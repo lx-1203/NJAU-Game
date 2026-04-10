@@ -1,0 +1,61 @@
+fileFormatVersion: 2
+guid: c1d2e3f4a5b6789012345678901234cd
+TrueTypeFontImporter:
+  externalObjects: {}
+  serializedVersion: 43
+  fontSize: 16
+  forceTextureCase: -2
+  characterSpacing: 0
+  includeFontData: 1
+  fontName: STXINWEI
+  fontNames:
+  - STXINWEI
+  fallbackFontAssets: []
+  customFontToFallback: 0
+  fontRenderingMode: 0
+  ascentMode: 0
+  useLegacyBounds: 0
+  shouldRoundAdvance: 1
+  fontColorOverride: {r: 1, g: 1, b: 1, a: 1}
+  fontColor: {r: 1, g: 1, b: 1, a: 1}
+  m_FontData:
+  - name: STXINWEI
+    hashCode: -1234567890
+    fileType: 0
+    filePath: Assets/Fonts/STXINWEI.TTF
+  m_GradientData: {fileType: 0, filePath: "", fileGUID: ""}
+  m_TextureMaterial:
+    instanceID: 0
+  m_AtlasPopulationMode: 0
+  m_AtlasTextureInstanceID: 0
+  m_Atlas: {fileType: 0, filePath: "", fileGUID: ""}
+  m_AtlasList: []
+  m_AtlasesRenderData: []
+  m_UsedGlyphRuneList: []
+  m_SortedFontFamilyNameList: []
+  m_fontWeight: 16
+  m_italicSimulation: 0
+  m_tabMultiple: 1
+  m_spacingOffset: 0
+  m_useLegacyMeshBounds: 1
+  m_AtlasWidth: 512
+  m_AtlasHeight: 512
+  m_AtlasPadding: 1
+  m_AtlasRenderMode: 1
+  m_OnlyASCIIMultiAtlas: 0
+  m_AllDensity: 0
+  m_FontReference: {fileID: 0}
+  m_GlyphInfoList: []
+  m_KerningPairList: []
+  m_FeatureGlyphAdjustmentList: {}
+  m_FeatureAdjustmentPairList: {}
+  m_FallbackFontAssets: []
+  m_CurrentFontAsset: {fileID: 0}
+  m_TMPFontAssetPopulateSettings: {}
+  m_glyphInfoDict: {}
+  m_FontAssetReferenceList: []
+  m_glyphPairAdjustmentRecordList: []
+  m_glyphPairAdjustmentRecordListSize: 0
+  userData:
+  assetBundleName:
+  assetBundleVariant:

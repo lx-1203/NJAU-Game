@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
 
 [CreateAssetMenu(fileName = "UILayoutConfig", menuName = "UI/Layout Config")]
 public class UILayoutConfig : ScriptableObject
@@ -9,7 +10,7 @@ public class UILayoutConfig : ScriptableObject
     public CanvasScaler.ScaleMode scaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
     public CanvasScaler.ScreenMatchMode screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
     public float matchValue = 0.5f;
-    
+
     [Header("Color Palette")]
     public Color primaryColor = new Color(0.2f, 0.4f, 0.8f);
     public Color secondaryColor = new Color(0.8f, 0.4f, 0.2f);
@@ -17,13 +18,35 @@ public class UILayoutConfig : ScriptableObject
     public Color textColor = new Color(0.9f, 0.9f, 0.9f);
     public Color buttonColor = new Color(0.25f, 0.25f, 0.35f);
     public Color buttonHoverColor = new Color(0.35f, 0.35f, 0.45f);
-    
-    [Header("Font Settings")]
-    public Font titleFont;
-    public Font bodyFont;
+
+    [Header("Font Settings (TMP)")]
+    [Tooltip("标题字体（TMP SDF 字体资源），留空则自动从 FontManager 获取")]
+    public TMP_FontAsset titleFontTMP;
+    [Tooltip("正文字体（TMP SDF 字体资源），留空则自动从 FontManager 获取")]
+    public TMP_FontAsset bodyFontTMP;
     public int titleFontSize = 72;
     public int subtitleFontSize = 36;
     public int bodyFontSize = 24;
+
+    /// <summary>
+    /// 获取标题字体，优先用配置的，否则从 FontManager 自动获取
+    /// </summary>
+    public TMP_FontAsset GetTitleFont()
+    {
+        if (titleFontTMP != null) return titleFontTMP;
+        if (FontManager.Instance != null) return FontManager.Instance.ChineseFont;
+        return null;
+    }
+
+    /// <summary>
+    /// 获取正文字体，优先用配置的，否则从 FontManager 自动获取
+    /// </summary>
+    public TMP_FontAsset GetBodyFont()
+    {
+        if (bodyFontTMP != null) return bodyFontTMP;
+        if (FontManager.Instance != null) return FontManager.Instance.ChineseFont;
+        return null;
+    }
     
     [Header("Spacing and Padding")]
     public float sectionSpacing = 40f;

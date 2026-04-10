@@ -2,33 +2,61 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 
 /// <summary>
-/// 场景加载器 - 用于从开始菜单跳转到游戏场景
-/// 挂载到 StartMenu 场景中的按钮或管理器对象上
+/// 异步场景加载工具类
+/// 提供静态方法供全局调用，通过加载界面过渡到目标场景
+/// 整合了远程版本的退出游戏功能
 /// </summary>
-public class SceneLoader : MonoBehaviour
+public static class SceneLoader
 {
+    // 加载界面场景名称
+    private const string LOADING_SCENE_NAME = "LoadingScreen";
+
+    // 目标场景名称（供 LoadingScreenManager 读取）
+    public static string TargetSceneName { get; private set; }
+
     /// <summary>
-    /// 加载游戏场景（横版2D游戏）
-    /// 可绑定到 UI 按钮的 OnClick 事件
+    /// 通过加载界面切换到目标场景
+    /// 异步加载 LoadingScreen 场景，避免黑屏卡顿
     /// </summary>
-    public void LoadGameScene()
+    /// <param name="sceneName">目标场景名称</param>
+    public static void LoadScene(string sceneName)
     {
-        SceneManager.LoadScene("GameScene");
+        if (string.IsNullOrEmpty(sceneName))
+        {
+            Debug.LogError("[SceneLoader] 目标场景名称不能为空！");
+            return;
+        }
+
+        // 记录目标场景名称
+        TargetSceneName = sceneName;
+        Debug.Log($"[SceneLoader] 准备加载场景: {sceneName}，进入加载界面...");
+
+        // 异步加载 LoadingScreen 场景，避免同步加载导致的黑屏
+        SceneManager.LoadSceneAsync(LOADING_SCENE_NAME);
     }
 
     /// <summary>
-    /// 返回开始菜单
+    /// 直接加载场景（无过渡，用于简单场景切换）
     /// </summary>
-    public void LoadStartMenu()
+    /// <param name="sceneName">目标场景名称</param>
+    public static void LoadSceneDirect(string sceneName)
     {
-        SceneManager.LoadScene("SampleScene");
+        if (string.IsNullOrEmpty(sceneName))
+        {
+            Debug.LogError("[SceneLoader] 目标场景名称不能为空！");
+            return;
+        }
+
+        Debug.Log($"[SceneLoader] 直接加载场景: {sceneName}");
+        SceneManager.LoadScene(sceneName);
     }
 
     /// <summary>
-    /// 退出游戏
+    /// 退出游戏（来自远程版本的功能）
     /// </summary>
-    public void QuitGame()
+    public static void QuitGame()
     {
+        Debug.Log("[SceneLoader] 退出游戏");
         #if UNITY_EDITOR
         UnityEditor.EditorApplication.isPlaying = false;
         #else

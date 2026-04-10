@@ -71,6 +71,19 @@ crashlytics-build.properties
 [Aa]ssets/[Ss]treamingAssets/aa.meta
 [Aa]ssets/[Ss]treamingAssets/aa/*
 
+# AI/MCP related (local dev tools, not for collaboration)
+.mcp.json
+.claude/
+.kilo/
+.trae/
+.vscode/
+Packages/com.coplaydev.unity-mcp/
+mcp_*.json
+MEMORY.md
+
+# Specs / local dev planning files
+specs/
+
 # ETC
 .DS_Store
 *.log

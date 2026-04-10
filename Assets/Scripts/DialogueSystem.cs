@@ -1,10 +1,12 @@
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
 using System.Collections;
 
 /// <summary>
 /// 对话系统 - 单例模式
 /// 管理对话框UI的创建、显示、文字逐字显示、翻页
+/// 已迁移到 TextMeshPro，通过 FontManager 自动获取中文字体
 /// </summary>
 public class DialogueSystem : MonoBehaviour
 {
@@ -13,12 +15,12 @@ public class DialogueSystem : MonoBehaviour
     [Header("对话设置")]
     [SerializeField] private float textSpeed = 0.04f; // 每个字的显示间隔
 
-    // UI 组件引用
+    // UI 组件引用（已改为 TMP）
     private Canvas dialogueCanvas;
     private GameObject dialoguePanel;
-    private Text nameText;
-    private Text contentText;
-    private Text hintText;
+    private TextMeshProUGUI nameText;
+    private TextMeshProUGUI contentText;
+    private TextMeshProUGUI hintText;
     private Image portraitImage;
 
     // 对话状态
@@ -42,6 +44,18 @@ public class DialogueSystem : MonoBehaviour
         Instance = this;
 
         CreateDialogueUI();
+    }
+
+    /// <summary>
+    /// 获取中文字体（从 FontManager 自动获取）
+    /// </summary>
+    private TMP_FontAsset GetChineseFont()
+    {
+        if (FontManager.Instance != null && FontManager.Instance.ChineseFont != null)
+        {
+            return FontManager.Instance.ChineseFont;
+        }
+        return null; // 会使用 TMP 默认字体 + fallback
     }
 
     private void CreateDialogueUI()
@@ -89,22 +103,15 @@ public class DialogueSystem : MonoBehaviour
         portraitImage.color = new Color(0.2f, 0.2f, 0.3f, 0.8f);
         portraitImage.preserveAspect = true;
 
-        // ===== NPC 名字 =====
-        GameObject nameObj = new GameObject("NameText", typeof(RectTransform), typeof(CanvasRenderer), typeof(Text));
-        nameObj.transform.SetParent(dialoguePanel.transform, false);
+        TMP_FontAsset chineseFont = GetChineseFont();
 
-        RectTransform nameRt = nameObj.GetComponent<RectTransform>();
-        nameRt.anchorMin = new Vector2(0.12f, 0.75f);
-        nameRt.anchorMax = new Vector2(0.5f, 0.95f);
-        nameRt.offsetMin = Vector2.zero;
-        nameRt.offsetMax = Vector2.zero;
-
-        nameText = nameObj.GetComponent<Text>();
-        nameText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        nameText.fontSize = 30;
-        nameText.fontStyle = FontStyle.Bold;
+        // ===== NPC 名字（TMP） =====
+        nameText = CreateTMPText(dialoguePanel.transform, "NameText",
+            new Vector2(0.12f, 0.75f), new Vector2(0.5f, 0.95f), 30f);
+        nameText.fontStyle = FontStyles.Bold;
         nameText.color = new Color(0.4f, 0.85f, 1f);
-        nameText.alignment = TextAnchor.MiddleLeft;
+        nameText.alignment = TextAlignmentOptions.MidlineLeft;
+        if (chineseFont != null) nameText.font = chineseFont;
 
         // ===== 名字底部装饰线 =====
         GameObject lineObj = new GameObject("NameLine", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
@@ -118,42 +125,46 @@ public class DialogueSystem : MonoBehaviour
 
         lineObj.GetComponent<Image>().color = new Color(0.4f, 0.85f, 1f, 0.3f);
 
-        // ===== 对话内容 =====
-        GameObject contentObj = new GameObject("ContentText", typeof(RectTransform), typeof(CanvasRenderer), typeof(Text));
-        contentObj.transform.SetParent(dialoguePanel.transform, false);
-
-        RectTransform contentRt = contentObj.GetComponent<RectTransform>();
-        contentRt.anchorMin = new Vector2(0.12f, 0.08f);
-        contentRt.anchorMax = new Vector2(0.95f, 0.7f);
-        contentRt.offsetMin = Vector2.zero;
-        contentRt.offsetMax = Vector2.zero;
-
-        contentText = contentObj.GetComponent<Text>();
-        contentText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        contentText.fontSize = 26;
+        // ===== 对话内容（TMP） =====
+        contentText = CreateTMPText(dialoguePanel.transform, "ContentText",
+            new Vector2(0.12f, 0.08f), new Vector2(0.95f, 0.7f), 26f);
         contentText.color = Color.white;
-        contentText.alignment = TextAnchor.UpperLeft;
-        contentText.lineSpacing = 1.3f;
+        contentText.alignment = TextAlignmentOptions.TopLeft;
+        contentText.lineSpacing = 10f; // TMP 的行间距单位不同于旧版 Text
+        if (chineseFont != null) contentText.font = chineseFont;
 
-        // ===== 底部提示文字 =====
-        GameObject hintObj = new GameObject("HintText", typeof(RectTransform), typeof(CanvasRenderer), typeof(Text));
-        hintObj.transform.SetParent(dialoguePanel.transform, false);
-
-        RectTransform hintRt = hintObj.GetComponent<RectTransform>();
-        hintRt.anchorMin = new Vector2(0.7f, 0.02f);
-        hintRt.anchorMax = new Vector2(0.98f, 0.15f);
-        hintRt.offsetMin = Vector2.zero;
-        hintRt.offsetMax = Vector2.zero;
-
-        hintText = hintObj.GetComponent<Text>();
-        hintText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        hintText.fontSize = 18;
+        // ===== 底部提示文字（TMP） =====
+        hintText = CreateTMPText(dialoguePanel.transform, "HintText",
+            new Vector2(0.7f, 0.02f), new Vector2(0.98f, 0.15f), 18f);
         hintText.color = new Color(0.7f, 0.7f, 0.7f, 0.8f);
-        hintText.alignment = TextAnchor.MiddleRight;
+        hintText.alignment = TextAlignmentOptions.MidlineRight;
         hintText.text = "按 空格键 继续...";
+        if (chineseFont != null) hintText.font = chineseFont;
 
         // 默认隐藏
         dialoguePanel.SetActive(false);
+    }
+
+    /// <summary>
+    /// 创建 TMP 文本组件的辅助方法
+    /// </summary>
+    private TextMeshProUGUI CreateTMPText(Transform parent, string name,
+        Vector2 anchorMin, Vector2 anchorMax, float fontSize)
+    {
+        GameObject obj = new GameObject(name, typeof(RectTransform));
+        obj.transform.SetParent(parent, false);
+
+        RectTransform rt = obj.GetComponent<RectTransform>();
+        rt.anchorMin = anchorMin;
+        rt.anchorMax = anchorMax;
+        rt.offsetMin = Vector2.zero;
+        rt.offsetMax = Vector2.zero;
+
+        TextMeshProUGUI tmp = obj.AddComponent<TextMeshProUGUI>();
+        tmp.fontSize = fontSize;
+        tmp.enableWordWrapping = true;
+
+        return tmp;
     }
 
     /// <summary>

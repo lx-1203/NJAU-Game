@@ -147,6 +147,17 @@ public class UISceneGenerator : MonoBehaviour
                 buttonText.text = text;
                 buttonText.fontSize = layoutConfig.bodyFontSize;
                 buttonText.color = layoutConfig.textColor;
+
+                // 自动应用中文字体
+                TMP_FontAsset font = layoutConfig != null ? layoutConfig.GetBodyFont() : null;
+                if (font != null)
+                {
+                    buttonText.font = font;
+                }
+                else if (FontManager.Instance != null)
+                {
+                    FontManager.Instance.ApplyChineseFont(buttonText);
+                }
             }
         }
         
@@ -157,18 +168,29 @@ public class UISceneGenerator : MonoBehaviour
     {
         GameObject textObject = Instantiate(textPrefab, canvas.transform);
         textObject.name = name;
-        
+
         RectTransform rectTransform = textObject.GetComponent<RectTransform>();
         rectTransform.anchoredPosition = position;
-        
+
         TextMeshProUGUI textComponent = textObject.GetComponent<TextMeshProUGUI>();
         if (textComponent != null)
         {
             textComponent.text = text;
             textComponent.fontSize = fontSize;
             textComponent.alignment = TextAlignmentOptions.Center;
+
+            // 自动应用中文字体
+            TMP_FontAsset font = layoutConfig != null ? layoutConfig.GetBodyFont() : null;
+            if (font != null)
+            {
+                textComponent.font = font;
+            }
+            else if (FontManager.Instance != null)
+            {
+                FontManager.Instance.ApplyChineseFont(textComponent);
+            }
         }
-        
+
         return textComponent;
     }
     

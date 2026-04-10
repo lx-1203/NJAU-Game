@@ -33,16 +33,22 @@ public class UIManager : MonoBehaviour
     private void InitializeUI()
     {
         // 设置初始面板状态
+        if (mainMenuPanel == null || settingsPanel == null || aboutPanel == null)
+        {
+            Debug.LogError($"[UIManager] 面板引用未赋值! mainMenuPanel={mainMenuPanel}, settingsPanel={settingsPanel}, aboutPanel={aboutPanel}，请在Inspector中设置。");
+            return;
+        }
+
         mainMenuPanel.SetActive(true);
         settingsPanel.SetActive(false);
         aboutPanel.SetActive(false);
-        
+
         // 注册按钮事件
-        startGameButton.onClick.AddListener(StartGame);
-        settingsButton.onClick.AddListener(OpenSettings);
-        aboutButton.onClick.AddListener(OpenAbout);
-        quitButton.onClick.AddListener(QuitGame);
-        
+        if (startGameButton != null) startGameButton.onClick.AddListener(StartGame);
+        if (settingsButton != null) settingsButton.onClick.AddListener(OpenSettings);
+        if (aboutButton != null) aboutButton.onClick.AddListener(OpenAbout);
+        if (quitButton != null) quitButton.onClick.AddListener(QuitGame);
+
         // 设置版本信息
         if (versionText != null)
         {
@@ -82,8 +88,8 @@ public class UIManager : MonoBehaviour
     public void StartGame()
     {
         Debug.Log("开始游戏...");
-        // 这里应该加载游戏场景
-        SceneManager.LoadScene("GameScene");
+        // 通过加载界面过渡到游戏场景（异步加载，不会卡顿）
+        SceneLoader.LoadScene("GameScene");
     }
     
     public void OpenSettings()
