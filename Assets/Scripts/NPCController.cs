@@ -1,8 +1,10 @@
 using UnityEngine;
+using TMPro;
 
 /// <summary>
 /// NPC 控制器
 /// 处理NPC图片加载、玩家靠近检测、显示互动提示
+/// 已迁移到 TextMeshPro（3D世界空间版），通过 FontManager 自动获取中文字体
 /// </summary>
 public class NPCController : MonoBehaviour
 {
@@ -78,20 +80,19 @@ public class NPCController : MonoBehaviour
         bgSr.sortingOrder = 9;
         bgObj.transform.localScale = new Vector3(1.8f, 0.6f, 1f);
 
-        // --- 按键图标 "E" ---
+        // --- 按键图标 "E"（使用 TMP 3D 版本） ---
         GameObject keyObj = new GameObject("KeyIcon");
         keyObj.transform.SetParent(interactionHint.transform, false);
         keyObj.transform.localPosition = new Vector3(-0.28f, 0.02f, 0);
 
-        TextMesh keyText = keyObj.AddComponent<TextMesh>();
+        TextMeshPro keyText = keyObj.AddComponent<TextMeshPro>();
         keyText.text = "E";
-        keyText.fontSize = 40;
-        keyText.characterSize = 0.06f;
-        keyText.anchor = TextAnchor.MiddleCenter;
-        keyText.alignment = TextAlignment.Center;
+        keyText.fontSize = 6f;
+        keyText.alignment = TextAlignmentOptions.Center;
         keyText.color = new Color(1f, 0.85f, 0.3f);
-        keyText.fontStyle = FontStyle.Bold;
-        keyObj.GetComponent<MeshRenderer>().sortingOrder = 11;
+        keyText.fontStyle = FontStyles.Bold;
+        keyText.sortingOrder = 11;
+        // "E" 是英文字母，TMP 默认字体就能显示
 
         // --- 按键背景框 ---
         GameObject keyBgObj = new GameObject("KeyBG", typeof(SpriteRenderer));
@@ -104,19 +105,22 @@ public class NPCController : MonoBehaviour
         keyBgSr.sortingOrder = 10;
         keyBgObj.transform.localScale = new Vector3(0.4f, 0.4f, 1f);
 
-        // --- 文字 "对话" ---
+        // --- 文字 "对话"（使用 TMP 3D 版本 + 中文字体） ---
         GameObject textObj = new GameObject("HintLabel");
         textObj.transform.SetParent(interactionHint.transform, false);
         textObj.transform.localPosition = new Vector3(0.15f, 0.02f, 0);
 
-        TextMesh labelText = textObj.AddComponent<TextMesh>();
+        TextMeshPro labelText = textObj.AddComponent<TextMeshPro>();
         labelText.text = "对话";
-        labelText.fontSize = 36;
-        labelText.characterSize = 0.05f;
-        labelText.anchor = TextAnchor.MiddleCenter;
-        labelText.alignment = TextAlignment.Center;
+        labelText.fontSize = 5f;
+        labelText.alignment = TextAlignmentOptions.Center;
         labelText.color = Color.white;
-        textObj.GetComponent<MeshRenderer>().sortingOrder = 11;
+        labelText.sortingOrder = 11;
+        // 自动应用中文字体
+        if (FontManager.Instance != null)
+        {
+            FontManager.Instance.ApplyChineseFont(labelText);
+        }
 
         interactionHint.transform.localScale = new Vector3(
             1f / transform.localScale.x,

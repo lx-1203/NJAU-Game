@@ -214,6 +214,54 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1100637959
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1100637961}
+  - component: {fileID: 1100637960}
+  m_Layer: 0
+  m_Name: FontManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1100637960
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1100637959}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e0c060d6aedcb2644890e23403c52cb2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  chineseFontAsset: {fileID: 11400000, guid: c91b9285bef768948b1fa4cec41e9ac4, type: 2}
+  resourceFontPath: Fonts
+  autoSetFallback: 1
+  autoApplyToScene: 1
+--- !u!4 &1100637961
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1100637959}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2014069784
 GameObject:
   m_ObjectHideFlags: 0
@@ -311,9 +359,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 810fe1e903e17f54c90df80a3b139ddb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  mainMenuSceneName: SampleScene
+  videoFileName: Start screen.mp4
+  loopSwitchLeadTime: 0.12
+  gameSceneName: GameScene
   layoutConfig: {fileID: 0}
   transitionDelay: 0.3
+  hintMessage: "\u70B9\u51FB\u4EFB\u610F\u4F4D\u7F6E\u7EE7\u7EED"
+  continueGameStartsGame: 1
 --- !u!4 &2081918711
 Transform:
   m_ObjectHideFlags: 0
@@ -336,3 +388,4 @@ SceneRoots:
   - {fileID: 281889099}
   - {fileID: 2014069787}
   - {fileID: 2081918711}
+  - {fileID: 1100637961}

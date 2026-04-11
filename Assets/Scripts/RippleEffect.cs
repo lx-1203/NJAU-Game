@@ -1,181 +1,240 @@
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.Video;
 using System.Collections;
 
 /// <summary>
-/// 涟漪扩散特效组件
-/// 在点击位置生成一个圆形涟漪，向外扩散后自动销毁
+/// 水涟漪特效 — 带背景扭曲
+///
+/// 原理：
+///   GrabPass 在 ScreenSpaceOverlay Canvas 上抓不到背景，
+///   改为直接把视频 RenderTexture 传给 Shader 做 UV 扭曲采样。
+///   其余区域完全透明，实现"只在波前扭曲背景"的效果。
 /// </summary>
 public class RippleEffect : MonoBehaviour
 {
     [Header("涟漪参数")]
-    [Tooltip("扩散最终大小")]
-    public float maxScale = 30f;
+    [Tooltip("持续时间（秒）")]
+    public float duration = 2.0f;
 
-    [Tooltip("扩散持续时间")]
-    public float duration = 0.8f;
+    [Tooltip("圈数")]
+    public int ringCount = 3;
 
-    [Tooltip("涟漪颜色")]
-    public Color rippleColor = new Color(1f, 1f, 1f, 0.4f);
+    [Tooltip("每圈延迟（秒）")]
+    public float ringDelay = 0.28f;
 
-    [Tooltip("涟漪边缘柔和度 (0=硬边, 1=全模糊)")]
-    public float edgeSoftness = 0.3f;
+    [Tooltip("最大扩散半径（归一化，0.65 ≈ 半屏）")]
+    public float maxRadius = 0.7f;
 
-    private static Sprite cachedCircleSprite;
+    [Tooltip("扭曲强度（0.02~0.06）")]
+    public float distortionStrength = 0.22f;
 
-    private RectTransform rectTransform;
-    private Image image;
-    private CanvasGroup canvasGroup;
+    [Tooltip("圆环宽度（归一化，0.1~0.3）")]
+    public float ringWidth = 0.26f;
 
-    /// <summary>
-    /// 在指定 Canvas 下、指定屏幕位置创建涟漪
-    /// </summary>
-    /// <param name="parent">父级 RectTransform（通常是全屏 Canvas）</param>
-    /// <param name="screenPosition">屏幕空间点击坐标</param>
-    /// <param name="camera">渲染该 Canvas 的摄像机（Overlay 模式传 null）</param>
-    /// <param name="onComplete">扩散完成后的回调</param>
-    public static RippleEffect Create(RectTransform parent, Vector2 screenPosition, Camera camera, System.Action onComplete = null)
+    [Tooltip("高亮圆环颜色")]
+    public Color ringColor = new Color(0.95f, 0.99f, 1f, 0.03f);
+
+    // ── 静态缓存 ──
+    private static Sprite s_ringSprite;
+
+    // ── 公共工厂方法（签名与旧版兼容）──
+    public static RippleEffect Create(RectTransform parent, Vector2 screenPosition,
+                                      Camera camera, System.Action onComplete = null)
     {
-        // 创建涟漪 GameObject
-        GameObject rippleGO = new GameObject("Ripple");
-        rippleGO.transform.SetParent(parent, false);
-
-        // 添加组件
-        RippleEffect ripple = rippleGO.AddComponent<RippleEffect>();
-        ripple.Setup(parent, screenPosition, camera, onComplete);
-
-        return ripple;
+        var go = new GameObject("RippleEffect");
+        go.transform.SetParent(parent, false);
+        var fx = go.AddComponent<RippleEffect>();
+        fx.StartCoroutine(fx.Run(parent, screenPosition, camera, onComplete));
+        return fx;
     }
 
-    private void Setup(RectTransform parent, Vector2 screenPosition, Camera camera, System.Action onComplete)
+    // ── 主协程 ──
+    private IEnumerator Run(RectTransform parent, Vector2 screenPos,
+                            Camera camera, System.Action onComplete)
     {
-        // 添加 RectTransform
-        rectTransform = gameObject.GetComponent<RectTransform>();
-        if (rectTransform == null)
-            rectTransform = gameObject.AddComponent<RectTransform>();
+        // 屏幕坐标 → 归一化 [0,1]
+        Vector2 normCenter = new Vector2(screenPos.x / Screen.width,
+                                         screenPos.y / Screen.height);
 
-        // 设置锚点为中心
-        rectTransform.anchorMin = new Vector2(0.5f, 0.5f);
-        rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
-        rectTransform.pivot = new Vector2(0.5f, 0.5f);
+        // 找视频的 RenderTexture（用来做扭曲采样的背景）
+        Texture bgTex = FindVideoTexture();
 
-        // 将屏幕坐标转换为 Canvas 内的局部坐标
-        Vector2 localPoint;
-        RectTransformUtility.ScreenPointToLocalPointInRectangle(parent, screenPosition, camera, out localPoint);
-        rectTransform.anchoredPosition = localPoint;
+        for (int i = 0; i < ringCount; i++)
+        {
+            float myMaxR    = maxRadius * (1f + i * 0.06f);
+            float peakAlpha = Mathf.Max(0.08f, 1f - i * 0.25f);
+            StartCoroutine(RunSingleRing(parent, normCenter, i * ringDelay,
+                                         myMaxR, peakAlpha, bgTex));
+        }
 
-        // 初始大小为一个小圆
-        float baseSize = 50f;
-        rectTransform.sizeDelta = new Vector2(baseSize, baseSize);
-        rectTransform.localScale = Vector3.zero;
-
-        // 添加 Image 组件（圆形）
-        image = gameObject.AddComponent<Image>();
-        image.color = rippleColor;
-        image.raycastTarget = false;
-
-        // 使用缓存圆形 Sprite，避免点击时重复生成贴图
-        image.sprite = GetOrCreateCircleSprite();
-        image.type = Image.Type.Simple;
-
-        // 添加 CanvasGroup 用于透明度控制
-        canvasGroup = gameObject.AddComponent<CanvasGroup>();
-        canvasGroup.alpha = 1f;
-        canvasGroup.blocksRaycasts = false;
-        canvasGroup.interactable = false;
-
-        // 确保涟漪显示在最上层
-        transform.SetAsLastSibling();
-
-        // 开始扩散动画
-        StartCoroutine(ExpandCoroutine(onComplete));
+        yield return new WaitForSeconds(duration + ringDelay * (ringCount - 1) + 0.1f);
+        onComplete?.Invoke();
+        if (this != null && gameObject != null)
+            Destroy(gameObject);
     }
 
-    /// <summary>
-    /// 扩散动画协程
-    /// </summary>
-    private IEnumerator ExpandCoroutine(System.Action onComplete)
+    // ── 找视频 RenderTexture ──
+    private Texture FindVideoTexture()
     {
+        // 优先找 VideoPlayer 的 targetTexture
+        var vp = FindObjectOfType<VideoPlayer>();
+        if (vp != null && vp.targetTexture != null)
+            return vp.targetTexture;
+
+        // 其次找场景里的 RawImage（通常是视频背景层）
+        var rawImages = FindObjectsOfType<RawImage>();
+        foreach (var ri in rawImages)
+        {
+            if (ri.texture != null && ri.gameObject.name.ToLower().Contains("video"))
+                return ri.texture;
+        }
+        // 兜底：任意 RawImage 的纹理
+        foreach (var ri in rawImages)
+        {
+            if (ri.texture != null) return ri.texture;
+        }
+        return null;
+    }
+
+    // ── 单圈协程 ──
+    private IEnumerator RunSingleRing(RectTransform parent, Vector2 normCenter,
+                                       float startDelay, float myMaxRadius,
+                                       float peakAlpha, Texture bgTex)
+    {
+        if (startDelay > 0f) yield return new WaitForSeconds(startDelay);
+
+        var shader = Shader.Find("UI/WaterRipple");
+        if (shader == null)
+        {
+            Debug.LogError("[RippleEffect] Shader UI/WaterRipple not found!");
+            yield break;
+        }
+
+        // —— 扭曲层（全屏 RawImage + WaterRipple Shader）——
+        var distortGO = new GameObject("RippleDistort");
+        distortGO.transform.SetParent(parent, false);
+        distortGO.transform.SetAsLastSibling();
+
+        var distortRT = distortGO.AddComponent<RectTransform>();
+        distortRT.anchorMin = Vector2.zero;
+        distortRT.anchorMax = Vector2.one;
+        distortRT.offsetMin = Vector2.zero;
+        distortRT.offsetMax = Vector2.zero;
+
+        var rawImg = distortGO.AddComponent<RawImage>();
+        rawImg.raycastTarget = false;
+        rawImg.color = Color.white;
+
+        // 创建独立 Material 实例
+        var mat = new Material(shader);
+        if (bgTex != null)
+            mat.SetTexture("_MainTex", bgTex);
+        mat.SetVector("_RippleCenter", new Vector4(normCenter.x, normCenter.y, 0, 0));
+        mat.SetFloat("_MaxRadius",   myMaxRadius);
+        mat.SetFloat("_Strength",    distortionStrength);
+        mat.SetFloat("_RingWidth",   ringWidth);
+        mat.SetColor("_RingColor",   ringColor);
+        mat.SetFloat("_Alpha",       0f);
+        rawImg.material = mat;
+
+        // 设置 rawImg.texture 为背景纹理（Shader 用 _MainTex 采样）
+        if (bgTex != null)
+            rawImg.texture = bgTex;
+
+        // —— 高亮圆环层（Image + 空心 Sprite）——
+        var ringGO = new GameObject("RippleRing");
+        ringGO.transform.SetParent(parent, false);
+        ringGO.transform.SetAsLastSibling();
+
+        var ringRT = ringGO.AddComponent<RectTransform>();
+        ringRT.anchorMin = new Vector2(0.5f, 0.5f);
+        ringRT.anchorMax = new Vector2(0.5f, 0.5f);
+        ringRT.pivot     = new Vector2(0.5f, 0.5f);
+
+        Vector2 localPt;
+        RectTransformUtility.ScreenPointToLocalPointInRectangle(
+            parent,
+            new Vector2(normCenter.x * Screen.width, normCenter.y * Screen.height),
+            null, out localPt);
+        ringRT.anchoredPosition = localPt;
+        ringRT.sizeDelta        = new Vector2(80f, 80f);
+        ringRT.localScale       = Vector3.zero;
+
+        var ringImg = ringGO.AddComponent<Image>();
+        ringImg.sprite        = GetRingSprite();
+        ringImg.color         = ringColor;
+        ringImg.raycastTarget = false;
+
+        var ringCG = ringGO.AddComponent<CanvasGroup>();
+        ringCG.alpha          = 0f;
+        ringCG.blocksRaycasts = false;
+        ringCG.interactable   = false;
+
+        // —— 动画主循环 ——
         float elapsed = 0f;
-        AnimationCurve scaleCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
-        // 透明度：前 60% 保持，后 40% 淡出
-        AnimationCurve alphaCurve = new AnimationCurve(
-            new Keyframe(0f, 1f),
-            new Keyframe(0.6f, 0.8f),
-            new Keyframe(1f, 0f)
-        );
-
         while (elapsed < duration)
         {
             float t = elapsed / duration;
-            float scaleValue = scaleCurve.Evaluate(t) * maxScale;
-            rectTransform.localScale = new Vector3(scaleValue, scaleValue, 1f);
-            canvasGroup.alpha = alphaCurve.Evaluate(t);
+
+            // cubic ease-out
+            float tEased = 1f - Mathf.Pow(1f - t, 3f);
+
+            // 更新 Shader 进度
+            mat.SetFloat("_Progress", tEased);
+
+            // alpha：快速淡入，平缓淡出
+            float alpha = t < 0.05f
+                ? t / 0.05f
+                : Mathf.Pow(1f - (t - 0.05f) / 0.95f, 1.4f);
+            float finalAlpha = alpha * peakAlpha;
+            mat.SetFloat("_Alpha", finalAlpha);
+
+            // 高亮圆环跟随波前
+            float ringScale = tEased * myMaxRadius / 0.65f * 24f;
+            ringRT.localScale = new Vector3(ringScale, ringScale, 1f);
+            ringCG.alpha      = finalAlpha * 0.75f;
+
             elapsed += Time.deltaTime;
             yield return null;
         }
 
-        // 确保最终状态
-        rectTransform.localScale = new Vector3(maxScale, maxScale, 1f);
-        canvasGroup.alpha = 0f;
+        mat.SetFloat("_Alpha", 0f);
+        ringCG.alpha = 0f;
 
-        // 回调
-        onComplete?.Invoke();
-
-        // 销毁自身
-        Destroy(gameObject);
+        Destroy(distortGO);
+        Destroy(ringGO);
+        Destroy(mat);
     }
 
-    /// <summary>
-    /// 获取或创建缓存的圆形 Sprite
-    /// </summary>
-    private Sprite GetOrCreateCircleSprite()
+    // ── 空心圆环 Sprite ──
+    private static Sprite GetRingSprite()
     {
-        if (cachedCircleSprite == null)
+        if (s_ringSprite != null) return s_ringSprite;
+
+        const int   res      = 256;
+        const float outer    = res / 2f;
+        const float ringFrac = 0.14f;
+        float inner   = outer * (1f - ringFrac);
+        float soft    = outer * ringFrac * 0.8f;
+
+        var tex    = new Texture2D(res, res, TextureFormat.RGBA32, false);
+        tex.filterMode = FilterMode.Bilinear;
+        var pixels = new Color[res * res];
+        var ctr    = new Vector2(outer, outer);
+
+        for (int y = 0; y < res; y++)
+        for (int x = 0; x < res; x++)
         {
-            cachedCircleSprite = CreateCircleSprite();
+            float d    = Vector2.Distance(new Vector2(x, y), ctr);
+            float aOut = Mathf.Clamp01((outer - d) / soft);
+            float aIn  = Mathf.Clamp01((d - inner) / soft);
+            pixels[y * res + x] = new Color(1f, 1f, 1f, Mathf.Min(aOut, aIn));
         }
 
-        return cachedCircleSprite;
-    }
-
-    /// <summary>
-    /// 运行时生成一个圆形 Sprite（白色填充圆）
-    /// </summary>
-    private Sprite CreateCircleSprite()
-    {
-        int resolution = 128;
-        Texture2D texture = new Texture2D(resolution, resolution, TextureFormat.RGBA32, false);
-        texture.filterMode = FilterMode.Bilinear;
-
-        float center = resolution / 2f;
-        float radius = resolution / 2f;
-        // 边缘柔和范围（像素）
-        float softPixels = radius * edgeSoftness;
-
-        for (int y = 0; y < resolution; y++)
-        {
-            for (int x = 0; x < resolution; x++)
-            {
-                float dist = Vector2.Distance(new Vector2(x, y), new Vector2(center, center));
-                if (dist < radius - softPixels)
-                {
-                    texture.SetPixel(x, y, Color.white);
-                }
-                else if (dist < radius)
-                {
-                    // 边缘渐变
-                    float alpha = 1f - (dist - (radius - softPixels)) / softPixels;
-                    texture.SetPixel(x, y, new Color(1f, 1f, 1f, alpha));
-                }
-                else
-                {
-                    texture.SetPixel(x, y, Color.clear);
-                }
-            }
-        }
-
-        texture.Apply();
-        return Sprite.Create(texture, new Rect(0, 0, resolution, resolution), new Vector2(0.5f, 0.5f));
+        tex.SetPixels(pixels);
+        tex.Apply();
+        s_ringSprite = Sprite.Create(tex, new Rect(0, 0, res, res), new Vector2(0.5f, 0.5f));
+        return s_ringSprite;
     }
 }

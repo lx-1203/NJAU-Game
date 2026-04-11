@@ -511,9 +511,9 @@ BoxCollider2D:
   m_UsedByComposite: 0
   m_Offset: {x: 0, y: 0}
   m_SpriteTilingProperty:
-    border: {x: 0.049999997, y: 0.049999997, z: 0.049999997, w: 0.049999997}
+    border: {x: 0, y: 0, z: 0, w: 0}
     pivot: {x: 0.5, y: 0.5}
-    oldSize: {x: 0.16, y: 0.16}
+    oldSize: {x: 8.8237505, y: 28.960001}
     newSize: {x: 1, y: 1}
     adaptiveTilingThreshold: 0.5
     drawMode: 0
@@ -532,8 +532,8 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: df346b4b5e927bc419e082822de99d13, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
+  m_Name: 
+  m_EditorClassIdentifier: 
   moveSpeed: 5
   jumpForce: 10
   groundCheck: {fileID: 0}
@@ -584,8 +584,8 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b1fc051c2c1dedf478f12bb2ab0e7aea, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
+  m_Name: 
+  m_EditorClassIdentifier: 
   npcPosition: {x: 5, y: -3.1, z: 0}
 --- !u!114 &400000003
 MonoBehaviour:
@@ -597,8 +597,8 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f585bbf27c67338448ebe5a5818fb3c0, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
+  m_Name: 
+  m_EditorClassIdentifier: 
   textSpeed: 0.04
 --- !u!1 &500000000
 GameObject:
@@ -695,8 +695,8 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 1ed92452e94e70e48bc35c2fe70df74c, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
+  m_Name: 
+  m_EditorClassIdentifier: 
   npcName: "\u540C\u5B66"
   interactionRange: 2.5
   dialogueLines:
@@ -704,6 +704,54 @@ MonoBehaviour:
   - "\u8FD9\u91CC\u662F\u4E00\u4E2A\u5145\u6EE1\u5192\u9669\u7684\u5730\u65B9\u3002"
   - "\u5982\u679C\u4F60\u9700\u8981\u5E2E\u52A9\uFF0C\u968F\u65F6\u53EF\u4EE5\u6765\u627E\u6211\u3002"
   - "\u795D\u4F60\u65C5\u9014\u6109\u5FEB\uFF01"
+--- !u!1 &1796595832
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1796595834}
+  - component: {fileID: 1796595833}
+  m_Layer: 0
+  m_Name: FontManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1796595833
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1796595832}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e0c060d6aedcb2644890e23403c52cb2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  chineseFontAsset: {fileID: 11400000, guid: c91b9285bef768948b1fa4cec41e9ac4, type: 2}
+  resourceFontPath: Fonts
+  autoSetFallback: 1
+  autoApplyToScene: 1
+--- !u!4 &1796595834
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1796595832}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
@@ -713,3 +761,4 @@ SceneRoots:
   - {fileID: 300000001}
   - {fileID: 400000001}
   - {fileID: 500000001}
+  - {fileID: 1796595834}

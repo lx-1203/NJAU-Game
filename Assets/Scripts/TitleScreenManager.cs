@@ -71,6 +71,15 @@ public class TitleScreenManager : MonoBehaviour
     private Slider sfxVolumeSlider;
     private Toggle fullscreenToggle;
 
+    // ===== 右上角图标按钮 =====
+    private Button tutorialButton;
+    private Button achievementButton;
+    private Button cgButton;
+    private Button creditsButton;
+
+    // ===== 版本号 =====
+    private TMP_Text versionText;
+
     // ===== 颜色缓存 =====
     private Color bgColor;
     private Color textColor;
@@ -129,7 +138,7 @@ public class TitleScreenManager : MonoBehaviour
 
     private void Update()
     {
-        if (isTransitioning || hasEnteredMenu)
+        if (hasEnteredMenu)
         {
             return;
         }
@@ -204,8 +213,7 @@ public class TitleScreenManager : MonoBehaviour
         CreateVideoBackground();
         CreateHintText();
         CreateMenuOverlay();
-        CreateFadeOverlay();
-    }
+        CreateFadeOverlay();    }
 
     private void CreateVideoBackground()
     {
@@ -243,6 +251,16 @@ public class TitleScreenManager : MonoBehaviour
         hintText.color = new Color(textColor.r, textColor.g, textColor.b, 0.8f);
         hintText.alignment = TextAlignmentOptions.Center;
         hintText.raycastTarget = false;
+
+        // TMP 描边 + 阴影
+        hintText.outlineWidth = 0.2f;
+        hintText.outlineColor = new Color32(0, 0, 0, 180);
+        hintText.fontMaterial.EnableKeyword("UNDERLAY_ON");
+        hintText.fontMaterial.SetColor("_UnderlayColor", new Color(0f, 0f, 0f, 0.7f));
+        hintText.fontMaterial.SetFloat("_UnderlayOffsetX", 0.8f);
+        hintText.fontMaterial.SetFloat("_UnderlayOffsetY", -0.8f);
+        hintText.fontMaterial.SetFloat("_UnderlayDilate", 0.2f);
+        hintText.fontMaterial.SetFloat("_UnderlaySoftness", 0.15f);
     }
 
     private void CreateMenuOverlay()
@@ -255,38 +273,280 @@ public class TitleScreenManager : MonoBehaviour
         menuOverlay.interactable = false;
         menuOverlay.blocksRaycasts = false;
 
-        CreateOverlayDim(overlayGO.transform as RectTransform);
+        // 不加遮罩，保持视频背景完全可见
         CreateMainMenuPanel(overlayGO.transform as RectTransform);
+        CreateTopRightIcons(overlayGO.transform as RectTransform);
+        CreateLogoArea(overlayGO.transform as RectTransform);
+        CreateVersionText(overlayGO.transform as RectTransform);
         CreateSettingsPanel(overlayGO.transform as RectTransform);
 
         overlayGO.SetActive(false);
     }
 
-    private void CreateOverlayDim(RectTransform parent)
+    /// <summary>
+    /// 中央 Logo 区域 — 上半部分放游戏标题图
+    /// </summary>
+    private void CreateLogoArea(RectTransform parent)
     {
-        GameObject dimGO = CreateUIElement("OverlayDim", parent);
-        StretchFull(dimGO.GetComponent<RectTransform>());
+        GameObject logoGO = CreateUIElement("LogoArea", parent);
+        RectTransform rt = logoGO.GetComponent<RectTransform>();
+        rt.anchorMin = new Vector2(0.5f, 0.5f);
+        rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.sizeDelta = new Vector2(900f, 330f);
+        rt.anchoredPosition = new Vector2(0f, 200f);
 
-        Image dimImage = dimGO.AddComponent<Image>();
-        dimImage.color = new Color(0f, 0f, 0f, 0.28f);
-        dimImage.raycastTarget = false;
+        // 尝试加载 Logo 图片，找不到就显示文字标题
+        Sprite logoSprite = Resources.Load<Sprite>("GameLogo");
+        if (logoSprite != null)
+        {
+            Image logoImg = logoGO.AddComponent<Image>();
+            logoImg.sprite = logoSprite;
+            logoImg.preserveAspect = true;
+            logoImg.raycastTarget = false;
+            logoImg.color = Color.white;
+
+            // Logo 图片阴影（适度）
+            var logoShadow = logoGO.AddComponent<Shadow>();
+            logoShadow.effectColor = new Color(0f, 0f, 0f, 0.85f);
+            logoShadow.effectDistance = new Vector2(2f, -2f);
+
+            // 第二层阴影柔和光晕
+            var logoShadow2 = logoGO.AddComponent<Shadow>();
+            logoShadow2.effectColor = new Color(0f, 0f, 0f, 0.4f);
+            logoShadow2.effectDistance = new Vector2(4f, -4f);
+        }
+        else
+        {
+            // 无图片时用文字标题代替
+            TextMeshProUGUI titleTxt = logoGO.AddComponent<TextMeshProUGUI>();
+            titleTxt.text = "钟山下";
+            titleTxt.fontSize = 96;
+            titleTxt.fontStyle = FontStyles.Bold;
+            titleTxt.alignment = TextAlignmentOptions.Center;
+            titleTxt.color = Color.white;
+            titleTxt.raycastTarget = false;
+
+            // 添加阴影效果
+            var shadow = logoGO.AddComponent<UnityEngine.UI.Shadow>();
+            shadow.effectColor = new Color(0f, 0f, 0f, 0.6f);
+            shadow.effectDistance = new Vector2(3f, -3f);
+        }
+    }
+
+    /// <summary>
+    /// 右上角四个图标按钮：游戏教程 / 成就 / 游戏CG / 制作人详情
+    /// </summary>
+    private void CreateTopRightIcons(RectTransform parent)
+    {
+        string[] labels = { "教程", "成就", "CG", "制作人" };
+        string[] tooltips = { "游戏教程", "成就", "游戏CG", "制作人详情" };
+        float iconSize = 56f;
+        float spacing = 12f;
+        float totalWidth = labels.Length * iconSize + (labels.Length - 1) * spacing;
+        float startX = -(totalWidth / 2f) + iconSize / 2f;
+
+        GameObject iconsRoot = CreateUIElement("TopRightIcons", parent);
+        RectTransform rootRT = iconsRoot.GetComponent<RectTransform>();
+        rootRT.anchorMin = new Vector2(1f, 1f);
+        rootRT.anchorMax = new Vector2(1f, 1f);
+        rootRT.pivot = new Vector2(1f, 1f);
+        rootRT.sizeDelta = new Vector2(totalWidth + 32f, iconSize + 24f);
+        rootRT.anchoredPosition = new Vector2(-24f, -20f);
+
+        for (int i = 0; i < labels.Length; i++)
+        {
+            int idx = i;
+            float xOffset = startX + i * (iconSize + spacing);
+
+            GameObject iconGO = CreateUIElement(labels[i] + "Btn", rootRT);
+            RectTransform iconRT = iconGO.GetComponent<RectTransform>();
+            iconRT.anchorMin = new Vector2(0.5f, 0.5f);
+            iconRT.anchorMax = new Vector2(0.5f, 0.5f);
+            iconRT.pivot = new Vector2(0.5f, 0.5f);
+            iconRT.sizeDelta = new Vector2(iconSize, iconSize);
+            iconRT.anchoredPosition = new Vector2(xOffset, 0f);
+
+            // 圆形背景
+            Image bg = iconGO.AddComponent<Image>();
+            bg.color = new Color(0.08f, 0.08f, 0.15f, 0.72f);
+
+            Button btn = iconGO.AddComponent<Button>();
+            btn.targetGraphic = bg;
+            ColorBlock cb = btn.colors;
+            cb.highlightedColor = new Color(1.1f, 1.1f, 1.1f, 1f);
+            cb.pressedColor = new Color(0.85f, 0.85f, 0.85f, 1f);
+            btn.colors = cb;
+
+            // 图标文字（占位，后续可替换为 Sprite）
+            GameObject labelGO = CreateUIElement("Label", iconRT);
+            StretchFull(labelGO.GetComponent<RectTransform>());
+            TextMeshProUGUI txt = labelGO.AddComponent<TextMeshProUGUI>();
+            txt.text = labels[i];
+            txt.fontSize = 16f;
+            txt.alignment = TextAlignmentOptions.Center;
+            txt.color = new Color(0.9f, 0.9f, 0.95f, 0.9f);
+            txt.raycastTarget = false;
+
+            // TMP 图标文字描边+阴影
+            txt.outlineWidth = 0.2f;
+            txt.outlineColor = new Color32(0, 0, 0, 180);
+            txt.fontMaterial.EnableKeyword("UNDERLAY_ON");
+            txt.fontMaterial.SetColor("_UnderlayColor", new Color(0f, 0f, 0f, 0.7f));
+            txt.fontMaterial.SetFloat("_UnderlayOffsetX", 0.8f);
+            txt.fontMaterial.SetFloat("_UnderlayOffsetY", -0.8f);
+            txt.fontMaterial.SetFloat("_UnderlayDilate", 0.2f);
+            txt.fontMaterial.SetFloat("_UnderlaySoftness", 0.1f);
+
+            int captured = idx;
+            btn.onClick.AddListener(() => OnTopIconClicked(captured, tooltips[captured]));
+
+            // 保存引用
+            if (idx == 0) tutorialButton = btn;
+            else if (idx == 1) achievementButton = btn;
+            else if (idx == 2) cgButton = btn;
+            else creditsButton = btn;
+        }
+    }
+
+    private void OnTopIconClicked(int index, string name)
+    {
+        Debug.Log($"[TitleScreen] 点击右上角：{name}（功能待接入）");
+    }
+
+    /// <summary>
+    /// 右下角版本号
+    /// </summary>
+    private void CreateVersionText(RectTransform parent)
+    {
+        GameObject vGO = CreateUIElement("VersionText", parent);
+        RectTransform rt = vGO.GetComponent<RectTransform>();
+        rt.anchorMin = new Vector2(1f, 0f);
+        rt.anchorMax = new Vector2(1f, 0f);
+        rt.pivot = new Vector2(1f, 0f);
+        rt.sizeDelta = new Vector2(200f, 36f);
+        rt.anchoredPosition = new Vector2(-16f, 12f);
+
+        versionText = vGO.AddComponent<TextMeshProUGUI>();
+        versionText.text = "v" + Application.version;
+        versionText.fontSize = 18f;
+        versionText.alignment = TextAlignmentOptions.Right;
+        versionText.color = new Color(1f, 1f, 1f, 0.45f);
+        versionText.raycastTarget = false;
+
+        var vShadow = vGO.AddComponent<UnityEngine.UI.Shadow>();
+        vShadow.effectColor = new Color(0f, 0f, 0f, 0.75f);
+        vShadow.effectDistance = new Vector2(1f, -1f);
     }
 
     private void CreateMainMenuPanel(RectTransform parent)
     {
-        mainMenuPanel = CreatePanel("MainMenuPanel", parent, new Vector2(0.5f, 0.5f), new Vector2(560f, 640f), panelColor);
+        // 无背景面板，直接在屏幕上放按钮
+        mainMenuPanel = CreateUIElement("MainMenuPanel", parent);
         RectTransform panelRect = mainMenuPanel.GetComponent<RectTransform>();
-        panelRect.anchoredPosition = new Vector2(0f, -20f);
+        panelRect.anchorMin = new Vector2(0.5f, 0.5f);
+        panelRect.anchorMax = new Vector2(0.5f, 0.5f);
+        panelRect.pivot = new Vector2(0.5f, 0.5f);
+        panelRect.sizeDelta = new Vector2(420f, 480f);
+        panelRect.anchoredPosition = new Vector2(0f, -100f);
 
-        CreatePanelTitle(mainMenuPanel.transform as RectTransform, "钟山下", 54, new Vector2(0f, 235f));
-        CreatePanelSubtitle(mainMenuPanel.transform as RectTransform, "点击后仍停留在当前动态背景中", new Vector2(0f, 175f));
+        // 按钮列表：文字、回调
+        var menuItems = new System.Collections.Generic.List<(string label, UnityEngine.Events.UnityAction action)>
+        {
+            ("继续游戏",  ContinueGame),
+            ("开始游戏",  StartGame),
+            ("载入游戏",  OnLoadGame),
+            ("设  置",    OpenSettings),
+            ("退出游戏",  QuitGame),
+        };
 
-        continueGameButton = CreateMenuButton(mainMenuPanel.transform as RectTransform, "ContinueGameButton", "继续游戏", new Vector2(0f, 70f), secondaryColor, ContinueGame);
-        startGameButton = CreateMenuButton(mainMenuPanel.transform as RectTransform, "StartGameButton", "开始游戏", new Vector2(0f, -20f), primaryColor, StartGame);
-        settingsButton = CreateMenuButton(mainMenuPanel.transform as RectTransform, "SettingsButton", "设置", new Vector2(0f, -110f), new Color(0.22f, 0.22f, 0.3f, 0.95f), OpenSettings);
-        quitGameButton = CreateMenuButton(mainMenuPanel.transform as RectTransform, "QuitGameButton", "退出游戏", new Vector2(0f, -200f), new Color(0.32f, 0.16f, 0.16f, 0.95f), QuitGame);
+        float btnHeight = 62f;
+        float gap = 10f;
+        float totalH = menuItems.Count * btnHeight + (menuItems.Count - 1) * gap;
+        float startY = totalH / 2f - btnHeight / 2f;
 
-        CreateFooterText(mainMenuPanel.transform as RectTransform, "首版先把结构和交互跑通，后续再继续细化", new Vector2(0f, -275f));
+        for (int i = 0; i < menuItems.Count; i++)
+        {
+            var item = menuItems[i];
+            float y = startY - i * (btnHeight + gap);
+            bool isPrimary = (i == 0 || i == 1); // 继续/开始 高亮
+            CreateTextMenuButton(panelRect, item.label, new Vector2(0f, y), item.action, isPrimary);
+        }
+    }
+
+    /// <summary>
+    /// 纯文字风格菜单按钮 — 参考截图：无色块背景，文字+底部细线
+    /// </summary>
+    private Button CreateTextMenuButton(RectTransform parent, string label,
+                                         Vector2 pos, UnityEngine.Events.UnityAction onClick,
+                                         bool highlight = false)
+    {
+        GameObject btnGO = CreateUIElement(label + "Btn", parent);
+        RectTransform rt = btnGO.GetComponent<RectTransform>();
+        rt.anchorMin = new Vector2(0.5f, 0.5f);
+        rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.sizeDelta = new Vector2(380f, 60f);
+        rt.anchoredPosition = pos;
+
+        // 透明可交互背景（接收射线）
+        Image bg = btnGO.AddComponent<Image>();
+        bg.color = Color.clear;
+
+        Button btn = btnGO.AddComponent<Button>();
+        btn.targetGraphic = bg;
+        ColorBlock cb = btn.colors;
+        cb.normalColor    = Color.white;
+        cb.highlightedColor = new Color(1f, 1f, 1f, 0.12f);
+        cb.pressedColor   = new Color(1f, 1f, 1f, 0.06f);
+        btn.colors = cb;
+        btn.onClick.AddListener(onClick);
+
+        // 文字
+        GameObject textGO = CreateUIElement("Label", rt);
+        StretchFull(textGO.GetComponent<RectTransform>());
+        TextMeshProUGUI txt = textGO.AddComponent<TextMeshProUGUI>();
+        txt.text = label;
+        txt.fontSize = highlight ? 38f : 32f;
+        txt.alignment = TextAlignmentOptions.Center;
+        txt.color = highlight
+            ? new Color(1f, 1f, 1f, 1f)
+            : new Color(1f, 1f, 1f, 0.9f);
+        txt.fontStyle = highlight ? FontStyles.Bold : FontStyles.Normal;
+        txt.raycastTarget = false;
+
+        // TMP 描边（Outline）— 通过 materialForRendering 设置
+        txt.outlineWidth = 0.25f;
+        txt.outlineColor = new Color32(0, 0, 0, 200);
+
+        // TMP 字体材质阴影（Underlay）
+        txt.fontMaterial.EnableKeyword("UNDERLAY_ON");
+        txt.fontMaterial.SetColor("_UnderlayColor", new Color(0f, 0f, 0f, 0.8f));
+        txt.fontMaterial.SetFloat("_UnderlayOffsetX", 1.0f);
+        txt.fontMaterial.SetFloat("_UnderlayOffsetY", -1.0f);
+        txt.fontMaterial.SetFloat("_UnderlayDilate", 0.3f);
+        txt.fontMaterial.SetFloat("_UnderlaySoftness", 0.2f);
+
+        // 底部细分割线
+        GameObject lineGO = CreateUIElement("Line", rt);
+        RectTransform lineRT = lineGO.GetComponent<RectTransform>();
+        lineRT.anchorMin = new Vector2(0.15f, 0f);
+        lineRT.anchorMax = new Vector2(0.85f, 0f);
+        lineRT.pivot = new Vector2(0.5f, 0f);
+        lineRT.sizeDelta = new Vector2(0f, 1f);
+        lineRT.anchoredPosition = Vector2.zero;
+        Image lineImg = lineGO.AddComponent<Image>();
+        lineImg.color = highlight
+            ? new Color(1f, 1f, 1f, 0.35f)
+            : new Color(1f, 1f, 1f, 0.15f);
+        lineImg.raycastTarget = false;
+
+        return btn;
+    }
+
+    private void OnLoadGame()
+    {
+        Debug.Log("[TitleScreen] 载入游戏（功能待接入）");
     }
 
     private void CreateSettingsPanel(RectTransform parent)
@@ -345,12 +605,12 @@ public class TitleScreenManager : MonoBehaviour
 
     private void OnScreenTapped(Vector2 screenPosition)
     {
-        if (isTransitioning || hasEnteredMenu)
+        if (hasEnteredMenu)
         {
             return;
         }
 
-        isTransitioning = true;
+        hasEnteredMenu = true;
 
         if (breathCoroutine != null)
         {
@@ -358,32 +618,25 @@ public class TitleScreenManager : MonoBehaviour
             breathCoroutine = null;
         }
 
-        RippleEffect.Create(canvasRect, screenPosition, null, OnRippleComplete);
-    }
-
-    private void OnRippleComplete()
-    {
-        if (!isTransitioning)
-        {
-            return;
-        }
-
-        StartCoroutine(ShowMenuAfterRipple());
-    }
-
-    private IEnumerator ShowMenuAfterRipple()
-    {
-        yield return new WaitForSeconds(transitionDelay);
-
-        hasEnteredMenu = true;
-        isTransitioning = false;
-
         if (hintText != null)
         {
             hintText.gameObject.SetActive(false);
         }
 
+        // 涟漪特效与菜单同步触发，互不等待
+        RippleEffect.Create(canvasRect, screenPosition, null);
         ShowMenuOverlay();
+    }
+
+    private void OnRippleComplete()
+    {
+        // 保留空实现，避免旧引用报错
+    }
+
+    private System.Collections.IEnumerator ShowMenuAfterRipple()
+    {
+        // 保留空实现，避免旧引用报错
+        yield break;
     }
 
     private void ShowMenuOverlay()
@@ -634,13 +887,23 @@ public class TitleScreenManager : MonoBehaviour
             return;
         }
 
+        // 始终标记 prepared 状态，无论是否已有活跃播放器
         playerPrepared[preparedIndex] = true;
+        Debug.Log($"[TitleScreen] VideoPlayer_{preparedIndex} 已准备就绪");
 
         if (activePlayerIndex >= 0)
         {
+            // 已有活跃播放器 —— 检查活跃播放器是否已停止（卡住恢复）
+            VideoPlayer activePlayer = videoPlayers[activePlayerIndex];
+            if (activePlayer != null && !activePlayer.isPlaying && preparedIndex == standbyPlayerIndex)
+            {
+                Debug.Log($"[TitleScreen] 检测到活跃播放器已停止，自动切换到 VideoPlayer_{preparedIndex}");
+                SwitchToPreparedPlayer(preparedIndex);
+            }
             return;
         }
 
+        // 首次启动：设定活跃/备用播放器
         activePlayerIndex = preparedIndex;
         standbyPlayerIndex = GetOtherPlayerIndex(preparedIndex);
         videoImage.texture = videoTextures[preparedIndex];
@@ -661,14 +924,29 @@ public class TitleScreenManager : MonoBehaviour
             return;
         }
 
+        Debug.Log($"[TitleScreen] VideoPlayer_{finishedIndex} 播放完毕");
+
         if (standbyPlayerIndex >= 0 && playerPrepared[standbyPlayerIndex])
         {
             SwitchToPreparedPlayer(standbyPlayerIndex);
             return;
         }
 
-        finishedPlayer.Stop();
-        finishedPlayer.Prepare();
+        // 备用播放器未就绪 —— 回退到单播放器循环
+        Debug.Log("[TitleScreen] 备用播放器未就绪，使用单播放器重新播放");
+        finishedPlayer.time = 0;
+        finishedPlayer.Play();
+
+        // 同时尝试重新准备备用播放器
+        if (standbyPlayerIndex >= 0)
+        {
+            VideoPlayer standbyPlayer = videoPlayers[standbyPlayerIndex];
+            if (standbyPlayer != null && !playerPrepared[standbyPlayerIndex])
+            {
+                standbyPlayer.Stop();
+                standbyPlayer.Prepare();
+            }
+        }
     }
 
     private void OnVideoError(VideoPlayer erroredPlayer, string message)
@@ -680,6 +958,22 @@ public class TitleScreenManager : MonoBehaviour
         }
 
         Debug.LogWarning("[TitleScreen] 开始界面视频播放失败: " + message);
+
+        // 如果是备用播放器出错，延迟重试
+        if (index == standbyPlayerIndex)
+        {
+            StartCoroutine(RetryPrepare(index, 1f));
+        }
+    }
+
+    private IEnumerator RetryPrepare(int playerIndex, float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        if (playerIndex >= 0 && playerIndex < videoPlayers.Length && videoPlayers[playerIndex] != null)
+        {
+            Debug.Log($"[TitleScreen] 重试准备 VideoPlayer_{playerIndex}");
+            videoPlayers[playerIndex].Prepare();
+        }
     }
 
     private IEnumerator MonitorVideoLoop()
@@ -689,6 +983,7 @@ public class TitleScreenManager : MonoBehaviour
             if (activePlayerIndex >= 0 && standbyPlayerIndex >= 0)
             {
                 VideoPlayer activePlayer = videoPlayers[activePlayerIndex];
+
                 if (activePlayer != null && activePlayer.isPlaying && playerPrepared[standbyPlayerIndex])
                 {
                     double remainingTime = activePlayer.length - activePlayer.time;
@@ -697,14 +992,40 @@ public class TitleScreenManager : MonoBehaviour
                         SwitchToPreparedPlayer(standbyPlayerIndex);
                     }
                 }
+
+                // 防卡死检测：活跃播放器既没在播放、也不在准备中
+                if (activePlayer != null && !activePlayer.isPlaying && !activePlayer.isPrepared)
+                {
+                    Debug.LogWarning("[TitleScreen] 活跃播放器状态异常，尝试恢复");
+                    if (playerPrepared[standbyPlayerIndex])
+                    {
+                        SwitchToPreparedPlayer(standbyPlayerIndex);
+                    }
+                    else
+                    {
+                        // 两个都没准备好，重新准备当前的
+                        activePlayer.Prepare();
+                    }
+                }
             }
 
             yield return null;
         }
     }
 
+    /// <summary>
+    /// 防止重入的切换锁
+    /// </summary>
+    private bool isSwitching = false;
+
     private void SwitchToPreparedPlayer(int nextPlayerIndex)
     {
+        // 防止重入（MonitorVideoLoop 和 OnVideoLoopPointReached 可能同帧触发）
+        if (isSwitching)
+        {
+            return;
+        }
+
         if (nextPlayerIndex < 0 || nextPlayerIndex >= videoPlayers.Length)
         {
             return;
@@ -715,14 +1036,20 @@ public class TitleScreenManager : MonoBehaviour
             return;
         }
 
+        isSwitching = true;
+
         int previousPlayerIndex = activePlayerIndex;
         VideoPlayer nextPlayer = videoPlayers[nextPlayerIndex];
         if (nextPlayer == null)
         {
+            isSwitching = false;
             return;
         }
 
+        Debug.Log($"[TitleScreen] 切换: VideoPlayer_{previousPlayerIndex} -> VideoPlayer_{nextPlayerIndex}");
+
         videoImage.texture = videoTextures[nextPlayerIndex];
+        nextPlayer.time = 0;
         nextPlayer.Play();
 
         activePlayerIndex = nextPlayerIndex;
@@ -739,6 +1066,8 @@ public class TitleScreenManager : MonoBehaviour
                 previousPlayer.Prepare();
             }
         }
+
+        isSwitching = false;
     }
 
     private int GetPlayerIndex(VideoPlayer player)
