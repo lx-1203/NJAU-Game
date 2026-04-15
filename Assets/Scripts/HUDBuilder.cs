@@ -26,7 +26,9 @@ public class HUDBuilder : MonoBehaviour
     // 顶栏
     [HideInInspector] public TextMeshProUGUI timeText;
     [HideInInspector] public TextMeshProUGUI moneyText;
+    [HideInInspector] public TextMeshProUGUI moneyWarningText;  // 透支警告图标 ⚠
     [HideInInspector] public TextMeshProUGUI actionPointsText;
+    [HideInInspector] public TextMeshProUGUI gpaText;  // GPA 显示
 
     // 左侧栏
     [HideInInspector] public Image portraitPlaceholder;
@@ -40,9 +42,22 @@ public class HUDBuilder : MonoBehaviour
     [HideInInspector] public Button btnSocial;
     [HideInInspector] public Button btnGoOut;
     [HideInInspector] public Button btnSleep;
+    [HideInInspector] public Button btnShop;  // 商店按钮
+    [HideInInspector] public Button btnClub;  // 社团按钮
+    [HideInInspector] public Button btnSave;  // 存档按钮
 
     // 动画器
     [HideInInspector] public UIAnimator hudAnimator;
+
+    // 商店 UI
+    [HideInInspector] public ShopUIBuilder shopUIBuilder;
+
+    // NPC 社交互动菜单
+    [HideInInspector] public NPCInteractionMenu npcInteractionMenu;
+
+    // 社团面板
+    [HideInInspector] public ClubPanelBuilder clubPanelBuilder;
+    [HideInInspector] public ClubPanelManager clubPanelManager;
 
     // ========== 布局常量 ==========
     private const float TopBarHeight = 60f;
@@ -75,6 +90,9 @@ public class HUDBuilder : MonoBehaviour
         CreateCenterPanel();
         CreateBottomBar();
         CreateAnimator();
+        CreateNPCInteractionMenu();
+        CreateShopUI();
+        CreateClubPanel();
     }
 
     // ====================================================================
@@ -132,13 +150,22 @@ public class HUDBuilder : MonoBehaviour
         timeText = CreateTMPText("TimeText", topBar.transform, "大一上 · 回合1 · 9月",
             20f, TextWhite, TextAlignmentOptions.Left, new Vector2(350, TopBarHeight));
 
-        // 金钱文本
+        // 金钱文本（加宽以支持负数显示）
         moneyText = CreateTMPText("MoneyText", topBar.transform, "金钱：￥0",
-            20f, TextGold, TextAlignmentOptions.Center, new Vector2(200, TopBarHeight));
+            20f, TextGold, TextAlignmentOptions.Center, new Vector2(280, TopBarHeight));
+
+        // 金钱警告图标（透支时显示，默认隐藏）
+        moneyWarningText = CreateTMPText("MoneyWarning", topBar.transform, "⚠",
+            22f, new Color(1f, 0.3f, 0.3f), TextAlignmentOptions.Center, new Vector2(35, TopBarHeight));
+        moneyWarningText.gameObject.SetActive(false);
 
         // 行动点文本
         actionPointsText = CreateTMPText("ActionPointsText", topBar.transform, "行动点：●●●●●",
             20f, TextWhite, TextAlignmentOptions.Right, new Vector2(280, TopBarHeight));
+
+        // GPA 文本
+        gpaText = CreateTMPText("GPAText", topBar.transform, "GPA: --",
+            20f, new Color(0.6f, 0.9f, 1.0f), TextAlignmentOptions.Right, new Vector2(160, TopBarHeight));
     }
 
     // ====================================================================
@@ -257,11 +284,14 @@ public class HUDBuilder : MonoBehaviour
         hlg.childForceExpandWidth = false;
         hlg.childForceExpandHeight = false;
 
-        // 创建 4 个行动按钮
+        // 创建 4 个行动按钮 + 商店按钮
         btnStudy  = CreateActionButton("BtnStudy",  bottomBar.transform, "自习");
         btnSocial = CreateActionButton("BtnSocial", bottomBar.transform, "社交");
         btnGoOut  = CreateActionButton("BtnGoOut",  bottomBar.transform, "出校门");
         btnSleep  = CreateActionButton("BtnSleep",  bottomBar.transform, "睡觉");
+        btnShop   = CreateActionButton("BtnShop",   bottomBar.transform, "商店");
+        btnClub   = CreateActionButton("BtnClub",   bottomBar.transform, "社团");
+        btnSave   = CreateActionButton("BtnSave",   bottomBar.transform, "存档");
     }
 
     // ====================================================================
@@ -273,6 +303,45 @@ public class HUDBuilder : MonoBehaviour
         GameObject animObj = new GameObject("HUDAnimator");
         animObj.transform.SetParent(transform, false);
         hudAnimator = animObj.AddComponent<UIAnimator>();
+    }
+
+    // ====================================================================
+    //  NPC 社交互动菜单
+    // ====================================================================
+
+    private void CreateNPCInteractionMenu()
+    {
+        GameObject menuObj = new GameObject("NPCInteractionMenu");
+        menuObj.transform.SetParent(transform, false);
+        npcInteractionMenu = menuObj.AddComponent<NPCInteractionMenu>();
+        npcInteractionMenu.Initialize(hudCanvas);
+    }
+
+    // ====================================================================
+    //  商店 UI
+    // ====================================================================
+
+    private void CreateShopUI()
+    {
+        GameObject shopObj = new GameObject("ShopUIBuilder");
+        shopObj.transform.SetParent(transform, false);
+        shopUIBuilder = shopObj.AddComponent<ShopUIBuilder>();
+        shopUIBuilder.BuildShopUI();
+    }
+
+    // ====================================================================
+    //  社团面板
+    // ====================================================================
+
+    private void CreateClubPanel()
+    {
+        GameObject clubObj = new GameObject("ClubPanelBuilder");
+        clubObj.transform.SetParent(transform, false);
+        clubPanelBuilder = clubObj.AddComponent<ClubPanelBuilder>();
+        clubPanelBuilder.BuildClubPanel();
+
+        clubPanelManager = clubObj.AddComponent<ClubPanelManager>();
+        clubPanelManager.Initialize(clubPanelBuilder);
     }
 
     // ====================================================================

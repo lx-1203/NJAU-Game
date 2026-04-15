@@ -1,0 +1,164 @@
+{
+    "achievements": [
+        {
+            "id": "ACH_001",
+            "name": "初来乍到",
+            "description": "完成第一个回合",
+            "conditions": [{ "type": "TotalRounds_GreaterOrEqual", "value": 1 }],
+            "iconId": "icon_newbie",
+            "points": 10
+        },
+        {
+            "id": "ACH_002",
+            "name": "学霸初成",
+            "description": "学力达到30",
+            "conditions": [{ "type": "Study_GreaterOrEqual", "value": 30 }],
+            "iconId": "icon_study_1",
+            "points": 20
+        },
+        {
+            "id": "ACH_003",
+            "name": "学海无涯",
+            "description": "学力达到60",
+            "conditions": [{ "type": "Study_GreaterOrEqual", "value": 60 }],
+            "iconId": "icon_study_2",
+            "points": 40
+        },
+        {
+            "id": "ACH_004",
+            "name": "学术巅峰",
+            "description": "学力达到90",
+            "conditions": [{ "type": "Study_GreaterOrEqual", "value": 90 }],
+            "iconId": "icon_study_3",
+            "points": 80
+        },
+        {
+            "id": "ACH_005",
+            "name": "社交蝴蝶",
+            "description": "魅力达到30",
+            "conditions": [{ "type": "Charm_GreaterOrEqual", "value": 30 }],
+            "iconId": "icon_charm_1",
+            "points": 20
+        },
+        {
+            "id": "ACH_006",
+            "name": "万人迷",
+            "description": "魅力达到70",
+            "conditions": [{ "type": "Charm_GreaterOrEqual", "value": 70 }],
+            "iconId": "icon_charm_2",
+            "points": 50
+        },
+        {
+            "id": "ACH_007",
+            "name": "健身达人",
+            "description": "体魄达到30",
+            "conditions": [{ "type": "Physique_GreaterOrEqual", "value": 30 }],
+            "iconId": "icon_phys_1",
+            "points": 20
+        },
+        {
+            "id": "ACH_008",
+            "name": "钢铁之躯",
+            "description": "体魄达到70",
+            "conditions": [{ "type": "Physique_GreaterOrEqual", "value": 70 }],
+            "iconId": "icon_phys_2",
+            "points": 50
+        },
+        {
+            "id": "ACH_009",
+            "name": "领袖气质",
+            "description": "领导力达到30",
+            "conditions": [{ "type": "Leadership_GreaterOrEqual", "value": 30 }],
+            "iconId": "icon_lead_1",
+            "points": 20
+        },
+        {
+            "id": "ACH_010",
+            "name": "天生领导者",
+            "description": "领导力达到70",
+            "conditions": [{ "type": "Leadership_GreaterOrEqual", "value": 70 }],
+            "iconId": "icon_lead_2",
+            "points": 50
+        },
+        {
+            "id": "ACH_011",
+            "name": "勤学苦练",
+            "description": "累计学习20次",
+            "conditions": [{ "type": "StudyCount_GreaterOrEqual", "value": 20 }],
+            "iconId": "icon_study_count",
+            "points": 30
+        },
+        {
+            "id": "ACH_012",
+            "name": "交际花",
+            "description": "累计社交20次",
+            "conditions": [{ "type": "SocialCount_GreaterOrEqual", "value": 20 }],
+            "iconId": "icon_social_count",
+            "points": 30
+        },
+        {
+            "id": "ACH_013",
+            "name": "探索者",
+            "description": "累计出校门15次",
+            "conditions": [{ "type": "GoOutCount_GreaterOrEqual", "value": 15 }],
+            "iconId": "icon_goout_count",
+            "points": 30
+        },
+        {
+            "id": "ACH_014",
+            "name": "财务自由",
+            "description": "金钱达到20000",
+            "conditions": [{ "type": "Money_GreaterOrEqual", "value": 20000 }],
+            "iconId": "icon_rich",
+            "points": 50
+        },
+        {
+            "id": "ACH_015",
+            "name": "负债人生",
+            "description": "金钱低于0",
+            "conditions": [{ "type": "Money_Less", "value": 0 }],
+            "iconId": "icon_debt",
+            "points": 10
+        },
+        {
+            "id": "ACH_016",
+            "name": "全面发展",
+            "description": "所有核心属性达到40",
+            "conditions": [{ "type": "AllAttributes_GreaterOrEqual", "value": 40 }],
+            "iconId": "icon_balanced",
+            "points": 100
+        },
+        {
+            "id": "ACH_017",
+            "name": "大一结束",
+            "description": "完成大一学年",
+            "conditions": [{ "type": "Year_GreaterOrEqual", "value": 2 }],
+            "iconId": "icon_year1",
+            "points": 15
+        },
+        {
+            "id": "ACH_018",
+            "name": "半程马拉松",
+            "description": "完成大二学年",
+            "conditions": [{ "type": "Year_GreaterOrEqual", "value": 3 }],
+            "iconId": "icon_year2",
+            "points": 15
+        },
+        {
+            "id": "ACH_019",
+            "name": "老油条",
+            "description": "累计睡觉30次",
+            "conditions": [{ "type": "SleepCount_GreaterOrEqual", "value": 30 }],
+            "iconId": "icon_sleep",
+            "points": 20
+        },
+        {
+            "id": "ACH_020",
+            "name": "优等生",
+            "description": "获得一次A级学期评价",
+            "conditions": [{ "type": "SemesterGrade_Equals", "value": 3 }],
+            "iconId": "icon_grade_a",
+            "points": 60
+        }
+    ]
+}

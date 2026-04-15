@@ -49,6 +49,8 @@ public class SplashScreenManager : MonoBehaviour
     private bool videoFailed = false;
     private bool canSkip = false;
     private bool hasSkipped = false;
+    private float skipEnabledTime = float.MaxValue; // 跳过功能生效的时刻
+    private const float MIN_VIEW_TIME = 1.0f; // 最少观看 1 秒才能跳过
 
     // ===== 序列阶段 =====
 
@@ -70,8 +72,8 @@ public class SplashScreenManager : MonoBehaviour
 
     private void Update()
     {
-        // 检测跳过：任意按键或点击
-        if (canSkip && !hasSkipped)
+        // 检测跳过：必须达到最小观看时间后，任意按键或点击才能跳过
+        if (canSkip && !hasSkipped && Time.time >= skipEnabledTime)
         {
             if (Input.anyKeyDown || Input.GetMouseButtonDown(0))
             {
@@ -145,8 +147,7 @@ public class SplashScreenManager : MonoBehaviour
         videoPlayer.isLooping = false;
         videoPlayer.skipOnDrop = true;
         videoPlayer.waitForFirstFrame = true;
-        videoPlayer.audioOutputMode = VideoAudioOutputMode.Direct;
-        videoPlayer.SetDirectAudioMute(0, true);
+        videoPlayer.audioOutputMode = VideoAudioOutputMode.None;
 
         // RawImage 显示视频
         videoImage = videoGO.AddComponent<RawImage>();
@@ -253,8 +254,7 @@ public class SplashScreenManager : MonoBehaviour
     {
         Debug.Log("[SplashScreen] 开场动画开始");
 
-        canSkip = true;
-
+        // 等视频准备好，这期间不允许跳过
         float prepareDeadline = Time.time + videoWaitTime;
         while (!videoPrepared && !videoFailed && Time.time < prepareDeadline)
         {
@@ -263,6 +263,10 @@ public class SplashScreenManager : MonoBehaviour
 
         if (videoPrepared && videoPlayer != null)
         {
+            // 视频已开始播放，延迟一段时间后才允许跳过
+            canSkip = true;
+            skipEnabledTime = Time.time + MIN_VIEW_TIME;
+
             float playbackDeadline = Time.time + Mathf.Max((float)videoPlayer.length + 1f, videoWaitTime);
             while (!videoFinished && !videoFailed && Time.time < playbackDeadline)
             {
@@ -279,6 +283,8 @@ public class SplashScreenManager : MonoBehaviour
         else
         {
             Debug.LogWarning("[SplashScreen] 视频未成功播放，直接进入 Logo 流程");
+            canSkip = true;
+            skipEnabledTime = Time.time + MIN_VIEW_TIME;
         }
 
         if (videoImage != null)

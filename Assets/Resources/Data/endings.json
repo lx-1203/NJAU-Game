@@ -1,0 +1,292 @@
+{
+    "endings": [
+        {
+            "id": "END_001",
+            "name": "永眠",
+            "stars": 0,
+            "layer": 0,
+            "conditions": [
+                { "type": "MentalHealth_Equals", "value": 0 }
+            ],
+            "description": "你的世界逐渐失去了色彩。在一个寂静的深夜，你选择了永远的沉睡。如果时间能重来，希望你能找到那束光。",
+            "cgId": "cg_ending_sleep_forever"
+        },
+        {
+            "id": "END_002",
+            "name": "破产退学",
+            "stars": 0,
+            "layer": 0,
+            "conditions": [
+                { "type": "Money_Less", "value": -5000 }
+            ],
+            "description": "债务如同滚雪球般越积越多。当催债电话响起的那一刻，你不得不离开校园，开始漫长的还债之路。",
+            "cgId": "cg_ending_bankrupt"
+        },
+        {
+            "id": "END_003",
+            "name": "自愿退学",
+            "stars": 0,
+            "layer": 0,
+            "conditions": [
+                { "type": "SlackingValue_GreaterOrEqual", "value": 120 }
+            ],
+            "description": "无尽的摆烂让你彻底失去了学习的动力。某天你收拾行囊，默默离开了校园。也许，大学不是唯一的出路。",
+            "cgId": "cg_ending_dropout"
+        },
+        {
+            "id": "END_004",
+            "name": "学术不端开除",
+            "stars": 0,
+            "layer": 0,
+            "conditions": [
+                { "type": "CheatingCount_GreaterOrEqual", "value": 2 }
+            ],
+            "description": "第二次作弊被抓后，学校决定开除你的学籍。你站在校门口，回望这个曾经充满希望的地方。",
+            "cgId": "cg_ending_expelled"
+        },
+        {
+            "id": "END_005",
+            "name": "校园传说",
+            "stars": 7,
+            "layer": 1,
+            "conditions": [
+                { "type": "GPA_GreaterOrEqual", "value": 3.8 },
+                { "type": "HasNationalScholarship", "value": 1 },
+                { "type": "RomanceLevel_GreaterOrEqual", "value": 5 },
+                { "type": "IsStudentCouncilPresident", "value": 1 },
+                { "type": "IsPartyMember", "value": 1 }
+            ],
+            "description": "你是南农百年历史上最璀璨的明星。学业顶尖、爱情圆满、领袖风范、信仰坚定——你的名字将永远铭刻在校史馆中。毕业典礼上，校长亲自为你拨穗，全场起立鼓掌。你就是——校园传说。",
+            "cgId": "cg_ending_legend"
+        },
+        {
+            "id": "END_006",
+            "name": "南农之光",
+            "stars": 6,
+            "layer": 1,
+            "conditions": [
+                { "type": "GPA_GreaterOrEqual", "value": 3.7 },
+                { "type": "HasNationalScholarship", "value": 1 },
+                { "type": "Leadership_GreaterOrEqual", "value": 80 }
+            ],
+            "description": "四年间你以卓越的成绩和出众的领导力成为了南农的标杆人物。校友会特邀你作为优秀毕业生代表发言，你的故事将激励一届又一届学弟学妹。",
+            "cgId": "cg_ending_pride"
+        },
+        {
+            "id": "END_007",
+            "name": "保研清北",
+            "stars": 5,
+            "layer": 2,
+            "conditions": [
+                { "type": "GPA_GreaterOrEqual", "value": 3.8 },
+                { "type": "Study_GreaterOrEqual", "value": 85 }
+            ],
+            "description": "凭借大学四年的努力，你成功获得了清华/北大的推免资格。站在更高的学术殿堂门前，你知道这只是新征程的起点。",
+            "cgId": "cg_ending_top_grad"
+        },
+        {
+            "id": "END_008",
+            "name": "保研本校",
+            "stars": 4,
+            "layer": 2,
+            "conditions": [
+                { "type": "GPA_GreaterOrEqual", "value": 3.5 },
+                { "type": "Study_GreaterOrEqual", "value": 70 }
+            ],
+            "description": "你的成绩在同届中名列前茅，顺利获得了本校的推免资格。虽然没有远走高飞，但在熟悉的校园里继续深造，也是一种幸福。",
+            "cgId": "cg_ending_local_grad"
+        },
+        {
+            "id": "END_009",
+            "name": "考研上岸",
+            "stars": 4,
+            "layer": 2,
+            "conditions": [
+                { "type": "GPA_GreaterOrEqual", "value": 3.0 },
+                { "type": "Study_GreaterOrEqual", "value": 60 },
+                { "type": "Stress_GreaterOrEqual", "value": 50 }
+            ],
+            "description": "备考的日子无比煎熬，但你咬牙坚持了下来。当录取通知到来的那一刻，所有的付出都有了回报。研究生的新生活在向你招手。",
+            "cgId": "cg_ending_exam_grad"
+        },
+        {
+            "id": "END_010",
+            "name": "公务员上岸",
+            "stars": 4,
+            "layer": 2,
+            "conditions": [
+                { "type": "Study_GreaterOrEqual", "value": 50 },
+                { "type": "Leadership_GreaterOrEqual", "value": 60 }
+            ],
+            "description": "经过层层选拔，你终于拿到了那张令人羡慕的公务员录取通知书。稳定的工作、服务社会的理想——你找到了属于自己的位置。",
+            "cgId": "cg_ending_civil_servant"
+        },
+        {
+            "id": "END_011",
+            "name": "参军报国",
+            "stars": 3,
+            "layer": 2,
+            "conditions": [
+                { "type": "Physique_GreaterOrEqual", "value": 70 },
+                { "type": "Leadership_GreaterOrEqual", "value": 40 }
+            ],
+            "description": "你选择了一条不同寻常的道路——穿上军装，保家卫国。军营的生活虽然艰苦，但你的体魄和意志让你如鱼得水。",
+            "cgId": "cg_ending_military"
+        },
+        {
+            "id": "END_012",
+            "name": "创业先锋",
+            "stars": 4,
+            "layer": 2,
+            "conditions": [
+                { "type": "Leadership_GreaterOrEqual", "value": 70 },
+                { "type": "Charm_GreaterOrEqual", "value": 50 },
+                { "type": "Money_GreaterOrEqual", "value": 15000 }
+            ],
+            "description": "还没毕业你就已经注册了公司。凭借出色的领导力和人脉，你的创业项目一路高歌猛进。也许将来，你会成为校友企业家中的佼佼者。",
+            "cgId": "cg_ending_entrepreneur"
+        },
+        {
+            "id": "END_013",
+            "name": "大厂offer",
+            "stars": 3,
+            "layer": 2,
+            "conditions": [
+                { "type": "Study_GreaterOrEqual", "value": 55 },
+                { "type": "GPA_GreaterOrEqual", "value": 3.0 }
+            ],
+            "description": "秋招季你收获了多家大厂的offer。选择了最心仪的那一个后，你踏上了职场之旅。996虽苦，但前路充满无限可能。",
+            "cgId": "cg_ending_big_company"
+        },
+        {
+            "id": "END_014",
+            "name": "教师之路",
+            "stars": 3,
+            "layer": 3,
+            "conditions": [
+                { "type": "Study_GreaterOrEqual", "value": 50 },
+                { "type": "Charm_GreaterOrEqual", "value": 40 }
+            ],
+            "description": "你选择成为一名教师，将知识的火种传递下去。站在讲台上的那一刻，你忽然理解了当年那些恩师的用心良苦。",
+            "cgId": "cg_ending_teacher"
+        },
+        {
+            "id": "END_015",
+            "name": "自由职业者",
+            "stars": 2,
+            "layer": 3,
+            "conditions": [
+                { "type": "Charm_GreaterOrEqual", "value": 45 },
+                { "type": "Leadership_GreaterOrEqual", "value": 30 }
+            ],
+            "description": "你不想被格子间束缚，选择了自由职业的道路。虽然收入不稳定，但每天醒来都充满期待——这就是你想要的生活。",
+            "cgId": "cg_ending_freelancer"
+        },
+        {
+            "id": "END_016",
+            "name": "PUA深渊",
+            "stars": 0,
+            "layer": 4,
+            "conditions": [
+                { "type": "Charm_GreaterOrEqual", "value": 80 },
+                { "type": "Mood_Less", "value": 20 },
+                { "type": "Study_GreaterOrEqual", "value": 0 }
+            ],
+            "description": "你学会了操控人心的技巧，却失去了真诚的能力。当所有人都对你避而远之时，你终于意识到——孤独才是最深的深渊。",
+            "cgId": "cg_ending_pua"
+        },
+        {
+            "id": "END_017",
+            "name": "网贷泥潭",
+            "stars": 0,
+            "layer": 4,
+            "conditions": [
+                { "type": "Money_Less", "value": -3000 },
+                { "type": "Mood_Less", "value": 30 }
+            ],
+            "description": "一笔又一笔的借贷如同无底洞。毕业时你的银行账户是鲜红的负数，而催债电话已经打到了父母那里。",
+            "cgId": "cg_ending_debt"
+        },
+        {
+            "id": "END_018",
+            "name": "体育健将",
+            "stars": 3,
+            "layer": 5,
+            "conditions": [
+                { "type": "Physique_GreaterOrEqual", "value": 85 }
+            ],
+            "description": "四年的坚持锻炼让你成为了校运会的常客。虽然没有走上职业体育的道路，但健康的体魄和坚韧的意志将陪伴你一生。",
+            "cgId": "cg_ending_athlete"
+        },
+        {
+            "id": "END_019",
+            "name": "社交达人",
+            "stars": 3,
+            "layer": 5,
+            "conditions": [
+                { "type": "Charm_GreaterOrEqual", "value": 80 },
+                { "type": "Leadership_GreaterOrEqual", "value": 50 }
+            ],
+            "description": "你是每个社交场合最耀眼的存在。毕业时你的通讯录里有数百个联系人，而他们中的很多人都真心感谢认识你。",
+            "cgId": "cg_ending_socialite"
+        },
+        {
+            "id": "END_020",
+            "name": "自媒体新星",
+            "stars": 3,
+            "layer": 6,
+            "conditions": [
+                { "type": "Charm_GreaterOrEqual", "value": 60 },
+                { "type": "Study_GreaterOrEqual", "value": 30 }
+            ],
+            "description": "从大学开始运营的自媒体账号已经积累了不少粉丝。毕业后你决定全职投入，用内容创作开辟自己的事业。",
+            "cgId": "cg_ending_influencer"
+        },
+        {
+            "id": "END_021",
+            "name": "电商创业",
+            "stars": 2,
+            "layer": 6,
+            "conditions": [
+                { "type": "Money_GreaterOrEqual", "value": 10000 },
+                { "type": "Charm_GreaterOrEqual", "value": 40 }
+            ],
+            "description": "在校期间你就开始了电商生意，毕业时已经有了稳定的客户群。虽然规模不大，但这是完全属于你的事业。",
+            "cgId": "cg_ending_ecommerce"
+        },
+        {
+            "id": "END_022",
+            "name": "普通毕业",
+            "stars": 1,
+            "layer": 7,
+            "conditions": [
+                { "type": "GPA_GreaterOrEqual", "value": 2.0 }
+            ],
+            "description": "四年的大学生活平平淡淡地结束了。没有什么惊天动地的成就，但你顺利拿到了毕业证。未来的路还很长，一切皆有可能。",
+            "cgId": "cg_ending_normal"
+        },
+        {
+            "id": "END_023",
+            "name": "啃老族",
+            "stars": 0,
+            "layer": 7,
+            "conditions": [
+                { "type": "GPA_Less", "value": 2.0 },
+                { "type": "Study_GreaterOrEqual", "value": 0 }
+            ],
+            "description": "毕业后你既没有找到工作的动力，也没有继续学习的意愿。回到家里，成为了父母口中的'等等再说'。",
+            "cgId": "cg_ending_neet"
+        },
+        {
+            "id": "END_024",
+            "name": "流浪者",
+            "stars": 0,
+            "layer": 7,
+            "conditions": [
+                { "type": "AlwaysTrue", "value": 0 }
+            ],
+            "description": "毕业证拿不到，工作也找不到。你背着行囊离开了南京，开始了一段不知终点的旅程。也许有一天，你会找到属于自己的方向。",
+            "cgId": "cg_ending_wanderer"
+        }
+    ]
+}

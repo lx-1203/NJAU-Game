@@ -1,0 +1,66 @@
+{
+  "events": [
+    {
+      "id": "DE_001",
+      "eventType": "Dark",
+      "title": "作弊诱惑",
+      "description": "考试压力太大了，有人悄悄递来了一张小抄...",
+      "priority": 0,
+      "isForced": false,
+      "isRepeatable": false,
+      "trigger": {
+        "year": 0,
+        "semester": 0,
+        "roundMin": 0,
+        "roundMax": 0,
+        "attributeConditions": [
+          { "attributeName": "压力", "comparison": ">=", "value": 80 },
+          { "attributeName": "学力", "comparison": "<=", "value": 20 }
+        ],
+        "minMoney": 0,
+        "maxMoney": 0,
+        "affinityConditions": [],
+        "requiredEventIds": [],
+        "excludedEventIds": [],
+        "minDarkness": 0,
+        "triggerBehavior": "",
+        "phase": "RoundEnd"
+      },
+      "dialogues": [
+        {
+          "speaker": "???",
+          "lines": [
+            "嘿，马上就要考试了，看你压力挺大的...",
+            "我这里有上次的考卷答案，要不要看看？"
+          ],
+          "portraitId": ""
+        }
+      ],
+      "choices": [
+        {
+          "text": "接受小抄",
+          "effects": [
+            { "type": "attribute", "target": "学力", "value": 10, "description": "学力 +10（临时）" },
+            { "type": "attribute", "target": "压力", "value": -20, "description": "压力 -20" },
+            { "type": "darkness", "target": "", "value": 15, "description": "黑暗值 +15" },
+            { "type": "flag", "target": "has_cheated", "value": 1, "description": "作弊标记" }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "拒绝诱惑",
+          "effects": [
+            { "type": "attribute", "target": "压力", "value": 5, "description": "压力 +5" },
+            { "type": "attribute", "target": "心情", "value": -5, "description": "心情 -5" },
+            { "type": "attribute", "target": "领导力", "value": 2, "description": "领导力 +2（正义感）" }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        }
+      ],
+      "defaultEffects": [],
+      "chainEventIds": []
+    }
+  ]
+}

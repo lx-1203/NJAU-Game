@@ -1,0 +1,47 @@
+{
+  "events": [
+    {
+      "id": "CE_001",
+      "eventType": "Conditional",
+      "title": "奖学金通知",
+      "description": "你的努力终于得到了回报！学校发来了奖学金通知。",
+      "priority": 2,
+      "isForced": false,
+      "isRepeatable": false,
+      "trigger": {
+        "year": 0,
+        "semester": 0,
+        "roundMin": 0,
+        "roundMax": 0,
+        "attributeConditions": [
+          { "attributeName": "学力", "comparison": ">=", "value": 50 }
+        ],
+        "minMoney": 0,
+        "maxMoney": 0,
+        "affinityConditions": [],
+        "requiredEventIds": [],
+        "excludedEventIds": [],
+        "minDarkness": 0,
+        "triggerBehavior": "",
+        "phase": "RoundEnd"
+      },
+      "dialogues": [
+        {
+          "speaker": "班主任",
+          "lines": [
+            "恭喜你！你的学习成绩优秀，获得了本学期的奖学金。",
+            "希望你再接再厉，继续保持！"
+          ],
+          "portraitId": ""
+        }
+      ],
+      "choices": [],
+      "defaultEffects": [
+        { "type": "money", "target": "", "value": 2000, "description": "金钱 +2000" },
+        { "type": "attribute", "target": "心情", "value": 15, "description": "心情 +15" },
+        { "type": "flag", "target": "scholarship_received", "value": 1, "description": "获得奖学金标记" }
+      ],
+      "chainEventIds": []
+    }
+  ]
+}

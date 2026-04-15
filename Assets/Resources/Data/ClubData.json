@@ -1,0 +1,310 @@
+{
+    "clubs": [
+        {
+            "id": "running_club",
+            "name": "跑协",
+            "category": "体育",
+            "primaryAttribute": "体魄",
+            "npcId": "npc_running_leader",
+            "eventChainIds": ["evt_run_01", "evt_run_02", "evt_run_03", "evt_run_04", "evt_run_05"],
+            "minigameType": "rhythm_run",
+            "occupiesSlot": true,
+            "isOfficial": false,
+            "activityAPCost": 2,
+            "activityMoneyCost": 20,
+            "activityEffects": [
+                { "attributeName": "体魄", "amount": 8 },
+                { "attributeName": "心情", "amount": 3 },
+                { "attributeName": "压力", "amount": -5 }
+            ],
+            "promotionPath": "standard",
+            "joinRequirements": []
+        },
+        {
+            "id": "basketball_club",
+            "name": "篮球社",
+            "category": "体育",
+            "primaryAttribute": "体魄",
+            "npcId": "npc_basketball_leader",
+            "eventChainIds": ["evt_bball_01", "evt_bball_02", "evt_bball_03", "evt_bball_04", "evt_bball_05"],
+            "minigameType": "basketball_shoot",
+            "occupiesSlot": true,
+            "isOfficial": false,
+            "activityAPCost": 2,
+            "activityMoneyCost": 30,
+            "activityEffects": [
+                { "attributeName": "体魄", "amount": 6 },
+                { "attributeName": "魅力", "amount": 3 },
+                { "attributeName": "压力", "amount": -3 }
+            ],
+            "promotionPath": "standard",
+            "joinRequirements": [
+                { "attributeName": "体魄", "minValue": 80, "logic": "AND" }
+            ]
+        },
+        {
+            "id": "guitar_club",
+            "name": "吉他社",
+            "category": "文艺",
+            "primaryAttribute": "魅力",
+            "npcId": "npc_guitar_leader",
+            "eventChainIds": ["evt_guitar_01", "evt_guitar_02", "evt_guitar_03", "evt_guitar_04", "evt_guitar_05"],
+            "minigameType": "rhythm_play",
+            "occupiesSlot": true,
+            "isOfficial": false,
+            "activityAPCost": 2,
+            "activityMoneyCost": 50,
+            "activityEffects": [
+                { "attributeName": "魅力", "amount": 5 },
+                { "attributeName": "心情", "amount": 8 },
+                { "attributeName": "压力", "amount": -3 }
+            ],
+            "promotionPath": "standard",
+            "joinRequirements": []
+        },
+        {
+            "id": "debate_club",
+            "name": "辩论社",
+            "category": "学术",
+            "primaryAttribute": "学力",
+            "npcId": "npc_debate_leader",
+            "eventChainIds": ["evt_debate_01", "evt_debate_02", "evt_debate_03", "evt_debate_04", "evt_debate_05"],
+            "minigameType": "debate_duel",
+            "occupiesSlot": true,
+            "isOfficial": false,
+            "activityAPCost": 2,
+            "activityMoneyCost": 0,
+            "activityEffects": [
+                { "attributeName": "学力", "amount": 6 },
+                { "attributeName": "领导力", "amount": 3 },
+                { "attributeName": "压力", "amount": 2 }
+            ],
+            "promotionPath": "standard",
+            "joinRequirements": [
+                { "attributeName": "学力", "minValue": 90, "logic": "AND" }
+            ]
+        },
+        {
+            "id": "volunteer_club",
+            "name": "青协",
+            "category": "志愿",
+            "primaryAttribute": "魅力",
+            "npcId": "npc_volunteer_leader",
+            "eventChainIds": ["evt_vol_01", "evt_vol_02", "evt_vol_03", "evt_vol_04", "evt_vol_05"],
+            "minigameType": "volunteer_service",
+            "occupiesSlot": true,
+            "isOfficial": false,
+            "activityAPCost": 2,
+            "activityMoneyCost": 0,
+            "activityEffects": [
+                { "attributeName": "魅力", "amount": 4 },
+                { "attributeName": "领导力", "amount": 3 },
+                { "attributeName": "心情", "amount": 2 }
+            ],
+            "promotionPath": "standard",
+            "joinRequirements": []
+        },
+        {
+            "id": "student_union",
+            "name": "学生会",
+            "category": "官方组织",
+            "primaryAttribute": "领导力",
+            "npcId": "npc_su_president",
+            "eventChainIds": ["evt_su_01", "evt_su_02", "evt_su_03", "evt_su_04", "evt_su_05"],
+            "minigameType": "meeting_decision",
+            "occupiesSlot": true,
+            "isOfficial": false,
+            "activityAPCost": 2,
+            "activityMoneyCost": 0,
+            "activityEffects": [
+                { "attributeName": "领导力", "amount": 5 },
+                { "attributeName": "魅力", "amount": 2 },
+                { "attributeName": "压力", "amount": 5 }
+            ],
+            "promotionPath": "student_union",
+            "joinRequirements": [
+                { "attributeName": "魅力", "minValue": 90, "logic": "OR" },
+                { "attributeName": "领导力", "minValue": 60, "logic": "OR" }
+            ]
+        },
+        {
+            "id": "anime_club",
+            "name": "动漫社",
+            "category": "兴趣",
+            "primaryAttribute": "魅力",
+            "npcId": "npc_anime_leader",
+            "eventChainIds": ["evt_anime_01", "evt_anime_02", "evt_anime_03", "evt_anime_04", "evt_anime_05"],
+            "minigameType": "cosplay",
+            "occupiesSlot": true,
+            "isOfficial": false,
+            "activityAPCost": 2,
+            "activityMoneyCost": 30,
+            "activityEffects": [
+                { "attributeName": "魅力", "amount": 3 },
+                { "attributeName": "心情", "amount": 10 },
+                { "attributeName": "压力", "amount": -5 }
+            ],
+            "promotionPath": "standard",
+            "joinRequirements": []
+        },
+        {
+            "id": "youth_league",
+            "name": "校团委",
+            "category": "官方组织",
+            "primaryAttribute": "领导力",
+            "npcId": "npc_yl_secretary",
+            "eventChainIds": ["evt_yl_01", "evt_yl_02", "evt_yl_03", "evt_yl_04", "evt_yl_05"],
+            "minigameType": "",
+            "occupiesSlot": false,
+            "isOfficial": true,
+            "activityAPCost": 2,
+            "activityMoneyCost": 0,
+            "activityEffects": [
+                { "attributeName": "领导力", "amount": 5 },
+                { "attributeName": "学力", "amount": 2 },
+                { "attributeName": "压力", "amount": 3 }
+            ],
+            "promotionPath": "youth_league",
+            "joinRequirements": [
+                { "attributeName": "领导力", "minValue": 50, "logic": "AND" }
+            ]
+        },
+        {
+            "id": "party_class",
+            "name": "党建班",
+            "category": "官方组织",
+            "primaryAttribute": "领导力",
+            "npcId": "npc_party_instructor",
+            "eventChainIds": ["evt_party_01", "evt_party_02", "evt_party_03", "evt_party_04", "evt_party_05"],
+            "minigameType": "",
+            "occupiesSlot": false,
+            "isOfficial": true,
+            "activityAPCost": 2,
+            "activityMoneyCost": 0,
+            "activityEffects": [
+                { "attributeName": "领导力", "amount": 4 },
+                { "attributeName": "学力", "amount": 3 },
+                { "attributeName": "压力", "amount": 2 }
+            ],
+            "promotionPath": "standard",
+            "joinRequirements": [
+                { "attributeName": "领导力", "minValue": 40, "logic": "AND" },
+                { "attributeName": "学力", "minValue": 40, "logic": "AND" }
+            ]
+        }
+    ],
+    "promotionPaths": [
+        {
+            "pathName": "standard",
+            "ranks": [
+                {
+                    "rank": 0,
+                    "title": "干事",
+                    "apCost": 0,
+                    "requiredRounds": 0,
+                    "requiredAttributes": []
+                },
+                {
+                    "rank": 1,
+                    "title": "部长",
+                    "apCost": 1,
+                    "requiredRounds": 10,
+                    "requiredAttributes": [
+                        { "attributeName": "领导力", "minValue": 30 }
+                    ]
+                },
+                {
+                    "rank": 2,
+                    "title": "社长",
+                    "apCost": 2,
+                    "requiredRounds": 25,
+                    "requiredAttributes": [
+                        { "attributeName": "领导力", "minValue": 50 }
+                    ]
+                }
+            ]
+        },
+        {
+            "pathName": "student_union",
+            "ranks": [
+                {
+                    "rank": 0,
+                    "title": "干事",
+                    "apCost": 0,
+                    "requiredRounds": 0,
+                    "requiredAttributes": []
+                },
+                {
+                    "rank": 1,
+                    "title": "部长",
+                    "apCost": 3,
+                    "requiredRounds": 10,
+                    "requiredAttributes": [
+                        { "attributeName": "领导力", "minValue": 40 }
+                    ]
+                },
+                {
+                    "rank": 2,
+                    "title": "副主席",
+                    "apCost": 4,
+                    "requiredRounds": 25,
+                    "requiredAttributes": [
+                        { "attributeName": "领导力", "minValue": 60 }
+                    ]
+                },
+                {
+                    "rank": 3,
+                    "title": "主席",
+                    "apCost": 5,
+                    "requiredRounds": 40,
+                    "requiredAttributes": [
+                        { "attributeName": "领导力", "minValue": 80 }
+                    ]
+                }
+            ]
+        },
+        {
+            "pathName": "youth_league",
+            "ranks": [
+                {
+                    "rank": 0,
+                    "title": "干事",
+                    "apCost": 2,
+                    "requiredRounds": 0,
+                    "requiredAttributes": []
+                },
+                {
+                    "rank": 1,
+                    "title": "部长",
+                    "apCost": 3,
+                    "requiredRounds": 10,
+                    "requiredAttributes": [
+                        { "attributeName": "领导力", "minValue": 40 }
+                    ]
+                },
+                {
+                    "rank": 2,
+                    "title": "副书记",
+                    "apCost": 4,
+                    "requiredRounds": 25,
+                    "requiredAttributes": [
+                        { "attributeName": "领导力", "minValue": 60 }
+                    ]
+                }
+            ]
+        }
+    ],
+    "partyMembershipStages": [
+        { "stage": 0, "name": "未申请", "requiredRound": 0 },
+        { "stage": 1, "name": "已提交申请", "requiredRound": 2 },
+        { "stage": 2, "name": "入党积极分子", "requiredRound": 4 },
+        { "stage": 3, "name": "发展对象", "requiredRound": 8 },
+        { "stage": 4, "name": "预备党员", "requiredRound": 12 },
+        { "stage": 5, "name": "正式党员", "requiredRound": 16 }
+    ],
+    "partyRequirements": {
+        "minLeadership": 60,
+        "minStudy": 60,
+        "noDisciplinaryRecord": true
+    }
+}

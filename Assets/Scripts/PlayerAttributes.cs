@@ -4,7 +4,7 @@ using System;
 /// <summary>
 /// 玩家属性数据类 —— 管理学力、魅力、体魄、领导力、压力、心情等角色属性
 /// </summary>
-public class PlayerAttributes : MonoBehaviour
+public class PlayerAttributes : MonoBehaviour, ISaveable
 {
     // ========== 单例 ==========
     public static PlayerAttributes Instance { get; private set; }
@@ -53,6 +53,11 @@ public class PlayerAttributes : MonoBehaviour
     [SerializeField] private int stress = 20;      // 压力
     [SerializeField] private int mood = 70;        // 心情
 
+    [Header("隐性属性")]
+    [SerializeField] private int darkness = 0;       // 黑暗值
+    [SerializeField] private int guilt = 0;          // 负罪感
+    [SerializeField] private int luck = 50;          // 幸运
+
     // ========== 属性颜色定义 ==========
     private static readonly Color ColorStudy      = new Color(0.30f, 0.60f, 1.00f); // 蓝色 - 学力
     private static readonly Color ColorCharm      = new Color(1.00f, 0.45f, 0.65f); // 粉色 - 魅力
@@ -60,6 +65,9 @@ public class PlayerAttributes : MonoBehaviour
     private static readonly Color ColorLeadership = new Color(1.00f, 0.75f, 0.20f); // 金色 - 领导力
     private static readonly Color ColorStress     = new Color(0.90f, 0.30f, 0.30f); // 红色 - 压力
     private static readonly Color ColorMood       = new Color(0.55f, 0.85f, 0.95f); // 天蓝 - 心情
+    private static readonly Color ColorDarkness   = new Color(0.40f, 0.10f, 0.50f); // 紫色 - 黑暗值
+    private static readonly Color ColorGuilt      = new Color(0.50f, 0.50f, 0.50f); // 灰色 - 负罪感
+    private static readonly Color ColorLuck       = new Color(1.00f, 0.90f, 0.30f); // 金色 - 幸运
 
     // ========== 属性访问器 ==========
 
@@ -99,6 +107,24 @@ public class PlayerAttributes : MonoBehaviour
         set { mood = Mathf.Clamp(value, 0, MaxStatusValue); NotifyChanged(); }
     }
 
+    public int Darkness
+    {
+        get => darkness;
+        set { darkness = Mathf.Max(0, value); NotifyChanged(); }
+    }
+
+    public int Guilt
+    {
+        get => guilt;
+        set { guilt = Mathf.Clamp(value, 0, MaxStatusValue); NotifyChanged(); }
+    }
+
+    public int Luck
+    {
+        get => luck;
+        set { luck = Mathf.Clamp(value, 0, MaxStatusValue); NotifyChanged(); }
+    }
+
     // ========== 便捷方法 ==========
 
     /// <summary>
@@ -129,6 +155,9 @@ public class PlayerAttributes : MonoBehaviour
             case "领导力": Leadership += amount; break;
             case "压力":   Stress += amount; break;
             case "心情":   Mood += amount; break;
+            case "黑暗值": Darkness += amount; break;
+            case "负罪感": Guilt += amount; break;
+            case "幸运":   Luck += amount; break;
             default:
                 Debug.LogWarning($"[PlayerAttributes] 未知属性名: {attrName}");
                 break;
@@ -151,5 +180,52 @@ public class PlayerAttributes : MonoBehaviour
     private void NotifyChanged()
     {
         OnAttributesChanged?.Invoke();
+    }
+
+    // ========== ISaveable 实现 ==========
+
+    /// <summary>将玩家属性写入存档数据</summary>
+    public void SaveToData(SaveData data)
+    {
+        data.study = study;
+        data.charm = charm;
+        data.physique = physique;
+        data.leadership = leadership;
+        data.stress = stress;
+        data.mood = mood;
+        data.darkness = darkness;
+        data.guilt = guilt;
+        data.luck = luck;
+    }
+
+    /// <summary>从存档数据恢复玩家属性</summary>
+    public void LoadFromData(SaveData data)
+    {
+        study = data.study;
+        charm = data.charm;
+        physique = data.physique;
+        leadership = data.leadership;
+        stress = data.stress;
+        mood = data.mood;
+        darkness = data.darkness;
+        guilt = data.guilt;
+        luck = data.luck;
+        NotifyChanged();
+    }
+
+    /// <summary>批量设置所有属性（供调试工具使用）</summary>
+    public void SetAll(int study, int charm, int physique, int leadership, int stress, int mood,
+                       int darkness = -1, int guilt = -1, int luck = -1)
+    {
+        this.study = Mathf.Max(0, study);
+        this.charm = Mathf.Max(0, charm);
+        this.physique = Mathf.Max(0, physique);
+        this.leadership = Mathf.Max(0, leadership);
+        this.stress = Mathf.Clamp(stress, 0, MaxStatusValue);
+        this.mood = Mathf.Clamp(mood, 0, MaxStatusValue);
+        if (darkness >= 0) this.darkness = Mathf.Max(0, darkness);
+        if (guilt >= 0) this.guilt = Mathf.Clamp(guilt, 0, MaxStatusValue);
+        if (luck >= 0) this.luck = Mathf.Clamp(luck, 0, MaxStatusValue);
+        NotifyChanged();
     }
 }

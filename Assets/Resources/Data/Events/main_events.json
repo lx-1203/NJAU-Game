@@ -1,0 +1,134 @@
+{
+  "events": [
+    {
+      "id": "ME_001",
+      "eventType": "MainStory",
+      "title": "军训开始",
+      "description": "大一新生军训正式开始，教官严格训练每一位新生。",
+      "priority": 1,
+      "isForced": true,
+      "isRepeatable": false,
+      "trigger": {
+        "year": 1,
+        "semester": 1,
+        "roundMin": 1,
+        "roundMax": 1,
+        "attributeConditions": [],
+        "minMoney": 0,
+        "maxMoney": 0,
+        "affinityConditions": [],
+        "requiredEventIds": [],
+        "excludedEventIds": [],
+        "minDarkness": 0,
+        "triggerBehavior": "",
+        "phase": "RoundStart"
+      },
+      "dialogues": [
+        {
+          "speaker": "教官",
+          "lines": [
+            "同学们，从今天开始进行为期两周的军训！",
+            "请做好吃苦的准备，我不会对任何人手软。"
+          ],
+          "portraitId": ""
+        },
+        {
+          "speaker": "旁白",
+          "lines": [
+            "烈日下，你和同学们站成整齐的方阵...",
+            "你该如何度过这段时光？"
+          ],
+          "portraitId": ""
+        }
+      ],
+      "choices": [
+        {
+          "text": "认真训练",
+          "effects": [
+            { "type": "attribute", "target": "体魄", "value": 5, "description": "体魄 +5" },
+            { "type": "attribute", "target": "压力", "value": 10, "description": "压力 +10" },
+            { "type": "attribute", "target": "领导力", "value": 2, "description": "领导力 +2" }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "摸鱼划水",
+          "effects": [
+            { "type": "attribute", "target": "心情", "value": 5, "description": "心情 +5" },
+            { "type": "attribute", "target": "压力", "value": -5, "description": "压力 -5" }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        }
+      ],
+      "defaultEffects": [],
+      "chainEventIds": []
+    },
+    {
+      "id": "ME_002",
+      "eventType": "MainStory",
+      "title": "班委竞选",
+      "description": "新学期的班委竞选开始了，你要参加吗？",
+      "priority": 1,
+      "isForced": true,
+      "isRepeatable": false,
+      "trigger": {
+        "year": 1,
+        "semester": 1,
+        "roundMin": 5,
+        "roundMax": 5,
+        "attributeConditions": [],
+        "minMoney": 0,
+        "maxMoney": 0,
+        "affinityConditions": [],
+        "requiredEventIds": [],
+        "excludedEventIds": [],
+        "minDarkness": 0,
+        "triggerBehavior": "",
+        "phase": "RoundStart"
+      },
+      "dialogues": [
+        {
+          "speaker": "班主任",
+          "lines": [
+            "同学们，新学期的班委竞选即将开始。",
+            "有意向的同学可以报名参加。"
+          ],
+          "portraitId": ""
+        }
+      ],
+      "choices": [
+        {
+          "text": "积极参选",
+          "effects": [
+            { "type": "attribute", "target": "领导力", "value": 5, "description": "领导力 +5" },
+            { "type": "attribute", "target": "魅力", "value": 3, "description": "魅力 +3" },
+            { "type": "attribute", "target": "压力", "value": 8, "description": "压力 +8" }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "保持低调",
+          "effects": [
+            { "type": "attribute", "target": "心情", "value": 3, "description": "心情 +3" }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "帮朋友拉票",
+          "effects": [
+            { "type": "attribute", "target": "魅力", "value": 2, "description": "魅力 +2" },
+            { "type": "attribute", "target": "领导力", "value": 1, "description": "领导力 +1" }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        }
+      ],
+      "defaultEffects": [],
+      "chainEventIds": []
+    }
+  ]
+}

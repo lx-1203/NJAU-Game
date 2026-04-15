@@ -243,24 +243,31 @@ public class TitleScreenManager : MonoBehaviour
         rt.anchorMax = new Vector2(0.5f, 0.12f);
         rt.pivot = new Vector2(0.5f, 0.5f);
         rt.anchoredPosition = Vector2.zero;
-        rt.sizeDelta = new Vector2(800, 64);
+        rt.sizeDelta = new Vector2(800, 80);
 
         hintText = hintGO.AddComponent<TextMeshProUGUI>();
         hintText.text = hintMessage;
-        hintText.fontSize = 28;
+        hintText.fontSize = 36;
         hintText.color = new Color(textColor.r, textColor.g, textColor.b, 0.8f);
         hintText.alignment = TextAlignmentOptions.Center;
         hintText.raycastTarget = false;
 
-        // TMP 描边 + 阴影
-        hintText.outlineWidth = 0.2f;
-        hintText.outlineColor = new Color32(0, 0, 0, 180);
+        // 先应用中文字体（确保在材质操作之前完成字体设置）
+        if (FontManager.Instance != null && FontManager.Instance.ChineseFont != null)
+        {
+            hintText.font = FontManager.Instance.ChineseFont;
+        }
+
+        // TMP 描边 + 阴影 — 使用实例化材质避免共享材质污染
+        hintText.fontMaterial = new Material(hintText.fontMaterial);
+        hintText.outlineWidth = 0.15f;
+        hintText.outlineColor = new Color32(0, 0, 0, 160);
         hintText.fontMaterial.EnableKeyword("UNDERLAY_ON");
-        hintText.fontMaterial.SetColor("_UnderlayColor", new Color(0f, 0f, 0f, 0.7f));
-        hintText.fontMaterial.SetFloat("_UnderlayOffsetX", 0.8f);
-        hintText.fontMaterial.SetFloat("_UnderlayOffsetY", -0.8f);
-        hintText.fontMaterial.SetFloat("_UnderlayDilate", 0.2f);
-        hintText.fontMaterial.SetFloat("_UnderlaySoftness", 0.15f);
+        hintText.fontMaterial.SetColor("_UnderlayColor", new Color(0f, 0f, 0f, 0.5f));
+        hintText.fontMaterial.SetFloat("_UnderlayOffsetX", 0.6f);
+        hintText.fontMaterial.SetFloat("_UnderlayOffsetY", -0.6f);
+        hintText.fontMaterial.SetFloat("_UnderlayDilate", 0.1f);
+        hintText.fontMaterial.SetFloat("_UnderlaySoftness", 0.08f);
     }
 
     private void CreateMenuOverlay()
@@ -388,15 +395,16 @@ public class TitleScreenManager : MonoBehaviour
             txt.color = new Color(0.9f, 0.9f, 0.95f, 0.9f);
             txt.raycastTarget = false;
 
-            // TMP 图标文字描边+阴影
-            txt.outlineWidth = 0.2f;
-            txt.outlineColor = new Color32(0, 0, 0, 180);
+            // TMP 图标文字描边+阴影 — 实例化材质避免共享污染
+            txt.fontMaterial = new Material(txt.fontMaterial);
+            txt.outlineWidth = 0.15f;
+            txt.outlineColor = new Color32(0, 0, 0, 160);
             txt.fontMaterial.EnableKeyword("UNDERLAY_ON");
-            txt.fontMaterial.SetColor("_UnderlayColor", new Color(0f, 0f, 0f, 0.7f));
-            txt.fontMaterial.SetFloat("_UnderlayOffsetX", 0.8f);
-            txt.fontMaterial.SetFloat("_UnderlayOffsetY", -0.8f);
-            txt.fontMaterial.SetFloat("_UnderlayDilate", 0.2f);
-            txt.fontMaterial.SetFloat("_UnderlaySoftness", 0.1f);
+            txt.fontMaterial.SetColor("_UnderlayColor", new Color(0f, 0f, 0f, 0.5f));
+            txt.fontMaterial.SetFloat("_UnderlayOffsetX", 0.6f);
+            txt.fontMaterial.SetFloat("_UnderlayOffsetY", -0.6f);
+            txt.fontMaterial.SetFloat("_UnderlayDilate", 0.1f);
+            txt.fontMaterial.SetFloat("_UnderlaySoftness", 0.08f);
 
             int captured = idx;
             btn.onClick.AddListener(() => OnTopIconClicked(captured, tooltips[captured]));
@@ -411,7 +419,21 @@ public class TitleScreenManager : MonoBehaviour
 
     private void OnTopIconClicked(int index, string name)
     {
-        Debug.Log($"[TitleScreen] 点击右上角：{name}（功能待接入）");
+        switch (index)
+        {
+            case 1: // 成就回顾
+                // 确保 AchievementUI 实例存在
+                if (AchievementUI.Instance == null)
+                {
+                    GameObject obj = new GameObject("AchievementUI");
+                    obj.AddComponent<AchievementUI>();
+                }
+                AchievementUI.Instance.ShowReviewPanel();
+                return;
+            default:
+                Debug.Log($"[TitleScreen] 点击右上角：{name}（功能待接入）");
+                break;
+        }
     }
 
     /// <summary>
@@ -516,16 +538,17 @@ public class TitleScreenManager : MonoBehaviour
         txt.raycastTarget = false;
 
         // TMP 描边（Outline）— 通过 materialForRendering 设置
-        txt.outlineWidth = 0.25f;
-        txt.outlineColor = new Color32(0, 0, 0, 200);
+        txt.outlineWidth = 0.2f;
+        txt.outlineColor = new Color32(0, 0, 0, 180);
 
-        // TMP 字体材质阴影（Underlay）
+        // TMP 字体材质阴影（Underlay）— 实例化材质避免共享污染
+        txt.fontMaterial = new Material(txt.fontMaterial);
         txt.fontMaterial.EnableKeyword("UNDERLAY_ON");
-        txt.fontMaterial.SetColor("_UnderlayColor", new Color(0f, 0f, 0f, 0.8f));
-        txt.fontMaterial.SetFloat("_UnderlayOffsetX", 1.0f);
-        txt.fontMaterial.SetFloat("_UnderlayOffsetY", -1.0f);
-        txt.fontMaterial.SetFloat("_UnderlayDilate", 0.3f);
-        txt.fontMaterial.SetFloat("_UnderlaySoftness", 0.2f);
+        txt.fontMaterial.SetColor("_UnderlayColor", new Color(0f, 0f, 0f, 0.6f));
+        txt.fontMaterial.SetFloat("_UnderlayOffsetX", 0.8f);
+        txt.fontMaterial.SetFloat("_UnderlayOffsetY", -0.8f);
+        txt.fontMaterial.SetFloat("_UnderlayDilate", 0.2f);
+        txt.fontMaterial.SetFloat("_UnderlaySoftness", 0.15f);
 
         // 底部细分割线
         GameObject lineGO = CreateUIElement("Line", rt);
@@ -546,7 +569,7 @@ public class TitleScreenManager : MonoBehaviour
 
     private void OnLoadGame()
     {
-        Debug.Log("[TitleScreen] 载入游戏（功能待接入）");
+        SaveLoadUI.Show(false);
     }
 
     private void CreateSettingsPanel(RectTransform parent)
@@ -711,10 +734,23 @@ public class TitleScreenManager : MonoBehaviour
     {
         Debug.Log("[TitleScreen] 点击继续游戏");
 
-        if (continueGameStartsGame)
+        if (SaveManager.Instance != null && SaveManager.Instance.HasSaveData(0))
         {
-            Debug.Log("[TitleScreen] 继续游戏暂未接入存档，先进入游戏场景");
-            StartGame();
+            SaveData data = SaveManager.Instance.LoadFromSlot(0);
+            if (data != null)
+            {
+                SaveManager.PendingLoadData = data;
+                Debug.Log("[TitleScreen] 已加载自动存档，准备进入游戏");
+                StartGame();
+            }
+            else
+            {
+                Debug.LogWarning("[TitleScreen] 自动存档读取失败");
+            }
+        }
+        else
+        {
+            Debug.Log("[TitleScreen] 无自动存档");
         }
     }
 

@@ -1,0 +1,230 @@
+{
+  "npcs": [
+    {
+      "id": "NPC_RoommateA",
+      "displayName": "林知秋",
+      "type": "Roommate",
+      "personality": "Introvert",
+      "description": "你的室友，安静的学霸，总是埋头看书。话不多但很靠谱。",
+      "portraitId": "NPC_RoommateA",
+      "likedActionIds": ["deep_talk", "study_together", "help"],
+      "dislikedActionIds": ["go_party", "karaoke"],
+      "schedule": [
+        { "timeSlot": "Morning",   "location": "图书馆" },
+        { "timeSlot": "Afternoon", "location": "教室" },
+        { "timeSlot": "Evening",   "location": "宿舍" }
+      ],
+      "greetingLines": [
+        "……嗯？你找我有事吗？",
+        "（她从书本后抬起头）啊，是你。",
+        "安静点比较好……不过你来了也行。"
+      ]
+    },
+    {
+      "id": "NPC_RoommateB",
+      "displayName": "苏小晴",
+      "type": "Roommate",
+      "personality": "Extrovert",
+      "description": "你的室友，社交达人，活泼外向，认识全校的人。",
+      "portraitId": "NPC_RoommateB",
+      "likedActionIds": ["chat", "eat_together", "go_party", "karaoke"],
+      "dislikedActionIds": ["deep_talk"],
+      "schedule": [
+        { "timeSlot": "Morning",   "location": "食堂" },
+        { "timeSlot": "Afternoon", "location": "社团活动室" },
+        { "timeSlot": "Evening",   "location": "宿舍" }
+      ],
+      "greetingLines": [
+        "嘿！你来啦！今天有什么计划？",
+        "走走走，一起去吃饭呀～",
+        "我跟你说个八卦！超级劲爆的那种！"
+      ]
+    },
+    {
+      "id": "NPC_RoommateC",
+      "displayName": "周然",
+      "type": "Roommate",
+      "personality": "Easygoing",
+      "description": "你的室友，佛系青年，万事随缘，打游戏睡觉两不误。",
+      "portraitId": "NPC_RoommateC",
+      "likedActionIds": ["eat_together", "hang_out", "chat"],
+      "dislikedActionIds": ["study_together"],
+      "schedule": [
+        { "timeSlot": "Morning",   "location": "宿舍" },
+        { "timeSlot": "Afternoon", "location": "操场" },
+        { "timeSlot": "Evening",   "location": "宿舍" }
+      ],
+      "greetingLines": [
+        "哟，来了。坐，随便坐。",
+        "（打了个哈欠）今天也是平和的一天呢。",
+        "有啥事儿？没事儿就一起摸鱼吧。"
+      ]
+    },
+    {
+      "id": "NPC_Senior",
+      "displayName": "谢凌云",
+      "type": "Senior",
+      "personality": "Mysterious",
+      "description": "传说中的全能学长/学姐，成绩优异、社交广泛，却总是神出鬼没。",
+      "portraitId": "NPC_Senior",
+      "likedActionIds": ["deep_talk", "help", "give_gift"],
+      "dislikedActionIds": ["greet"],
+      "schedule": [
+        { "timeSlot": "Morning",   "location": "实验室" },
+        { "timeSlot": "Afternoon", "location": "图书馆" },
+        { "timeSlot": "Evening",   "location": "校门口" }
+      ],
+      "greetingLines": [
+        "你……倒是挺有眼缘的。",
+        "（微微一笑）又见面了，缘分呐。",
+        "时间不多，有话直说吧。"
+      ]
+    }
+  ],
+  "socialActions": [
+    {
+      "id": "greet",
+      "displayName": "打招呼",
+      "actionPointCost": 1,
+      "moneyCost": 0,
+      "minAffinityLevel": "Stranger",
+      "baseAffinityMin": 3,
+      "baseAffinityMax": 5,
+      "attributeEffects": [
+        { "attributeName": "心情", "amount": 2 }
+      ]
+    },
+    {
+      "id": "chat",
+      "displayName": "聊天",
+      "actionPointCost": 2,
+      "moneyCost": 0,
+      "minAffinityLevel": "Stranger",
+      "baseAffinityMin": 5,
+      "baseAffinityMax": 8,
+      "attributeEffects": [
+        { "attributeName": "魅力", "amount": 1 },
+        { "attributeName": "心情", "amount": 5 }
+      ]
+    },
+    {
+      "id": "eat_together",
+      "displayName": "一起吃饭",
+      "actionPointCost": 2,
+      "moneyCost": 30,
+      "minAffinityLevel": "Acquaintance",
+      "baseAffinityMin": 5,
+      "baseAffinityMax": 10,
+      "attributeEffects": [
+        { "attributeName": "魅力", "amount": 1 },
+        { "attributeName": "心情", "amount": 8 }
+      ]
+    },
+    {
+      "id": "give_gift",
+      "displayName": "赠送礼物",
+      "actionPointCost": 1,
+      "moneyCost": 100,
+      "minAffinityLevel": "Acquaintance",
+      "baseAffinityMin": 8,
+      "baseAffinityMax": 15,
+      "attributeEffects": [
+        { "attributeName": "魅力", "amount": 2 }
+      ]
+    },
+    {
+      "id": "help",
+      "displayName": "帮助",
+      "actionPointCost": 3,
+      "moneyCost": 0,
+      "minAffinityLevel": "Friend",
+      "baseAffinityMin": 10,
+      "baseAffinityMax": 15,
+      "attributeEffects": [
+        { "attributeName": "领导力", "amount": 2 },
+        { "attributeName": "心情", "amount": 5 }
+      ]
+    },
+    {
+      "id": "hang_out",
+      "displayName": "约出去玩",
+      "actionPointCost": 3,
+      "moneyCost": 80,
+      "minAffinityLevel": "Friend",
+      "baseAffinityMin": 10,
+      "baseAffinityMax": 20,
+      "attributeEffects": [
+        { "attributeName": "魅力", "amount": 2 },
+        { "attributeName": "心情", "amount": 10 },
+        { "attributeName": "压力", "amount": -5 }
+      ]
+    },
+    {
+      "id": "deep_talk",
+      "displayName": "深度交谈",
+      "actionPointCost": 3,
+      "moneyCost": 0,
+      "minAffinityLevel": "CloseFriend",
+      "baseAffinityMin": 8,
+      "baseAffinityMax": 12,
+      "attributeEffects": [
+        { "attributeName": "魅力", "amount": 1 },
+        { "attributeName": "领导力", "amount": 1 },
+        { "attributeName": "心情", "amount": 6 }
+      ]
+    },
+    {
+      "id": "study_together",
+      "displayName": "一起自习",
+      "actionPointCost": 2,
+      "moneyCost": 0,
+      "minAffinityLevel": "Acquaintance",
+      "baseAffinityMin": 4,
+      "baseAffinityMax": 8,
+      "attributeEffects": [
+        { "attributeName": "学力", "amount": 2 },
+        { "attributeName": "压力", "amount": 3 }
+      ]
+    },
+    {
+      "id": "go_party",
+      "displayName": "一起参加活动",
+      "actionPointCost": 2,
+      "moneyCost": 50,
+      "minAffinityLevel": "Friend",
+      "baseAffinityMin": 6,
+      "baseAffinityMax": 12,
+      "attributeEffects": [
+        { "attributeName": "魅力", "amount": 2 },
+        { "attributeName": "领导力", "amount": 1 },
+        { "attributeName": "心情", "amount": 8 }
+      ]
+    },
+    {
+      "id": "karaoke",
+      "displayName": "一起唱歌",
+      "actionPointCost": 2,
+      "moneyCost": 60,
+      "minAffinityLevel": "Friend",
+      "baseAffinityMin": 7,
+      "baseAffinityMax": 14,
+      "attributeEffects": [
+        { "attributeName": "心情", "amount": 12 },
+        { "attributeName": "压力", "amount": -8 }
+      ]
+    },
+    {
+      "id": "encourage",
+      "displayName": "鼓励",
+      "actionPointCost": 1,
+      "moneyCost": 0,
+      "minAffinityLevel": "Friend",
+      "baseAffinityMin": 4,
+      "baseAffinityMax": 8,
+      "attributeEffects": [
+        { "attributeName": "心情", "amount": 5 },
+        { "attributeName": "领导力", "amount": 1 }
+      ]
+    }
+  ]
+}

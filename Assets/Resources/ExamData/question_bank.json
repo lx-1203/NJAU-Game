@@ -1,0 +1,1809 @@
+{
+    "questionGroups": [
+        {
+            "subjectTag": "math",
+            "questions": [
+                {
+                    "question": "2 + 3 × 4 = ?",
+                    "options": ["20", "14", "24", "12"],
+                    "correctIndex": 1,
+                    "subjectTag": "math"
+                },
+                {
+                    "question": "一个三角形三个内角之和是多少度？",
+                    "options": ["90°", "270°", "180°", "360°"],
+                    "correctIndex": 2,
+                    "subjectTag": "math"
+                },
+                {
+                    "question": "3的平方等于多少？",
+                    "options": ["6", "9", "12", "27"],
+                    "correctIndex": 1,
+                    "subjectTag": "math"
+                }
+            ]
+        },
+        {
+            "subjectTag": "math",
+            "questions": [
+                {
+                    "question": "1/2 + 1/4 = ?",
+                    "options": ["1/6", "2/6", "3/4", "1/8"],
+                    "correctIndex": 2,
+                    "subjectTag": "math"
+                },
+                {
+                    "question": "圆的面积公式是？",
+                    "options": ["2πr", "πr²", "πd", "2πr²"],
+                    "correctIndex": 1,
+                    "subjectTag": "math"
+                },
+                {
+                    "question": "解方程 2x + 6 = 10，x = ?",
+                    "options": ["1", "3", "2", "8"],
+                    "correctIndex": 2,
+                    "subjectTag": "math"
+                }
+            ]
+        },
+        {
+            "subjectTag": "math",
+            "questions": [
+                {
+                    "question": "|-5| 等于多少？",
+                    "options": ["-5", "0", "5", "25"],
+                    "correctIndex": 2,
+                    "subjectTag": "math"
+                },
+                {
+                    "question": "长方形的周长公式是？",
+                    "options": ["a × b", "2(a + b)", "a + b", "4a"],
+                    "correctIndex": 1,
+                    "subjectTag": "math"
+                },
+                {
+                    "question": "100的平方根是多少？",
+                    "options": ["50", "25", "1000", "10"],
+                    "correctIndex": 3,
+                    "subjectTag": "math"
+                }
+            ]
+        },
+        {
+            "subjectTag": "math",
+            "questions": [
+                {
+                    "question": "0.1 + 0.2 = ?",
+                    "options": ["0.__(编程梗)", "0.12", "0.3", "0.02"],
+                    "correctIndex": 2,
+                    "subjectTag": "math"
+                },
+                {
+                    "question": "一打是多少个？",
+                    "options": ["10", "12", "24", "6"],
+                    "correctIndex": 1,
+                    "subjectTag": "math"
+                },
+                {
+                    "question": "如果 x² = 16，那么 x 可以等于？",
+                    "options": ["2", "8", "4", "6"],
+                    "correctIndex": 2,
+                    "subjectTag": "math"
+                }
+            ]
+        },
+        {
+            "subjectTag": "math",
+            "questions": [
+                {
+                    "question": "15% 化成小数是多少？",
+                    "options": ["1.5", "0.015", "0.15", "15"],
+                    "correctIndex": 2,
+                    "subjectTag": "math"
+                },
+                {
+                    "question": "一个正方体有多少个面？",
+                    "options": ["4", "8", "6", "12"],
+                    "correctIndex": 2,
+                    "subjectTag": "math"
+                },
+                {
+                    "question": "5! (5的阶乘) 等于多少？",
+                    "options": ["25", "60", "120", "720"],
+                    "correctIndex": 2,
+                    "subjectTag": "math"
+                }
+            ]
+        },
+        {
+            "subjectTag": "math",
+            "questions": [
+                {
+                    "question": "直角三角形中，斜边的平方等于什么？",
+                    "options": ["两直角边之和", "两直角边之积", "两直角边的平方和", "两直角边的平方差"],
+                    "correctIndex": 2,
+                    "subjectTag": "math"
+                },
+                {
+                    "question": "log₁₀(100) = ?",
+                    "options": ["1", "2", "10", "100"],
+                    "correctIndex": 1,
+                    "subjectTag": "math"
+                },
+                {
+                    "question": "π (圆周率) 大约等于多少？",
+                    "options": ["2.14", "3.14", "4.14", "3.41"],
+                    "correctIndex": 1,
+                    "subjectTag": "math"
+                }
+            ]
+        },
+        {
+            "subjectTag": "math",
+            "questions": [
+                {
+                    "question": "等差数列 2, 5, 8, 11, ...的公差是？",
+                    "options": ["2", "3", "4", "5"],
+                    "correctIndex": 1,
+                    "subjectTag": "math"
+                },
+                {
+                    "question": "sin 30° = ?",
+                    "options": ["1", "0.5", "0.866", "0"],
+                    "correctIndex": 1,
+                    "subjectTag": "math"
+                },
+                {
+                    "question": "两条平行线之间的距离处处______。",
+                    "options": ["不等", "相等", "递增", "递减"],
+                    "correctIndex": 1,
+                    "subjectTag": "math"
+                }
+            ]
+        },
+        {
+            "subjectTag": "math",
+            "questions": [
+                {
+                    "question": "梯形的面积公式是？",
+                    "options": ["(上底+下底)×高÷2", "上底×下底×高", "底×高÷2", "底×高"],
+                    "correctIndex": 0,
+                    "subjectTag": "math"
+                },
+                {
+                    "question": "2⁵ = ?",
+                    "options": ["10", "16", "32", "64"],
+                    "correctIndex": 2,
+                    "subjectTag": "math"
+                },
+                {
+                    "question": "正六边形的内角和是多少度？",
+                    "options": ["360°", "540°", "720°", "1080°"],
+                    "correctIndex": 2,
+                    "subjectTag": "math"
+                }
+            ]
+        },
+
+        {
+            "subjectTag": "english",
+            "questions": [
+                {
+                    "question": "She ___ to school every day.",
+                    "options": ["go", "goes", "going", "gone"],
+                    "correctIndex": 1,
+                    "subjectTag": "english"
+                },
+                {
+                    "question": "\"Apple\" 的中文意思是？",
+                    "options": ["香蕉", "橙子", "苹果", "葡萄"],
+                    "correctIndex": 2,
+                    "subjectTag": "english"
+                },
+                {
+                    "question": "Which is the past tense of \"eat\"?",
+                    "options": ["eated", "eating", "eaten", "ate"],
+                    "correctIndex": 3,
+                    "subjectTag": "english"
+                }
+            ]
+        },
+        {
+            "subjectTag": "english",
+            "questions": [
+                {
+                    "question": "I have ___ finished my homework.",
+                    "options": ["yet", "already", "still", "never"],
+                    "correctIndex": 1,
+                    "subjectTag": "english"
+                },
+                {
+                    "question": "\"Thank you\" 的中文意思是？",
+                    "options": ["对不起", "再见", "谢谢你", "你好"],
+                    "correctIndex": 2,
+                    "subjectTag": "english"
+                },
+                {
+                    "question": "The book is ___ the table.",
+                    "options": ["at", "on", "of", "to"],
+                    "correctIndex": 1,
+                    "subjectTag": "english"
+                }
+            ]
+        },
+        {
+            "subjectTag": "english",
+            "questions": [
+                {
+                    "question": "He is the ___ student in our class.",
+                    "options": ["tall", "taller", "tallest", "more tall"],
+                    "correctIndex": 2,
+                    "subjectTag": "english"
+                },
+                {
+                    "question": "\"Beautiful\" 的反义词是？",
+                    "options": ["pretty", "ugly", "handsome", "cute"],
+                    "correctIndex": 1,
+                    "subjectTag": "english"
+                },
+                {
+                    "question": "There ___ many students in the classroom.",
+                    "options": ["is", "am", "are", "be"],
+                    "correctIndex": 2,
+                    "subjectTag": "english"
+                }
+            ]
+        },
+        {
+            "subjectTag": "english",
+            "questions": [
+                {
+                    "question": "I ___ playing basketball when it started to rain.",
+                    "options": ["am", "is", "was", "were"],
+                    "correctIndex": 2,
+                    "subjectTag": "english"
+                },
+                {
+                    "question": "\"大学\" 的英文是？",
+                    "options": ["school", "college", "university", "Both B and C"],
+                    "correctIndex": 3,
+                    "subjectTag": "english"
+                },
+                {
+                    "question": "She can ___ English very well.",
+                    "options": ["speaks", "spoke", "speaking", "speak"],
+                    "correctIndex": 3,
+                    "subjectTag": "english"
+                }
+            ]
+        },
+        {
+            "subjectTag": "english",
+            "questions": [
+                {
+                    "question": "What ___ you do yesterday?",
+                    "options": ["do", "did", "does", "doing"],
+                    "correctIndex": 1,
+                    "subjectTag": "english"
+                },
+                {
+                    "question": "选出与 \"happy\" 意思相近的词：",
+                    "options": ["sad", "angry", "glad", "tired"],
+                    "correctIndex": 2,
+                    "subjectTag": "english"
+                },
+                {
+                    "question": "If it ___ tomorrow, we will stay at home.",
+                    "options": ["rain", "rains", "rained", "raining"],
+                    "correctIndex": 1,
+                    "subjectTag": "english"
+                }
+            ]
+        },
+        {
+            "subjectTag": "english",
+            "questions": [
+                {
+                    "question": "Neither he nor I ___ wrong.",
+                    "options": ["am", "is", "are", "be"],
+                    "correctIndex": 0,
+                    "subjectTag": "english"
+                },
+                {
+                    "question": "\"Goodbye\" 的中文意思是？",
+                    "options": ["你好", "再见", "谢谢", "抱歉"],
+                    "correctIndex": 1,
+                    "subjectTag": "english"
+                },
+                {
+                    "question": "Which word means \"图书馆\"?",
+                    "options": ["laboratory", "library", "liberty", "liberal"],
+                    "correctIndex": 1,
+                    "subjectTag": "english"
+                }
+            ]
+        },
+        {
+            "subjectTag": "english",
+            "questions": [
+                {
+                    "question": "My mother ___ cooking dinner now.",
+                    "options": ["is", "are", "am", "be"],
+                    "correctIndex": 0,
+                    "subjectTag": "english"
+                },
+                {
+                    "question": "\"星期一\" 的英文是？",
+                    "options": ["Sunday", "Monday", "Tuesday", "Saturday"],
+                    "correctIndex": 1,
+                    "subjectTag": "english"
+                },
+                {
+                    "question": "This is ___ interesting book.",
+                    "options": ["a", "an", "the", "×(不填)"],
+                    "correctIndex": 1,
+                    "subjectTag": "english"
+                }
+            ]
+        },
+        {
+            "subjectTag": "english",
+            "questions": [
+                {
+                    "question": "We have known each other ___ 2018.",
+                    "options": ["for", "since", "from", "at"],
+                    "correctIndex": 1,
+                    "subjectTag": "english"
+                },
+                {
+                    "question": "\"December\" 是几月？",
+                    "options": ["十月", "十一月", "十二月", "九月"],
+                    "correctIndex": 2,
+                    "subjectTag": "english"
+                },
+                {
+                    "question": "He runs ___ than me.",
+                    "options": ["fast", "faster", "fastest", "more fast"],
+                    "correctIndex": 1,
+                    "subjectTag": "english"
+                }
+            ]
+        },
+
+        {
+            "subjectTag": "physics",
+            "questions": [
+                {
+                    "question": "牛顿第一定律又叫什么定律？",
+                    "options": ["万有引力定律", "惯性定律", "作用力定律", "加速度定律"],
+                    "correctIndex": 1,
+                    "subjectTag": "physics"
+                },
+                {
+                    "question": "光在真空中的传播速度约为多少？",
+                    "options": ["3×10⁶ m/s", "3×10⁸ m/s", "3×10¹⁰ m/s", "3×10⁴ m/s"],
+                    "correctIndex": 1,
+                    "subjectTag": "physics"
+                },
+                {
+                    "question": "水的沸点是多少摄氏度？（标准大气压下）",
+                    "options": ["90°C", "80°C", "100°C", "110°C"],
+                    "correctIndex": 2,
+                    "subjectTag": "physics"
+                }
+            ]
+        },
+        {
+            "subjectTag": "physics",
+            "questions": [
+                {
+                    "question": "F = ma 是哪个定律的公式？",
+                    "options": ["牛顿第一定律", "牛顿第二定律", "牛顿第三定律", "胡克定律"],
+                    "correctIndex": 1,
+                    "subjectTag": "physics"
+                },
+                {
+                    "question": "一个物体从10米高处自由下落，不考虑空气阻力，g取10m/s²，落地速度约为？",
+                    "options": ["10 m/s", "约14.1 m/s", "20 m/s", "5 m/s"],
+                    "correctIndex": 1,
+                    "subjectTag": "physics"
+                },
+                {
+                    "question": "电流的单位是什么？",
+                    "options": ["伏特", "瓦特", "安培", "欧姆"],
+                    "correctIndex": 2,
+                    "subjectTag": "physics"
+                }
+            ]
+        },
+        {
+            "subjectTag": "physics",
+            "questions": [
+                {
+                    "question": "欧姆定律的公式是？",
+                    "options": ["U = IR", "P = UI", "W = Fs", "E = mc²"],
+                    "correctIndex": 0,
+                    "subjectTag": "physics"
+                },
+                {
+                    "question": "声音在空气中的传播速度约为？",
+                    "options": ["340 m/s", "3400 m/s", "34 m/s", "34000 m/s"],
+                    "correctIndex": 0,
+                    "subjectTag": "physics"
+                },
+                {
+                    "question": "地球对物体的引力方向是？",
+                    "options": ["水平向前", "竖直向上", "竖直向下", "任意方向"],
+                    "correctIndex": 2,
+                    "subjectTag": "physics"
+                }
+            ]
+        },
+        {
+            "subjectTag": "physics",
+            "questions": [
+                {
+                    "question": "1千瓦时等于多少焦耳？",
+                    "options": ["360000 J", "3600 J", "3600000 J", "36000 J"],
+                    "correctIndex": 2,
+                    "subjectTag": "physics"
+                },
+                {
+                    "question": "以下哪种是导体？",
+                    "options": ["橡胶", "玻璃", "铜", "塑料"],
+                    "correctIndex": 2,
+                    "subjectTag": "physics"
+                },
+                {
+                    "question": "杠杆平衡条件是？",
+                    "options": ["F1 = F2", "F1·L1 = F2·L2", "F1+L1 = F2+L2", "F1/L1 = F2/L2"],
+                    "correctIndex": 1,
+                    "subjectTag": "physics"
+                }
+            ]
+        },
+        {
+            "subjectTag": "physics",
+            "questions": [
+                {
+                    "question": "冰融化成水时，温度保持在？",
+                    "options": ["-1°C", "0°C", "1°C", "100°C"],
+                    "correctIndex": 1,
+                    "subjectTag": "physics"
+                },
+                {
+                    "question": "凸透镜对光线有什么作用？",
+                    "options": ["发散", "会聚", "反射", "没有作用"],
+                    "correctIndex": 1,
+                    "subjectTag": "physics"
+                },
+                {
+                    "question": "一个物体做匀速直线运动，它受到的合力是？",
+                    "options": ["向前的力", "向后的力", "零", "不确定"],
+                    "correctIndex": 2,
+                    "subjectTag": "physics"
+                }
+            ]
+        },
+        {
+            "subjectTag": "physics",
+            "questions": [
+                {
+                    "question": "哪位科学家发现了万有引力定律？",
+                    "options": ["爱因斯坦", "伽利略", "牛顿", "法拉第"],
+                    "correctIndex": 2,
+                    "subjectTag": "physics"
+                },
+                {
+                    "question": "电功率的计算公式是？",
+                    "options": ["P = UI", "P = mgh", "P = ½mv²", "P = Fs/t"],
+                    "correctIndex": 0,
+                    "subjectTag": "physics"
+                },
+                {
+                    "question": "密度的单位是？",
+                    "options": ["kg/m", "kg/m²", "kg/m³", "kg·m"],
+                    "correctIndex": 2,
+                    "subjectTag": "physics"
+                }
+            ]
+        },
+
+        {
+            "subjectTag": "cs",
+            "questions": [
+                {
+                    "question": "二进制数 1010 转换为十进制是多少？",
+                    "options": ["8", "10", "12", "1010"],
+                    "correctIndex": 1,
+                    "subjectTag": "cs"
+                },
+                {
+                    "question": "1 字节(Byte)等于多少位(bit)？",
+                    "options": ["4", "8", "16", "32"],
+                    "correctIndex": 1,
+                    "subjectTag": "cs"
+                },
+                {
+                    "question": "CPU 的中文全称是？",
+                    "options": ["中央处理器", "中央存储器", "图形处理器", "输入输出控制器"],
+                    "correctIndex": 0,
+                    "subjectTag": "cs"
+                }
+            ]
+        },
+        {
+            "subjectTag": "cs",
+            "questions": [
+                {
+                    "question": "以下哪种不是编程语言？",
+                    "options": ["Python", "Java", "Photoshop", "C++"],
+                    "correctIndex": 2,
+                    "subjectTag": "cs"
+                },
+                {
+                    "question": "HTML 是什么的缩写？",
+                    "options": ["超文本标记语言", "高级文本管理语言", "超链接传输协议", "混合文本模型语言"],
+                    "correctIndex": 0,
+                    "subjectTag": "cs"
+                },
+                {
+                    "question": "在大多数编程语言中，数组的下标通常从几开始？",
+                    "options": ["0", "1", "-1", "任意"],
+                    "correctIndex": 0,
+                    "subjectTag": "cs"
+                }
+            ]
+        },
+        {
+            "subjectTag": "cs",
+            "questions": [
+                {
+                    "question": "栈(Stack)的特点是？",
+                    "options": ["先进先出", "先进后出", "随机存取", "按优先级"],
+                    "correctIndex": 1,
+                    "subjectTag": "cs"
+                },
+                {
+                    "question": "队列(Queue)的特点是？",
+                    "options": ["先进后出", "先进先出", "后进先出", "随机存取"],
+                    "correctIndex": 1,
+                    "subjectTag": "cs"
+                },
+                {
+                    "question": "二叉树每个节点最多有几个子节点？",
+                    "options": ["1", "2", "3", "无限"],
+                    "correctIndex": 1,
+                    "subjectTag": "cs"
+                }
+            ]
+        },
+        {
+            "subjectTag": "cs",
+            "questions": [
+                {
+                    "question": "IP地址 \"192.168.1.1\" 属于哪类地址？",
+                    "options": ["A类", "B类", "C类", "D类"],
+                    "correctIndex": 2,
+                    "subjectTag": "cs"
+                },
+                {
+                    "question": "HTTP 默认使用哪个端口号？",
+                    "options": ["21", "22", "80", "443"],
+                    "correctIndex": 2,
+                    "subjectTag": "cs"
+                },
+                {
+                    "question": "以下哪个是关系型数据库？",
+                    "options": ["MongoDB", "Redis", "MySQL", "Elasticsearch"],
+                    "correctIndex": 2,
+                    "subjectTag": "cs"
+                }
+            ]
+        },
+        {
+            "subjectTag": "cs",
+            "questions": [
+                {
+                    "question": "冒泡排序的平均时间复杂度是？",
+                    "options": ["O(n)", "O(n log n)", "O(n²)", "O(log n)"],
+                    "correctIndex": 2,
+                    "subjectTag": "cs"
+                },
+                {
+                    "question": "Git 中，将远程仓库克隆到本地的命令是？",
+                    "options": ["git push", "git pull", "git clone", "git commit"],
+                    "correctIndex": 2,
+                    "subjectTag": "cs"
+                },
+                {
+                    "question": "Linux 中查看当前目录下文件列表的命令是？",
+                    "options": ["dir", "ls", "cd", "pwd"],
+                    "correctIndex": 1,
+                    "subjectTag": "cs"
+                }
+            ]
+        },
+        {
+            "subjectTag": "cs",
+            "questions": [
+                {
+                    "question": "1 KB 等于多少字节？",
+                    "options": ["100", "512", "1000", "1024"],
+                    "correctIndex": 3,
+                    "subjectTag": "cs"
+                },
+                {
+                    "question": "以下哪个不是操作系统？",
+                    "options": ["Windows", "Linux", "Oracle", "macOS"],
+                    "correctIndex": 2,
+                    "subjectTag": "cs"
+                },
+                {
+                    "question": "布尔类型(Boolean)有几种值？",
+                    "options": ["1", "2", "3", "无限"],
+                    "correctIndex": 1,
+                    "subjectTag": "cs"
+                }
+            ]
+        },
+        {
+            "subjectTag": "cs",
+            "questions": [
+                {
+                    "question": "TCP 和 UDP 的区别是？",
+                    "options": ["TCP无连接，UDP有连接", "TCP有连接，UDP无连接", "两者完全一样", "TCP用于邮件，UDP用于网页"],
+                    "correctIndex": 1,
+                    "subjectTag": "cs"
+                },
+                {
+                    "question": "Python 中 print('Hello') 的作用是？",
+                    "options": ["输入Hello", "输出Hello", "定义变量Hello", "删除Hello"],
+                    "correctIndex": 1,
+                    "subjectTag": "cs"
+                },
+                {
+                    "question": "DNS 的作用是？",
+                    "options": ["加密数据", "域名解析为IP地址", "防火墙过滤", "压缩文件"],
+                    "correctIndex": 1,
+                    "subjectTag": "cs"
+                }
+            ]
+        },
+        {
+            "subjectTag": "cs",
+            "questions": [
+                {
+                    "question": "以下哪种排序算法是稳定的？",
+                    "options": ["快速排序", "选择排序", "归并排序", "堆排序"],
+                    "correctIndex": 2,
+                    "subjectTag": "cs"
+                },
+                {
+                    "question": "面向对象编程的三大特征不包括？",
+                    "options": ["封装", "继承", "多态", "递归"],
+                    "correctIndex": 3,
+                    "subjectTag": "cs"
+                },
+                {
+                    "question": "十六进制中，字母 A 代表十进制的？",
+                    "options": ["9", "10", "11", "16"],
+                    "correctIndex": 1,
+                    "subjectTag": "cs"
+                }
+            ]
+        },
+
+        {
+            "subjectTag": "politics",
+            "questions": [
+                {
+                    "question": "中华人民共和国成立于哪一年？",
+                    "options": ["1945", "1949", "1950", "1948"],
+                    "correctIndex": 1,
+                    "subjectTag": "politics"
+                },
+                {
+                    "question": "我国的根本政治制度是？",
+                    "options": ["多党合作制", "人民代表大会制度", "政治协商制度", "民族区域自治制度"],
+                    "correctIndex": 1,
+                    "subjectTag": "politics"
+                },
+                {
+                    "question": "中国共产党成立于哪一年？",
+                    "options": ["1919", "1920", "1921", "1922"],
+                    "correctIndex": 2,
+                    "subjectTag": "politics"
+                }
+            ]
+        },
+        {
+            "subjectTag": "politics",
+            "questions": [
+                {
+                    "question": "我国的国体是？",
+                    "options": ["人民民主专政", "君主立宪制", "联邦制", "总统制"],
+                    "correctIndex": 0,
+                    "subjectTag": "politics"
+                },
+                {
+                    "question": "社会主义核心价值观在国家层面包括？",
+                    "options": ["自由、平等、公正、法治", "富强、民主、文明、和谐", "爱国、敬业、诚信、友善", "勤劳、勇敢、团结、创新"],
+                    "correctIndex": 1,
+                    "subjectTag": "politics"
+                },
+                {
+                    "question": "我国现行宪法是哪一年通过的？",
+                    "options": ["1978", "1982", "1988", "1954"],
+                    "correctIndex": 1,
+                    "subjectTag": "politics"
+                }
+            ]
+        },
+        {
+            "subjectTag": "politics",
+            "questions": [
+                {
+                    "question": "\"实事求是\" 是谁提出的思想路线？",
+                    "options": ["孙中山", "毛泽东", "邓小平", "周恩来"],
+                    "correctIndex": 1,
+                    "subjectTag": "politics"
+                },
+                {
+                    "question": "改革开放始于哪一年？",
+                    "options": ["1976", "1978", "1980", "1982"],
+                    "correctIndex": 1,
+                    "subjectTag": "politics"
+                },
+                {
+                    "question": "\"一国两制\" 最初是为解决什么问题提出的？",
+                    "options": ["香港问题", "台湾问题", "澳门问题", "西藏问题"],
+                    "correctIndex": 1,
+                    "subjectTag": "politics"
+                }
+            ]
+        },
+        {
+            "subjectTag": "politics",
+            "questions": [
+                {
+                    "question": "全国人民代表大会每届任期几年？",
+                    "options": ["3年", "4年", "5年", "6年"],
+                    "correctIndex": 2,
+                    "subjectTag": "politics"
+                },
+                {
+                    "question": "中国特色社会主义最本质的特征是？",
+                    "options": ["公有制", "中国共产党领导", "人民民主", "市场经济"],
+                    "correctIndex": 1,
+                    "subjectTag": "politics"
+                },
+                {
+                    "question": "我国的基本经济制度是？",
+                    "options": ["纯公有制", "纯私有制", "以公有制为主体、多种所有制共同发展", "完全市场经济"],
+                    "correctIndex": 2,
+                    "subjectTag": "politics"
+                }
+            ]
+        },
+        {
+            "subjectTag": "politics",
+            "questions": [
+                {
+                    "question": "马克思主义哲学的核心是？",
+                    "options": ["唯心主义", "辩证唯物主义", "机械唯物主义", "形而上学"],
+                    "correctIndex": 1,
+                    "subjectTag": "politics"
+                },
+                {
+                    "question": "对立统一规律又叫什么？",
+                    "options": ["量变质变规律", "否定之否定规律", "矛盾规律", "因果律"],
+                    "correctIndex": 2,
+                    "subjectTag": "politics"
+                },
+                {
+                    "question": "\"五四运动\" 发生在哪一年？",
+                    "options": ["1917", "1919", "1921", "1925"],
+                    "correctIndex": 1,
+                    "subjectTag": "politics"
+                }
+            ]
+        },
+        {
+            "subjectTag": "politics",
+            "questions": [
+                {
+                    "question": "我国公民的基本权利不包括以下哪项？",
+                    "options": ["选举权和被选举权", "言论自由", "携带武器的权利", "受教育权"],
+                    "correctIndex": 2,
+                    "subjectTag": "politics"
+                },
+                {
+                    "question": "中国的民族政策是？",
+                    "options": ["民族同化", "民族隔离", "民族平等、团结、互助", "民族竞争"],
+                    "correctIndex": 2,
+                    "subjectTag": "politics"
+                },
+                {
+                    "question": "邓小平理论的精髓是？",
+                    "options": ["阶级斗争", "解放思想、实事求是", "以阶级斗争为纲", "闭关锁国"],
+                    "correctIndex": 1,
+                    "subjectTag": "politics"
+                }
+            ]
+        },
+
+        {
+            "subjectTag": "pe",
+            "questions": [
+                {
+                    "question": "标准篮球场的三分线距离篮筐约多远？",
+                    "options": ["5.8米", "6.75米", "7.5米", "8米"],
+                    "correctIndex": 1,
+                    "subjectTag": "pe"
+                },
+                {
+                    "question": "足球比赛中每队上场几人？",
+                    "options": ["9人", "10人", "11人", "12人"],
+                    "correctIndex": 2,
+                    "subjectTag": "pe"
+                },
+                {
+                    "question": "奥运会几年举办一次？",
+                    "options": ["2年", "3年", "4年", "5年"],
+                    "correctIndex": 2,
+                    "subjectTag": "pe"
+                }
+            ]
+        },
+        {
+            "subjectTag": "pe",
+            "questions": [
+                {
+                    "question": "乒乓球比赛中，每局比赛打到多少分？",
+                    "options": ["11分", "15分", "21分", "25分"],
+                    "correctIndex": 0,
+                    "subjectTag": "pe"
+                },
+                {
+                    "question": "马拉松全程约多少公里？",
+                    "options": ["21公里", "35公里", "42.195公里", "50公里"],
+                    "correctIndex": 2,
+                    "subjectTag": "pe"
+                },
+                {
+                    "question": "排球每队场上几名球员？",
+                    "options": ["5人", "6人", "7人", "8人"],
+                    "correctIndex": 1,
+                    "subjectTag": "pe"
+                }
+            ]
+        },
+        {
+            "subjectTag": "pe",
+            "questions": [
+                {
+                    "question": "短跑起跑时应该用什么姿势？",
+                    "options": ["站立式", "蹲踞式", "坐姿", "跪姿"],
+                    "correctIndex": 1,
+                    "subjectTag": "pe"
+                },
+                {
+                    "question": "NBA 全称是什么？",
+                    "options": ["National Basketball Association", "National Baseball Association", "North Basketball Alliance", "National Ball Association"],
+                    "correctIndex": 0,
+                    "subjectTag": "pe"
+                },
+                {
+                    "question": "羽毛球场地的网高是多少？",
+                    "options": ["1.25米", "1.524米", "1.8米", "2米"],
+                    "correctIndex": 1,
+                    "subjectTag": "pe"
+                }
+            ]
+        },
+        {
+            "subjectTag": "pe",
+            "questions": [
+                {
+                    "question": "游泳比赛中哪种泳姿速度最快？",
+                    "options": ["蛙泳", "蝶泳", "仰泳", "自由泳"],
+                    "correctIndex": 3,
+                    "subjectTag": "pe"
+                },
+                {
+                    "question": "田径比赛中 \"110米栏\" 有多少个栏？",
+                    "options": ["8个", "10个", "12个", "15个"],
+                    "correctIndex": 1,
+                    "subjectTag": "pe"
+                },
+                {
+                    "question": "世界杯足球赛几年举办一次？",
+                    "options": ["2年", "3年", "4年", "5年"],
+                    "correctIndex": 2,
+                    "subjectTag": "pe"
+                }
+            ]
+        },
+        {
+            "subjectTag": "pe",
+            "questions": [
+                {
+                    "question": "篮球比赛中，罚球线到篮板的距离是多少？",
+                    "options": ["4.6米", "5.8米", "6.25米", "7米"],
+                    "correctIndex": 0,
+                    "subjectTag": "pe"
+                },
+                {
+                    "question": "正规网球比赛中，男子大满贯采用几盘几胜制？",
+                    "options": ["三盘两胜", "五盘三胜", "七盘四胜", "一盘定胜负"],
+                    "correctIndex": 1,
+                    "subjectTag": "pe"
+                },
+                {
+                    "question": "拳击比赛中每回合多长时间？",
+                    "options": ["2分钟", "3分钟", "5分钟", "10分钟"],
+                    "correctIndex": 1,
+                    "subjectTag": "pe"
+                }
+            ]
+        },
+        {
+            "subjectTag": "pe",
+            "questions": [
+                {
+                    "question": "人体最大的肌肉是？",
+                    "options": ["二头肌", "腹肌", "臀大肌", "三角肌"],
+                    "correctIndex": 2,
+                    "subjectTag": "pe"
+                },
+                {
+                    "question": "运动前应该做什么准备？",
+                    "options": ["直接剧烈运动", "热身运动", "喝大量冷水", "吃饱饭"],
+                    "correctIndex": 1,
+                    "subjectTag": "pe"
+                },
+                {
+                    "question": "正常成年人的心率大约是多少次/分钟？",
+                    "options": ["40-50", "60-100", "110-130", "140-160"],
+                    "correctIndex": 1,
+                    "subjectTag": "pe"
+                }
+            ]
+        },
+
+        {
+            "subjectTag": "chemistry",
+            "questions": [
+                {
+                    "question": "水的化学式是什么？",
+                    "options": ["CO₂", "H₂O", "O₂", "NaCl"],
+                    "correctIndex": 1,
+                    "subjectTag": "chemistry"
+                },
+                {
+                    "question": "氧气的化学式是？",
+                    "options": ["O", "O₂", "O₃", "CO₂"],
+                    "correctIndex": 1,
+                    "subjectTag": "chemistry"
+                },
+                {
+                    "question": "元素周期表中，原子序数为1的元素是？",
+                    "options": ["氦", "氢", "锂", "碳"],
+                    "correctIndex": 1,
+                    "subjectTag": "chemistry"
+                }
+            ]
+        },
+        {
+            "subjectTag": "chemistry",
+            "questions": [
+                {
+                    "question": "铁在潮湿空气中会发生什么反应？",
+                    "options": ["燃烧", "生锈（氧化）", "溶解", "蒸发"],
+                    "correctIndex": 1,
+                    "subjectTag": "chemistry"
+                },
+                {
+                    "question": "食盐的主要成分化学式是？",
+                    "options": ["KCl", "NaCl", "CaCl₂", "NaOH"],
+                    "correctIndex": 1,
+                    "subjectTag": "chemistry"
+                },
+                {
+                    "question": "pH值为7时，溶液是什么性质？",
+                    "options": ["酸性", "碱性", "中性", "强酸性"],
+                    "correctIndex": 2,
+                    "subjectTag": "chemistry"
+                }
+            ]
+        },
+        {
+            "subjectTag": "chemistry",
+            "questions": [
+                {
+                    "question": "空气中含量最多的气体是？",
+                    "options": ["氧气", "氮气", "二氧化碳", "氢气"],
+                    "correctIndex": 1,
+                    "subjectTag": "chemistry"
+                },
+                {
+                    "question": "以下哪个是稀有气体？",
+                    "options": ["氧气", "氮气", "氦气", "氢气"],
+                    "correctIndex": 2,
+                    "subjectTag": "chemistry"
+                },
+                {
+                    "question": "金刚石和石墨都是由什么元素组成？",
+                    "options": ["铁", "铝", "碳", "硅"],
+                    "correctIndex": 2,
+                    "subjectTag": "chemistry"
+                }
+            ]
+        },
+        {
+            "subjectTag": "chemistry",
+            "questions": [
+                {
+                    "question": "光合作用的化学方程式中，植物吸收的是？",
+                    "options": ["O₂", "CO₂", "N₂", "H₂"],
+                    "correctIndex": 1,
+                    "subjectTag": "chemistry"
+                },
+                {
+                    "question": "以下哪个是酸？",
+                    "options": ["NaOH", "HCl", "NaCl", "CaO"],
+                    "correctIndex": 1,
+                    "subjectTag": "chemistry"
+                },
+                {
+                    "question": "燃烧需要的三个条件不包括？",
+                    "options": ["可燃物", "助燃剂(氧气)", "水", "达到着火点"],
+                    "correctIndex": 2,
+                    "subjectTag": "chemistry"
+                }
+            ]
+        },
+        {
+            "subjectTag": "chemistry",
+            "questions": [
+                {
+                    "question": "碳酸饮料中含有哪种气体？",
+                    "options": ["氧气", "氮气", "二氧化碳", "氦气"],
+                    "correctIndex": 2,
+                    "subjectTag": "chemistry"
+                },
+                {
+                    "question": "以下哪种金属最活泼？",
+                    "options": ["金", "银", "铜", "钠"],
+                    "correctIndex": 3,
+                    "subjectTag": "chemistry"
+                },
+                {
+                    "question": "酒精的化学式是？",
+                    "options": ["CH₄", "C₂H₅OH", "CH₃OH", "C₆H₁₂O₆"],
+                    "correctIndex": 1,
+                    "subjectTag": "chemistry"
+                }
+            ]
+        },
+        {
+            "subjectTag": "chemistry",
+            "questions": [
+                {
+                    "question": "原子由哪些粒子组成？",
+                    "options": ["质子和电子", "质子、中子和电子", "中子和电子", "只有质子"],
+                    "correctIndex": 1,
+                    "subjectTag": "chemistry"
+                },
+                {
+                    "question": "化学变化和物理变化的本质区别是？",
+                    "options": ["状态变化", "有无新物质生成", "颜色变化", "体积变化"],
+                    "correctIndex": 1,
+                    "subjectTag": "chemistry"
+                },
+                {
+                    "question": "不锈钢是一种什么材料？",
+                    "options": ["纯金属", "合金", "非金属", "有机物"],
+                    "correctIndex": 1,
+                    "subjectTag": "chemistry"
+                }
+            ]
+        },
+
+        {
+            "subjectTag": "history",
+            "questions": [
+                {
+                    "question": "中国历史上第一个统一的封建王朝是？",
+                    "options": ["商朝", "周朝", "秦朝", "汉朝"],
+                    "correctIndex": 2,
+                    "subjectTag": "history"
+                },
+                {
+                    "question": "\"四大发明\" 不包括以下哪项？",
+                    "options": ["造纸术", "印刷术", "丝绸", "火药"],
+                    "correctIndex": 2,
+                    "subjectTag": "history"
+                },
+                {
+                    "question": "唐朝的开国皇帝是？",
+                    "options": ["李世民", "李渊", "李隆基", "李白"],
+                    "correctIndex": 1,
+                    "subjectTag": "history"
+                }
+            ]
+        },
+        {
+            "subjectTag": "history",
+            "questions": [
+                {
+                    "question": "鸦片战争发生在哪一年？",
+                    "options": ["1839", "1840", "1842", "1856"],
+                    "correctIndex": 1,
+                    "subjectTag": "history"
+                },
+                {
+                    "question": "辛亥革命发生在哪一年？",
+                    "options": ["1901", "1911", "1919", "1921"],
+                    "correctIndex": 1,
+                    "subjectTag": "history"
+                },
+                {
+                    "question": "万里长城最初修建于哪个朝代？",
+                    "options": ["秦朝", "汉朝", "明朝", "春秋战国"],
+                    "correctIndex": 3,
+                    "subjectTag": "history"
+                }
+            ]
+        },
+        {
+            "subjectTag": "history",
+            "questions": [
+                {
+                    "question": "三国时期的三个国家是？",
+                    "options": ["魏蜀吴", "齐楚燕", "宋元明", "秦汉晋"],
+                    "correctIndex": 0,
+                    "subjectTag": "history"
+                },
+                {
+                    "question": "\"丝绸之路\" 开辟于哪个朝代？",
+                    "options": ["秦朝", "汉朝", "唐朝", "宋朝"],
+                    "correctIndex": 1,
+                    "subjectTag": "history"
+                },
+                {
+                    "question": "郑和下西洋发生在哪个朝代？",
+                    "options": ["宋朝", "元朝", "明朝", "清朝"],
+                    "correctIndex": 2,
+                    "subjectTag": "history"
+                }
+            ]
+        },
+        {
+            "subjectTag": "history",
+            "questions": [
+                {
+                    "question": "抗日战争全面爆发的标志是？",
+                    "options": ["九一八事变", "卢沟桥事变", "西安事变", "南京大屠杀"],
+                    "correctIndex": 1,
+                    "subjectTag": "history"
+                },
+                {
+                    "question": "第一次世界大战爆发于哪一年？",
+                    "options": ["1912", "1914", "1918", "1939"],
+                    "correctIndex": 1,
+                    "subjectTag": "history"
+                },
+                {
+                    "question": "新中国第一颗原子弹爆炸成功是在哪一年？",
+                    "options": ["1958", "1960", "1964", "1970"],
+                    "correctIndex": 2,
+                    "subjectTag": "history"
+                }
+            ]
+        },
+        {
+            "subjectTag": "history",
+            "questions": [
+                {
+                    "question": "科举制度始于哪个朝代？",
+                    "options": ["汉朝", "隋朝", "唐朝", "宋朝"],
+                    "correctIndex": 1,
+                    "subjectTag": "history"
+                },
+                {
+                    "question": "被称为 \"诗圣\" 的是谁？",
+                    "options": ["李白", "杜甫", "白居易", "王维"],
+                    "correctIndex": 1,
+                    "subjectTag": "history"
+                },
+                {
+                    "question": "清朝的最后一位皇帝是？",
+                    "options": ["光绪", "同治", "宣统(溥仪)", "道光"],
+                    "correctIndex": 2,
+                    "subjectTag": "history"
+                }
+            ]
+        },
+        {
+            "subjectTag": "history",
+            "questions": [
+                {
+                    "question": "中国现存最古老的兵书是？",
+                    "options": ["三十六计", "孙子兵法", "孙膑兵法", "六韬"],
+                    "correctIndex": 1,
+                    "subjectTag": "history"
+                },
+                {
+                    "question": "《史记》的作者是？",
+                    "options": ["班固", "司马迁", "司马光", "左丘明"],
+                    "correctIndex": 1,
+                    "subjectTag": "history"
+                },
+                {
+                    "question": "二战中日本宣布无条件投降是在哪一年？",
+                    "options": ["1943", "1944", "1945", "1946"],
+                    "correctIndex": 2,
+                    "subjectTag": "history"
+                }
+            ]
+        },
+
+        {
+            "subjectTag": "economics",
+            "questions": [
+                {
+                    "question": "GDP 的中文全称是？",
+                    "options": ["国民生产总值", "国内生产总值", "国内消费总量", "国民收入总值"],
+                    "correctIndex": 1,
+                    "subjectTag": "economics"
+                },
+                {
+                    "question": "当商品供大于求时，价格通常会？",
+                    "options": ["上升", "下降", "不变", "波动"],
+                    "correctIndex": 1,
+                    "subjectTag": "economics"
+                },
+                {
+                    "question": "通货膨胀是指？",
+                    "options": ["物价持续下降", "物价持续上升", "工资下降", "失业率上升"],
+                    "correctIndex": 1,
+                    "subjectTag": "economics"
+                }
+            ]
+        },
+        {
+            "subjectTag": "economics",
+            "questions": [
+                {
+                    "question": "\"看不见的手\" 这一经济学概念是谁提出的？",
+                    "options": ["马克思", "凯恩斯", "亚当·斯密", "李嘉图"],
+                    "correctIndex": 2,
+                    "subjectTag": "economics"
+                },
+                {
+                    "question": "以下哪个是中央银行的职能？",
+                    "options": ["吸收公众存款", "发放个人贷款", "制定货币政策", "办理个人业务"],
+                    "correctIndex": 2,
+                    "subjectTag": "economics"
+                },
+                {
+                    "question": "机会成本是指？",
+                    "options": ["实际花费的金钱", "放弃的最佳替代选择的价值", "投资的利息", "商品的价格"],
+                    "correctIndex": 1,
+                    "subjectTag": "economics"
+                }
+            ]
+        },
+        {
+            "subjectTag": "economics",
+            "questions": [
+                {
+                    "question": "恩格尔系数反映的是什么？",
+                    "options": ["失业率", "食品支出占总支出的比重", "人均GDP", "贸易差额"],
+                    "correctIndex": 1,
+                    "subjectTag": "economics"
+                },
+                {
+                    "question": "以下哪个属于直接税？",
+                    "options": ["增值税", "消费税", "个人所得税", "营业税"],
+                    "correctIndex": 2,
+                    "subjectTag": "economics"
+                },
+                {
+                    "question": "股票市场中，\"牛市\" 是指？",
+                    "options": ["市场下跌", "市场上涨", "市场稳定", "市场关闭"],
+                    "correctIndex": 1,
+                    "subjectTag": "economics"
+                }
+            ]
+        },
+        {
+            "subjectTag": "economics",
+            "questions": [
+                {
+                    "question": "边际效用递减规律是指？",
+                    "options": ["消费越多总效用越少", "每增加一单位消费，新增的满足感递减", "价格越高需求越大", "成本越低利润越高"],
+                    "correctIndex": 1,
+                    "subjectTag": "economics"
+                },
+                {
+                    "question": "CPI 是衡量什么的指标？",
+                    "options": ["经济增长率", "居民消费价格水平", "失业率", "汇率变动"],
+                    "correctIndex": 1,
+                    "subjectTag": "economics"
+                },
+                {
+                    "question": "垄断市场的特征是？",
+                    "options": ["很多卖家", "一个卖家", "两个卖家", "没有卖家"],
+                    "correctIndex": 1,
+                    "subjectTag": "economics"
+                }
+            ]
+        },
+        {
+            "subjectTag": "economics",
+            "questions": [
+                {
+                    "question": "国际贸易中，一国出口大于进口叫做？",
+                    "options": ["贸易逆差", "贸易顺差", "贸易平衡", "贸易壁垒"],
+                    "correctIndex": 1,
+                    "subjectTag": "economics"
+                },
+                {
+                    "question": "以下哪个不属于生产要素？",
+                    "options": ["劳动", "土地", "广告", "资本"],
+                    "correctIndex": 2,
+                    "subjectTag": "economics"
+                },
+                {
+                    "question": "当利率上升时，人们通常会？",
+                    "options": ["增加消费", "增加储蓄", "增加投资", "增加借贷"],
+                    "correctIndex": 1,
+                    "subjectTag": "economics"
+                }
+            ]
+        },
+        {
+            "subjectTag": "economics",
+            "questions": [
+                {
+                    "question": "人民币的货币代码是？",
+                    "options": ["RMB", "CNY", "JPY", "USD"],
+                    "correctIndex": 1,
+                    "subjectTag": "economics"
+                },
+                {
+                    "question": "需求曲线通常是什么形状？",
+                    "options": ["向右上方倾斜", "向右下方倾斜", "水平直线", "垂直直线"],
+                    "correctIndex": 1,
+                    "subjectTag": "economics"
+                },
+                {
+                    "question": "以下哪种市场结构竞争最激烈？",
+                    "options": ["完全垄断", "寡头垄断", "垄断竞争", "完全竞争"],
+                    "correctIndex": 3,
+                    "subjectTag": "economics"
+                }
+            ]
+        },
+
+        {
+            "subjectTag": "literature",
+            "questions": [
+                {
+                    "question": "\"床前明月光\" 是谁的诗？",
+                    "options": ["杜甫", "白居易", "李白", "王维"],
+                    "correctIndex": 2,
+                    "subjectTag": "literature"
+                },
+                {
+                    "question": "中国古典四大名著不包括？",
+                    "options": ["《红楼梦》", "《聊斋志异》", "《三国演义》", "《水浒传》"],
+                    "correctIndex": 1,
+                    "subjectTag": "literature"
+                },
+                {
+                    "question": "《西游记》的作者是？",
+                    "options": ["施耐庵", "曹雪芹", "罗贯中", "吴承恩"],
+                    "correctIndex": 3,
+                    "subjectTag": "literature"
+                }
+            ]
+        },
+        {
+            "subjectTag": "literature",
+            "questions": [
+                {
+                    "question": "\"春眠不觉晓，处处闻啼鸟\" 出自哪首诗？",
+                    "options": ["《春望》", "《春晓》", "《咏柳》", "《春雪》"],
+                    "correctIndex": 1,
+                    "subjectTag": "literature"
+                },
+                {
+                    "question": "鲁迅的原名是？",
+                    "options": ["周作人", "周树人", "周建人", "周恩来"],
+                    "correctIndex": 1,
+                    "subjectTag": "literature"
+                },
+                {
+                    "question": "《骆驼祥子》的作者是？",
+                    "options": ["巴金", "老舍", "茅盾", "鲁迅"],
+                    "correctIndex": 1,
+                    "subjectTag": "literature"
+                }
+            ]
+        },
+        {
+            "subjectTag": "literature",
+            "questions": [
+                {
+                    "question": "\"但愿人长久，千里共婵娟\" 的作者是？",
+                    "options": ["李白", "杜甫", "苏轼", "辛弃疾"],
+                    "correctIndex": 2,
+                    "subjectTag": "literature"
+                },
+                {
+                    "question": "《红楼梦》的作者是？",
+                    "options": ["施耐庵", "罗贯中", "曹雪芹", "吴承恩"],
+                    "correctIndex": 2,
+                    "subjectTag": "literature"
+                },
+                {
+                    "question": "\"唐宋八大家\" 中，唐代的有几位？",
+                    "options": ["一位", "两位", "三位", "四位"],
+                    "correctIndex": 1,
+                    "subjectTag": "literature"
+                }
+            ]
+        },
+        {
+            "subjectTag": "literature",
+            "questions": [
+                {
+                    "question": "\"两个黄鹂鸣翠柳\" 的下一句是？",
+                    "options": ["一行白鹭上青天", "春风又绿江南岸", "映日荷花别样红", "万条垂下绿丝绦"],
+                    "correctIndex": 0,
+                    "subjectTag": "literature"
+                },
+                {
+                    "question": "莎士比亚是哪国人？",
+                    "options": ["法国", "美国", "德国", "英国"],
+                    "correctIndex": 3,
+                    "subjectTag": "literature"
+                },
+                {
+                    "question": "\"词\" 这种文学体裁兴盛于哪个朝代？",
+                    "options": ["唐朝", "宋朝", "元朝", "明朝"],
+                    "correctIndex": 1,
+                    "subjectTag": "literature"
+                }
+            ]
+        },
+        {
+            "subjectTag": "literature",
+            "questions": [
+                {
+                    "question": "《论语》记录的是谁的言行？",
+                    "options": ["老子", "孟子", "孔子", "庄子"],
+                    "correctIndex": 2,
+                    "subjectTag": "literature"
+                },
+                {
+                    "question": "\"先天下之忧而忧\" 出自谁的作品？",
+                    "options": ["韩愈", "柳宗元", "范仲淹", "欧阳修"],
+                    "correctIndex": 2,
+                    "subjectTag": "literature"
+                },
+                {
+                    "question": "元曲四大家不包括？",
+                    "options": ["关汉卿", "马致远", "白朴", "辛弃疾"],
+                    "correctIndex": 3,
+                    "subjectTag": "literature"
+                }
+            ]
+        },
+        {
+            "subjectTag": "literature",
+            "questions": [
+                {
+                    "question": "\"路漫漫其修远兮\" 出自哪部作品？",
+                    "options": ["《诗经》", "《离骚》", "《论语》", "《庄子》"],
+                    "correctIndex": 1,
+                    "subjectTag": "literature"
+                },
+                {
+                    "question": "被称为 \"诗仙\" 的是？",
+                    "options": ["杜甫", "白居易", "李白", "王勃"],
+                    "correctIndex": 2,
+                    "subjectTag": "literature"
+                },
+                {
+                    "question": "《朝花夕拾》是什么类型的作品？",
+                    "options": ["小说集", "诗歌集", "散文集", "戏剧集"],
+                    "correctIndex": 2,
+                    "subjectTag": "literature"
+                }
+            ]
+        },
+
+        {
+            "subjectTag": "management",
+            "questions": [
+                {
+                    "question": "管理的四大职能是？",
+                    "options": ["计划、组织、领导、控制", "生产、销售、财务、人事", "研发、制造、营销、服务", "招聘、培训、考核、晋升"],
+                    "correctIndex": 0,
+                    "subjectTag": "management"
+                },
+                {
+                    "question": "SWOT分析中，S代表什么？",
+                    "options": ["Strategy(策略)", "Strength(优势)", "System(系统)", "Solution(方案)"],
+                    "correctIndex": 1,
+                    "subjectTag": "management"
+                },
+                {
+                    "question": "马斯洛需求层次理论中，最底层的需求是？",
+                    "options": ["安全需求", "社交需求", "生理需求", "尊重需求"],
+                    "correctIndex": 2,
+                    "subjectTag": "management"
+                }
+            ]
+        },
+        {
+            "subjectTag": "management",
+            "questions": [
+                {
+                    "question": "PDCA循环中，P代表什么？",
+                    "options": ["Product(产品)", "Plan(计划)", "Process(流程)", "Profit(利润)"],
+                    "correctIndex": 1,
+                    "subjectTag": "management"
+                },
+                {
+                    "question": "\"科学管理之父\" 是谁？",
+                    "options": ["彼得·德鲁克", "亨利·法约尔", "弗雷德里克·泰勒", "马克斯·韦伯"],
+                    "correctIndex": 2,
+                    "subjectTag": "management"
+                },
+                {
+                    "question": "KPI 的中文含义是？",
+                    "options": ["关键绩效指标", "关键过程指标", "核心产品指数", "关键人员指标"],
+                    "correctIndex": 0,
+                    "subjectTag": "management"
+                }
+            ]
+        },
+        {
+            "subjectTag": "management",
+            "questions": [
+                {
+                    "question": "决策过程的第一步通常是？",
+                    "options": ["制定方案", "识别问题", "评估结果", "选择方案"],
+                    "correctIndex": 1,
+                    "subjectTag": "management"
+                },
+                {
+                    "question": "扁平化组织结构的特点是？",
+                    "options": ["管理层级多", "管理层级少", "只有一个管理者", "没有管理者"],
+                    "correctIndex": 1,
+                    "subjectTag": "management"
+                },
+                {
+                    "question": "头脑风暴法的核心原则是？",
+                    "options": ["严格批评每个想法", "延迟批判、鼓励自由联想", "只接受领导的意见", "投票决定"],
+                    "correctIndex": 1,
+                    "subjectTag": "management"
+                }
+            ]
+        },
+        {
+            "subjectTag": "management",
+            "questions": [
+                {
+                    "question": "项目管理中的 \"里程碑\" 是指？",
+                    "options": ["项目开始日", "项目中的关键节点", "项目结束日", "项目预算"],
+                    "correctIndex": 1,
+                    "subjectTag": "management"
+                },
+                {
+                    "question": "团队发展的 \"形成-震荡-规范-执行\" 模型是谁提出的？",
+                    "options": ["马斯洛", "塔克曼", "赫茨伯格", "麦格雷戈"],
+                    "correctIndex": 1,
+                    "subjectTag": "management"
+                },
+                {
+                    "question": "领导和管理的主要区别是？",
+                    "options": ["没有区别", "领导侧重变革和愿景，管理侧重秩序和效率", "领导比管理低级", "管理不需要沟通"],
+                    "correctIndex": 1,
+                    "subjectTag": "management"
+                }
+            ]
+        },
+        {
+            "subjectTag": "management",
+            "questions": [
+                {
+                    "question": "企业的使命(Mission)是指？",
+                    "options": ["短期利润目标", "企业存在的根本目的和价值", "年度销售计划", "员工福利方案"],
+                    "correctIndex": 1,
+                    "subjectTag": "management"
+                },
+                {
+                    "question": "\"木桶原理\" 说明了什么管理道理？",
+                    "options": ["越大越好", "整体水平取决于最薄弱环节", "只需抓住重点", "数量决定质量"],
+                    "correctIndex": 1,
+                    "subjectTag": "management"
+                },
+                {
+                    "question": "绩效考核中，360度反馈包括？",
+                    "options": ["只有上级评价", "上级、下级、同事、自我等多方评价", "只有自我评价", "只有客户评价"],
+                    "correctIndex": 1,
+                    "subjectTag": "management"
+                }
+            ]
+        },
+        {
+            "subjectTag": "management",
+            "questions": [
+                {
+                    "question": "敏捷开发(Agile)的核心理念是？",
+                    "options": ["严格按计划执行", "快速迭代、拥抱变化", "不需要计划", "只关注文档"],
+                    "correctIndex": 1,
+                    "subjectTag": "management"
+                },
+                {
+                    "question": "二八法则(帕累托原则)是指？",
+                    "options": ["20%的努力产生80%的结果", "28天养成习惯", "每天工作8小时", "团队不超过28人"],
+                    "correctIndex": 0,
+                    "subjectTag": "management"
+                },
+                {
+                    "question": "激励理论中，赫茨伯格的双因素理论包括？",
+                    "options": ["内因和外因", "保健因素和激励因素", "正激励和负激励", "物质和精神"],
+                    "correctIndex": 1,
+                    "subjectTag": "management"
+                }
+            ]
+        },
+
+        {
+            "subjectTag": "law",
+            "questions": [
+                {
+                    "question": "我国法律规定的完全民事行为能力年龄是？",
+                    "options": ["14周岁", "16周岁", "18周岁", "20周岁"],
+                    "correctIndex": 2,
+                    "subjectTag": "law"
+                },
+                {
+                    "question": "宪法在法律体系中的地位是？",
+                    "options": ["普通法", "根本大法", "行政法规", "地方法规"],
+                    "correctIndex": 1,
+                    "subjectTag": "law"
+                },
+                {
+                    "question": "以下哪种行为属于犯罪？",
+                    "options": ["违反校规", "闯红灯", "故意伤害他人致重伤", "迟到"],
+                    "correctIndex": 2,
+                    "subjectTag": "law"
+                }
+            ]
+        },
+        {
+            "subjectTag": "law",
+            "questions": [
+                {
+                    "question": "劳动法规定每日工作时间不超过几小时？",
+                    "options": ["6小时", "8小时", "10小时", "12小时"],
+                    "correctIndex": 1,
+                    "subjectTag": "law"
+                },
+                {
+                    "question": "消费者权益保护法规定，网购商品可以几天无理由退货？",
+                    "options": ["3天", "7天", "15天", "30天"],
+                    "correctIndex": 1,
+                    "subjectTag": "law"
+                },
+                {
+                    "question": "正当防卫是指？",
+                    "options": ["主动攻击他人", "为保护合法权益对侵害行为进行的防卫", "报复行为", "事后追击"],
+                    "correctIndex": 1,
+                    "subjectTag": "law"
+                }
+            ]
+        },
+        {
+            "subjectTag": "law",
+            "questions": [
+                {
+                    "question": "我国刑法规定，不满几周岁的人不负刑事责任？",
+                    "options": ["10周岁", "12周岁", "14周岁", "16周岁"],
+                    "correctIndex": 1,
+                    "subjectTag": "law"
+                },
+                {
+                    "question": "民事诉讼中，\"谁主张，谁举证\" 属于什么原则？",
+                    "options": ["公开原则", "举证责任原则", "回避原则", "合议原则"],
+                    "correctIndex": 1,
+                    "subjectTag": "law"
+                },
+                {
+                    "question": "知识产权不包括以下哪种？",
+                    "options": ["著作权", "专利权", "商标权", "债权"],
+                    "correctIndex": 3,
+                    "subjectTag": "law"
+                }
+            ]
+        },
+        {
+            "subjectTag": "law",
+            "questions": [
+                {
+                    "question": "合同成立的基本条件不包括？",
+                    "options": ["双方自愿", "内容合法", "当事人穿正装", "意思表示一致"],
+                    "correctIndex": 2,
+                    "subjectTag": "law"
+                },
+                {
+                    "question": "婚姻法规定的法定结婚年龄，男性不得早于？",
+                    "options": ["18周岁", "20周岁", "22周岁", "25周岁"],
+                    "correctIndex": 2,
+                    "subjectTag": "law"
+                },
+                {
+                    "question": "以下哪种是行政处罚？",
+                    "options": ["有期徒刑", "罚款", "赔偿损失", "支付违约金"],
+                    "correctIndex": 1,
+                    "subjectTag": "law"
+                }
+            ]
+        },
+        {
+            "subjectTag": "law",
+            "questions": [
+                {
+                    "question": "公民的隐私权属于什么权利？",
+                    "options": ["财产权", "人格权", "政治权利", "社会权利"],
+                    "correctIndex": 1,
+                    "subjectTag": "law"
+                },
+                {
+                    "question": "法律面前人人平等体现了法律的什么特征？",
+                    "options": ["强制性", "规范性", "平等性", "普遍性"],
+                    "correctIndex": 2,
+                    "subjectTag": "law"
+                },
+                {
+                    "question": "遗嘱继承和法定继承，哪个优先？",
+                    "options": ["法定继承优先", "遗嘱继承优先", "同时进行", "取决于法官"],
+                    "correctIndex": 1,
+                    "subjectTag": "law"
+                }
+            ]
+        },
+        {
+            "subjectTag": "law",
+            "questions": [
+                {
+                    "question": "交通事故中，机动车与行人发生碰撞，通常由谁承担主要责任？",
+                    "options": ["行人", "机动车一方", "双方各半", "保险公司"],
+                    "correctIndex": 1,
+                    "subjectTag": "law"
+                },
+                {
+                    "question": "\"法无禁止即可为\" 适用于谁？",
+                    "options": ["政府机关", "公民个人", "法院", "检察院"],
+                    "correctIndex": 1,
+                    "subjectTag": "law"
+                },
+                {
+                    "question": "诉讼时效的一般期限是几年？",
+                    "options": ["1年", "2年", "3年", "5年"],
+                    "correctIndex": 2,
+                    "subjectTag": "law"
+                }
+            ]
+        }
+    ]
+}

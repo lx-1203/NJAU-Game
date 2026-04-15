@@ -1,0 +1,127 @@
+{
+    "id": "npc_classmate_01",
+    "nodes": [
+        {
+            "id": "D001",
+            "speaker": "张明",
+            "portrait": "NPCSprite",
+            "content": "嘿，你来了！最近学习怎么样？",
+            "next": "D002",
+            "choices": null
+        },
+        {
+            "id": "D002",
+            "speaker": "",
+            "portrait": "",
+            "content": "张明是你的同班同学，平时成绩不错，人也很热情。",
+            "next": "D003",
+            "choices": null
+        },
+        {
+            "id": "D003",
+            "speaker": "_inner",
+            "portrait": "",
+            "content": "看起来他心情不错，要不要找他聊聊？",
+            "next": "D004",
+            "choices": null
+        },
+        {
+            "id": "D004",
+            "speaker": "张明",
+            "portrait": "NPCSprite",
+            "content": "对了，我正好想问你——要不要一起去图书馆复习？期末考试快到了。",
+            "next": null,
+            "choices": [
+                {
+                    "text": "好啊，一起去图书馆！",
+                    "next": "D005",
+                    "condition": "",
+                    "conditionHint": "",
+                    "effects": [
+                        { "type": "attribute", "target": "学力", "amount": 3 },
+                        { "type": "attribute", "target": "压力", "amount": 5 },
+                        { "type": "attribute", "target": "心情", "amount": 3 }
+                    ]
+                },
+                {
+                    "text": "我想自己安静看书",
+                    "next": "D006",
+                    "condition": "学力>=20",
+                    "conditionHint": "需要学力>=20",
+                    "effects": [
+                        { "type": "attribute", "target": "学力", "amount": 5 },
+                        { "type": "attribute", "target": "压力", "amount": 8 }
+                    ]
+                },
+                {
+                    "text": "不如我请你吃饭吧！",
+                    "next": "D007",
+                    "condition": "金钱>=100",
+                    "conditionHint": "需要100元以上",
+                    "effects": [
+                        { "type": "money", "target": "", "amount": -100 },
+                        { "type": "attribute", "target": "魅力", "amount": 3 },
+                        { "type": "attribute", "target": "心情", "amount": 8 }
+                    ]
+                },
+                {
+                    "text": "算了，我还有别的事",
+                    "next": "D008",
+                    "condition": "",
+                    "conditionHint": "",
+                    "effects": [
+                        { "type": "attribute", "target": "心情", "amount": -3 }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "D005",
+            "speaker": "张明",
+            "portrait": "NPCSprite",
+            "content": "太好了！走吧，我知道图书馆三楼有个安静的角落。",
+            "next": "D009",
+            "choices": null
+        },
+        {
+            "id": "D006",
+            "speaker": "张明",
+            "portrait": "NPCSprite",
+            "content": "也好，你学习一向认真。那我就不打扰你了，加油！",
+            "next": "D010",
+            "choices": null
+        },
+        {
+            "id": "D007",
+            "speaker": "张明",
+            "portrait": "NPCSprite",
+            "content": "真的吗？太够意思了！走，去食堂旁边那家新开的面馆！",
+            "next": "D010",
+            "choices": null
+        },
+        {
+            "id": "D008",
+            "speaker": "张明",
+            "portrait": "NPCSprite",
+            "content": "好吧，那你忙你的。有空再聊！",
+            "next": null,
+            "choices": null
+        },
+        {
+            "id": "D009",
+            "speaker": "",
+            "portrait": "",
+            "content": "你和张明一起前往了图书馆，度过了充实的一下午。",
+            "next": null,
+            "choices": null
+        },
+        {
+            "id": "D010",
+            "speaker": "_inner",
+            "portrait": "",
+            "content": "今天和张明的交流还不错，感觉大学生活渐渐有了些色彩。",
+            "next": null,
+            "choices": null
+        }
+    ]
+}

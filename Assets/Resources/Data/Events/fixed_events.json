@@ -1,0 +1,60 @@
+{
+  "events": [
+    {
+      "id": "FE_001",
+      "eventType": "Fixed",
+      "title": "上课时间",
+      "description": "又到了上课的时间，你打算怎么度过这节课？",
+      "priority": 3,
+      "isForced": false,
+      "isRepeatable": true,
+      "trigger": {
+        "year": 0,
+        "semester": 0,
+        "roundMin": 0,
+        "roundMax": 0,
+        "attributeConditions": [],
+        "minMoney": 0,
+        "maxMoney": 0,
+        "affinityConditions": [],
+        "requiredEventIds": [],
+        "excludedEventIds": [],
+        "minDarkness": 0,
+        "triggerBehavior": "",
+        "phase": "RoundStart"
+      },
+      "dialogues": [
+        {
+          "speaker": "旁白",
+          "lines": [
+            "课堂上，老师正在讲解重要的知识点...",
+            "你打算认真听讲还是做自己的事？"
+          ],
+          "portraitId": ""
+        }
+      ],
+      "choices": [
+        {
+          "text": "认真听讲",
+          "effects": [
+            { "type": "attribute", "target": "学力", "value": 2, "description": "学力 +2" },
+            { "type": "attribute", "target": "压力", "value": 3, "description": "压力 +3" }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "打瞌睡",
+          "effects": [
+            { "type": "attribute", "target": "心情", "value": 2, "description": "心情 +2" },
+            { "type": "attribute", "target": "压力", "value": -2, "description": "压力 -2" }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        }
+      ],
+      "defaultEffects": [],
+      "chainEventIds": []
+    }
+  ]
+}

@@ -9,17 +9,11 @@ using TMPro;
 public class NPCController : MonoBehaviour
 {
     [Header("NPC 设置")]
-    [SerializeField] private string npcName = "同学";
     [SerializeField] private float interactionRange = 2.5f;
 
-    [Header("对话内容")]
-    [SerializeField] private string[] dialogueLines = new string[]
-    {
-        "你好！欢迎来到这个世界。",
-        "这里是一个充满冒险的地方。",
-        "如果你需要帮助，随时可以来找我。",
-        "祝你旅途愉快！"
-    };
+    // ========== NPC 数据 ==========
+    private string npcId;
+    private NPCData npcData;
 
     private SpriteRenderer spriteRenderer;
     private Transform player;
@@ -27,11 +21,27 @@ public class NPCController : MonoBehaviour
     private GameObject interactionHint;
     private float hintBobTime = 0f;
 
-    private void Awake()
+    // ========== 公共属性 ==========
+
+    public string NpcId => npcId;
+    public string NPCName => npcData != null ? npcData.displayName : "";
+    public bool IsPlayerInRange => playerInRange;
+
+    // ========== 初始化 ==========
+
+    /// <summary>
+    /// 由 NPCManager 调用，设置 NPC 数据并初始化外观
+    /// </summary>
+    public void Initialize(NPCData data)
     {
+        npcId = data.id;
+        npcData = data;
+
         spriteRenderer = GetComponent<SpriteRenderer>();
         LoadNPCSprite();
         CreateInteractionHint();
+
+        Debug.Log($"[NPCController] NPC 初始化完成: {npcData.displayName} (ID: {npcId})");
     }
 
     private void Start()
@@ -46,19 +56,23 @@ public class NPCController : MonoBehaviour
 
     private void LoadNPCSprite()
     {
-        Sprite npcSprite = Resources.Load<Sprite>("NPCSprite");
-        if (npcSprite != null && spriteRenderer != null)
+        if (npcData == null || spriteRenderer == null) return;
+
+        // 使用 npcData.portraitId 加载立绘
+        string spritePath = !string.IsNullOrEmpty(npcData.portraitId) ? npcData.portraitId : "NPCSprite";
+        Sprite npcSprite = Resources.Load<Sprite>(spritePath);
+        if (npcSprite != null)
         {
             spriteRenderer.sprite = npcSprite;
             spriteRenderer.color = Color.white;
 
             // 调整NPC大小
-            float targetHeight = 2f;
+            float targetHeight = 3f; // 适配 orthoSize=5.5 的相机
             float spriteHeight = npcSprite.bounds.size.y;
             float scale = targetHeight / spriteHeight;
             transform.localScale = new Vector3(scale, scale, 1f);
 
-            Debug.Log("NPC图片加载成功！");
+            Debug.Log($"[NPCController] {npcData.displayName} 立绘加载成功！");
         }
     }
 
@@ -105,13 +119,14 @@ public class NPCController : MonoBehaviour
         keyBgSr.sortingOrder = 10;
         keyBgObj.transform.localScale = new Vector3(0.4f, 0.4f, 1f);
 
-        // --- 文字 "对话"（使用 TMP 3D 版本 + 中文字体） ---
+        // --- 文字：显示 NPC 名字（使用 TMP 3D 版本 + 中文字体） ---
+        string hintLabel = npcData != null ? npcData.displayName : "对话";
         GameObject textObj = new GameObject("HintLabel");
         textObj.transform.SetParent(interactionHint.transform, false);
         textObj.transform.localPosition = new Vector3(0.15f, 0.02f, 0);
 
         TextMeshPro labelText = textObj.AddComponent<TextMeshPro>();
-        labelText.text = "对话";
+        labelText.text = hintLabel;
         labelText.fontSize = 5f;
         labelText.alignment = TextAlignmentOptions.Center;
         labelText.color = Color.white;
@@ -182,28 +197,64 @@ public class NPCController : MonoBehaviour
             }
         }
 
-        // 按E键触发对话
+        // 按E键触发互动
         if (playerInRange && Input.GetKeyDown(KeyCode.E))
         {
             if (!DialogueSystem.Instance.IsDialogueActive)
             {
-                StartDialogue();
+                HandleInteraction();
             }
         }
     }
 
-    private void StartDialogue()
+    // ========== 互动逻辑 ==========
+
+    /// <summary>
+    /// 处理玩家按 E 键的互动：优先打开互动菜单，否则通过事件中枢发布对话请求
+    /// </summary>
+    private void HandleInteraction()
     {
         if (interactionHint != null)
         {
             interactionHint.SetActive(false);
         }
 
-        DialogueSystem.Instance.StartDialogue(npcName, dialogueLines);
-    }
+        // 优先使用 NPCInteractionMenu（若已实现）
+        if (NPCInteractionMenu.Instance != null)
+        {
+            NPCInteractionMenu.Instance.ShowForNPC(npcId);
+            return;
+        }
 
-    public string NPCName => npcName;
-    public bool IsPlayerInRange => playerInRange;
+        // 否则通过 NPCEventHub 发布对话请求
+        if (NPCEventHub.Instance != null && npcData != null && npcData.greetingLines != null && npcData.greetingLines.Length > 0)
+        {
+            NPCEventHub.DialogueRequest request = new NPCEventHub.DialogueRequest(
+                npcId,
+                npcData.displayName,
+                npcData.greetingLines,
+                npcData.portraitId
+            );
+            NPCEventHub.Instance.RaiseDialogueRequested(request);
+        }
+        else
+        {
+            // 兜底：直接调用 DialogueSystem
+            // 优先使用 JSON 对话 ID
+            if (npcData != null && !string.IsNullOrEmpty(npcData.dialogueId))
+            {
+                DialogueSystem.Instance.StartDialogue(npcData.dialogueId);
+            }
+            else
+            {
+                string speakerName = npcData != null ? npcData.displayName : "";
+                string[] lines = npcData != null && npcData.greetingLines != null
+                    ? npcData.greetingLines
+                    : new string[] { "……" };
+                DialogueSystem.Instance.StartDialogue(speakerName, lines);
+            }
+        }
+    }
 
     private void OnDrawGizmosSelected()
     {

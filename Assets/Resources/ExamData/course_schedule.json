@@ -1,0 +1,331 @@
+{
+    "courses": [
+        {
+            "id": "COURSE_MATH_1_1",
+            "courseName": "高等数学I",
+            "credits": 5,
+            "subjectTag": "math",
+            "year": 1,
+            "semester": 1
+        },
+        {
+            "id": "COURSE_ENGLISH_1_1",
+            "courseName": "大学英语I",
+            "credits": 4,
+            "subjectTag": "english",
+            "year": 1,
+            "semester": 1
+        },
+        {
+            "id": "COURSE_POLITICS_1_1",
+            "courseName": "思想道德与法治",
+            "credits": 3,
+            "subjectTag": "politics",
+            "year": 1,
+            "semester": 1
+        },
+        {
+            "id": "COURSE_CS_1_1",
+            "courseName": "计算机基础",
+            "credits": 3,
+            "subjectTag": "cs",
+            "year": 1,
+            "semester": 1
+        },
+        {
+            "id": "COURSE_PE_1_1",
+            "courseName": "体育I",
+            "credits": 1,
+            "subjectTag": "pe",
+            "year": 1,
+            "semester": 1
+        },
+        {
+            "id": "COURSE_HISTORY_1_1",
+            "courseName": "中国近现代史纲要",
+            "credits": 2,
+            "subjectTag": "history",
+            "year": 1,
+            "semester": 1
+        },
+
+        {
+            "id": "COURSE_MATH_1_2",
+            "courseName": "高等数学II",
+            "credits": 5,
+            "subjectTag": "math",
+            "year": 1,
+            "semester": 2
+        },
+        {
+            "id": "COURSE_ENGLISH_1_2",
+            "courseName": "大学英语II",
+            "credits": 4,
+            "subjectTag": "english",
+            "year": 1,
+            "semester": 2
+        },
+        {
+            "id": "COURSE_PHYSICS_1_2",
+            "courseName": "大学物理I",
+            "credits": 4,
+            "subjectTag": "physics",
+            "year": 1,
+            "semester": 2
+        },
+        {
+            "id": "COURSE_CS_1_2",
+            "courseName": "C语言程序设计",
+            "credits": 3,
+            "subjectTag": "cs",
+            "year": 1,
+            "semester": 2
+        },
+        {
+            "id": "COURSE_PE_1_2",
+            "courseName": "体育II",
+            "credits": 1,
+            "subjectTag": "pe",
+            "year": 1,
+            "semester": 2
+        },
+
+        {
+            "id": "COURSE_MATH_2_1",
+            "courseName": "线性代数",
+            "credits": 3,
+            "subjectTag": "math",
+            "year": 2,
+            "semester": 1
+        },
+        {
+            "id": "COURSE_ENGLISH_2_1",
+            "courseName": "大学英语III",
+            "credits": 3,
+            "subjectTag": "english",
+            "year": 2,
+            "semester": 1
+        },
+        {
+            "id": "COURSE_PHYSICS_2_1",
+            "courseName": "大学物理II",
+            "credits": 3,
+            "subjectTag": "physics",
+            "year": 2,
+            "semester": 1
+        },
+        {
+            "id": "COURSE_CS_2_1",
+            "courseName": "数据结构",
+            "credits": 4,
+            "subjectTag": "cs",
+            "year": 2,
+            "semester": 1
+        },
+        {
+            "id": "COURSE_POLITICS_2_1",
+            "courseName": "马克思主义基本原理",
+            "credits": 3,
+            "subjectTag": "politics",
+            "year": 2,
+            "semester": 1
+        },
+        {
+            "id": "COURSE_PE_2_1",
+            "courseName": "体育III",
+            "credits": 1,
+            "subjectTag": "pe",
+            "year": 2,
+            "semester": 1
+        },
+
+        {
+            "id": "COURSE_MATH_2_2",
+            "courseName": "概率论与数理统计",
+            "credits": 3,
+            "subjectTag": "math",
+            "year": 2,
+            "semester": 2
+        },
+        {
+            "id": "COURSE_ENGLISH_2_2",
+            "courseName": "大学英语IV",
+            "credits": 3,
+            "subjectTag": "english",
+            "year": 2,
+            "semester": 2
+        },
+        {
+            "id": "COURSE_CS_2_2A",
+            "courseName": "操作系统",
+            "credits": 4,
+            "subjectTag": "cs",
+            "year": 2,
+            "semester": 2
+        },
+        {
+            "id": "COURSE_CS_2_2B",
+            "courseName": "数据库原理",
+            "credits": 3,
+            "subjectTag": "cs",
+            "year": 2,
+            "semester": 2
+        },
+        {
+            "id": "COURSE_POLITICS_2_2",
+            "courseName": "毛泽东思想和中国特色社会主义理论体系概论",
+            "credits": 3,
+            "subjectTag": "politics",
+            "year": 2,
+            "semester": 2
+        },
+        {
+            "id": "COURSE_PE_2_2",
+            "courseName": "体育IV",
+            "credits": 1,
+            "subjectTag": "pe",
+            "year": 2,
+            "semester": 2
+        },
+
+        {
+            "id": "COURSE_CS_3_1A",
+            "courseName": "计算机网络",
+            "credits": 4,
+            "subjectTag": "cs",
+            "year": 3,
+            "semester": 1
+        },
+        {
+            "id": "COURSE_CS_3_1B",
+            "courseName": "软件工程",
+            "credits": 3,
+            "subjectTag": "cs",
+            "year": 3,
+            "semester": 1
+        },
+        {
+            "id": "COURSE_CS_3_1C",
+            "courseName": "算法设计与分析",
+            "credits": 3,
+            "subjectTag": "cs",
+            "year": 3,
+            "semester": 1
+        },
+        {
+            "id": "COURSE_ECONOMICS_3_1",
+            "courseName": "微观经济学",
+            "credits": 3,
+            "subjectTag": "economics",
+            "year": 3,
+            "semester": 1
+        },
+        {
+            "id": "COURSE_PE_3_1",
+            "courseName": "大学生心理健康教育",
+            "credits": 2,
+            "subjectTag": "pe",
+            "year": 3,
+            "semester": 1
+        },
+
+        {
+            "id": "COURSE_CS_3_2A",
+            "courseName": "人工智能导论",
+            "credits": 3,
+            "subjectTag": "cs",
+            "year": 3,
+            "semester": 2
+        },
+        {
+            "id": "COURSE_CS_3_2B",
+            "courseName": "编译原理",
+            "credits": 3,
+            "subjectTag": "cs",
+            "year": 3,
+            "semester": 2
+        },
+        {
+            "id": "COURSE_CS_3_2C",
+            "courseName": "Web开发技术",
+            "credits": 3,
+            "subjectTag": "cs",
+            "year": 3,
+            "semester": 2
+        },
+        {
+            "id": "COURSE_ECONOMICS_3_2",
+            "courseName": "宏观经济学",
+            "credits": 3,
+            "subjectTag": "economics",
+            "year": 3,
+            "semester": 2
+        },
+        {
+            "id": "COURSE_MANAGEMENT_3_2",
+            "courseName": "创业基础",
+            "credits": 2,
+            "subjectTag": "management",
+            "year": 3,
+            "semester": 2
+        },
+
+        {
+            "id": "COURSE_CS_4_1A",
+            "courseName": "信息安全",
+            "credits": 3,
+            "subjectTag": "cs",
+            "year": 4,
+            "semester": 1
+        },
+        {
+            "id": "COURSE_CS_4_1B",
+            "courseName": "云计算与大数据",
+            "credits": 3,
+            "subjectTag": "cs",
+            "year": 4,
+            "semester": 1
+        },
+        {
+            "id": "COURSE_MANAGEMENT_4_1",
+            "courseName": "项目管理",
+            "credits": 2,
+            "subjectTag": "management",
+            "year": 4,
+            "semester": 1
+        },
+        {
+            "id": "COURSE_LITERATURE_4_1",
+            "courseName": "科技论文写作",
+            "credits": 2,
+            "subjectTag": "literature",
+            "year": 4,
+            "semester": 1
+        },
+        {
+            "id": "COURSE_MANAGEMENT_4_1B",
+            "courseName": "职业规划与就业指导",
+            "credits": 1,
+            "subjectTag": "management",
+            "year": 4,
+            "semester": 1
+        },
+
+        {
+            "id": "COURSE_CS_4_2A",
+            "courseName": "毕业设计",
+            "credits": 8,
+            "subjectTag": "cs",
+            "year": 4,
+            "semester": 2
+        },
+        {
+            "id": "COURSE_CS_4_2B",
+            "courseName": "毕业实习",
+            "credits": 4,
+            "subjectTag": "cs",
+            "year": 4,
+            "semester": 2
+        }
+    ]
+}
