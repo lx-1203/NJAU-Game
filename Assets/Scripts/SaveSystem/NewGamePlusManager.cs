@@ -73,12 +73,12 @@ public class NewGamePlusManager : MonoBehaviour
 
         // 快照 NPC 关系数据
         data.lastRelationships.Clear();
-        if (NPCManager.Instance != null)
+        if (AffinitySystem.Instance != null)
         {
-            var allRelationships = NPCManager.Instance.GetAllRelationships();
+            var allRelationships = AffinitySystem.Instance.GetAllRelationships();
             if (allRelationships != null)
             {
-                foreach (var rd in allRelationships)
+                foreach (var rd in allRelationships.Values)
                 {
                     data.lastRelationships.Add(NPCRelationshipSaveData.FromRuntime(rd));
                 }
@@ -134,7 +134,7 @@ public class NewGamePlusManager : MonoBehaviour
         }
 
         // NPC 好感度传承
-        if (NPCManager.Instance != null && data.lastRelationships != null)
+        if (AffinitySystem.Instance != null && data.lastRelationships != null)
         {
             foreach (var savedRel in data.lastRelationships)
             {
@@ -143,7 +143,7 @@ public class NewGamePlusManager : MonoBehaviour
 
                 if (inheritedAffinity > 0)
                 {
-                    var currentRel = NPCManager.Instance.GetRelationship(savedRel.npcId);
+                    var currentRel = AffinitySystem.Instance.GetRelationship(savedRel.npcId);
                     if (currentRel != null)
                     {
                         currentRel.affinity = inheritedAffinity;

@@ -261,7 +261,11 @@ public class SemesterSummarySystem : MonoBehaviour, ISaveable
         // 发放天赋点奖励
         if (TalentSystem.Instance != null)
         {
-            TalentSystem.Instance.ProcessSemesterReward();
+            float gpa = gpaProvider != null ? gpaProvider.GetSemesterGPA(year, semester) : 0f;
+            string ptGrade = "";
+            bool cet4 = ExamSystem.Instance != null && ExamSystem.Instance.IsCET4Passed;
+            bool cet6 = ExamSystem.Instance != null && ExamSystem.Instance.IsCET6Passed;
+            TalentSystem.Instance.ProcessSemesterReward(gpa, ptGrade, cet4, cet6);
         }
 
         OnSemesterSummaryReady?.Invoke(summary);

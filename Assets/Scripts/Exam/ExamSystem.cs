@@ -7,7 +7,7 @@ using System.Linq;
 /// 考试系统 —— 管理题库加载、考试流程控制、通过率计算、成绩记录
 /// 实现 IExamResultProvider 接口供结局系统和天赋系统使用
 /// </summary>
-public class ExamSystem : MonoBehaviour, IExamResultProvider
+public class ExamSystem : MonoBehaviour, IExamResultProvider, ISaveable
 {
     // ========== 单例 ==========
 
@@ -866,5 +866,29 @@ public class ExamSystem : MonoBehaviour, IExamResultProvider
     {
         Debug.Log("[ExamSystem] 收到开除信号，触发强制结局「学术不端·开除」");
         OnExpulsionTriggered?.Invoke("学术不端·开除");
+    }
+
+    // ========== ISaveable 实现 ==========
+
+    public void SaveToData(SaveData data)
+    {
+        data.semesterGPAHistory = new List<SemesterGPA>(semesterGPAHistory);
+        data.failedCourses = new List<ExamResult>(failedCourses);
+        data.studyCountThisSemester = studyCountThisSemester;
+        data.cet4Passed = cet4Passed;
+        data.cet6Passed = cet6Passed;
+        data.computerLevelPassed = computerLevelPassed;
+        data.lastMidtermResults = new List<ExamResult>(lastMidtermResults);
+    }
+
+    public void LoadFromData(SaveData data)
+    {
+        semesterGPAHistory = data.semesterGPAHistory ?? new List<SemesterGPA>();
+        failedCourses = data.failedCourses ?? new List<ExamResult>();
+        studyCountThisSemester = data.studyCountThisSemester;
+        cet4Passed = data.cet4Passed;
+        cet6Passed = data.cet6Passed;
+        computerLevelPassed = data.computerLevelPassed;
+        lastMidtermResults = data.lastMidtermResults ?? new List<ExamResult>();
     }
 }

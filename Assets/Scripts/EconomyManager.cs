@@ -47,6 +47,9 @@ public class TransactionRecord
     /// <summary>交易描述</summary>
     public string description;
 
+    /// <summary>JSON反序列化需要的无参构造函数</summary>
+    public TransactionRecord() { }
+
     /// <summary>
     /// 构造交易记录
     /// </summary>

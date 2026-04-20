@@ -334,15 +334,36 @@ public class NPCInteractionMenu : MonoBehaviour
         }
 
         NPCData[] allNPCs = NPCDatabase.Instance.GetAllNPCs();
-        if (allNPCs.Length == 0)
+
+        // 按当前地点过滤可见NPC
+        LocationId currentLoc = GameState.Instance != null ? GameState.Instance.CurrentLocation : LocationId.Dormitory;
+        List<NPCData> visibleNPCs = new List<NPCData>();
+        foreach (var npc in allNPCs)
         {
-            CreateInfoLabel("暂无可互动的NPC");
+            // 检查NPC是否在当前地点（通过LocationManager日程查询）
+            if (LocationManager.Instance != null)
+            {
+                string[] npcsHere = LocationManager.Instance.GetNPCsAtLocation(currentLoc);
+                if (npcsHere != null && System.Array.IndexOf(npcsHere, npc.id) >= 0)
+                {
+                    visibleNPCs.Add(npc);
+                }
+            }
+            else
+            {
+                visibleNPCs.Add(npc); // LocationManager不可用时回退显示全部
+            }
+        }
+
+        if (visibleNPCs.Count == 0)
+        {
+            CreateInfoLabel("当前地点没有可互动的NPC");
             return;
         }
 
-        for (int i = 0; i < allNPCs.Length; i++)
+        for (int i = 0; i < visibleNPCs.Count; i++)
         {
-            NPCData npc = allNPCs[i];
+            NPCData npc = visibleNPCs[i];
 
             // 获取好感度信息
             string affinityInfo = "";

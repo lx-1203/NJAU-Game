@@ -198,19 +198,18 @@ public class PlayerAttributes : MonoBehaviour, ISaveable
         data.luck = luck;
     }
 
-    /// <summary>从存档数据恢复玩家属性</summary>
+    /// <summary>从存档数据恢复玩家属性（通过属性访问器校验值域）</summary>
     public void LoadFromData(SaveData data)
     {
-        study = data.study;
-        charm = data.charm;
-        physique = data.physique;
-        leadership = data.leadership;
-        stress = data.stress;
-        mood = data.mood;
-        darkness = data.darkness;
-        guilt = data.guilt;
-        luck = data.luck;
-        NotifyChanged();
+        Study = data.study;
+        Charm = data.charm;
+        Physique = data.physique;
+        Leadership = data.leadership;
+        Stress = data.stress;
+        Mood = data.mood;
+        Darkness = data.darkness;
+        Guilt = data.guilt;
+        Luck = data.luck;
     }
 
     /// <summary>批量设置所有属性（供调试工具使用）</summary>

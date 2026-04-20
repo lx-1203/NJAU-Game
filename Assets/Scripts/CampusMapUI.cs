@@ -5,15 +5,9 @@ using System;
 using System.Collections.Generic;
 
 /// <summary>
-/// 校园地图 UI —— 在 HUDBuilder 的 centerPanel 内构建节点式校园地图
-/// 非 MonoBehaviour，由 HUDManager 管理生命周期
-///
-/// 功能：
-/// - 按 LocationDefinition.mapPosition 归一化坐标定位地点节点
-/// - 相邻地点之间绘制连接线
-/// - 当前地点高亮显示（金色边框 + 不可点击）
-/// - 每个节点显示地点名称 + NPC 数量指示
-/// - 点击节点触发 OnLocationNodeClicked 事件
+/// 校园地图 UI —— 弹窗式覆盖地图（非 MonoBehaviour）
+/// 点击"地图"按钮打开，选择地点后关闭
+/// 由 HUDManager 管理生命周期
 /// </summary>
 public class CampusMapUI
 {
@@ -22,25 +16,19 @@ public class CampusMapUI
     /// <summary>地点节点被点击时触发，参数为目标地点 ID</summary>
     public event Action<LocationId> OnLocationNodeClicked;
 
-    // ========== 颜色方案（复用 HUDBuilder 配色） ==========
+    // ========== 颜色方案 ==========
 
-    private static readonly Color PanelBgColor       = new Color(0.08f, 0.08f, 0.12f, 0.90f);
-    private static readonly Color CenterPanelColor   = new Color(0.05f, 0.05f, 0.08f, 0.50f);
+    private static readonly Color OverlayBgColor     = new Color(0f, 0f, 0f, 0.70f);
+    private static readonly Color PanelBgColor       = new Color(0.08f, 0.08f, 0.12f, 0.95f);
     private static readonly Color ButtonNormalColor   = new Color(0.20f, 0.35f, 0.60f, 1.0f);
-    private static readonly Color ButtonHoverColor    = new Color(0.30f, 0.45f, 0.70f, 1.0f);
-    private static readonly Color ButtonPressedColor  = new Color(0.15f, 0.25f, 0.50f, 1.0f);
     private static readonly Color TextWhite           = new Color(0.92f, 0.92f, 0.92f);
     private static readonly Color TextGold            = new Color(1.0f, 0.85f, 0.30f);
-
-    // 当前地点节点专用色
     private static readonly Color CurrentNodeColor    = new Color(0.85f, 0.65f, 0.15f, 1.0f);
     private static readonly Color CurrentNodeBorder   = new Color(1.0f, 0.85f, 0.30f, 1.0f);
-
-    // 连接线颜色
     private static readonly Color LinkLineColor       = new Color(0.35f, 0.40f, 0.55f, 0.6f);
-
-    // NPC 指示颜色
     private static readonly Color NPCIndicatorColor   = new Color(0.40f, 0.85f, 0.50f, 1.0f);
+    private static readonly Color CloseButtonColor    = new Color(0.50f, 0.20f, 0.20f, 1.0f);
+    private static readonly Color CloseHoverColor     = new Color(0.65f, 0.30f, 0.30f, 1.0f);
 
     // ========== 布局常量 ==========
 
@@ -48,20 +36,22 @@ public class CampusMapUI
     private const float NodeHeight     = 60f;
     private const float LinkLineHeight = 2f;
     private const float TitleHeight    = 40f;
-    private const float MapPadding     = 40f;  // 地图区域四周留白
+    private const float MapPadding     = 40f;
 
     // ========== 内部引用 ==========
 
-    private GameObject centerPanel;
-    private GameObject mapRoot;          // 地图根节点（放在 centerPanel 内）
-    private TextMeshProUGUI titleText;   // 顶部标题 "当前位置：XX"
-    private GameObject nodesContainer;   // 节点容器
-    private GameObject linksContainer;   // 连接线容器
+    private GameObject overlayRoot;     // 全屏覆盖层根节点
+    private GameObject mapPanel;        // 地图面板（居中）
+    private TextMeshProUGUI titleText;
+    private GameObject nodesContainer;
+    private GameObject linksContainer;
+
+    /// <summary>覆盖层根节点（供 LocationDetailPanel 作为父级）</summary>
+    public GameObject OverlayRoot => overlayRoot;
 
     // 节点数据缓存
     private Dictionary<LocationId, NodeEntry> nodeEntries = new Dictionary<LocationId, NodeEntry>();
 
-    /// <summary>单个地点节点的 UI 引用集合</summary>
     private class NodeEntry
     {
         public GameObject root;
@@ -73,47 +63,92 @@ public class CampusMapUI
         public LocationDefinition locationDef;
     }
 
-    // ========== 对外接口 ==========
+    // ========== 可见性 ==========
+
+    public bool IsVisible => overlayRoot != null && overlayRoot.activeSelf;
+
+    public void ShowOverlay()
+    {
+        if (overlayRoot != null)
+        {
+            RefreshMap();
+            overlayRoot.SetActive(true);
+        }
+    }
+
+    public void HideOverlay()
+    {
+        if (overlayRoot != null)
+        {
+            overlayRoot.SetActive(false);
+        }
+    }
+
+    // ========== 构建 ==========
 
     /// <summary>
-    /// 在指定的 centerPanel 内构建完整的校园地图 UI
+    /// 在指定 Canvas 上构建弹窗式地图覆盖层
     /// </summary>
-    /// <param name="panel">HUDBuilder.centerPanel 引用</param>
-    public void BuildMap(GameObject panel)
+    public void BuildMapOverlay(Canvas canvas)
     {
-        if (panel == null)
+        if (canvas == null)
         {
-            Debug.LogError("[CampusMapUI] centerPanel 为 null，无法构建地图");
+            Debug.LogError("[CampusMapUI] Canvas 为 null，无法构建地图");
             return;
         }
 
-        centerPanel = panel;
+        // --- 全屏覆盖层 ---
+        overlayRoot = new GameObject("CampusMapOverlay");
+        overlayRoot.transform.SetParent(canvas.transform, false);
+        RectTransform overlayRT = overlayRoot.AddComponent<RectTransform>();
+        StretchFill(overlayRT);
+        // 确保在最前面
+        overlayRoot.transform.SetAsLastSibling();
 
-        // 清除 centerPanel 中的占位内容
-        ClearChildren(centerPanel.transform);
+        // 半透明黑底（点击关闭）
+        Image overlayBg = overlayRoot.AddComponent<Image>();
+        overlayBg.color = OverlayBgColor;
+        Button overlayBtn = overlayRoot.AddComponent<Button>();
+        overlayBtn.transition = Selectable.Transition.None;
+        overlayBtn.onClick.AddListener(HideOverlay);
 
-        // 创建地图根节点
-        mapRoot = new GameObject("CampusMap");
-        mapRoot.transform.SetParent(centerPanel.transform, false);
-        RectTransform mapRT = mapRoot.AddComponent<RectTransform>();
-        StretchFill(mapRT);
+        // --- 居中地图面板（80% 屏幕大小） ---
+        mapPanel = new GameObject("MapPanel");
+        mapPanel.transform.SetParent(overlayRoot.transform, false);
+        RectTransform panelRT = mapPanel.AddComponent<RectTransform>();
+        panelRT.anchorMin = new Vector2(0.1f, 0.08f);
+        panelRT.anchorMax = new Vector2(0.9f, 0.92f);
+        panelRT.offsetMin = Vector2.zero;
+        panelRT.offsetMax = Vector2.zero;
 
-        // 1. 创建顶部标题
+        Image panelBg = mapPanel.AddComponent<Image>();
+        panelBg.color = PanelBgColor;
+        panelBg.raycastTarget = true; // 阻止点击穿透到覆盖层关闭按钮
+
+        // 地图面板内的点击不触发关闭
+        Button panelBlocker = mapPanel.AddComponent<Button>();
+        panelBlocker.transition = Selectable.Transition.None;
+        // 不绑定任何事件，仅拦截点击
+
+        // --- 关闭按钮 ---
+        CreateCloseButton();
+
+        // --- 标题 ---
         CreateTitle();
 
-        // 2. 创建连接线容器（先创建，让线在节点下方）
+        // --- 连接线容器 ---
         linksContainer = new GameObject("LinksContainer");
-        linksContainer.transform.SetParent(mapRoot.transform, false);
+        linksContainer.transform.SetParent(mapPanel.transform, false);
         RectTransform linksRT = linksContainer.AddComponent<RectTransform>();
         StretchFill(linksRT);
 
-        // 3. 创建节点容器
+        // --- 节点容器 ---
         nodesContainer = new GameObject("NodesContainer");
-        nodesContainer.transform.SetParent(mapRoot.transform, false);
+        nodesContainer.transform.SetParent(mapPanel.transform, false);
         RectTransform nodesRT = nodesContainer.AddComponent<RectTransform>();
         StretchFill(nodesRT);
 
-        // 4. 创建所有地点节点
+        // --- 创建地点节点和连线 ---
         if (LocationManager.Instance != null)
         {
             LocationDefinition[] allLocations = LocationManager.Instance.GetAllLocations();
@@ -122,25 +157,19 @@ public class CampusMapUI
                 CreateLocationNode(locDef);
             }
 
-            // 5. 绘制连接线
             List<LocationLink> links = LocationManager.Instance.GetAllLinks();
             foreach (var link in links)
             {
                 CreateLinkLine(link);
             }
         }
-        else
-        {
-            Debug.LogWarning("[CampusMapUI] LocationManager 实例不存在，无法加载地点数据");
-        }
 
-        // 6. 首次刷新高亮状态
-        RefreshMap();
+        // 初始隐藏
+        overlayRoot.SetActive(false);
     }
 
-    /// <summary>
-    /// 刷新地图状态：更新当前地点高亮、NPC 指示
-    /// </summary>
+    // ========== 刷新 ==========
+
     public void RefreshMap()
     {
         if (LocationManager.Instance == null || GameState.Instance == null) return;
@@ -159,13 +188,10 @@ public class CampusMapUI
         {
             LocationId locId = kvp.Key;
             NodeEntry entry = kvp.Value;
-
             bool isCurrent = (locId == currentLoc);
 
-            // 更新背景色和交互状态
             if (isCurrent)
             {
-                // 当前地点：金色高亮，不可点击
                 entry.bgImage.color = CurrentNodeColor;
                 entry.borderImage.color = CurrentNodeBorder;
                 entry.button.interactable = false;
@@ -173,14 +199,13 @@ public class CampusMapUI
             }
             else
             {
-                // 其他地点：普通蓝色，可点击
                 entry.bgImage.color = ButtonNormalColor;
-                entry.borderImage.color = new Color(0f, 0f, 0f, 0f); // 透明边框
+                entry.borderImage.color = new Color(0f, 0f, 0f, 0f);
                 entry.button.interactable = true;
                 entry.nameText.color = TextWhite;
             }
 
-            // 更新 NPC 数量显示
+            // NPC 数量
             string[] npcs = LocationManager.Instance.GetNPCsAtLocation(locId);
             if (npcs != null && npcs.Length > 0)
             {
@@ -194,25 +219,58 @@ public class CampusMapUI
         }
     }
 
-    /// <summary>
-    /// 销毁地图 UI（在需要重建时调用）
-    /// </summary>
     public void Destroy()
     {
-        if (mapRoot != null)
+        if (overlayRoot != null)
         {
-            UnityEngine.Object.Destroy(mapRoot);
+            UnityEngine.Object.Destroy(overlayRoot);
         }
         nodeEntries.Clear();
     }
 
     // ========== 内部构建方法 ==========
 
-    /// <summary>创建顶部位置标题</summary>
+    private void CreateCloseButton()
+    {
+        GameObject closeBtnObj = new GameObject("CloseButton");
+        closeBtnObj.transform.SetParent(mapPanel.transform, false);
+
+        RectTransform closeRT = closeBtnObj.AddComponent<RectTransform>();
+        closeRT.anchorMin = new Vector2(1, 1);
+        closeRT.anchorMax = new Vector2(1, 1);
+        closeRT.pivot = new Vector2(1, 1);
+        closeRT.anchoredPosition = new Vector2(-8, -8);
+        closeRT.sizeDelta = new Vector2(40, 40);
+
+        Image closeBg = closeBtnObj.AddComponent<Image>();
+        closeBg.color = CloseButtonColor;
+
+        Button closeBtn = closeBtnObj.AddComponent<Button>();
+        ColorBlock cb = closeBtn.colors;
+        cb.normalColor = CloseButtonColor;
+        cb.highlightedColor = CloseHoverColor;
+        cb.pressedColor = new Color(0.40f, 0.15f, 0.15f, 1.0f);
+        cb.selectedColor = CloseButtonColor;
+        closeBtn.colors = cb;
+        closeBtn.onClick.AddListener(HideOverlay);
+
+        // X 文字
+        GameObject xObj = new GameObject("XText");
+        xObj.transform.SetParent(closeBtnObj.transform, false);
+        RectTransform xRT = xObj.AddComponent<RectTransform>();
+        StretchFill(xRT);
+        TextMeshProUGUI xText = xObj.AddComponent<TextMeshProUGUI>();
+        xText.text = "✕";
+        xText.fontSize = 22f;
+        xText.color = TextWhite;
+        xText.alignment = TextAlignmentOptions.Center;
+        xText.raycastTarget = false;
+    }
+
     private void CreateTitle()
     {
         GameObject titleObj = new GameObject("MapTitle");
-        titleObj.transform.SetParent(mapRoot.transform, false);
+        titleObj.transform.SetParent(mapPanel.transform, false);
 
         RectTransform rt = titleObj.AddComponent<RectTransform>();
         rt.anchorMin = new Vector2(0, 1);
@@ -228,12 +286,9 @@ public class CampusMapUI
         titleText.alignment = TextAlignmentOptions.Center;
         titleText.enableWordWrapping = false;
         titleText.overflowMode = TextOverflowModes.Ellipsis;
+        titleText.raycastTarget = false;
     }
 
-    /// <summary>
-    /// 创建单个地点节点按钮
-    /// 节点结构：Border(Image) > Background(Image+Button) > NameText + NPCText
-    /// </summary>
     private void CreateLocationNode(LocationDefinition locDef)
     {
         // --- 外层边框 ---
@@ -242,39 +297,37 @@ public class CampusMapUI
 
         RectTransform borderRT = borderObj.AddComponent<RectTransform>();
         borderRT.sizeDelta = new Vector2(NodeWidth + 4f, NodeHeight + 4f);
-        // 使用左下角作为锚点基准，根据 mapPosition 定位
         borderRT.anchorMin = new Vector2(0, 0);
         borderRT.anchorMax = new Vector2(0, 0);
         borderRT.pivot = new Vector2(0.5f, 0.5f);
-        // 实际位置将在 PositionNode 中设置
 
         Image borderImage = borderObj.AddComponent<Image>();
-        borderImage.color = new Color(0f, 0f, 0f, 0f); // 默认透明
+        borderImage.color = new Color(0f, 0f, 0f, 0f);
 
         // --- 内层背景 + 按钮 ---
         GameObject nodeObj = new GameObject($"Node_{locDef.id}");
         nodeObj.transform.SetParent(borderObj.transform, false);
 
         RectTransform nodeRT = nodeObj.AddComponent<RectTransform>();
-        StretchFill(nodeRT, 2f); // 内缩 2px 形成边框效果
+        StretchFill(nodeRT, 2f);
 
         Image bgImage = nodeObj.AddComponent<Image>();
         bgImage.color = ButtonNormalColor;
 
         Button button = nodeObj.AddComponent<Button>();
-        ColorBlock cb = button.colors;
-        cb.normalColor = Color.white;  // 使用 Image.color 控制，Button tint 为白
-        cb.highlightedColor = new Color(1.2f, 1.2f, 1.2f, 1f);
-        cb.pressedColor = new Color(0.8f, 0.8f, 0.8f, 1f);
-        cb.selectedColor = Color.white;
-        cb.fadeDuration = 0.1f;
-        btn_SetTargetGraphic(button, bgImage);
+        ColorBlock bcb = button.colors;
+        bcb.normalColor = Color.white;
+        bcb.highlightedColor = new Color(1f, 1f, 1f, 1f);
+        bcb.pressedColor = new Color(0.8f, 0.8f, 0.8f, 1f);
+        bcb.selectedColor = Color.white;
+        bcb.fadeDuration = 0.1f;
+        button.colors = bcb;
+        button.targetGraphic = bgImage;
 
-        // 点击事件
         LocationId capturedId = locDef.id;
         button.onClick.AddListener(() => OnNodeClicked(capturedId));
 
-        // --- 地点名称文本 ---
+        // --- 地点名称 ---
         GameObject nameObj = new GameObject("NameText");
         nameObj.transform.SetParent(nodeObj.transform, false);
 
@@ -293,7 +346,7 @@ public class CampusMapUI
         nameText.overflowMode = TextOverflowModes.Ellipsis;
         nameText.raycastTarget = false;
 
-        // --- NPC 数量指示 ---
+        // --- NPC 指示 ---
         GameObject npcObj = new GameObject("NPCText");
         npcObj.transform.SetParent(nodeObj.transform, false);
 
@@ -312,11 +365,9 @@ public class CampusMapUI
         npcText.raycastTarget = false;
         npcObj.SetActive(false);
 
-        // 定位节点
         PositionNode(borderRT, locDef.mapPosition);
 
-        // 缓存
-        NodeEntry entry = new NodeEntry
+        nodeEntries[locDef.id] = new NodeEntry
         {
             root = borderObj,
             button = button,
@@ -326,47 +377,21 @@ public class CampusMapUI
             npcText = npcText,
             locationDef = locDef
         };
-        nodeEntries[locDef.id] = entry;
     }
 
-    /// <summary>
-    /// 根据归一化 mapPosition(0-1) 计算节点在地图区域内的锚定位置
-    /// 地图区域 = centerPanel 减去标题栏和四周留白
-    /// </summary>
     private void PositionNode(RectTransform nodeRT, Vector2 mapPosition)
     {
-        // 使用百分比锚点定位：将 mapPosition 映射到可用区域
-        // 可用区域：上方留出标题(TitleHeight+8)，四周留白 MapPadding
-        // 使用 anchorMin/anchorMax 方式实现自适应布局
-
-        // 计算归一化可用区域内的锚点
-        // X: MapPadding ~ (1 - MapPadding/panelWidth) → 简化为直接用百分比 + offset
-        // 改用锚点百分比方式更健壮：
-
-        nodeRT.anchorMin = mapPosition;
-        nodeRT.anchorMax = mapPosition;
-        nodeRT.anchoredPosition = new Vector2(0, -(TitleHeight + 8f) * mapPosition.y);
-
-        // 修正：不用上面的方式，改用全范围锚点 + 偏移
-        // 让节点根据归一化坐标分布在地图区域
-        // Y 轴翻转（UI 坐标系 Y 向上，但 mapPosition.y=0.8 表示偏上方）
         float normalizedX = mapPosition.x;
         float normalizedY = mapPosition.y;
 
         nodeRT.anchorMin = new Vector2(normalizedX, normalizedY);
         nodeRT.anchorMax = new Vector2(normalizedX, normalizedY);
 
-        // 通过 padding 偏移避免标题遮挡和边缘裁剪
-        // 将归一化坐标映射到 padding 范围内（用 anchoredPosition 微调）
-        // 注：由于 anchor 已经占满 centerPanel，实际效果是自适应缩放
         float xOffset = Mathf.Lerp(MapPadding, -MapPadding, normalizedX);
         float yOffset = Mathf.Lerp(MapPadding, -(MapPadding + TitleHeight), normalizedY);
         nodeRT.anchoredPosition = new Vector2(xOffset, yOffset);
     }
 
-    /// <summary>
-    /// 创建两个地点之间的连接线（使用旋转的细 Image）
-    /// </summary>
     private void CreateLinkLine(LocationLink link)
     {
         if (!nodeEntries.ContainsKey(link.from) || !nodeEntries.ContainsKey(link.to))
@@ -375,29 +400,18 @@ public class CampusMapUI
         NodeEntry fromEntry = nodeEntries[link.from];
         NodeEntry toEntry = nodeEntries[link.to];
 
-        RectTransform fromRT = fromEntry.root.GetComponent<RectTransform>();
-        RectTransform toRT = toEntry.root.GetComponent<RectTransform>();
-
-        // 获取两个节点在 linksContainer 中的中心点位置
-        // 由于节点和线都在 mapRoot 下，使用 world position 转换
         Vector2 fromPos = GetNodeWorldCenter(fromEntry.locationDef.mapPosition);
         Vector2 toPos = GetNodeWorldCenter(toEntry.locationDef.mapPosition);
 
-        // 创建线条 Image
         GameObject lineObj = new GameObject($"Link_{link.from}_{link.to}");
         lineObj.transform.SetParent(linksContainer.transform, false);
 
         RectTransform lineRT = lineObj.AddComponent<RectTransform>();
 
-        // 计算线条长度和角度
         Vector2 diff = toPos - fromPos;
         float distance = diff.magnitude;
         float angle = Mathf.Atan2(diff.y, diff.x) * Mathf.Rad2Deg;
 
-        // 线条定位：中心点在两节点的中间
-        Vector2 midPoint = (fromPos + toPos) / 2f;
-
-        // 使用相同的锚点定位方式
         float midNormX = (fromEntry.locationDef.mapPosition.x + toEntry.locationDef.mapPosition.x) / 2f;
         float midNormY = (fromEntry.locationDef.mapPosition.y + toEntry.locationDef.mapPosition.y) / 2f;
 
@@ -416,15 +430,11 @@ public class CampusMapUI
         lineImage.raycastTarget = false;
     }
 
-    /// <summary>
-    /// 根据归一化坐标估算节点在父容器中的近似像素位置（用于计算线条长度和角度）
-    /// </summary>
     private Vector2 GetNodeWorldCenter(Vector2 mapPosition)
     {
-        // 使用参考分辨率估算（CanvasScaler 参考 1920x1080）
-        // centerPanel 大约占 1920-260=1660 宽, 1080-60-70=950 高
-        float refWidth = 1660f;
-        float refHeight = 950f;
+        // 使用地图面板的参考大小估算
+        float refWidth = 1536f;  // 80% of 1920
+        float refHeight = 907f;  // 84% of 1080
 
         float usableWidth = refWidth - MapPadding * 2f;
         float usableHeight = refHeight - MapPadding * 2f - TitleHeight;
@@ -437,7 +447,6 @@ public class CampusMapUI
 
     // ========== 事件处理 ==========
 
-    /// <summary>节点被点击时的处理</summary>
     private void OnNodeClicked(LocationId locationId)
     {
         OnLocationNodeClicked?.Invoke(locationId);
@@ -445,27 +454,11 @@ public class CampusMapUI
 
     // ========== 工具方法 ==========
 
-    /// <summary>清除指定 Transform 下的所有子对象</summary>
-    private void ClearChildren(Transform parent)
-    {
-        for (int i = parent.childCount - 1; i >= 0; i--)
-        {
-            UnityEngine.Object.Destroy(parent.GetChild(i).gameObject);
-        }
-    }
-
-    /// <summary>设置 RectTransform 填满父容器</summary>
     private void StretchFill(RectTransform rt, float inset = 0f)
     {
         rt.anchorMin = Vector2.zero;
         rt.anchorMax = Vector2.one;
         rt.offsetMin = new Vector2(inset, inset);
         rt.offsetMax = new Vector2(-inset, -inset);
-    }
-
-    /// <summary>设置 Button 的 targetGraphic</summary>
-    private void btn_SetTargetGraphic(Button btn, Image img)
-    {
-        btn.targetGraphic = img;
     }
 }

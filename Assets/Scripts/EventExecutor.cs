@@ -62,6 +62,8 @@ public class EventExecutor : MonoBehaviour
         if (isExecuting)
         {
             Debug.LogWarning($"[EventExecutor] 事件 {eventDef.id} 被忽略，当前正在执行另一个事件。");
+            // 仍然调用 onComplete 以防止事件队列永久阻塞
+            onComplete?.Invoke();
             return;
         }
 
@@ -106,13 +108,41 @@ public class EventExecutor : MonoBehaviour
     /// <param name="eventDef">事件定义。</param>
     private void OnDialoguesFinished(EventDefinition eventDef)
     {
-        // 有选项 → 展示选择界面
+        // 有选项 → 过滤showConditions并展示选择界面
         if (eventDef.choices != null && eventDef.choices.Length > 0)
         {
-            dialogueTrigger.ShowChoices(eventDef.choices, (int selectedIndex) =>
+            // 过滤满足showConditions的选项，保留原始索引映射
+            var filteredChoices = new System.Collections.Generic.List<EventChoice>();
+            var indexMap = new System.Collections.Generic.List<int>();
+
+            for (int i = 0; i < eventDef.choices.Length; i++)
             {
-                OnChoiceSelected(eventDef, selectedIndex);
-            });
+                if (CheckShowConditions(eventDef.choices[i].showConditions))
+                {
+                    filteredChoices.Add(eventDef.choices[i]);
+                    indexMap.Add(i);
+                }
+            }
+
+            if (filteredChoices.Count > 0)
+            {
+                dialogueTrigger.ShowChoices(filteredChoices.ToArray(), (int selectedFilteredIndex) =>
+                {
+                    int originalIndex = indexMap[selectedFilteredIndex];
+                    OnChoiceSelected(eventDef, originalIndex);
+                });
+            }
+            else
+            {
+                // 所有选项均不满足条件 → 应用默认效果
+                if (eventDef.defaultEffects != null && eventDef.defaultEffects.Length > 0)
+                {
+                    ApplyEffects(eventDef.defaultEffects);
+                }
+                EventHistory.Instance.RecordEvent(eventDef.id, -1);
+                Debug.Log($"[EventExecutor] 事件 {eventDef.id} 所有选项条件不满足，已应用默认效果。");
+                FinishExecution();
+            }
         }
         else
         {
@@ -126,6 +156,58 @@ public class EventExecutor : MonoBehaviour
             Debug.Log($"[EventExecutor] 事件 {eventDef.id} 无选项，已应用默认效果。");
 
             FinishExecution();
+        }
+    }
+
+    /// <summary>
+    /// 检查选项的showConditions是否全部满足
+    /// </summary>
+    private bool CheckShowConditions(AttributeCondition[] conditions)
+    {
+        if (conditions == null || conditions.Length == 0) return true;
+        if (PlayerAttributes.Instance == null) return true;
+
+        foreach (var cond in conditions)
+        {
+            int attrValue = GetPlayerAttributeValue(cond.attributeName);
+            bool met = false;
+            switch (cond.comparison)
+            {
+                case ">=": met = attrValue >= cond.value; break;
+                case "<=": met = attrValue <= cond.value; break;
+                case "==": met = attrValue == cond.value; break;
+                case ">":  met = attrValue > cond.value;  break;
+                case "<":  met = attrValue < cond.value;  break;
+                case "!=": met = attrValue != cond.value; break;
+                default:   met = true; break;
+            }
+            if (!met) return false;
+        }
+        return true;
+    }
+
+    /// <summary>
+    /// 通过属性名获取玩家属性值
+    /// </summary>
+    private int GetPlayerAttributeValue(string attrName)
+    {
+        var pa = PlayerAttributes.Instance;
+        if (pa == null) return 0;
+        switch (attrName)
+        {
+            case "学力":   return pa.Study;
+            case "魅力":   return pa.Charm;
+            case "体魄":   return pa.Physique;
+            case "领导力": return pa.Leadership;
+            case "压力":   return pa.Stress;
+            case "心情":   return pa.Mood;
+            case "黑暗值": return pa.Darkness;
+            case "负罪感": return pa.Guilt;
+            case "幸运":   return pa.Luck;
+            default:
+                if (attrName == "金钱" && GameState.Instance != null)
+                    return GameState.Instance.Money;
+                return 0;
         }
     }
 

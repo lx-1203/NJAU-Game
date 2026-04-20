@@ -266,7 +266,7 @@ public class LocationDetailPanel
         }
     }
 
-    /// <summary>移动消耗提示</summary>
+    /// <summary>移动提示（移动免费）</summary>
     private void BuildMoveCost(LocationId targetLocation, bool isCurrentLocation)
     {
         if (isCurrentLocation)
@@ -276,16 +276,8 @@ public class LocationDetailPanel
         }
         else
         {
-            LocationId from = GameState.Instance.CurrentLocation;
-            int cost = LocationManager.Instance.GetMoveCost(from, targetLocation);
-            bool isAdj = LocationManager.Instance.IsAdjacent(from, targetLocation);
-
-            string costStr = cost == 0
-                ? "移动消耗: 0AP (相邻)"
-                : $"移动消耗: {cost}AP";
-
-            Color costColor = GameState.Instance.ActionPoints >= cost ? TextWhite : new Color(0.9f, 0.3f, 0.3f);
-            moveCostText = CreateText("MoveCost", costStr, 15f, costColor, TextAlignmentOptions.Center, 24f);
+            moveCostText = CreateText("MoveCost", "可自由前往",
+                15f, TextGreen, TextAlignmentOptions.Center, 24f);
         }
     }
 
@@ -313,11 +305,9 @@ public class LocationDetailPanel
 
         if (!isCurrentLocation)
         {
-            // "前往"按钮
-            bool canMove = LocationManager.Instance.CanMoveTo(targetLocation);
+            // "前往"按钮（移动免费，始终可用）
             goButton = CreateButton(btnContainer.transform, "前往", 130f, 42f,
-                canMove ? ButtonNormalColor : ButtonDisabledColor, () => OnGoClicked());
-            goButton.interactable = canMove;
+                ButtonNormalColor, () => OnGoClicked());
         }
 
         // "取消"按钮

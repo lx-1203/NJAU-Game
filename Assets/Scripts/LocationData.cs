@@ -35,6 +35,12 @@ public class LocationDefinition
     public LocationId[] adjacentLocations; // 相邻地点（移动 0AP）
     public string openTimeDesc;          // 开放时间描述
 
+    // ========== 世界空间区域（横版场景） ==========
+    public float worldCenterX;           // 区域中心世界 X 坐标
+    public float worldMinX;              // 区域左边界
+    public float worldMaxX;              // 区域右边界
+    public float worldSpawnY = -3.5f;    // NPC 生成 Y 坐标
+
     public LocationDefinition(
         LocationId id,
         string displayName,
@@ -43,7 +49,11 @@ public class LocationDefinition
         Vector2 mapPosition,
         string[] availableActionIds,
         LocationId[] adjacentLocations,
-        string openTimeDesc = "全天开放")
+        string openTimeDesc = "全天开放",
+        float worldCenterX = 0f,
+        float worldMinX = 0f,
+        float worldMaxX = 0f,
+        float worldSpawnY = -3.5f)
     {
         this.id = id;
         this.displayName = displayName;
@@ -53,6 +63,10 @@ public class LocationDefinition
         this.availableActionIds = availableActionIds;
         this.adjacentLocations = adjacentLocations;
         this.openTimeDesc = openTimeDesc;
+        this.worldCenterX = worldCenterX;
+        this.worldMinX = worldMinX;
+        this.worldMaxX = worldMaxX;
+        this.worldSpawnY = worldSpawnY;
     }
 }
 

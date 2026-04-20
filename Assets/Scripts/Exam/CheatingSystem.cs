@@ -4,7 +4,7 @@ using System;
 /// <summary>
 /// 作弊系统 —— 管理考试中作弊的概率判定、惩罚执行与累计追踪
 /// </summary>
-public class CheatingSystem : MonoBehaviour
+public class CheatingSystem : MonoBehaviour, ISaveable
 {
     // ========== 单例 ==========
 
@@ -136,5 +136,19 @@ public class CheatingSystem : MonoBehaviour
         }
         Instance = this;
         DontDestroyOnLoad(gameObject);
+    }
+
+    // ========== ISaveable 实现 ==========
+
+    public void SaveToData(SaveData data)
+    {
+        data.cheatCaughtCount = caughtCount;
+        data.cheatTotalAttempts = totalCheatAttempts;
+    }
+
+    public void LoadFromData(SaveData data)
+    {
+        caughtCount = data.cheatCaughtCount;
+        totalCheatAttempts = data.cheatTotalAttempts;
     }
 }

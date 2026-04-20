@@ -419,7 +419,7 @@ public class ClubSystem : MonoBehaviour, ISaveable
             if (EconomyManager.Instance != null)
             {
                 EconomyManager.Instance.Spend(club.activityMoneyCost,
-                    TransactionRecord.TransactionType.Daily,
+                    TransactionRecord.TransactionType.DailyNecessities,
                     $"社团活动: {club.name}");
             }
             else
@@ -849,22 +849,21 @@ public class ClubSystem : MonoBehaviour, ISaveable
         roundActivityCount.Clear();
         activeThisRound.Clear();
 
-        // 6. 冷却期递减
+        // 6. 冷却期递减（先递减，再移除归零的）
+        List<string> cooldownKeys = new List<string>(exitCooldowns.Keys);
+        foreach (string key in cooldownKeys)
+        {
+            exitCooldowns[key]--;
+        }
         List<string> expiredCooldowns = new List<string>();
         foreach (var kvp in exitCooldowns)
         {
-            if (kvp.Value <= 1)
+            if (kvp.Value <= 0)
                 expiredCooldowns.Add(kvp.Key);
         }
         foreach (string key in expiredCooldowns)
         {
             exitCooldowns.Remove(key);
-        }
-        // 递减剩余冷却
-        List<string> cooldownKeys = new List<string>(exitCooldowns.Keys);
-        foreach (string key in cooldownKeys)
-        {
-            exitCooldowns[key]--;
         }
 
         // 7. 更新职务行动点

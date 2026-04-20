@@ -69,8 +69,8 @@ public class TimeModule : MonoBehaviour, IDebugModule
         semesterInput.contentType = TMP_InputField.ContentType.IntegerNumber;
         semesterInput.characterLimit = 1;
 
-        // 回合输入 (1-40)
-        roundInput = CreateInputRow(content.transform, "回合 (1-40)", "1");
+        // 回合输入 (1-5)
+        roundInput = CreateInputRow(content.transform, "回合 (1-5)", "1");
         roundInput.contentType = TMP_InputField.ContentType.IntegerNumber;
         roundInput.characterLimit = 2;
 
@@ -84,7 +84,7 @@ public class TimeModule : MonoBehaviour, IDebugModule
             if (semesterInput != null) int.TryParse(semesterInput.text, out semester);
             if (roundInput != null) int.TryParse(roundInput.text, out round);
 
-            int month = GameState.CalculateMonth(Mathf.Clamp(semester, 1, 2), Mathf.Clamp(round, 1, 40));
+            int month = GameState.CalculateMonth(Mathf.Clamp(semester, 1, 2), Mathf.Clamp(round, 1, GameState.MaxRoundsPerSemester));
             GameState.Instance.SetState(year, semester, round, month,
                 GameState.Instance.Money, GameState.Instance.ActionPoints);
 
@@ -134,11 +134,11 @@ public class TimeModule : MonoBehaviour, IDebugModule
 
             targetYear = Mathf.Clamp(targetYear, 1, 4);
             targetSemester = Mathf.Clamp(targetSemester, 1, 2);
-            targetRound = Mathf.Clamp(targetRound, 1, 40);
+            targetRound = Mathf.Clamp(targetRound, 1, GameState.MaxRoundsPerSemester);
 
             // 循环推进到目标时间
             int safetyCount = 0;
-            while (safetyCount < 400)
+            while (safetyCount < 50)
             {
                 if (GameState.Instance.CurrentYear == targetYear &&
                     GameState.Instance.CurrentSemester == targetSemester &&

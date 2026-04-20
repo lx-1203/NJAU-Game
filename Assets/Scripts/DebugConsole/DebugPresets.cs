@@ -2,104 +2,135 @@
 using UnityEngine;
 
 /// <summary>
-/// 调试预设集 —— 8 种快速设定角色状态的预设方案
+/// 调试快捷增减器 —— 对指定属性进行 +/- 步长调节
+/// 替代旧的固定预设系统，支持可切换步长 (1/5/10/25)
 /// </summary>
 public static class DebugPresets
 {
-    /// <summary>满属性: 全满，无压力，金钱充裕</summary>
-    public static void ApplyMax()
+    // ========== 步长档位 ==========
+    private static readonly int[] StepOptions = { 1, 5, 10, 25 };
+    private static int currentStepIndex = 1; // 默认步长 5
+
+    /// <summary>当前步长值</summary>
+    public static int CurrentStep => StepOptions[currentStepIndex];
+
+    /// <summary>所有可选步长</summary>
+    public static int[] GetStepOptions() => StepOptions;
+
+    /// <summary>当前步长索引</summary>
+    public static int CurrentStepIndex => currentStepIndex;
+
+    /// <summary>切换到指定步长索引</summary>
+    public static void SetStepIndex(int index)
     {
-        if (PlayerAttributes.Instance != null)
-            PlayerAttributes.Instance.SetAll(100, 100, 100, 100, 0, 100, 0, 0, 100);
-
-        if (GameState.Instance != null)
-            GameState.Instance.Money = 99999;
-
-        DebugConsoleManager.Log("预设", "已应用预设: 满属性");
+        currentStepIndex = Mathf.Clamp(index, 0, StepOptions.Length - 1);
+        DebugConsoleManager.Log("增减", $"步长切换 → {CurrentStep}");
     }
 
-    /// <summary>巅峰: 高属性、低压力、高心情</summary>
-    public static void ApplyPeak()
+    // ========== 属性增减 ==========
+
+    /// <summary>
+    /// 对指定属性增减当前步长
+    /// </summary>
+    /// <param name="attrName">属性中文名 (学力/魅力/体魄/领导力/压力/心情/黑暗值/负罪感/幸运/金钱)</param>
+    /// <param name="positive">true=加, false=减</param>
+    public static void AdjustAttribute(string attrName, bool positive)
     {
-        if (PlayerAttributes.Instance != null)
-            PlayerAttributes.Instance.SetAll(80, 80, 80, 80, 10, 90, 0, 0, 70);
+        int delta = positive ? CurrentStep : -CurrentStep;
 
-        if (GameState.Instance != null)
-            GameState.Instance.Money = 20000;
+        if (attrName == "金钱")
+        {
+            if (GameState.Instance != null)
+            {
+                int moneyDelta = positive ? CurrentStep * 100 : -CurrentStep * 100;
+                GameState.Instance.Money += moneyDelta;
+                DebugConsoleManager.Log("增减", $"金钱 {(moneyDelta >= 0 ? "+" : "")}{moneyDelta} → {GameState.Instance.Money}");
+            }
+            return;
+        }
 
-        DebugConsoleManager.Log("预设", "已应用预设: 巅峰");
+        if (PlayerAttributes.Instance == null) return;
+
+        var pa = PlayerAttributes.Instance;
+        int oldVal, newVal;
+
+        switch (attrName)
+        {
+            case "学力":
+                oldVal = pa.Study;
+                pa.Study = Mathf.Clamp(pa.Study + delta, 0, 100);
+                newVal = pa.Study;
+                break;
+            case "魅力":
+                oldVal = pa.Charm;
+                pa.Charm = Mathf.Clamp(pa.Charm + delta, 0, 100);
+                newVal = pa.Charm;
+                break;
+            case "体魄":
+                oldVal = pa.Physique;
+                pa.Physique = Mathf.Clamp(pa.Physique + delta, 0, 100);
+                newVal = pa.Physique;
+                break;
+            case "领导力":
+                oldVal = pa.Leadership;
+                pa.Leadership = Mathf.Clamp(pa.Leadership + delta, 0, 100);
+                newVal = pa.Leadership;
+                break;
+            case "压力":
+                oldVal = pa.Stress;
+                pa.Stress = Mathf.Clamp(pa.Stress + delta, 0, 100);
+                newVal = pa.Stress;
+                break;
+            case "心情":
+                oldVal = pa.Mood;
+                pa.Mood = Mathf.Clamp(pa.Mood + delta, 0, 100);
+                newVal = pa.Mood;
+                break;
+            case "黑暗值":
+                oldVal = pa.Darkness;
+                pa.Darkness = Mathf.Clamp(pa.Darkness + delta, 0, 100);
+                newVal = pa.Darkness;
+                break;
+            case "负罪感":
+                oldVal = pa.Guilt;
+                pa.Guilt = Mathf.Clamp(pa.Guilt + delta, 0, 100);
+                newVal = pa.Guilt;
+                break;
+            case "幸运":
+                oldVal = pa.Luck;
+                pa.Luck = Mathf.Clamp(pa.Luck + delta, 0, 100);
+                newVal = pa.Luck;
+                break;
+            default:
+                Debug.LogWarning($"[DebugPresets] 未知属性: {attrName}");
+                return;
+        }
+
+        DebugConsoleManager.Log("增减", $"{attrName} {(delta >= 0 ? "+" : "")}{delta} → {newVal}");
     }
 
-    /// <summary>黑暗: 极低属性、极高压力、极低心情、满黑暗值</summary>
-    public static void ApplyDark()
+    /// <summary>获取属性当前值</summary>
+    public static int GetAttributeValue(string attrName)
     {
-        if (PlayerAttributes.Instance != null)
-            PlayerAttributes.Instance.SetAll(5, 5, 5, 5, 95, 5, 100, 80, 10);
+        if (attrName == "金钱")
+            return GameState.Instance != null ? GameState.Instance.Money : 0;
 
-        if (GameState.Instance != null)
-            GameState.Instance.Money = 0;
+        if (PlayerAttributes.Instance == null) return 0;
+        var pa = PlayerAttributes.Instance;
 
-        DebugConsoleManager.Log("预设", "已应用预设: 黑暗");
-    }
-
-    /// <summary>摆烂: 低属性、中高压力、低心情</summary>
-    public static void ApplySlacker()
-    {
-        if (PlayerAttributes.Instance != null)
-            PlayerAttributes.Instance.SetAll(20, 20, 20, 20, 60, 30, 30, 20, 40);
-
-        if (GameState.Instance != null)
-            GameState.Instance.Money = 500;
-
-        DebugConsoleManager.Log("预设", "已应用预设: 摆烂");
-    }
-
-    /// <summary>贫困: 中低属性、中等压力、低金钱</summary>
-    public static void ApplyPoor()
-    {
-        if (PlayerAttributes.Instance != null)
-            PlayerAttributes.Instance.SetAll(30, 30, 30, 30, 50, 40, 10, 10, 30);
-
-        if (GameState.Instance != null)
-            GameState.Instance.Money = 0;
-
-        DebugConsoleManager.Log("预设", "已应用预设: 贫困");
-    }
-
-    /// <summary>恋爱: 高魅力、高心情、低压力</summary>
-    public static void ApplyRomance()
-    {
-        if (PlayerAttributes.Instance != null)
-            PlayerAttributes.Instance.SetAll(50, 90, 50, 50, 5, 95, 0, 0, 80);
-
-        if (GameState.Instance != null)
-            GameState.Instance.Money = 5000;
-
-        DebugConsoleManager.Log("预设", "已应用预设: 恋爱");
-    }
-
-    /// <summary>新手: 重置为初始默认值</summary>
-    public static void ApplyNewbie()
-    {
-        if (PlayerAttributes.Instance != null)
-            PlayerAttributes.Instance.SetAll(10, 5, 8, 3, 20, 70, 0, 0, 50);
-
-        if (GameState.Instance != null)
-            GameState.Instance.Money = 8000;
-
-        DebugConsoleManager.Log("预设", "已应用预设: 新手");
-    }
-
-    /// <summary>空白: 全部归零</summary>
-    public static void ApplyBlank()
-    {
-        if (PlayerAttributes.Instance != null)
-            PlayerAttributes.Instance.SetAll(0, 0, 0, 0, 0, 0, 0, 0, 0);
-
-        if (GameState.Instance != null)
-            GameState.Instance.Money = 0;
-
-        DebugConsoleManager.Log("预设", "已应用预设: 空白");
+        switch (attrName)
+        {
+            case "学力":   return pa.Study;
+            case "魅力":   return pa.Charm;
+            case "体魄":   return pa.Physique;
+            case "领导力": return pa.Leadership;
+            case "压力":   return pa.Stress;
+            case "心情":   return pa.Mood;
+            case "黑暗值": return pa.Darkness;
+            case "负罪感": return pa.Guilt;
+            case "幸运":   return pa.Luck;
+            default:       return 0;
+        }
     }
 }
 #endif

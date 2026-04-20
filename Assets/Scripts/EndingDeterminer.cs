@@ -341,11 +341,11 @@ public class EndingDeterminer : MonoBehaviour
     {
         if (ClubSystem.Instance == null) return false;
 
-        var membership = ClubSystem.Instance.GetMembership("student_council");
+        var membership = ClubSystem.Instance.GetMembership("student_union");
         if (membership == null) return false;
 
-        var currentRank = ClubSystem.Instance.GetCurrentRank("student_council");
-        var nextRank = ClubSystem.Instance.GetNextRank("student_council");
+        var currentRank = ClubSystem.Instance.GetCurrentRank("student_union");
+        var nextRank = ClubSystem.Instance.GetNextRank("student_union");
 
         // 如果没有下一级了，说明已经是最高职位（主席）
         return currentRank != null && nextRank == null;

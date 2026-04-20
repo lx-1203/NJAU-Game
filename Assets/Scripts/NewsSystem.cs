@@ -331,13 +331,14 @@ public class NewsSystem : MonoBehaviour
         // NPC好感度检查
         if (AffinitySystem.Instance != null && NPCDatabase.Instance != null)
         {
-            var allNPCs = NPCDatabase.Instance.GetAllNPCIds();
-            foreach (string npcId in allNPCs)
+            var allNPCs = NPCDatabase.Instance.GetAllNPCs();
+            foreach (var npc in allNPCs)
             {
-                int affinity = AffinitySystem.Instance.GetAffinity(npcId);
+                string npcId = npc.id;
+                int affinity = AffinitySystem.Instance.GetRelationship(npcId).affinity;
                 if (affinity >= 60)
                 {
-                    string npcName = NPCDatabase.Instance.GetNPCName(npcId);
+                    string npcName = npc.displayName;
                     return new NewsItem(NewsType.Trending, "", $"#校园CP预警# \"{npcName}和某同学走得好近啊\"") { hotValue = 95f, hotTag = "爆" };
                 }
             }
@@ -355,7 +356,7 @@ public class NewsSystem : MonoBehaviour
             return new NewsItem(NewsType.Trending, "", "#南农土豪# \"有人的生活费是我的三倍？？\"") { hotValue = 48f, hotTag = "新" };
 
         // 社团相关
-        if (ClubSystem.Instance != null && ClubSystem.Instance.GetJoinedClubIds().Count > 0)
+        if (ClubSystem.Instance != null && ClubSystem.Instance.GetJoinedClubs().Count > 0)
         {
             return new NewsItem(NewsType.Trending, "", "#社团招新战报# \"XX社团今年新人好活跃\"") { hotValue = 33f, hotTag = "新" };
         }

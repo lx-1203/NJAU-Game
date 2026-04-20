@@ -109,26 +109,37 @@ public class CharacterCreationUI : MonoBehaviour
         inputBg.color = InputBgColor;
         nameInput = inputObj.AddComponent<TMP_InputField>();
 
-        TextMeshProUGUI textArea = CreateTMP(inputObj.transform, "Text", "");
+        // Text Viewport (带 RectMask2D，TMP_InputField 必需)
+        GameObject inputVpObj = new GameObject("TextViewport", typeof(RectTransform));
+        inputVpObj.transform.SetParent(inputObj.transform, false);
+        RectTransform inputVpRt = inputVpObj.GetComponent<RectTransform>();
+        inputVpRt.anchorMin = Vector2.zero;
+        inputVpRt.anchorMax = Vector2.one;
+        inputVpRt.offsetMin = new Vector2(10, 0);
+        inputVpRt.offsetMax = new Vector2(-10, 0);
+        inputVpObj.AddComponent<RectMask2D>();
+
+        TextMeshProUGUI textArea = CreateTMP(inputVpObj.transform, "Text", "");
         textArea.fontSize = 24;
         textArea.alignment = TextAlignmentOptions.MidlineLeft;
         textArea.color = Color.white;
         RectTransform textRt = textArea.GetComponent<RectTransform>();
         textRt.anchorMin = Vector2.zero;
         textRt.anchorMax = Vector2.one;
-        textRt.offsetMin = new Vector2(10, 0);
-        textRt.offsetMax = new Vector2(-10, 0);
+        textRt.offsetMin = Vector2.zero;
+        textRt.offsetMax = Vector2.zero;
 
-        TextMeshProUGUI placeholder = CreateTMP(inputObj.transform, "Placeholder", "请输入姓名...");
+        TextMeshProUGUI placeholder = CreateTMP(inputVpObj.transform, "Placeholder", "请输入姓名...");
         placeholder.fontSize = 24;
         placeholder.alignment = TextAlignmentOptions.MidlineLeft;
         placeholder.color = new Color(0.5f, 0.5f, 0.5f);
         RectTransform phRt = placeholder.GetComponent<RectTransform>();
         phRt.anchorMin = Vector2.zero;
         phRt.anchorMax = Vector2.one;
-        phRt.offsetMin = new Vector2(10, 0);
-        phRt.offsetMax = new Vector2(-10, 0);
+        phRt.offsetMin = Vector2.zero;
+        phRt.offsetMax = Vector2.zero;
 
+        nameInput.textViewport = inputVpRt;
         nameInput.textComponent = textArea;
         nameInput.placeholder = placeholder;
         nameInput.characterLimit = 6;
@@ -179,8 +190,83 @@ public class CharacterCreationUI : MonoBehaviour
         dpLabelRt.offsetMin = new Vector2(10, 0);
         dpLabelRt.offsetMax = new Vector2(-30, 0);
 
-        majorDropdown.targetGraphic = dropdownBg;
+        // Arrow indicator
+        TextMeshProUGUI arrowTxt = CreateTMP(dropdownObj.transform, "Arrow", "▼");
+        arrowTxt.fontSize = 16;
+        arrowTxt.alignment = TextAlignmentOptions.Center;
+        RectTransform arrowRt = arrowTxt.GetComponent<RectTransform>();
+        arrowRt.anchorMin = new Vector2(1, 0.5f);
+        arrowRt.anchorMax = new Vector2(1, 0.5f);
+        arrowRt.pivot = new Vector2(1, 0.5f);
+        arrowRt.sizeDelta = new Vector2(24, 24);
+        arrowRt.anchoredPosition = new Vector2(-6, 0);
+
+        // Dropdown template
+        GameObject templateObj = new GameObject("Template", typeof(RectTransform));
+        templateObj.transform.SetParent(dropdownObj.transform, false);
+        RectTransform templateRt = templateObj.GetComponent<RectTransform>();
+        templateRt.anchorMin = new Vector2(0, 0);
+        templateRt.anchorMax = new Vector2(1, 0);
+        templateRt.pivot = new Vector2(0.5f, 1);
+        templateRt.anchoredPosition = Vector2.zero;
+        templateRt.sizeDelta = new Vector2(0, 200);
+        Image templateBg = templateObj.AddComponent<Image>();
+        templateBg.color = new Color(0.15f, 0.15f, 0.2f, 0.95f);
+        ScrollRect templateScroll = templateObj.AddComponent<ScrollRect>();
+        templateScroll.horizontal = false;
+
+        GameObject viewport = new GameObject("Viewport", typeof(RectTransform));
+        viewport.transform.SetParent(templateObj.transform, false);
+        RectTransform vpRt = viewport.GetComponent<RectTransform>();
+        vpRt.anchorMin = Vector2.zero;
+        vpRt.anchorMax = Vector2.one;
+        vpRt.offsetMin = new Vector2(2, 2);
+        vpRt.offsetMax = new Vector2(-2, -2);
+        viewport.AddComponent<RectMask2D>();
+        templateScroll.viewport = vpRt;
+
+        GameObject content = new GameObject("Content", typeof(RectTransform));
+        content.transform.SetParent(viewport.transform, false);
+        RectTransform contentRt = content.GetComponent<RectTransform>();
+        contentRt.anchorMin = new Vector2(0, 1);
+        contentRt.anchorMax = new Vector2(1, 1);
+        contentRt.pivot = new Vector2(0.5f, 1);
+        contentRt.anchoredPosition = Vector2.zero;
+        templateScroll.content = contentRt;
+
+        GameObject itemObj = new GameObject("Item", typeof(RectTransform));
+        itemObj.transform.SetParent(content.transform, false);
+        RectTransform itemRt = itemObj.GetComponent<RectTransform>();
+        itemRt.sizeDelta = new Vector2(0, 40);
+        itemRt.anchorMin = new Vector2(0, 0.5f);
+        itemRt.anchorMax = new Vector2(1, 0.5f);
+        Image itemBg = itemObj.AddComponent<Image>();
+        itemBg.color = new Color(0.2f, 0.2f, 0.28f, 0.5f);
+        Toggle itemToggle = itemObj.AddComponent<Toggle>();
+
+        GameObject checkObj = new GameObject("ItemCheckmark", typeof(RectTransform));
+        checkObj.transform.SetParent(itemObj.transform, false);
+        checkObj.GetComponent<RectTransform>().sizeDelta = Vector2.zero;
+        Image checkImg = checkObj.AddComponent<Image>();
+        checkImg.color = Color.clear;
+        itemToggle.graphic = checkImg;
+        itemToggle.targetGraphic = itemBg;
+
+        TextMeshProUGUI itemLabel = CreateTMP(itemObj.transform, "ItemLabel", "");
+        itemLabel.fontSize = 22;
+        itemLabel.alignment = TextAlignmentOptions.MidlineLeft;
+        RectTransform ilRt = itemLabel.GetComponent<RectTransform>();
+        ilRt.anchorMin = Vector2.zero;
+        ilRt.anchorMax = Vector2.one;
+        ilRt.offsetMin = new Vector2(10, 0);
+        ilRt.offsetMax = Vector2.zero;
+
+        templateObj.SetActive(false);
+
+        majorDropdown.template = templateRt;
         majorDropdown.captionText = dpLabel;
+        majorDropdown.itemText = itemLabel;
+        majorDropdown.targetGraphic = dropdownBg;
         majorDropdown.options = new List<TMP_Dropdown.OptionData>
         {
             new TMP_Dropdown.OptionData("生物科学"),

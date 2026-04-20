@@ -225,16 +225,26 @@ public class RomanceSystem : MonoBehaviour, IRomanceProvider
     }
 
     /// <summary>
-    /// 告白失败处理：设为 Cooldown，冷却4回合
+    /// 告白失败处理
+    /// isReunion=false: 普通告白失败 → Cooldown态，冷却4回合
+    /// isReunion=true:  复合告白失败 → 保持BrokenUp态，重置冷却4回合
     /// </summary>
-    public void OnConfessionFail(string npcId)
+    public void OnConfessionFail(string npcId, bool isReunion = false)
     {
         var record = GetOrCreateRecord(npcId);
 
-        TransitionState(npcId, RomanceState.Cooldown);
-        record.cooldownRoundsLeft = 4;
-
-        Debug.Log($"[RomanceSystem] {npcId} 告白失败，进入冷却期（4回合）");
+        if (isReunion)
+        {
+            // 复合失败：保持BrokenUp态，重新设置冷却期
+            record.cooldownRoundsLeft = 4;
+            Debug.Log($"[RomanceSystem] {npcId} 复合告白失败，保持BrokenUp，冷却期重置（4回合）");
+        }
+        else
+        {
+            TransitionState(npcId, RomanceState.Cooldown);
+            record.cooldownRoundsLeft = 4;
+            Debug.Log($"[RomanceSystem] {npcId} 告白失败，进入冷却期（4回合）");
+        }
     }
 
     // ========== 公共方法：互动与健康度 ==========
@@ -621,7 +631,7 @@ public class RomanceSystem : MonoBehaviour, IRomanceProvider
     public RomanceEndingTier CalculateEnding(string npcId)
     {
         var record = GetOrCreateRecord(npcId);
-        int affinity = GetAffinity(npcId);
+        int affinity = GetAffinityDirect(npcId);
 
         // 5★ Engaged: 恋爱中 + 心情均值≥70 + 好感=100
         if (record.state == RomanceState.Dating

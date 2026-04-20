@@ -119,8 +119,8 @@ public class PlayerController : MonoBehaviour
             isClickMoving = false;
             moveInput = keyboardInput;
         }
-        // 鼠标左键点击：设置目标点
-        else if (Input.GetMouseButtonDown(0))
+        // 鼠标左键点击：设置目标点（忽略 UI 上的点击）
+        else if (Input.GetMouseButtonDown(0) && !UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject())
         {
             Vector3 mouseWorldPos = mainCamera.ScreenToWorldPoint(Input.mousePosition);
             clickTargetX = mouseWorldPos.x;

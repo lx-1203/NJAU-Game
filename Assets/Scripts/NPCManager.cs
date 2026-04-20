@@ -2,7 +2,7 @@ using UnityEngine;
 using System.Collections.Generic;
 
 /// <summary>
-/// NPC 管理器 —— 根据时间段刷新场景中的 NPC，管理活跃 NPC 实例
+/// NPC 管理器 —— 根据时间段和当前地点刷新场景中的 NPC，管理活跃 NPC 实例
 /// 单例模式，在 GameSceneInitializer 中初始化
 /// </summary>
 public class NPCManager : MonoBehaviour
@@ -13,15 +13,14 @@ public class NPCManager : MonoBehaviour
     // ========== 内部字段 ==========
     private Dictionary<string, NPCController> activeNPCs = new Dictionary<string, NPCController>();
 
-    // ========== NPC 生成位置 ==========
-    private static readonly Vector3 BasePosition = new Vector3(3f, -3.5f, 0f);
+    // ========== NPC 生成参数 ==========
     private const float PositionOffsetX = 3.0f;
 
     // ========== 公共方法 ==========
 
     /// <summary>
-    /// 根据当前时间段刷新场景中的 NPC
-    /// 对比日程表创建/移除 NPC GameObject
+    /// 根据当前时间段和当前地点刷新场景中的 NPC
+    /// 只显示日程地点匹配 GameState.CurrentLocation 的 NPC
     /// </summary>
     public void RefreshNPCsForCurrentTimeSlot()
     {
@@ -33,13 +32,20 @@ public class NPCManager : MonoBehaviour
 
         TimeSlot currentSlot = AffinitySystem.GetCurrentTimeSlot();
         NPCData[] allNPCs = NPCDatabase.Instance.GetAllNPCs();
+        LocationId currentLoc = GameState.Instance != null
+            ? GameState.Instance.CurrentLocation
+            : LocationId.Dormitory;
 
-        // 收集当前时间段应在场的 NPC ID
+        // 收集当前时间段 + 当前地点应在场的 NPC ID
         HashSet<string> shouldBeActive = new HashSet<string>();
         for (int i = 0; i < allNPCs.Length; i++)
         {
             string location = NPCDatabase.Instance.GetNPCLocation(allNPCs[i].id, currentSlot);
-            if (!string.IsNullOrEmpty(location))
+            if (string.IsNullOrEmpty(location)) continue;
+
+            // 将日程地点字符串解析为 LocationId，与当前地点比对
+            LocationId? resolved = LocationManager.ResolveScheduleLocation(location);
+            if (resolved.HasValue && resolved.Value == currentLoc)
             {
                 shouldBeActive.Add(allNPCs[i].id);
             }
@@ -67,8 +73,24 @@ public class NPCManager : MonoBehaviour
             }
         }
 
-        // 创建应在场但尚未存在的 NPC
-        int positionIndex = activeNPCs.Count;
+        // 获取当前地点的世界空间区域信息
+        LocationDefinition locDef = LocationManager.Instance != null
+            ? LocationManager.Instance.GetLocation(currentLoc)
+            : null;
+        float centerX = locDef != null ? locDef.worldCenterX : 5f;
+        float minX = locDef != null ? locDef.worldMinX + 2f : 0f;
+        float maxX = locDef != null ? locDef.worldMaxX - 2f : 30f;
+        float spawnY = locDef != null ? locDef.worldSpawnY : -3.5f;
+
+        // 计算需要新创建的 NPC 数量用于居中分布
+        int newCount = 0;
+        foreach (string npcId in shouldBeActive)
+        {
+            if (!activeNPCs.ContainsKey(npcId)) newCount++;
+        }
+
+        // 创建应在场但尚未存在的 NPC（在区域中心附近对称分布）
+        int spawnIndex = 0;
         foreach (string npcId in shouldBeActive)
         {
             if (!activeNPCs.ContainsKey(npcId))
@@ -76,14 +98,16 @@ public class NPCManager : MonoBehaviour
                 NPCData data = NPCDatabase.Instance.GetNPC(npcId);
                 if (data != null)
                 {
-                    Vector3 position = BasePosition + new Vector3(positionIndex * PositionOffsetX, 0f, 0f);
+                    float x = centerX + (spawnIndex - (newCount - 1) * 0.5f) * PositionOffsetX;
+                    x = Mathf.Clamp(x, minX, maxX);
+                    Vector3 position = new Vector3(x, spawnY, 0f);
                     CreateNPCObject(data, position);
-                    positionIndex++;
+                    spawnIndex++;
                 }
             }
         }
 
-        Debug.Log($"[NPCManager] NPC刷新完成，当前时间段: {currentSlot}，活跃NPC数: {activeNPCs.Count}");
+        Debug.Log($"[NPCManager] NPC刷新完成，地点: {currentLoc}，时间段: {currentSlot}，活跃NPC数: {activeNPCs.Count}");
     }
 
     /// <summary>
@@ -142,10 +166,12 @@ public class NPCManager : MonoBehaviour
 
     // ========== 事件回调 ==========
 
-    /// <summary>
-    /// 回合推进时刷新 NPC
-    /// </summary>
     private void OnRoundAdvanced(GameState.RoundAdvanceResult result)
+    {
+        RefreshNPCsForCurrentTimeSlot();
+    }
+
+    private void OnLocationChanged(LocationId from, LocationId to)
     {
         RefreshNPCsForCurrentTimeSlot();
     }
@@ -175,6 +201,12 @@ public class NPCManager : MonoBehaviour
             Debug.LogWarning("[NPCManager] TurnManager 实例不存在，无法订阅回合推进事件");
         }
 
+        // 订阅地点切换事件 —— 切换地点时刷新NPC
+        if (LocationManager.Instance != null)
+        {
+            LocationManager.Instance.OnLocationChanged += OnLocationChanged;
+        }
+
         // 首次刷新
         RefreshNPCsForCurrentTimeSlot();
     }
@@ -184,6 +216,10 @@ public class NPCManager : MonoBehaviour
         if (TurnManager.Instance != null)
         {
             TurnManager.Instance.OnRoundAdvanced -= OnRoundAdvanced;
+        }
+        if (LocationManager.Instance != null)
+        {
+            LocationManager.Instance.OnLocationChanged -= OnLocationChanged;
         }
     }
 }

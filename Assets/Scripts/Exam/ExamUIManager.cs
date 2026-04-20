@@ -508,10 +508,31 @@ public class ExamUIManager : MonoBehaviour
         builder.examCanvas.SetActive(false);
         currentState = ExamUIState.Done;
 
-        // 通知 ExamSystem 完成结算
+        // 按考试类型分派不同的完成方法
         if (ExamSystem.Instance != null)
         {
-            ExamSystem.Instance.FinalizeSemesterExam(examYear, examSemester);
+            switch (currentExamType)
+            {
+                case ExamType.Final:
+                    ExamSystem.Instance.FinalizeSemesterExam(examYear, examSemester);
+                    break;
+                case ExamType.Midterm:
+                    ExamSystem.Instance.FinalizeMidtermExam();
+                    break;
+                case ExamType.Makeup:
+                    // 补考走独立的结算路径，不创建新的学期GPA
+                    ExamSystem.Instance.FinalizeMidtermExam(); // 暂用期中结算（不影响GPA），后续可改为ProcessMakeupResults
+                    break;
+                case ExamType.CET4:
+                case ExamType.CET6:
+                case ExamType.ComputerLevel:
+                    // 证书考试不影响GPA，仅记录结果
+                    ExamSystem.Instance.FinalizeMidtermExam();
+                    break;
+                default:
+                    ExamSystem.Instance.FinalizeSemesterExam(examYear, examSemester);
+                    break;
+            }
         }
 
         OnExamUICompleted?.Invoke();

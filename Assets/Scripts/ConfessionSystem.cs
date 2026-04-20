@@ -221,10 +221,12 @@ public class ConfessionSystem : MonoBehaviour
         }
         else
         {
-            RomanceSystem.Instance.OnConfessionFail(npcId);
+            RomanceSystem.Instance.OnConfessionFail(npcId, isReunion);
 
             // 同步 NPCRelationshipData 的 romanceState
-            SyncRelationshipRomanceState(npcId, RomanceState.Cooldown);
+            // 复合失败后应恢复BrokenUp状态（而非Cooldown），否则CanReunite永远无法满足
+            RomanceState syncState = isReunion ? RomanceState.BrokenUp : RomanceState.Cooldown;
+            SyncRelationshipRomanceState(npcId, syncState);
         }
 
         // 触发事件

@@ -12,8 +12,8 @@ public class CameraFollow : MonoBehaviour
 
     [Header("边界限制")]
     [SerializeField] private bool useBounds = true;
-    [SerializeField] private float minX = -20f;
-    [SerializeField] private float maxX = 20f;
+    [SerializeField] private float minX = -15f;
+    [SerializeField] private float maxX = 220f;
 
     private Transform target;
     private float fixedY;

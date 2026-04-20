@@ -119,7 +119,7 @@ public class JobSystem : MonoBehaviour, ISaveable
 
         if (AffinitySystem.Instance != null)
         {
-            friendCount = AffinitySystem.Instance.GetFriendCount();
+            friendCount = AffinitySystem.Instance.GetFriendOrAboveCount();
         }
 
         return darkness >= 15 || friendCount >= 3;

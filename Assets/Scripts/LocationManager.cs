@@ -19,8 +19,22 @@ public class LocationManager : MonoBehaviour
     private Dictionary<LocationId, LocationDefinition> locationDefs = new Dictionary<LocationId, LocationDefinition>();
     private List<LocationLink> locationLinks = new List<LocationLink>();
 
-    // NPC 地点配置（静态，后续由 NPCScheduleManager 动态管理）
-    private Dictionary<LocationId, List<string>> npcAtLocation = new Dictionary<LocationId, List<string>>();
+    // NPC 日程地点字符串 → LocationId 映射
+    private static readonly Dictionary<string, LocationId> scheduleLocationMap = new Dictionary<string, LocationId>
+    {
+        { "宿舍", LocationId.Dormitory },
+        { "食堂", LocationId.Canteen },
+        { "图书馆", LocationId.Library },
+        { "教室", LocationId.TeachingBuilding },
+        { "教学楼", LocationId.TeachingBuilding },
+        { "操场", LocationId.Playground },
+        { "教超", LocationId.Store },
+        { "快递站", LocationId.ExpressStation },
+        { "外卖站", LocationId.TakeoutStation },
+        { "社团活动室", LocationId.TeachingBuilding },
+        { "实验室", LocationId.TeachingBuilding },
+        { "校门口", LocationId.TakeoutStation },
+    };
 
     // ========== 初始化 ==========
 
@@ -36,7 +50,6 @@ public class LocationManager : MonoBehaviour
 
         InitDefaultLocations();
         InitDefaultLinks();
-        InitDefaultNPCs();
     }
 
     private void Start()
@@ -68,27 +81,9 @@ public class LocationManager : MonoBehaviour
             "宿舍", "你的大学宿舍，温馨的小窝。可以休息、社交或打游戏。",
             "🏠", new Vector2(0.55f, 0.45f),
             new string[] { "sleep", "social", "play_game" },
-            new LocationId[] { LocationId.Canteen, LocationId.Playground, LocationId.TeachingBuilding }
-        ));
-
-        // 教学楼
-        Register(new LocationDefinition(
-            LocationId.TeachingBuilding,
-            "教学楼", "课程和考试的主要场所。上课是大学生活的核心。",
-            "🏫", new Vector2(0.30f, 0.75f),
-            new string[] { "attend_class", "study" },
-            new LocationId[] { LocationId.Library, LocationId.Canteen, LocationId.Dormitory },
-            "08:00-22:00"
-        ));
-
-        // 图书馆
-        Register(new LocationDefinition(
-            LocationId.Library,
-            "图书馆", "安静的学习圣地。自习效率最高的地方。",
-            "📚", new Vector2(0.55f, 0.80f),
-            new string[] { "study" },
-            new LocationId[] { LocationId.TeachingBuilding, LocationId.Playground },
-            "07:00-22:30"
+            new LocationId[] { LocationId.Canteen, LocationId.Playground, LocationId.TeachingBuilding, LocationId.TakeoutStation },
+            "全天开放",
+            worldCenterX: 5f, worldMinX: -10f, worldMaxX: 20f
         ));
 
         // 食堂
@@ -98,16 +93,8 @@ public class LocationManager : MonoBehaviour
             "🍜", new Vector2(0.30f, 0.45f),
             new string[] { "eat" },
             new LocationId[] { LocationId.TeachingBuilding, LocationId.Dormitory, LocationId.Store },
-            "06:30-21:00"
-        ));
-
-        // 操场
-        Register(new LocationDefinition(
-            LocationId.Playground,
-            "操场", "跑步、锻炼和体测的场所。保持健康很重要！",
-            "🏃", new Vector2(0.75f, 0.65f),
-            new string[] { "exercise", "sports_test" },
-            new LocationId[] { LocationId.Dormitory, LocationId.Library }
+            "06:30-21:00",
+            worldCenterX: 35f, worldMinX: 20f, worldMaxX: 50f
         ));
 
         // 教超
@@ -116,7 +103,42 @@ public class LocationManager : MonoBehaviour
             "教超", "校内超市，日用品和零食的天堂。",
             "🏪", new Vector2(0.15f, 0.25f),
             new string[] { "shop" },
-            new LocationId[] { LocationId.Canteen, LocationId.ExpressStation }
+            new LocationId[] { LocationId.Canteen, LocationId.ExpressStation },
+            "全天开放",
+            worldCenterX: 62f, worldMinX: 50f, worldMaxX: 75f
+        ));
+
+        // 教学楼
+        Register(new LocationDefinition(
+            LocationId.TeachingBuilding,
+            "教学楼", "课程和考试的主要场所。上课是大学生活的核心。",
+            "🏫", new Vector2(0.30f, 0.75f),
+            new string[] { "attend_class", "study" },
+            new LocationId[] { LocationId.Library, LocationId.Canteen, LocationId.Dormitory },
+            "08:00-22:00",
+            worldCenterX: 90f, worldMinX: 75f, worldMaxX: 105f
+        ));
+
+        // 图书馆
+        Register(new LocationDefinition(
+            LocationId.Library,
+            "图书馆", "安静的学习圣地。自习效率最高的地方。",
+            "📚", new Vector2(0.55f, 0.80f),
+            new string[] { "study" },
+            new LocationId[] { LocationId.TeachingBuilding, LocationId.Playground },
+            "07:00-22:30",
+            worldCenterX: 120f, worldMinX: 105f, worldMaxX: 135f
+        ));
+
+        // 操场
+        Register(new LocationDefinition(
+            LocationId.Playground,
+            "操场", "跑步、锻炼和体测的场所。保持健康很重要！",
+            "🏃", new Vector2(0.75f, 0.65f),
+            new string[] { "exercise", "sports_test" },
+            new LocationId[] { LocationId.Dormitory, LocationId.Library },
+            "全天开放",
+            worldCenterX: 150f, worldMinX: 135f, worldMaxX: 165f
         ));
 
         // 快递站
@@ -125,7 +147,9 @@ public class LocationManager : MonoBehaviour
             "快递站", "收发快递的地方。网购到货别忘了取！",
             "📦", new Vector2(0.40f, 0.15f),
             new string[] { "pickup_express" },
-            new LocationId[] { LocationId.Store, LocationId.TakeoutStation }
+            new LocationId[] { LocationId.Store, LocationId.TakeoutStation },
+            "全天开放",
+            worldCenterX: 177f, worldMinX: 165f, worldMaxX: 190f
         ));
 
         // 外卖站
@@ -134,7 +158,9 @@ public class LocationManager : MonoBehaviour
             "外卖站", "点外卖的取餐点。懒得去食堂时的救星。",
             "🛵", new Vector2(0.65f, 0.15f),
             new string[] { "order_takeout" },
-            new LocationId[] { LocationId.ExpressStation, LocationId.Dormitory }
+            new LocationId[] { LocationId.ExpressStation, LocationId.Dormitory },
+            "全天开放",
+            worldCenterX: 202f, worldMinX: 190f, worldMaxX: 215f
         ));
     }
 
@@ -169,20 +195,15 @@ public class LocationManager : MonoBehaviour
         return a < b ? $"{a}-{b}" : $"{b}-{a}";
     }
 
-    private void InitDefaultNPCs()
-    {
-        npcAtLocation.Clear();
+    // ========== NPC 日程映射 ==========
 
-        // 初始 NPC 分布（静态配置，后续由 NPCScheduleManager 动态管理）
-        SetNPCs(LocationId.Dormitory, new string[] { "室友" });
-        SetNPCs(LocationId.TeachingBuilding, new string[] { "老师" });
-        SetNPCs(LocationId.Library, new string[] { "学长" });
-        SetNPCs(LocationId.Canteen, new string[] { "同学" });
-    }
-
-    private void SetNPCs(LocationId loc, string[] names)
+    /// <summary>将 NPC 日程中的地点字符串解析为 LocationId</summary>
+    public static LocationId? ResolveScheduleLocation(string scheduleLocation)
     {
-        npcAtLocation[loc] = new List<string>(names);
+        if (string.IsNullOrEmpty(scheduleLocation)) return null;
+        if (scheduleLocationMap.TryGetValue(scheduleLocation, out LocationId id))
+            return id;
+        return null;
     }
 
     // ========== 查询 API ==========
@@ -233,11 +254,10 @@ public class LocationManager : MonoBehaviour
         return false;
     }
 
-    /// <summary>获取从 from 到 to 的移动 AP 消耗（相邻0, 远距离1）</summary>
+    /// <summary>获取从 from 到 to 的移动 AP 消耗（设计文档未定义移动消耗，全部免费）</summary>
     public int GetMoveCost(LocationId from, LocationId to)
     {
-        if (from == to) return 0;
-        return IsAdjacent(from, to) ? 0 : 1;
+        return 0;
     }
 
     /// <summary>获取指定地点的可用行动列表</summary>
@@ -272,32 +292,62 @@ public class LocationManager : MonoBehaviour
         return result.ToArray();
     }
 
-    /// <summary>获取指定地点当前的 NPC 列表</summary>
+    /// <summary>获取指定地点当前时间段的 NPC ID 列表（动态查询日程）</summary>
     public string[] GetNPCsAtLocation(LocationId locationId)
     {
-        if (npcAtLocation.TryGetValue(locationId, out List<string> names))
+        if (NPCDatabase.Instance == null) return new string[0];
+
+        TimeSlot currentSlot = AffinitySystem.GetCurrentTimeSlot();
+        List<string> result = new List<string>();
+
+        NPCData[] allNPCs = NPCDatabase.Instance.GetAllNPCs();
+        foreach (var npc in allNPCs)
         {
-            return names.ToArray();
+            string schedLoc = NPCDatabase.Instance.GetNPCLocation(npc.id, currentSlot);
+            if (string.IsNullOrEmpty(schedLoc)) continue;
+
+            LocationId? resolved = ResolveScheduleLocation(schedLoc);
+            if (resolved.HasValue && resolved.Value == locationId)
+            {
+                result.Add(npc.id);
+            }
         }
-        return new string[0];
+
+        return result.ToArray();
+    }
+
+    /// <summary>获取地点的世界空间中心坐标（用于传送）</summary>
+    public Vector3 GetLocationWorldCenter(LocationId id)
+    {
+        LocationDefinition def = GetLocation(id);
+        if (def == null) return Vector3.zero;
+        return new Vector3(def.worldCenterX, def.worldSpawnY, 0f);
+    }
+
+    /// <summary>根据世界X坐标判断所处地点（用于区域检测）</summary>
+    public LocationId? GetLocationAtWorldX(float x)
+    {
+        foreach (var def in locationDefs.Values)
+        {
+            if (x >= def.worldMinX && x < def.worldMaxX)
+                return def.id;
+        }
+        return null;
     }
 
     // ========== 导航 API ==========
 
-    /// <summary>检查是否可以移动到目标地点（AP 足够 + 不在同一地点）</summary>
+    /// <summary>检查是否可以移动到目标地点（不在同一地点即可，移动免费）</summary>
     public bool CanMoveTo(LocationId target)
     {
         if (GameState.Instance == null) return false;
 
         LocationId current = GameState.Instance.CurrentLocation;
-        if (current == target) return false;
-
-        int cost = GetMoveCost(current, target);
-        return GameState.Instance.ActionPoints >= cost;
+        return current != target;
     }
 
     /// <summary>
-    /// 执行移动到目标地点：扣除 AP、更新 GameState、触发事件
+    /// 执行移动到目标地点：更新 GameState、触发事件（移动免费，不消耗AP）
     /// </summary>
     public bool MoveTo(LocationId target)
     {
@@ -309,18 +359,11 @@ public class LocationManager : MonoBehaviour
 
         GameState gs = GameState.Instance;
         LocationId from = gs.CurrentLocation;
-        int cost = GetMoveCost(from, target);
-
-        // 扣除行动点
-        if (cost > 0)
-        {
-            gs.ConsumeActionPoint(cost);
-        }
 
         // 更新当前地点
         gs.CurrentLocation = target;
 
-        Debug.Log($"[LocationManager] 移动: {from} → {target}, 消耗 {cost} AP");
+        Debug.Log($"[LocationManager] 移动: {from} → {target}");
 
         // 触发事件
         OnLocationChanged?.Invoke(from, target);
@@ -332,7 +375,6 @@ public class LocationManager : MonoBehaviour
 
     private void OnRoundAdvanced(GameState.RoundAdvanceResult result)
     {
-        // 回合推进时刷新 NPC 分布（目前为静态配置，后续可接入 NPCScheduleManager）
         Debug.Log("[LocationManager] 回合推进，刷新地点状态");
     }
 }

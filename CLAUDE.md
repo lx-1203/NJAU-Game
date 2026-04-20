@@ -37,13 +37,13 @@ MCP 协议: Streamable HTTP, endpoint `http://localhost:8080/mcp`
 - `Assets/Scripts/RomanceSystem.cs` - 恋爱系统核心 (状态机/健康度/回合结算/分手/结局)
 - `Assets/Scripts/ConfessionSystem.cs` - 告白系统 (成功率公式/执行/复合/对话触发)
 - `Assets/Scripts/RomanceBridge.cs` - 恋爱桥接器 (IRelationshipExtension实现, AffinitySystem<->RomanceSystem同步)
-- `Assets/Scripts/ActionSystem.cs` - 行动系统 (12种行动定义+执行+效果应用, isGlobal标记全局行动, moneyCost走EconomyManager)
+- `Assets/Scripts/ActionSystem.cs` - 行动系统 (12种行动定义+执行+效果应用, isGlobal标记全局行动, moneyCost走EconomyManager, 自习2AP学力+7, 校园跑1AP体魄+1/压力-3/心情+2, 出校门2AP全局行动, 睡觉1AP压力-5结束回合, 新增背单词1AP)
 - `Assets/Scripts/LocationData.cs` - 地点数据模型 (LocationId枚举8地点, LocationDefinition, LocationLink邻接关系)
-- `Assets/Scripts/LocationManager.cs` - 地点管理器单例 (8地点定义+邻接图, 导航MoveTo扣AP, GetAvailableActions地点过滤+全局行动, NPC分布)
+- `Assets/Scripts/LocationManager.cs` - 地点管理器单例 (8地点定义+邻接图, 导航MoveTo免费不消耗AP, GetAvailableActions地点过滤+全局行动, NPC分布)
 - `Assets/Scripts/CampusMapUI.cs` - 校园地图UI (纯C#类, 节点图+连接线, 当前地点高亮, NPC指示, 点击打开详情面板)
 - `Assets/Scripts/LocationDetailPanel.cs` - 地点详情浮动面板 (纯C#类, 行动预览+NPC列表+移动消耗+前往/取消按钮)
 - `Assets/Scripts/TurnManager.cs` - 回合管理器 (回合/学期/学年推进, 含经济结算+考试拦截+补考检查+事件调度挂钩)
-- `Assets/Scripts/GameState.cs` - 游戏状态 (行动点/回合/学期/学年/金钱/当前地点, Money允许负数, CurrentLocation属性+OnLocationChanged事件)
+- `Assets/Scripts/GameState.cs` - 游戏状态 (行动点/回合/学期/学年/金钱/当前地点, Money允许负数, CurrentLocation属性+OnLocationChanged事件, DefaultActionPoints=20, MaxRoundsPerSemester=5)
 - `Assets/Scripts/PlayerAttributes.cs` - 玩家属性 (学力/魅力/体魄/领导力/压力/心情/黑暗值/负罪感/幸运)
 - `Assets/Scripts/EconomyManager.cs` - 经济管理器 (Earn/Spend/交易流水/回合结算/学期学费)
 - `Assets/Scripts/DebtSystem.cs` - 债务系统 (4级阈值: 200/0/-2000/-5000, 透支惩罚压力+10)
@@ -88,9 +88,9 @@ MCP 协议: Streamable HTTP, endpoint `http://localhost:8080/mcp`
 - 行动系统: 底栏动态按钮(按当前地点过滤) → ActionSystem 执行 → 属性变化
 - 社团系统: 底栏"社团"按钮 → 社团面板 → 加入/退出/活动 → ClubSystem独立处理AP与属性
 - 回合推进: 行动点耗尽 → TurnManager 延迟0.5s → GameState.AdvanceRound() → ClubSystem.OnRoundEnd()(晋升/入党阶段推进)
-- 时间流转: 回合→月份→学期→学年→毕业 (大一到大四, 每学期40回合)
+- 时间流转: 回合→月份→学期→学年→毕业 (大一到大四, 每学期5回合, 共40回合)
 - 睡觉特殊: 消耗1行动点+清空剩余 → 立即触发回合推进
-- 地点移动消耗: 相邻地点0AP, 远距离地点1AP
+- 地点移动消耗: 免费移动，不消耗行动点
 - 底栏按钮: 静态按钮(HUDBuilder创建)被HideStaticButtons()隐藏, 改由RefreshBottomBar()动态创建
 - 初始化顺序: SaveManager → NewGamePlusManager → GameState → PlayerAttributes → LocationManager → ActionSystem → ClubSystem → EconomyManager → DebtSystem → ShopSystem → RomanceSystem → ConfessionSystem → AchievementSystem → AchievementUI → SemesterSummarySystem → EndingDeterminer → TurnManager → ExamSystem → CheatingSystem → EventHistory → EventScheduler → DialogueSystem → EventExecutor → NPCEventHub → NPCDatabase → AffinitySystem → RomanceBridge → NPCManager → DebugConsoleManager(仅Debug构建)
 
@@ -132,13 +132,13 @@ MCP 协议: Streamable HTTP, endpoint `http://localhost:8080/mcp`
 ## 校园地图与场景导航系统
 - 8个校园地点: 教学楼/图书馆/宿舍/食堂/操场/教超/快递站/外卖站
 - 地点枚举: LocationId (TeachingBuilding/Library/Dormitory/Canteen/Playground/Supermarket/ExpressStation/TakeoutStation)
-- 邻接图: 相邻地点移动0AP, 远距离1AP
-- LocationManager: 单例管理器, 硬编码8地点+邻接关系, MoveTo()扣AP+更新GameState.CurrentLocation+触发OnLocationChanged
+- 邻接图: 保留邻接关系定义，但移动全部免费（不消耗AP）
+- LocationManager: 单例管理器, 硬编码8地点+邻接关系, MoveTo()不消耗AP+更新GameState.CurrentLocation+触发OnLocationChanged
 - GetAvailableActions(): 返回当前地点绑定的行动 + 所有isGlobal=true的全局行动(如睡觉)
 - CampusMapUI: 纯C#类(非MonoBehaviour), 在HUD centerPanel构建节点图, 当前地点金色高亮, NPC数量指示
 - LocationDetailPanel: 纯C#类, 浮动详情面板, 展示行动预览(含属性效果)+NPC列表+移动消耗+前往/取消按钮
 - HUDManager集成: InitMapUI()创建地图, RefreshBottomBar()动态生成行动按钮, HideStaticButtons()隐藏旧按钮
-- 12种行动: study/attend_class/social/play_game/sleep(全局)/goout/eat/exercise/sports_test/shop/pickup_express/order_takeout
+- 12种行动: study(2AP)/attend_class(2AP)/social(1AP)/play_game(1AP)/sleep(全局,1AP)/goout(全局,2AP)/eat(1AP)/exercise(1AP)/sports_test(2AP)/shop(1AP)/pickup_express(1AP)/order_takeout(1AP)/memorize_words(背单词,全局,1AP)
 - NPC分布: 静态分配(林知秋→宿舍, 苏小晴→食堂, 周然→宿舍, 谢凌云→图书馆), 预留NPCScheduleManager动态日程
 
 ## 对话系统 (数据驱动)

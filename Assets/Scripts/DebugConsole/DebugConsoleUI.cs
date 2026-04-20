@@ -16,7 +16,7 @@ public class DebugConsoleUI : MonoBehaviour
 
     // ========== 布局常量 ==========
     private const float TopBarHeight = 48f;
-    private const float BottomBarHeight = 56f;
+    private const float BottomBarHeight = 120f;  // 两行: 步长选择 + 增减按钮
     private const float SidebarWidth = 140f;
     private const float Padding = 6f;
 
@@ -85,8 +85,9 @@ public class DebugConsoleUI : MonoBehaviour
             instance.rootCanvasGroup.interactable = true;
             instance.rootCanvasGroup.blocksRaycasts = true;
         }
-        // 刷新当前活跃模块
+        // 刷新当前活跃模块 + 底栏数值
         instance.RefreshActiveModule();
+        instance.RefreshAdjustValues();
     }
 
     public static void Hide()
@@ -260,6 +261,17 @@ public class DebugConsoleUI : MonoBehaviour
         contentArea.offsetMax = new Vector2(0, -TopBarHeight);
     }
 
+    // ========== 增减按钮底栏 ==========
+
+    // 属性增减 UI 引用
+    private readonly string[] adjustAttrNames = { "学力", "魅力", "体魄", "领导力", "压力", "心情", "黑暗值", "负罪感", "幸运", "金钱" };
+    private readonly List<TextMeshProUGUI> adjustValueTexts = new List<TextMeshProUGUI>();
+    private readonly List<Image> stepBtnImages = new List<Image>();
+    private static readonly Color StepNormal   = new Color(0.18f, 0.18f, 0.26f, 0.90f);
+    private static readonly Color StepSelected = new Color(0.30f, 0.50f, 0.75f, 1.0f);
+    private static readonly Color MinusBtnColor = new Color(0.65f, 0.25f, 0.25f, 1.0f);
+    private static readonly Color PlusBtnColor  = new Color(0.25f, 0.55f, 0.30f, 1.0f);
+
     private void CreateBottomBar()
     {
         GameObject bottomBar = CreatePanel("BottomBar", canvas.transform, BottomBarColor);
@@ -270,63 +282,202 @@ public class DebugConsoleUI : MonoBehaviour
         botRT.anchoredPosition = Vector2.zero;
         botRT.sizeDelta = new Vector2(0, BottomBarHeight);
 
-        // 水平布局
-        HorizontalLayoutGroup hlg = bottomBar.AddComponent<HorizontalLayoutGroup>();
-        hlg.spacing = 8f;
-        hlg.padding = new RectOffset(12, 12, 6, 6);
+        // 纵向布局：第一行步长选择，第二行属性增减
+        VerticalLayoutGroup vlg = bottomBar.AddComponent<VerticalLayoutGroup>();
+        vlg.spacing = 4f;
+        vlg.padding = new RectOffset(10, 10, 4, 4);
+        vlg.childAlignment = TextAnchor.UpperCenter;
+        vlg.childControlWidth = true;
+        vlg.childControlHeight = false;
+        vlg.childForceExpandWidth = true;
+        vlg.childForceExpandHeight = false;
+
+        // ---- 第一行: 步长选择 ----
+        CreateStepRow(bottomBar.transform);
+
+        // ---- 第二行: 属性增减按钮 ----
+        CreateAdjustRow(bottomBar.transform);
+    }
+
+    private void CreateStepRow(Transform parent)
+    {
+        GameObject row = CreateUIElement("StepRow", parent);
+        RectTransform rowRT = row.GetComponent<RectTransform>();
+        rowRT.sizeDelta = new Vector2(0, 32f);
+
+        HorizontalLayoutGroup hlg = row.AddComponent<HorizontalLayoutGroup>();
+        hlg.spacing = 6f;
+        hlg.padding = new RectOffset(4, 4, 2, 2);
         hlg.childAlignment = TextAnchor.MiddleCenter;
         hlg.childControlWidth = false;
-        hlg.childControlHeight = false;
+        hlg.childControlHeight = true;
         hlg.childForceExpandWidth = false;
         hlg.childForceExpandHeight = false;
 
-        // 8 个预设按钮
-        string[] presetLabels = { "满属性", "巅峰", "黑暗", "摆烂", "贫困", "恋爱", "新手", "空白" };
-        System.Action[] presetActions =
-        {
-            DebugPresets.ApplyMax,
-            DebugPresets.ApplyPeak,
-            DebugPresets.ApplyDark,
-            DebugPresets.ApplySlacker,
-            DebugPresets.ApplyPoor,
-            DebugPresets.ApplyRomance,
-            DebugPresets.ApplyNewbie,
-            DebugPresets.ApplyBlank
-        };
+        // 标签
+        TextMeshProUGUI label = CreateTMPText("StepLabel", row.transform,
+            "步长:", 14f, TextGold, TextAlignmentOptions.Right, new Vector2(50, 28));
+        LayoutElement labelLE = label.gameObject.AddComponent<LayoutElement>();
+        labelLE.preferredWidth = 50f;
 
-        for (int i = 0; i < presetLabels.Length; i++)
+        // 4 个步长按钮
+        int[] steps = DebugPresets.GetStepOptions();
+        for (int i = 0; i < steps.Length; i++)
         {
             int idx = i;
-            CreatePresetButton(bottomBar.transform, presetLabels[i], () =>
-            {
-                presetActions[idx]();
-                RefreshActiveModule();
-            });
+            CreateStepButton(row.transform, steps[i].ToString(), idx);
         }
+
+        // 初始高亮当前步长
+        RefreshStepHighlight();
     }
 
-    private void CreatePresetButton(Transform parent, string label, UnityEngine.Events.UnityAction onClick)
+    private void CreateStepButton(Transform parent, string label, int stepIndex)
     {
-        GameObject btnObj = CreateUIElement("Preset_" + label, parent);
+        GameObject btnObj = CreateUIElement("Step_" + label, parent);
         RectTransform rt = btnObj.GetComponent<RectTransform>();
-        rt.sizeDelta = new Vector2(100, 40);
+        rt.sizeDelta = new Vector2(56, 28);
 
         Image btnBg = btnObj.AddComponent<Image>();
-        btnBg.color = BtnNormal;
+        bool isActive = stepIndex == DebugPresets.CurrentStepIndex;
+        btnBg.color = isActive ? StepSelected : StepNormal;
+        stepBtnImages.Add(btnBg);
 
         Button btn = btnObj.AddComponent<Button>();
         btn.targetGraphic = btnBg;
         ColorBlock cb = btn.colors;
         cb.normalColor = Color.white;
-        cb.highlightedColor = new Color(1.1f, 1.1f, 1.1f, 1f);
+        cb.highlightedColor = new Color(1.15f, 1.15f, 1.15f, 1f);
         cb.pressedColor = new Color(0.85f, 0.85f, 0.85f, 1f);
+        btn.colors = cb;
+        btn.onClick.AddListener(() =>
+        {
+            DebugPresets.SetStepIndex(stepIndex);
+            RefreshStepHighlight();
+        });
+
+        TextMeshProUGUI txt = CreateTMPText("Label", btnObj.transform,
+            label, 14f, TextWhite, TextAlignmentOptions.Center, new Vector2(56, 28));
+        StretchFull(txt.GetComponent<RectTransform>());
+    }
+
+    private void RefreshStepHighlight()
+    {
+        for (int i = 0; i < stepBtnImages.Count; i++)
+        {
+            stepBtnImages[i].color = (i == DebugPresets.CurrentStepIndex) ? StepSelected : StepNormal;
+        }
+    }
+
+    private void CreateAdjustRow(Transform parent)
+    {
+        GameObject row = CreateUIElement("AdjustRow", parent);
+        RectTransform rowRT = row.GetComponent<RectTransform>();
+        rowRT.sizeDelta = new Vector2(0, 70f);
+
+        // 使用 GridLayoutGroup 实现 5×2 布局
+        GridLayoutGroup grid = row.AddComponent<GridLayoutGroup>();
+        grid.cellSize = new Vector2(160f, 30f);
+        grid.spacing = new Vector2(6f, 4f);
+        grid.padding = new RectOffset(4, 4, 2, 2);
+        grid.startCorner = GridLayoutGroup.Corner.UpperLeft;
+        grid.startAxis = GridLayoutGroup.Axis.Horizontal;
+        grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+        grid.constraintCount = 5;
+        grid.childAlignment = TextAnchor.UpperCenter;
+
+        // 10 个属性: 每个 = [-] 名称 数值 [+]
+        for (int i = 0; i < adjustAttrNames.Length; i++)
+        {
+            int idx = i;
+            CreateAdjustCell(row.transform, adjustAttrNames[i], idx);
+        }
+
+        // 初始刷新数值
+        RefreshAdjustValues();
+    }
+
+    private void CreateAdjustCell(Transform parent, string attrName, int index)
+    {
+        GameObject cell = CreateUIElement("Cell_" + attrName, parent);
+
+        HorizontalLayoutGroup hlg = cell.AddComponent<HorizontalLayoutGroup>();
+        hlg.spacing = 2f;
+        hlg.padding = new RectOffset(0, 0, 0, 0);
+        hlg.childAlignment = TextAnchor.MiddleCenter;
+        hlg.childControlWidth = false;
+        hlg.childControlHeight = true;
+        hlg.childForceExpandWidth = false;
+        hlg.childForceExpandHeight = true;
+
+        // [-] 按钮
+        CreateSmallButton(cell.transform, "-", MinusBtnColor, 24f, () =>
+        {
+            DebugPresets.AdjustAttribute(attrName, false);
+            RefreshAdjustValues();
+            RefreshActiveModule();
+        });
+
+        // 属性名
+        string shortName = attrName.Length > 3 ? attrName.Substring(0, 3) : attrName;
+        TextMeshProUGUI nameText = CreateTMPText("Name", cell.transform,
+            shortName, 12f, TextWhite, TextAlignmentOptions.Center, new Vector2(42, 26));
+        LayoutElement nameLE = nameText.gameObject.AddComponent<LayoutElement>();
+        nameLE.preferredWidth = 42f;
+
+        // 数值
+        TextMeshProUGUI valText = CreateTMPText("Value", cell.transform,
+            "0", 13f, TextGold, TextAlignmentOptions.Center, new Vector2(50, 26));
+        LayoutElement valLE = valText.gameObject.AddComponent<LayoutElement>();
+        valLE.preferredWidth = 50f;
+        adjustValueTexts.Add(valText);
+
+        // [+] 按钮
+        CreateSmallButton(cell.transform, "+", PlusBtnColor, 24f, () =>
+        {
+            DebugPresets.AdjustAttribute(attrName, true);
+            RefreshAdjustValues();
+            RefreshActiveModule();
+        });
+    }
+
+    private void CreateSmallButton(Transform parent, string label, Color bgColor, float size,
+        UnityEngine.Events.UnityAction onClick)
+    {
+        GameObject btnObj = CreateUIElement("Btn_" + label, parent);
+        RectTransform rt = btnObj.GetComponent<RectTransform>();
+        rt.sizeDelta = new Vector2(size, size);
+
+        LayoutElement le = btnObj.AddComponent<LayoutElement>();
+        le.preferredWidth = size;
+        le.preferredHeight = size;
+
+        Image btnBg = btnObj.AddComponent<Image>();
+        btnBg.color = bgColor;
+
+        Button btn = btnObj.AddComponent<Button>();
+        btn.targetGraphic = btnBg;
+        ColorBlock cb = btn.colors;
+        cb.normalColor = Color.white;
+        cb.highlightedColor = new Color(1.2f, 1.2f, 1.2f, 1f);
+        cb.pressedColor = new Color(0.75f, 0.75f, 0.75f, 1f);
         btn.colors = cb;
         btn.onClick.AddListener(onClick);
 
         TextMeshProUGUI txt = CreateTMPText("Label", btnObj.transform,
-            label, 14f, TextWhite, TextAlignmentOptions.Center,
-            new Vector2(100, 40));
+            label, 16f, TextWhite, TextAlignmentOptions.Center, new Vector2(size, size));
+        txt.fontStyle = FontStyles.Bold;
         StretchFull(txt.GetComponent<RectTransform>());
+    }
+
+    /// <summary>刷新底栏所有属性数值显示</summary>
+    private void RefreshAdjustValues()
+    {
+        for (int i = 0; i < adjustAttrNames.Length && i < adjustValueTexts.Count; i++)
+        {
+            int val = DebugPresets.GetAttributeValue(adjustAttrNames[i]);
+            adjustValueTexts[i].text = adjustAttrNames[i] == "金钱" ? $"¥{val}" : val.ToString();
+        }
     }
 
     // ========== 模块面板创建 ==========
