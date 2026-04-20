@@ -140,13 +140,18 @@ public class SaveData
     // ========== 元信息 ==========
     public SaveMetaInfo meta = new SaveMetaInfo();
 
+    // ========== 玩家身份 ==========
+    public string playerName = "";
+    public int playerGender = 0;  // 0=男, 1=女
+    public string playerMajor = "";
+
     // ========== 游戏状态 (GameState) ==========
     public int currentYear = 1;
     public int currentSemester = 1;
     public int currentRound = 1;
     public int currentMonth = 9;
     public int money = 1488;
-    public int actionPoints = 5;
+    public int actionPoints = 20;
 
     // ========== 玩家属性 (PlayerAttributes) ==========
     public int study = 10;
@@ -181,6 +186,24 @@ public class SaveData
 
     // ========== 课程 & 成绩（ExamSystem 存档） ==========
     public List<CourseRecord> courseRecords = new List<CourseRecord>();
+    public List<SemesterGPA> semesterGPAHistory = new List<SemesterGPA>();
+    public List<ExamResult> failedCourses = new List<ExamResult>();
+    public int studyCountThisSemester = 0;
+    public bool cet4Passed = false;
+    public bool cet6Passed = false;
+    public bool computerLevelPassed = false;
+    public List<ExamResult> lastMidtermResults = new List<ExamResult>();
+
+    // ========== 作弊系统（CheatingSystem 存档） ==========
+    public int cheatCaughtCount = 0;
+    public int cheatTotalAttempts = 0;
+
+    // ========== 行动统计（SemesterSummarySystem 存档） ==========
+    public int studyCount = 0;
+    public int socialCount = 0;
+    public int goOutCount = 0;
+    public int sleepCount = 0;
+    public int totalMoneySpent = 0;
 
     // ========== 交易记录（EconomyManager 存档） ==========
     public List<TransactionRecord> transactionRecords = new List<TransactionRecord>();
@@ -191,6 +214,10 @@ public class SaveData
     public int partyApplicationRound = 0;
     /// <summary>退出冷却记录 (clubId → 剩余回合数)</summary>
     public List<StringIntPair> clubExitCooldowns = new List<StringIntPair>();
+
+    // ========== 校园跑（CampusRunSystem 存档） ==========
+    public int campusRunCompleted = 0;
+    public int campusRunProxy = 0;
 
     // ========== 游戏时长 ==========
     public float totalPlayTimeSeconds = 0f;

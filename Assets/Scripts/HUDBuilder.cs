@@ -45,6 +45,8 @@ public class HUDBuilder : MonoBehaviour
     [HideInInspector] public Button btnShop;  // 商店按钮
     [HideInInspector] public Button btnClub;  // 社团按钮
     [HideInInspector] public Button btnSave;  // 存档按钮
+    [HideInInspector] public Button btnTalent;  // 天赋按钮
+    [HideInInspector] public Button btnMap;     // 地图按钮
 
     // 动画器
     [HideInInspector] public UIAnimator hudAnimator;
@@ -244,7 +246,7 @@ public class HUDBuilder : MonoBehaviour
 
     private void CreateCenterPanel()
     {
-        centerPanel = CreatePanel("CenterPanel", hudCanvas.transform, CenterPanelColor);
+        centerPanel = CreatePanel("CenterPanel", hudCanvas.transform, new Color(0, 0, 0, 0));
         RectTransform centerRT = centerPanel.GetComponent<RectTransform>();
         // 锚定：左侧偏移 LeftPanelWidth，上方偏移 TopBarHeight，下方偏移 BottomBarHeight
         centerRT.anchorMin = new Vector2(0, 0);
@@ -252,15 +254,9 @@ public class HUDBuilder : MonoBehaviour
         centerRT.offsetMin = new Vector2(LeftPanelWidth, BottomBarHeight);
         centerRT.offsetMax = new Vector2(0, -TopBarHeight);
 
-        // 占位文字
-        TextMeshProUGUI mapPlaceholder = CreateTMPText("MapPlaceholder", centerPanel.transform,
-            "地图 / 当前场景\n（点击地点触发对应事件）",
-            24f, new Color(0.4f, 0.4f, 0.45f), TextAlignmentOptions.Center,
-            new Vector2(400, 100));
-        RectTransform mpRT = mapPlaceholder.GetComponent<RectTransform>();
-        mpRT.anchorMin = new Vector2(0.5f, 0.5f);
-        mpRT.anchorMax = new Vector2(0.5f, 0.5f);
-        mpRT.anchoredPosition = Vector2.zero;
+        // 中央面板透明，鼠标点击穿透到游戏场景
+        Image centerImage = centerPanel.GetComponent<Image>();
+        if (centerImage != null) centerImage.raycastTarget = false;
     }
 
     // ====================================================================
@@ -291,6 +287,8 @@ public class HUDBuilder : MonoBehaviour
         btnSleep  = CreateActionButton("BtnSleep",  bottomBar.transform, "睡觉");
         btnShop   = CreateActionButton("BtnShop",   bottomBar.transform, "商店");
         btnClub   = CreateActionButton("BtnClub",   bottomBar.transform, "社团");
+        btnMap    = CreateActionButton("BtnMap",    bottomBar.transform, "地图");
+        btnTalent = CreateActionButton("BtnTalent", bottomBar.transform, "天赋");
         btnSave   = CreateActionButton("BtnSave",   bottomBar.transform, "存档");
     }
 
@@ -338,7 +336,7 @@ public class HUDBuilder : MonoBehaviour
         GameObject clubObj = new GameObject("ClubPanelBuilder");
         clubObj.transform.SetParent(transform, false);
         clubPanelBuilder = clubObj.AddComponent<ClubPanelBuilder>();
-        clubPanelBuilder.BuildClubPanel();
+        clubPanelBuilder.BuildPanel();
 
         clubPanelManager = clubObj.AddComponent<ClubPanelManager>();
         clubPanelManager.Initialize(clubPanelBuilder);

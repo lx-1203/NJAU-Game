@@ -6,7 +6,7 @@ using System.Linq;
 /// <summary>
 /// 学期总结系统 —— 负责学期结算评分、属性快照管理、行动统计、Provider 调度
 /// </summary>
-public class SemesterSummarySystem : MonoBehaviour
+public class SemesterSummarySystem : MonoBehaviour, ISaveable
 {
     // ========== 单例 ==========
     public static SemesterSummarySystem Instance { get; private set; }
@@ -257,6 +257,12 @@ public class SemesterSummarySystem : MonoBehaviour
 
         Debug.Log($"[SemesterSummarySystem] 学期总结已生成: {summary.yearName}{summary.semesterName} " +
                   $"总分={summary.totalScore} 评级={summary.grade}");
+
+        // 发放天赋点奖励
+        if (TalentSystem.Instance != null)
+        {
+            TalentSystem.Instance.ProcessSemesterReward();
+        }
 
         OnSemesterSummaryReady?.Invoke(summary);
     }
@@ -695,7 +701,7 @@ public class SemesterSummarySystem : MonoBehaviour
                 if (NPCDatabase.Instance != null)
                 {
                     var npcData = NPCDatabase.Instance.GetNPC(kvp.Key);
-                    if (npcData != null) npcName = npcData.name;
+                    if (npcData != null) npcName = npcData.displayName;
                 }
 
                 relations.Add(new NPCRelationInfo(
@@ -717,11 +723,11 @@ public class SemesterSummarySystem : MonoBehaviour
         {
             if (ClubSystem.Instance == null) return false;
 
-            var membership = ClubSystem.Instance.GetMembership("student_council");
+            var membership = ClubSystem.Instance.GetMembership("student_union");
             if (membership == null) return false;
 
-            var currentRank = ClubSystem.Instance.GetCurrentRank("student_council");
-            var nextRank = ClubSystem.Instance.GetNextRank("student_council");
+            var currentRank = ClubSystem.Instance.GetCurrentRank("student_union");
+            var nextRank = ClubSystem.Instance.GetNextRank("student_union");
 
             return currentRank != null && nextRank == null;
         }
@@ -827,7 +833,7 @@ public class SemesterSummarySystem : MonoBehaviour
             foreach (var npc in allNPCs)
             {
                 if (RomanceSystem.Instance.GetRomanceState(npc.id) == RomanceState.Dating)
-                    return npc.name;
+                    return npc.displayName;
             }
             return "";
         }
@@ -846,5 +852,25 @@ public class SemesterSummarySystem : MonoBehaviour
             }
             return false;
         }
+    }
+
+    // ========== ISaveable 实现 ==========
+
+    public void SaveToData(SaveData data)
+    {
+        data.studyCount = studyCount;
+        data.socialCount = socialCount;
+        data.goOutCount = goOutCount;
+        data.sleepCount = sleepCount;
+        data.totalMoneySpent = totalMoneySpent;
+    }
+
+    public void LoadFromData(SaveData data)
+    {
+        studyCount = data.studyCount;
+        socialCount = data.socialCount;
+        goOutCount = data.goOutCount;
+        sleepCount = data.sleepCount;
+        totalMoneySpent = data.totalMoneySpent;
     }
 }

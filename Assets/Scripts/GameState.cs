@@ -20,10 +20,10 @@ public class GameState : MonoBehaviour, ISaveable
     public event Action<LocationId> OnLocationChanged;
 
     // ========== 常量 ==========
-    /// <summary>每回合默认行动点</summary>
-    public const int DefaultActionPoints = 5;
-    /// <summary>每学期回合数上限</summary>
-    public const int MaxRoundsPerSemester = 40;
+    /// <summary>每回合默认行动点（设计文档：基础上限20点）</summary>
+    public const int DefaultActionPoints = 20;
+    /// <summary>每学期回合数上限（设计文档：每学期5回合，共40回合）</summary>
+    public const int MaxRoundsPerSemester = 5;
 
     // ========== 内部字段 ==========
     [Header("学业进度")]
@@ -41,6 +41,11 @@ public class GameState : MonoBehaviour, ISaveable
 
     [Header("职务扣减")]
     [SerializeField] private int positionAPCost = 0;  // 所有职务的总行动点扣减
+
+    [Header("玩家身份")]
+    [SerializeField] private string playerName = "学生";
+    [SerializeField] private int playerGender = 0;   // 0=男, 1=女
+    [SerializeField] private string playerMajor = "生物科学";
 
     // ========== 属性访问器（写入时自动通知） ==========
 
@@ -100,6 +105,27 @@ public class GameState : MonoBehaviour, ISaveable
         set { currentLocation = value; NotifyChanged(); OnLocationChanged?.Invoke(value); }
     }
 
+    /// <summary>玩家姓名</summary>
+    public string PlayerName
+    {
+        get => playerName;
+        set { playerName = value; NotifyChanged(); }
+    }
+
+    /// <summary>玩家性别：0=男，1=女</summary>
+    public int PlayerGender
+    {
+        get => playerGender;
+        set { playerGender = value; NotifyChanged(); }
+    }
+
+    /// <summary>玩家专业</summary>
+    public string PlayerMajor
+    {
+        get => playerMajor;
+        set { playerMajor = value; NotifyChanged(); }
+    }
+
     /// <summary>每回合实际可用最大行动点（基础 - 职务扣减）</summary>
     public int EffectiveMaxActionPoints => Mathf.Max(1, DefaultActionPoints - positionAPCost);
 
@@ -113,11 +139,6 @@ public class GameState : MonoBehaviour, ISaveable
         NextYear,       // 进入下学年
         Graduated       // 毕业（大四下学期结束）
     }
-
-    // ========== 回合推进事件 ==========
-
-    /// <summary>回合推进后触发，参数为推进结果</summary>
-    public event Action<RoundAdvanceResult> OnRoundAdvanced;
 
     // ========== 回合推进 ==========
 
@@ -164,26 +185,21 @@ public class GameState : MonoBehaviour, ISaveable
 
         // 通知变化
         NotifyChanged();
-        OnRoundAdvanced?.Invoke(result);
 
         return result;
     }
 
     /// <summary>
     /// 根据学期和回合计算对应月份。
-    /// 上学期: 回合1-10→9月, 11-20→10月, 21-30→11月, 31-35→12月, 36-40→1月
-    /// 下学期: 回合1-10→3月, 11-20→4月, 21-30→5月, 31-35→6月, 36-40→7月
+    /// 每学期5回合，按设计文档映射：
+    /// 上学期: 回合1→9月, 回合2→10月, 回合3→11月, 回合4→12月, 回合5→1月
+    /// 下学期: 回合1→2月, 回合2→3月, 回合3→4月, 回合4→5月, 回合5→6月
     /// </summary>
     public static int CalculateMonth(int semester, int round)
     {
-        int baseMonth = (semester == 1) ? 9 : 3; // 上学期从9月，下学期从3月
+        int baseMonth = (semester == 1) ? 9 : 2; // 上学期从9月，下学期从2月
 
-        int monthOffset;
-        if (round <= 10) monthOffset = 0;
-        else if (round <= 20) monthOffset = 1;
-        else if (round <= 30) monthOffset = 2;
-        else if (round <= 35) monthOffset = 3;
-        else monthOffset = 4;
+        int monthOffset = Mathf.Clamp(round - 1, 0, 4); // 0~4
 
         int month = baseMonth + monthOffset;
         if (month > 12) month -= 12; // 处理跨年（12月→1月）
@@ -270,6 +286,10 @@ public class GameState : MonoBehaviour, ISaveable
         data.currentMonth = currentMonth;
         data.money = money;
         data.actionPoints = actionPoints;
+        data.currentLocation = currentLocation.ToString();
+        data.playerName = playerName;
+        data.playerGender = playerGender;
+        data.playerMajor = playerMajor;
     }
 
     /// <summary>从存档数据恢复游戏状态</summary>
@@ -281,6 +301,20 @@ public class GameState : MonoBehaviour, ISaveable
         currentMonth = data.currentMonth;
         money = data.money;
         actionPoints = data.actionPoints;
+
+        if (!string.IsNullOrEmpty(data.playerName))
+            playerName = data.playerName;
+        playerGender = data.playerGender;
+        if (!string.IsNullOrEmpty(data.playerMajor))
+            playerMajor = data.playerMajor;
+
+        // 恢复地点
+        if (!string.IsNullOrEmpty(data.currentLocation) &&
+            System.Enum.TryParse(data.currentLocation, true, out LocationId loc))
+        {
+            currentLocation = loc;
+        }
+
         NotifyChanged();
     }
 

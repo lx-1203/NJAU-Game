@@ -55,23 +55,23 @@ public class ActionSystem : MonoBehaviour
 
         // ===== 图书馆/教学楼行动 =====
 
-        // 自习：学力+3, 压力+5
+        // 自习（设计文档：2AP, 学力+5~10）：取中间值学力+7, 压力+5
         actionDefinitions.Add(new ActionDefinition
         {
             id = "study",
             displayName = "自习",
-            actionPointCost = 1,
+            actionPointCost = 2,
             moneyCost = 0,
             endsRound = false,
             isGlobal = false,
             effects = new AttributeEffect[]
             {
-                new AttributeEffect("学力", 3),
+                new AttributeEffect("学力", 7),
                 new AttributeEffect("压力", 5)
             }
         });
 
-        // 上课（教学楼专属）：学力+5, 压力+3
+        // 上课（教学楼专属，设计文档未单独定义AP消耗，按行动点消耗规则保持2AP）
         actionDefinitions.Add(new ActionDefinition
         {
             id = "attend_class",
@@ -89,7 +89,7 @@ public class ActionSystem : MonoBehaviour
 
         // ===== 宿舍行动 =====
 
-        // 社交：魅力+2, 领导力+1, 心情+8
+        // 社交（设计文档：1AP）：魅力+2, 领导力+1, 心情+8
         actionDefinitions.Add(new ActionDefinition
         {
             id = "social",
@@ -123,7 +123,8 @@ public class ActionSystem : MonoBehaviour
             }
         });
 
-        // 睡觉（全局行动）：体魄+2, 压力-15, 心情+5
+        // 睡觉（全局行动，设计文档：1AP, 行动点+3, 压力-5，每回合必须触发一次）
+        // 注意：endsRound=true 会清空剩余AP并结束回合
         actionDefinitions.Add(new ActionDefinition
         {
             id = "sleep",
@@ -134,23 +135,21 @@ public class ActionSystem : MonoBehaviour
             isGlobal = true,
             effects = new AttributeEffect[]
             {
-                new AttributeEffect("体魄", 2),
-                new AttributeEffect("压力", -15),
-                new AttributeEffect("心情", 5)
+                new AttributeEffect("压力", -5)
             }
         });
 
         // ===== 校外/出门行动 =====
 
-        // 出校门：心情+10, 压力-5
+        // 出校门（设计文档：2AP, 进入子活动菜单）：全局行动，任何地点可触发
         actionDefinitions.Add(new ActionDefinition
         {
             id = "goout",
             displayName = "出校门",
-            actionPointCost = 1,
+            actionPointCost = 2,
             moneyCost = 50,
             endsRound = false,
-            isGlobal = false,
+            isGlobal = true,
             effects = new AttributeEffect[]
             {
                 new AttributeEffect("心情", 10),
@@ -178,7 +177,7 @@ public class ActionSystem : MonoBehaviour
 
         // ===== 操场行动 =====
 
-        // 校园跑：体魄+4, 压力-5, 心情+2
+        // 校园跑（设计文档：1AP, 体魄+1, 压力-3, 心情+2）
         actionDefinitions.Add(new ActionDefinition
         {
             id = "exercise",
@@ -189,9 +188,25 @@ public class ActionSystem : MonoBehaviour
             isGlobal = false,
             effects = new AttributeEffect[]
             {
-                new AttributeEffect("体魄", 4),
-                new AttributeEffect("压力", -5),
+                new AttributeEffect("体魄", 1),
+                new AttributeEffect("压力", -3),
                 new AttributeEffect("心情", 2)
+            }
+        });
+
+        // 背单词（设计文档：1AP, 四六级通过率+5%）
+        actionDefinitions.Add(new ActionDefinition
+        {
+            id = "memorize_words",
+            displayName = "背单词",
+            actionPointCost = 1,
+            moneyCost = 0,
+            endsRound = false,
+            isGlobal = true,
+            effects = new AttributeEffect[]
+            {
+                new AttributeEffect("学力", 1),
+                new AttributeEffect("压力", 2)
             }
         });
 
@@ -309,7 +324,12 @@ public class ActionSystem : MonoBehaviour
             return false;
         }
 
-        if (gs.ActionPoints < action.actionPointCost)
+        // 额外AP消耗（负罪感）
+        int extraAP = 0;
+        if (PenaltySystem.Instance != null)
+            extraAP = PenaltySystem.Instance.GetGuiltExtraAPCost();
+
+        if (gs.ActionPoints < action.actionPointCost + extraAP)
             return false;
 
         if (gs.Money < action.moneyCost)
@@ -334,8 +354,11 @@ public class ActionSystem : MonoBehaviour
         ActionDefinition action = GetAction(id);
         GameState gs = GameState.Instance;
 
-        // 2. 扣除行动点
-        gs.ConsumeActionPoint(action.actionPointCost);
+        // 2. 扣除行动点（含负罪感额外消耗）
+        int extraAPCost = 0;
+        if (PenaltySystem.Instance != null)
+            extraAPCost = PenaltySystem.Instance.GetGuiltExtraAPCost();
+        gs.ConsumeActionPoint(action.actionPointCost + extraAPCost);
 
         // 3. 扣除金钱（通过 EconomyManager 记录交易）
         if (action.moneyCost > 0)
@@ -353,13 +376,53 @@ public class ActionSystem : MonoBehaviour
             }
         }
 
-        // 4. 应用属性效果
+        // 4. 应用属性效果（考虑惩罚系统的效率乘数）
         if (action.effects != null && PlayerAttributes.Instance != null)
         {
+            float guiltMult = 1f;
+            float slackingStudyMult = 1f;
+            if (PenaltySystem.Instance != null)
+            {
+                guiltMult = PenaltySystem.Instance.GetGuiltEfficiencyMultiplier();
+                slackingStudyMult = PenaltySystem.Instance.GetSlackingStudyMultiplier();
+            }
+
+            // 天赋加成
+            float studyLibraryBonus = 1f;
+            if (TalentSystem.Instance != null && TalentSystem.Instance.HasTalentEffect("study_library_bonus"))
+            {
+                if (action.id == "study" && GameState.Instance != null && GameState.Instance.CurrentLocation == LocationId.Library)
+                    studyLibraryBonus = 1f + TalentSystem.Instance.GetTalentEffectValue("study_library_bonus") / 100f;
+            }
+
             for (int i = 0; i < action.effects.Length; i++)
             {
                 AttributeEffect effect = action.effects[i];
-                PlayerAttributes.Instance.AddAttribute(effect.attributeName, effect.amount);
+                int finalAmount = effect.amount;
+
+                // 正面效果受负罪感效率影响
+                if (finalAmount > 0)
+                {
+                    finalAmount = Mathf.RoundToInt(finalAmount * guiltMult);
+                }
+
+                // 学力正收益受摆烂值影响
+                if (effect.attributeName == "学力" && finalAmount > 0)
+                {
+                    finalAmount = Mathf.RoundToInt(finalAmount * slackingStudyMult * studyLibraryBonus);
+                }
+
+                // 天赋：压力增长减缓
+                if (effect.attributeName == "压力" && finalAmount > 0)
+                {
+                    if (TalentSystem.Instance != null && TalentSystem.Instance.HasTalentEffect("stress_growth_reduction"))
+                    {
+                        float reduction = TalentSystem.Instance.GetTalentEffectValue("stress_growth_reduction") / 100f;
+                        finalAmount = Mathf.RoundToInt(finalAmount * (1f - reduction));
+                    }
+                }
+
+                PlayerAttributes.Instance.AddAttribute(effect.attributeName, finalAmount);
             }
         }
 
@@ -371,6 +434,8 @@ public class ActionSystem : MonoBehaviour
         OnActionExecuted?.Invoke(action);
 
         // 7. 如果 endsRound 且还有剩余行动点，清零
+        //    睡觉特殊处理：设计文档要求睡觉回复3行动点，但同时结束回合
+        //    因此先回复再清零（回复效果体现在下回合初始AP不变，设计意义在于"每回合必须睡觉"）
         if (action.endsRound && gs.ActionPoints > 0)
         {
             gs.ActionPoints = 0;

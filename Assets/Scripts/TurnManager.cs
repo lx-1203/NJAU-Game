@@ -112,9 +112,9 @@ public class TurnManager : MonoBehaviour
     {
         if (GameState.Instance == null) return;
 
-        // ========== 期中考试拦截（第20回合） ==========
+        // ========== 期中考试拦截（每学期第3回合） ==========
 
-        int midtermRound = GameState.MaxRoundsPerSemester / 2; // 第20回合
+        int midtermRound = 3; // 每学期5回合，期中在第3回合
         if (GameState.Instance.CurrentRound == midtermRound && !waitingForExam)
         {
             if (ExamSystem.Instance != null && ExamSystem.Instance.IsDataLoaded)
@@ -143,9 +143,9 @@ public class TurnManager : MonoBehaviour
             }
         }
 
-        // ========== 学期末考试拦截（第40回合） ==========
+        // ========== 学期末考试拦截（学期最后一回合） ==========
 
-        // 如果当前是学期最后一回合（第40回合），触发期末考试
+        // 如果当前是学期最后一回合，触发期末考试
         if (GameState.Instance.CurrentRound == GameState.MaxRoundsPerSemester && !waitingForExam)
         {
             if (ExamSystem.Instance != null && ExamSystem.Instance.IsDataLoaded)
@@ -179,11 +179,11 @@ public class TurnManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 考试完成后的回调：继续回合推进
+    /// 考试完成后的回调：执行体测，然后继续回合推进
     /// </summary>
     private void HandleExamCompleted()
     {
-        Debug.Log("[TurnManager] 考试完成，继续回合推进");
+        Debug.Log("[TurnManager] 考试完成，执行体测");
 
         // 取消订阅
         if (ExamUIManager.Instance != null)
@@ -192,6 +192,13 @@ public class TurnManager : MonoBehaviour
         }
 
         waitingForExam = false;
+
+        // 期末考试后执行体测（使用默认策略，后续可接入UI选择）
+        if (PhysicalTestSystem.Instance != null)
+        {
+            var ptResult = PhysicalTestSystem.Instance.ExecuteTestDefault();
+            Debug.Log($"[TurnManager] 体测完成: {ptResult.grade} ({ptResult.totalScore}分)");
+        }
 
         // 继续推进
         ContinueAdvanceRound();
@@ -261,6 +268,29 @@ public class TurnManager : MonoBehaviour
         if (DebtSystem.Instance != null)
         {
             DebtSystem.Instance.ProcessRoundDebtPenalty();
+        }
+
+        // 社团系统回合结算（晋升、入党阶段推进等）
+        if (ClubSystem.Instance != null)
+        {
+            ClubSystem.Instance.OnRoundEnd();
+        }
+
+        // 学期切换时检查校园跑完成情况
+        if (result == GameState.RoundAdvanceResult.NextSemester ||
+            result == GameState.RoundAdvanceResult.NextYear)
+        {
+            if (CampusRunSystem.Instance != null)
+            {
+                float completionRate = CampusRunSystem.Instance.GetCompletionRate();
+                if (completionRate < 1f && PlayerAttributes.Instance != null)
+                {
+                    // 未完成校园跑：压力+5，体魄-3
+                    PlayerAttributes.Instance.Stress += 5;
+                    PlayerAttributes.Instance.Physique -= 3;
+                    Debug.Log($"[TurnManager] 校园跑未完成(完成率{completionRate:P0})，压力+5，体魄-3");
+                }
+            }
         }
 
         // ========== 日志输出 ==========
@@ -353,8 +383,8 @@ public class TurnManager : MonoBehaviour
         int semester = GameState.Instance.CurrentSemester;
         int round = GameState.Instance.CurrentRound;
 
-        // 证书考试在每学期第30回合触发（期中考后、期末考前的稳定窗口）
-        if (round != 30) return;
+        // 证书考试在每学期第4回合触发（期中考后、期末考前的窗口）
+        if (round != 4) return;
 
         Debug.Log($"[TurnManager] 证书考试窗口期 —— {GameState.Instance.GetYearName()}{GameState.Instance.GetSemesterName()} 第{round}回合");
 

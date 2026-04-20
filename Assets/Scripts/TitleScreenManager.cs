@@ -756,7 +756,19 @@ public class TitleScreenManager : MonoBehaviour
 
     public void StartGame()
     {
-        StartCoroutine(TransitionToGameScene());
+        // 显示角色创建UI
+        if (CharacterCreationUI.Instance == null)
+        {
+            GameObject obj = new GameObject("CharacterCreationUI");
+            CharacterCreationUI ui = obj.AddComponent<CharacterCreationUI>();
+            ui.OnCreationComplete += () => { StartCoroutine(TransitionToGameScene()); };
+            ui.Show();
+        }
+        else
+        {
+            CharacterCreationUI.Instance.OnCreationComplete += () => { StartCoroutine(TransitionToGameScene()); };
+            CharacterCreationUI.Instance.Show();
+        }
     }
 
     public void QuitGame()

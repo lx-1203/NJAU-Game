@@ -25,6 +25,8 @@ public class GameSceneInitializer : MonoBehaviour
         SetupShopSystem();
         SetupRomanceSystem();
         SetupConfessionSystem();
+        SetupCampusRunSystem();
+        SetupPhysicalTestSystem();
         SetupAchievementSystem();
         SetupAchievementUI();
         SetupSemesterSummarySystem();
@@ -49,11 +51,30 @@ public class GameSceneInitializer : MonoBehaviour
         SetupRomanceBridge();
         SetupNPCManager();
 
+        // 挂载区域检测器到玩家（走路自动切换地点）
+        SetupLocationZoneDetector();
+
+        // 校园新闻系统（依赖 PlayerAttributes, AffinitySystem, NPCDatabase, ClubSystem）
+        SetupNewsSystem();
+
+        // 天赋系统
+        SetupTalentSystem();
+        SetupTalentUI();
+
+        // 工作/实习/副业系统
+        SetupJobSystem();
+
+        // 惩罚系统（依赖 TurnManager, ActionSystem, PlayerAttributes, TalentSystem）
+        SetupPenaltySystem();
+
         // 注入真实 Provider（所有子系统已初始化完毕）
         if (SemesterSummarySystem.Instance != null)
         {
             SemesterSummarySystem.Instance.InjectRealProviders();
         }
+
+        // HUD 管理器（必须在所有子系统初始化之后，确保事件订阅成功）
+        SetupHUDManager();
 
         // 初始化调试控制台（仅 Development/Editor 构建）
 #if DEVELOPMENT_BUILD || UNITY_EDITOR
@@ -242,6 +263,26 @@ public class GameSceneInitializer : MonoBehaviour
         }
     }
 
+    private void SetupLocationZoneDetector()
+    {
+        GameObject player = GameObject.FindGameObjectWithTag("Player");
+        if (player != null && player.GetComponent<LocationZoneDetector>() == null)
+        {
+            player.AddComponent<LocationZoneDetector>();
+        }
+    }
+
+    // ========== HUD 管理器 ==========
+
+    private void SetupHUDManager()
+    {
+        if (FindObjectOfType<HUDManager>() == null)
+        {
+            GameObject obj = new GameObject("HUDManager");
+            obj.AddComponent<HUDManager>();
+        }
+    }
+
     // ========== 社团系统 ==========
 
     private void SetupClubSystem()
@@ -308,6 +349,81 @@ public class GameSceneInitializer : MonoBehaviour
         {
             GameObject obj = new GameObject("CheatingSystem");
             obj.AddComponent<CheatingSystem>();
+        }
+    }
+
+    // ========== 体测系统 ==========
+
+    private void SetupPhysicalTestSystem()
+    {
+        if (PhysicalTestSystem.Instance == null)
+        {
+            GameObject obj = new GameObject("PhysicalTestSystem");
+            obj.AddComponent<PhysicalTestSystem>();
+        }
+    }
+
+    // ========== 校园跑系统 ==========
+
+    private void SetupCampusRunSystem()
+    {
+        if (CampusRunSystem.Instance == null)
+        {
+            GameObject obj = new GameObject("CampusRunSystem");
+            obj.AddComponent<CampusRunSystem>();
+        }
+    }
+
+    // ========== 校园新闻系统 ==========
+
+    private void SetupNewsSystem()
+    {
+        if (NewsSystem.Instance == null)
+        {
+            GameObject obj = new GameObject("NewsSystem");
+            obj.AddComponent<NewsSystem>();
+        }
+    }
+
+    // ========== 天赋系统 ==========
+
+    private void SetupTalentSystem()
+    {
+        if (TalentSystem.Instance == null)
+        {
+            GameObject obj = new GameObject("TalentSystem");
+            obj.AddComponent<TalentSystem>();
+        }
+    }
+
+    private void SetupTalentUI()
+    {
+        if (TalentUI.Instance == null)
+        {
+            GameObject obj = new GameObject("TalentUI");
+            obj.AddComponent<TalentUI>();
+        }
+    }
+
+    // ========== 事件系统（原有） ==========
+
+    private void SetupJobSystem()
+    {
+        if (JobSystem.Instance == null)
+        {
+            GameObject obj = new GameObject("JobSystem");
+            obj.AddComponent<JobSystem>();
+        }
+    }
+
+    // ========== 惩罚系统 ==========
+
+    private void SetupPenaltySystem()
+    {
+        if (PenaltySystem.Instance == null)
+        {
+            GameObject obj = new GameObject("PenaltySystem");
+            obj.AddComponent<PenaltySystem>();
         }
     }
 

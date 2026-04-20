@@ -53,40 +53,8 @@ public class HUDManager : MonoBehaviour
         if (gameState != null) gameState.OnStateChanged += RefreshTopBar;
         if (playerAttributes != null) playerAttributes.OnAttributesChanged += RefreshAttributes;
 
-        // 订阅考试完成事件（刷新 GPA 显示）
-        if (ExamSystem.Instance != null)
-        {
-            ExamSystem.Instance.OnExamCompleted += OnExamCompleted;
-        }
-
-        // 订阅回合推进事件
-        if (TurnManager.Instance != null)
-        {
-            TurnManager.Instance.OnRoundAdvanced += OnRoundAdvanced;
-        }
-
-        // 订阅 NPC 社交互动反馈事件
-        if (NPCEventHub.Instance != null)
-        {
-            NPCEventHub.Instance.OnSocialInteractionFeedback += OnSocialFeedback;
-        }
-
-        // 订阅地点变化事件
-        if (LocationManager.Instance != null)
-        {
-            LocationManager.Instance.OnLocationChanged += OnLocationChangedHandler;
-        }
-
-        // 订阅恋爱系统事件
-        if (RomanceSystem.Instance != null)
-        {
-            RomanceSystem.Instance.OnRomanceStateChanged += OnRomanceStateChanged;
-            RomanceSystem.Instance.OnRomanceHealthChanged += OnRomanceHealthChanged;
-        }
-        if (ConfessionSystem.Instance != null)
-        {
-            ConfessionSystem.Instance.OnConfessionResult += OnConfessionResult;
-        }
+        // 延迟订阅子系统事件（确保所有单例已完成初始化）
+        StartCoroutine(DeferredSubscriptions());
 
         // 绑定商店按钮
         if (builder.btnShop != null && builder.shopUIBuilder != null)
@@ -122,27 +90,88 @@ public class HUDManager : MonoBehaviour
             });
         }
 
+        // 绑定天赋按钮
+        if (builder.btnTalent != null)
+        {
+            builder.btnTalent.onClick.AddListener(() =>
+            {
+                if (builder.hudAnimator != null)
+                    builder.hudAnimator.ButtonPressEffect(builder.btnTalent);
+                if (TalentUI.Instance != null)
+                {
+                    if (TalentUI.Instance.IsOpen)
+                        TalentUI.Instance.ClosePanel();
+                    else
+                        TalentUI.Instance.ShowPanel();
+                }
+            });
+        }
+
+        // 绑定地图按钮
+        if (builder.btnMap != null)
+        {
+            builder.btnMap.onClick.AddListener(() =>
+            {
+                if (builder.hudAnimator != null)
+                    builder.hudAnimator.ButtonPressEffect(builder.btnMap);
+                ToggleMapOverlay();
+            });
+        }
+
         // 缓存社团面板管理器引用
         clubPanelManager = builder.clubPanelManager;
-
-        // 订阅债务等级变化事件
-        if (DebtSystem.Instance != null)
-        {
-            DebtSystem.Instance.OnDebtLevelChanged += OnDebtLevelChanged;
-        }
-
-        // 订阅事件系统（事件执行期间禁用/启用行动按钮）
-        if (EventScheduler.Instance != null)
-        {
-            EventScheduler.Instance.OnEventTriggered += OnGameEventTriggered;
-            EventScheduler.Instance.OnEventCompleted += OnGameEventCompleted;
-        }
 
         // 首次刷新
         RefreshAll();
 
         // 播放入场动画
         StartCoroutine(PlayEntryAnimation());
+
+        // 显示第一回合新闻（延迟到入场动画之后）
+        StartCoroutine(ShowInitialNews());
+    }
+
+    /// <summary>延迟订阅子系统事件，确保所有单例已初始化完毕</summary>
+    private IEnumerator DeferredSubscriptions()
+    {
+        // 等待一帧，确保所有单例的 Start() 已执行
+        yield return null;
+
+        // 订阅考试完成事件
+        if (ExamSystem.Instance != null)
+            ExamSystem.Instance.OnExamCompleted += OnExamCompleted;
+
+        // 订阅回合推进事件
+        if (TurnManager.Instance != null)
+            TurnManager.Instance.OnRoundAdvanced += OnRoundAdvanced;
+
+        // 订阅 NPC 社交互动反馈事件
+        if (NPCEventHub.Instance != null)
+            NPCEventHub.Instance.OnSocialInteractionFeedback += OnSocialFeedback;
+
+        // 订阅地点变化事件
+        if (LocationManager.Instance != null)
+            LocationManager.Instance.OnLocationChanged += OnLocationChangedHandler;
+
+        // 订阅恋爱系统事件
+        if (RomanceSystem.Instance != null)
+        {
+            RomanceSystem.Instance.OnRomanceStateChanged += OnRomanceStateChanged;
+            RomanceSystem.Instance.OnRomanceHealthChanged += OnRomanceHealthChanged;
+        }
+        if (ConfessionSystem.Instance != null)
+            ConfessionSystem.Instance.OnConfessionResult += OnConfessionResult;
+
+        // 订阅债务等级变化事件
+        if (DebtSystem.Instance != null)
+            DebtSystem.Instance.OnDebtLevelChanged += OnDebtLevelChanged;
+
+        // 订阅事件系统
+        if (EventScheduler.Instance != null)
+        {
+            EventScheduler.Instance.OnEventTriggered += OnGameEventTriggered;
+            EventScheduler.Instance.OnEventCompleted += OnGameEventCompleted;
+        }
     }
 
     private void OnDestroy()
@@ -160,6 +189,7 @@ public class HUDManager : MonoBehaviour
             EventScheduler.Instance.OnEventCompleted -= OnGameEventCompleted;
         }
         if (ExamSystem.Instance != null) ExamSystem.Instance.OnExamCompleted -= OnExamCompleted;
+        if (NewsSystem.Instance != null) NewsSystem.Instance.OnNewsDismissed -= OnNewsDismissed;
         if (RomanceSystem.Instance != null)
         {
             RomanceSystem.Instance.OnRomanceStateChanged -= OnRomanceStateChanged;
@@ -322,19 +352,19 @@ public class HUDManager : MonoBehaviour
         RefreshBottomBar();
     }
 
-    /// <summary>初始化地图 UI（校园地图 + 详情面板）</summary>
+    /// <summary>初始化地图 UI（校园地图覆盖层 + 详情面板）</summary>
     private void InitMapUI()
     {
-        if (builder.centerPanel == null) return;
+        if (builder.hudCanvas == null) return;
 
-        // 创建地图 UI
+        // 创建地图覆盖层（弹窗式，初始隐藏）
         campusMapUI = new CampusMapUI();
-        campusMapUI.BuildMap(builder.centerPanel);
+        campusMapUI.BuildMapOverlay(builder.hudCanvas);
         campusMapUI.OnLocationNodeClicked += OnLocationNodeClicked;
 
-        // 创建详情面板
+        // 创建详情面板（挂在覆盖层内）
         detailPanel = new LocationDetailPanel();
-        detailPanel.Build(builder.centerPanel);
+        detailPanel.Build(campusMapUI.OverlayRoot);
         detailPanel.OnNavigated += OnLocationNavigated;
     }
 
@@ -349,9 +379,24 @@ public class HUDManager : MonoBehaviour
         }
     }
 
-    /// <summary>导航完成 —— 刷新地图和底栏</summary>
+    /// <summary>导航完成 —— 传送玩家、关闭地图覆盖层、刷新UI</summary>
     private void OnLocationNavigated(LocationId targetLocation)
     {
+        // 传送玩家到目标地点的世界中心坐标
+        if (LocationManager.Instance != null)
+        {
+            Vector3 targetPos = LocationManager.Instance.GetLocationWorldCenter(targetLocation);
+            GameObject player = GameObject.FindGameObjectWithTag("Player");
+            if (player != null)
+            {
+                player.transform.position = targetPos;
+            }
+        }
+
+        // 关闭地图覆盖层
+        if (campusMapUI != null) campusMapUI.HideOverlay();
+
+        // 刷新UI
         if (campusMapUI != null) campusMapUI.RefreshMap();
         RefreshBottomBar();
         RefreshTopBar();
@@ -362,6 +407,16 @@ public class HUDManager : MonoBehaviour
     {
         if (campusMapUI != null) campusMapUI.RefreshMap();
         RefreshBottomBar();
+    }
+
+    /// <summary>切换地图覆盖层显示/隐藏</summary>
+    private void ToggleMapOverlay()
+    {
+        if (campusMapUI == null) return;
+        if (campusMapUI.IsVisible)
+            campusMapUI.HideOverlay();
+        else
+            campusMapUI.ShowOverlay();
     }
 
     // ========== 动态底栏 ==========
@@ -429,11 +484,15 @@ public class HUDManager : MonoBehaviour
         cb.fadeDuration = 0.1f;
         btn.colors = cb;
 
-        // 按钮文字：显示名 + AP消耗
-        string label = action.actionPointCost > 0 ?
-            $"{action.displayName}({action.actionPointCost}AP)" : action.displayName;
+        // 按钮文字：显示名 + AP消耗 + 金钱消耗
+        string label = action.displayName;
+        List<string> costs = new List<string>();
+        if (action.actionPointCost > 0)
+            costs.Add($"{action.actionPointCost}AP");
         if (action.moneyCost > 0)
-            label = $"{action.displayName}(¥{action.moneyCost})";
+            costs.Add($"¥{action.moneyCost}");
+        if (costs.Count > 0)
+            label += $"({string.Join("/", costs)})";
 
         GameObject textObj = new GameObject("Label");
         textObj.transform.SetParent(btnObj.transform, false);
@@ -564,6 +623,8 @@ public class HUDManager : MonoBehaviour
         {
             case GameState.RoundAdvanceResult.NextRound:
                 Debug.Log($"[HUD] 新回合开始 — {gameState.GetTimeDescription()}");
+                // 显示校园新闻
+                ShowRoundNews();
                 break;
             case GameState.RoundAdvanceResult.NextSemester:
                 Debug.Log($"[HUD] 新学期开始 — {gameState.GetTimeDescription()}");
@@ -582,15 +643,28 @@ public class HUDManager : MonoBehaviour
                 break;
         }
 
-        // 回合推进后触发社团系统结算（晋升、入党阶段推进等）
-        if (ClubSystem.Instance != null)
-        {
-            ClubSystem.Instance.OnRoundEnd();
-        }
-
         // 回合推进后刷新地图和底栏
         if (campusMapUI != null) campusMapUI.RefreshMap();
         RefreshBottomBar();
+    }
+
+    /// <summary>显示回合开始新闻（锁定行动按钮，直到玩家关闭新闻）</summary>
+    private void ShowRoundNews()
+    {
+        if (NewsSystem.Instance == null) return;
+
+        SetActionButtonsInteractable(false);
+        NewsSystem.Instance.OnNewsDismissed += OnNewsDismissed;
+        NewsSystem.Instance.ShowNews();
+    }
+
+    /// <summary>新闻关闭后恢复行动按钮</summary>
+    private void OnNewsDismissed()
+    {
+        if (NewsSystem.Instance != null)
+            NewsSystem.Instance.OnNewsDismissed -= OnNewsDismissed;
+
+        SetActionButtonsInteractable(true);
     }
 
     /// <summary>NPC 社交互动反馈回调</summary>
@@ -677,6 +751,14 @@ public class HUDManager : MonoBehaviour
     }
 
     // ========== 协程动画（参考 UIAnimator 风格） ==========
+
+    /// <summary>初始新闻显示（入场动画完成后）</summary>
+    private IEnumerator ShowInitialNews()
+    {
+        // 等待入场动画完成
+        yield return new WaitForSeconds(1.5f);
+        ShowRoundNews();
+    }
 
     /// <summary>入场动画：各区域依次淡入滑入</summary>
     private IEnumerator PlayEntryAnimation()
@@ -854,20 +936,4 @@ public class HUDManager : MonoBehaviour
         SetModalState(false);
     }
 
-    // ========== 考试系统回调 ==========
-
-    /// <summary>考试完成回调 —— 刷新 GPA 显示</summary>
-    private void OnExamCompleted(ExamSystem.ExamResult result)
-    {
-        Debug.Log($"[HUD] 考试完成: {result.subject}, 成绩={result.score:F1}");
-
-        // 刷新 GPA 显示
-        if (builder.gpaText != null && ExamSystem.Instance != null)
-        {
-            float gpa = ExamSystem.Instance.GetCumulativeGPA();
-            builder.gpaText.text = $"GPA: {gpa:F2}";
-        }
-
-        RefreshAll();
-    }
 }
