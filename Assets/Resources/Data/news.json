@@ -1,0 +1,187 @@
+{
+    "headlines": {
+        "fixed": [
+            {
+                "id": "h_1_1_1",
+                "title": "热烈欢迎2024级新同学！今日南农迎来3000余名新生",
+                "content": "钟山脚下又添新面孔。今年的新生中，最远的来自新疆，最近的就住在学校对面小区。校长在开学典礼上表示：\"希望同学们珍惜四年时光，不要等到毕业才后悔。\"",
+                "author": "南农青年报记者 小明",
+                "targetYear": 1,
+                "targetSemester": 1,
+                "targetRound": 1
+            },
+            {
+                "id": "h_1_1_2",
+                "title": "国庆七天乐！但你的选课选好了吗？",
+                "content": "据统计，本届新生中有47%的同学在国庆假期前一天才完成选课。教务处温馨提醒：热门课程先到先得，\"水课\"也是有灵魂的。",
+                "author": "南农青年报记者 小红",
+                "targetYear": 1,
+                "targetSemester": 1,
+                "targetRound": 2
+            },
+            {
+                "id": "h_1_1_3",
+                "title": "期中考试来袭！图书馆座位一位难求",
+                "content": "随着期中考试周临近，图书馆日均入馆人次突破历史新高。心理咨询中心提醒：合理安排学习时间，不要给自己太大压力。",
+                "author": "南农青年报记者 小华",
+                "targetYear": 1,
+                "targetSemester": 1,
+                "targetRound": 3
+            },
+            {
+                "id": "h_1_1_4",
+                "title": "期末季 + 四六级！南农学子迎来最忙十二月",
+                "content": "十二月的南农校园弥漫着焦虑与奶茶的气息。CET-4考试将于本月举行，而期末考试也近在咫尺。后勤处贴心提醒：天冷了记得加衣服。",
+                "author": "南农青年报记者 小李",
+                "targetYear": 1,
+                "targetSemester": 1,
+                "targetRound": 4
+            },
+            {
+                "id": "h_1_1_5",
+                "title": "大一上学期即将落幕！你的第一张成绩单准备好了吗？",
+                "content": "一学期转瞬即逝。回望这几个月，有人收获了友情和成长，有人在迷茫中摸索方向。辅导员提醒：回家注意安全，别忘了给家人带一只南农烧鸡。",
+                "author": "南农青年报记者 小刘",
+                "targetYear": 1,
+                "targetSemester": 1,
+                "targetRound": 5
+            }
+        ],
+        "generic": {
+            "round1": {
+                "titleTemplate": "{yearName}{semName}开学啦！新学期新气象",
+                "contentTemplate": "又是一个新学期的开始，{yearName}的同学们已经是\"老生\"了。教务处提醒：别忘了确认课表，新学期一起加油！",
+                "author": "南农青年报"
+            },
+            "round3": {
+                "titleTemplate": "期中考试周来临，你准备好了吗？",
+                "contentTemplate": "{yearName}{semName}期中考试即将开始，图书馆再次人满为患。加油，少年！",
+                "author": "南农青年报"
+            },
+            "round5": {
+                "titleTemplate": "{yearName}{semName}即将结束，期末冲刺！",
+                "contentTemplate": "本学期进入尾声，期末考试在即。回顾这个学期，你收获了什么？",
+                "author": "南农青年报"
+            },
+            "midRound": [
+                "校园文化节精彩纷呈，各社团大显身手",
+                "图书馆新增自习位500个，再也不用抢座了",
+                "食堂推出新菜品，同学们排队品尝",
+                "校园绿化升级，钟山脚下更添一抹新绿",
+                "校运动会报名启动，各学院积极备战"
+            ],
+            "midRoundContent": "校园生活丰富多彩，每一天都有新的故事在发生。",
+            "midRoundAuthor": "南农青年报"
+        }
+    },
+    "trending": {
+        "fixed": [
+            { "id": "t_1_1_1_1", "title": "#大一新生军训第一天# \"教官好帅但太阳好毒\"", "hotValue": 98.2, "hotTag": "新", "targetYear": 1, "targetSemester": 1, "targetRound": 1 },
+            { "id": "t_1_1_1_2", "title": "#宿舍分配结果# \"室友打呼噜怎么办在线等急\"", "hotValue": 76.5, "hotTag": "新", "targetYear": 1, "targetSemester": 1, "targetRound": 1 },
+            { "id": "t_1_1_2_1", "title": "#选课大战# \"全校都在抢那门《影视鉴赏》\"", "hotValue": 156.7, "hotTag": "热", "targetYear": 1, "targetSemester": 1, "targetRound": 2 },
+            { "id": "t_1_1_2_2", "title": "#国庆回家还是留校# \"我妈说想我了，行吧\"", "hotValue": 89.3, "hotTag": "新", "targetYear": 1, "targetSemester": 1, "targetRound": 2 },
+            { "id": "t_1_1_3_1", "title": "#期中考试倒计时# \"谁的高数还没开始复习\"", "hotValue": 203.1, "hotTag": "爆", "targetYear": 1, "targetSemester": 1, "targetRound": 3 },
+            { "id": "t_1_1_3_2", "title": "#班委竞选名场面# \"竞选宣言比脱口秀还好笑\"", "hotValue": 91.7, "hotTag": "热", "targetYear": 1, "targetSemester": 1, "targetRound": 3 },
+            { "id": "t_1_1_4_1", "title": "#四级考试祈福贴# \"转发这条锦鲤保过四级\"", "hotValue": 312.5, "hotTag": "爆", "targetYear": 1, "targetSemester": 1, "targetRound": 4 },
+            { "id": "t_1_1_4_2", "title": "#期末突击学习法# \"一个通宵顶一个学期？\"", "hotValue": 187.9, "hotTag": "热", "targetYear": 1, "targetSemester": 1, "targetRound": 4 },
+            { "id": "t_1_1_5_1", "title": "#期末考试出分了# \"GPA多少不重要，活着就好\"", "hotValue": 445.2, "hotTag": "爆", "targetYear": 1, "targetSemester": 1, "targetRound": 5 },
+            { "id": "t_1_1_5_2", "title": "#寒假计划大赏# \"从减肥到学车到躺平三步曲\"", "hotValue": 178.6, "hotTag": "热", "targetYear": 1, "targetSemester": 1, "targetRound": 5 }
+        ],
+        "generic": [
+            { "title": "#学期开始了# \"新学期flag立起来\"", "hotValue": 88.5 },
+            { "title": "#食堂排队日常# \"今天又是在食堂浪费生命的一天\"", "hotValue": 65.3 },
+            { "title": "#图书馆占座大战# \"我的位置被人抢了！\"", "hotValue": 72.1 },
+            { "title": "#校园跑打卡# \"今天你跑了吗\"", "hotValue": 45.6 },
+            { "title": "#考试周倒计时# \"求抱佛脚攻略\"", "hotValue": 134.8 },
+            { "title": "#宿舍夜谈# \"聊到凌晨三点的都是什么话题\"", "hotValue": 56.9 }
+        ],
+        "dynamic": [
+            { "id": "dt_mood", "title": "#关注大学生情绪# \"如果你不开心，请看这篇\"", "hotValue": 61.0, "hotTag": "热", "condition": {"type": "attribute", "target": "Mood", "op": "<=", "value": 30} },
+            { "id": "dt_stress", "title": "#大学生心理健康# \"你最近还好吗？\"", "hotValue": 55.0, "hotTag": "热", "condition": {"type": "attribute", "target": "Stress", "op": ">=", "value": 70} },
+            { "id": "dt_guilt", "title": "#校园不良风气# \"听说有人在做一些不太正当的事\"", "hotValue": 41.0, "hotTag": "新", "condition": {"type": "attribute", "target": "Guilt", "op": ">=", "value": 50} },
+            { "id": "dt_romance", "title": "#校园CP预警# \"{npcName}和某同学走得好近啊\"", "hotValue": 95.0, "hotTag": "爆", "condition": {"type": "romance"} },
+            { "id": "dt_study", "title": "#南农学霸养成记# \"有人绩点已经快满了？\"", "hotValue": 67.0, "hotTag": "热", "condition": {"type": "attribute", "target": "Study", "op": ">=", "value": 150} },
+            { "id": "dt_charm", "title": "#校园风云人物# \"有个大一新生好像很受欢迎\"", "hotValue": 82.0, "hotTag": "热", "condition": {"type": "attribute", "target": "Charm", "op": ">=", "value": 120} },
+            { "id": "dt_physique", "title": "#晨跑达人# \"每天操场都能看到同一个人在跑步\"", "hotValue": 38.0, "hotTag": "新", "condition": {"type": "attribute", "target": "Physique", "op": ">=", "value": 130} },
+            { "id": "dt_money_low", "title": "#月底吃土人# \"离发生活费还有X天，撑住\"", "hotValue": 73.0, "hotTag": "热", "condition": {"type": "attribute", "target": "Money", "op": "between", "min": 0, "max": 500} },
+            { "id": "dt_money_high", "title": "#南农土豪# \"有人的生活费是我的三倍？？\"", "hotValue": 48.0, "hotTag": "新", "condition": {"type": "attribute", "target": "Money", "op": ">=", "value": 5000} },
+            { "id": "dt_club", "title": "#社团招新战报# \"XX社团今年新人好活跃\"", "hotValue": 33.0, "hotTag": "新", "condition": {"type": "club"} },
+            { "id": "dt_default", "title": "#校园日常# \"今天也是平平无奇的一天\"", "hotValue": 25.0, "hotTag": "新", "condition": {"type": "default"} }
+        ]
+    },
+    "gossip": {
+        "pool": [
+            { "content": "刚到学校就有学长学姐来宿舍推销英语课，我都不好意思拒绝……感觉钱包在哭泣", "likes": 287 },
+            { "content": "军训教官说站军姿不许动，然后一只蚊子在我脸上开了个party", "likes": 534 },
+            { "content": "食堂阿姨今天心情好，给我打了超多饭！感觉可以吃三天！", "likes": 189 },
+            { "content": "刚才在校门口看到有人拎着一整只南农烧鸡进来的，那个香味我追了三条街", "likes": 423 },
+            { "content": "选课系统崩了三次，我选的课全被抢光了，现在课表上全是8点的课", "likes": 612 },
+            { "content": "班会上辅导员让每个人做自我介绍，我紧张到把自己名字说错了……社死现场", "likes": 445 },
+            { "content": "我爸打电话问我以后打算考研还是考公，我说我打算先活过期中考试", "likes": 567 },
+            { "content": "今天在食堂吃到了黄教授烧饼，一口下去仿佛看见了满分的高数卷子（错觉）", "likes": 423 },
+            { "content": "四级还剩两周，我的词汇量还停留在abandon。每次翻开单词书，命运都在暗示我放弃", "likes": 723 },
+            { "content": "今天在图书馆看到一个人同时铺开了五本书，像是在摆阵法，期末结界！", "likes": 534 },
+            { "content": "出分了。不想说话。GPA和我的心情一样低迷", "likes": 634 },
+            { "content": "一学期结束了，最大的收获是认识了一群好室友，虽然他们打呼噜但我爱他们", "likes": 876 },
+            { "content": "有没有人知道图书馆三楼那个总是占座的学长是谁？每天都比我早到太卷了吧", "likes": 276 },
+            { "content": "室友昨晚做梦喊'选A！选A！'，我们都惊醒了，他说梦见在考四级", "likes": 445 },
+            { "content": "寒假flag：1.减肥 2.学车 3.看完10本书。（和上学期开学flag一模一样）", "likes": 567 }
+        ],
+        "conditional": [
+            {
+                "id": "g_cond_money_neg",
+                "content": "听说有人余额负数了？大学生真的要学会理财啊",
+                "likes": 289,
+                "condition": {"type": "attribute", "target": "Money", "op": "<", "value": 0}
+            }
+        ]
+    },
+    "anonymousIds": [
+        "匿名柠檬精", "匿名卷王", "匿名摆烂人", "匿名小透明", "匿名干饭人",
+        "匿名夜猫子", "匿名早八困难户", "匿名社恐", "匿名社牛", "匿名咸鱼",
+        "匿名学霸", "匿名学渣", "匿名月光族", "匿名养生达人", "匿名追星girl",
+        "匿名游戏宅", "匿名图书馆钉子户", "匿名食堂测评师", "匿名操场独行侠",
+        "匿名快递收割机", "匿名奶茶续命者", "匿名PPT战神", "匿名DDL战士",
+        "匿名选课抢手", "匿名占座王", "匿名外卖依赖症", "匿名被窝哲学家"
+    ],
+    "notices": [
+        { "id": "n_round1", "author": "【教务处】", "content": "新学期课程表已发布，请同学们及时查看并做好上课准备。", "condition": {"type": "round", "value": 1} },
+        { "id": "n_round3", "author": "【学工处】", "content": "期中学习情况摸底将于本月进行，请各位同学认真对待。", "condition": {"type": "round", "value": 3} },
+        { "id": "n_round5", "author": "【学工处】", "content": "本学期成绩已发布，请同学们登录教务系统查询。对成绩有疑问的同学可在规定时间内申请复查。", "condition": {"type": "round", "value": 5} },
+        { "id": "n_mood", "author": "【心理咨询中心】", "content": "若感到焦虑或情绪低落，欢迎预约心理咨询（工作日9:00-17:00），你不是一个人在战斗。", "condition": {"type": "attribute", "target": "Mood", "op": "<", "value": 40} },
+        { "id": "n_stress", "author": "【辅导员提醒】", "content": "注意劳逸结合，适当运动放松，有困难随时找老师聊聊。", "condition": {"type": "attribute", "target": "Stress", "op": ">=", "value": 80} }
+    ],
+    "ads": [
+        "校门口文具店开学大促！买满50送南农定制笔记本！——学长温馨提示：笔记本质量一般但胜在情怀",
+        "学长的CET-4真题解析笔记，手写版限量30份！先到先得！——绝对不是去年没过的学长写的（大概）",
+        "校门口奶茶店新品上市！\"学霸特调\"——据说喝了能多背50个单词（效果因人而异）",
+        "二手教材交易群：物美价廉！买到就是赚到！——备注：书上的笔记是附赠的，不是瑕疵",
+        "校内驾校招生中！大学生专属优惠价！——学不会包退（退的是学费不是驾照）"
+    ],
+    "series": {
+        "food_war": {
+            "triggerYear": 1,
+            "triggerSemester": 1,
+            "author": "南农美食家",
+            "episodes": [
+                { "title": "食堂窗口人气排行出炉！", "content": "经过一周非正式统计，一食堂3号窗口以日均排队47人的成绩荣登榜首。其秘密武器：阿姨手不抖。", "likes": 250 },
+                { "title": "二食堂反击战！新菜单曝光", "content": "二食堂推出\"南农特色套餐\"，据说灵感来源于黄教授烧饼。一食堂表示不服。", "likes": 300 },
+                { "title": "食堂大战白热化：出现了神秘黑马", "content": "三食堂角落一个不起眼的小窗口突然爆火，原因是老板会记住每个同学的口味。", "likes": 350 },
+                { "title": "食堂投票结果揭晓", "content": "经过全校投票，\"最佳食堂\"称号授予……全部三个食堂。因为评委老师说\"手心手背都是肉\"。", "likes": 400 },
+                { "title": "食堂故事完结篇", "content": "学期结束了，大家最想念的还是食堂阿姨那句\"够不够？再给你加点\"。", "likes": 450 }
+            ]
+        },
+        "campus_cat": {
+            "triggerYear": 1,
+            "triggerSemester": 2,
+            "author": "绩点观察员",
+            "episodes": [
+                { "title": "校园新来了一只橘猫", "content": "教学楼旁出现一只橘猫，已被三个学院的同学分别起了不同的名字。猫：你们商量好了再叫我。", "likes": 380 },
+                { "title": "橘猫有名字了：绩点", "content": "经全校投票，校园橘猫正式命名为\"绩点\"。取名者表示：\"希望我的绩点能像它一样圆润饱满\"。", "likes": 460 },
+                { "title": "绩点（猫）期中考试成绩公布", "content": "绩点同学本月在五个教室旁听了课程，出勤率比某些同学还高。辅导员考虑给它发奖学金。", "likes": 540 },
+                { "title": "绩点（猫）的圣诞节", "content": "有同学给绩点织了一条小围巾，绩点表示——叼着围巾跑了。", "likes": 620 },
+                { "title": "绩点（猫）的寒假安排", "content": "大家都回家了，但绩点留校了。后勤叔叔表示会照顾好它。下学期见，绩点！", "likes": 700 }
+            ]
+        }
+    }
+}

@@ -38,6 +38,8 @@ public class CharacterCreationUI : MonoBehaviour
 
     public void Show()
     {
+        UIFlowGuard.EnsureEventSystem();
+
         if (canvasObj != null) return;
         BuildUI();
     }

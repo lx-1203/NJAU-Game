@@ -3,6 +3,8 @@ using UnityEngine.UI;
 using UnityEngine.Video;
 using UnityEngine.SceneManagement;
 using System.Collections;
+using System;
+using System.IO;
 
 /// <summary>
 /// 开场制作组动画管理器
@@ -42,6 +44,7 @@ public class SplashScreenManager : MonoBehaviour
     private Image logo2Image;
     private CanvasGroup globalFade;
     private string resolvedVideoPath;
+    private string resolvedVideoUrl;
 
     // ===== 状态 =====
     private bool videoPrepared = false;
@@ -58,7 +61,8 @@ public class SplashScreenManager : MonoBehaviour
 
     private void Awake()
     {
-        resolvedVideoPath = System.IO.Path.Combine(Application.streamingAssetsPath, videoFileName).Replace("\\", "/");
+        UIFlowGuard.RestoreInteractiveState();
+        ResolveVideoSource();
         SetupCanvas();
         CreateVideoPlayer();
         CreateImages();
@@ -141,13 +145,14 @@ public class SplashScreenManager : MonoBehaviour
 
         videoPlayer = videoGO.AddComponent<VideoPlayer>();
         videoPlayer.source = VideoSource.Url;
-        videoPlayer.url = resolvedVideoPath;
+        videoPlayer.url = resolvedVideoUrl;
         videoPlayer.renderMode = VideoRenderMode.RenderTexture;
         videoPlayer.targetTexture = rtTexture;
         videoPlayer.isLooping = false;
         videoPlayer.skipOnDrop = true;
         videoPlayer.waitForFirstFrame = true;
         videoPlayer.audioOutputMode = VideoAudioOutputMode.None;
+        videoPlayer.playOnAwake = false;
 
         // RawImage 显示视频
         videoImage = videoGO.AddComponent<RawImage>();
@@ -160,7 +165,14 @@ public class SplashScreenManager : MonoBehaviour
         videoPlayer.errorReceived += OnVideoError;
 
         // 开始准备视频
-        videoPlayer.Prepare();
+        if (!string.IsNullOrEmpty(resolvedVideoUrl))
+        {
+            videoPlayer.Prepare();
+        }
+        else
+        {
+            videoFailed = true;
+        }
     }
 
     private void OnVideoPrepared(VideoPlayer vp)
@@ -183,6 +195,7 @@ public class SplashScreenManager : MonoBehaviour
     private void OnVideoError(VideoPlayer vp, string message)
     {
         videoFailed = true;
+        Debug.LogWarning("[SplashScreen] Video source: " + resolvedVideoPath);
         Debug.LogWarning("[SplashScreen] 视频播放失败: " + message);
     }
 
@@ -427,6 +440,49 @@ public class SplashScreenManager : MonoBehaviour
     private float EaseInOut(float t)
     {
         return t < 0.5f ? 2f * t * t : 1f - Mathf.Pow(-2f * t + 2f, 2f) / 2f;
+    }
+
+    private void ResolveVideoSource()
+    {
+        resolvedVideoPath = string.Empty;
+        resolvedVideoUrl = string.Empty;
+
+        foreach (string candidate in GetVideoCandidates())
+        {
+            string absolutePath = Path.Combine(Application.streamingAssetsPath, candidate);
+            if (!File.Exists(absolutePath))
+            {
+                continue;
+            }
+
+            resolvedVideoPath = absolutePath;
+            resolvedVideoUrl = new Uri(absolutePath).AbsoluteUri;
+            Debug.Log("[SplashScreen] Using startup video: " + resolvedVideoPath);
+            return;
+        }
+
+        Debug.LogWarning("[SplashScreen] No startup video found in StreamingAssets.");
+    }
+
+    private string[] GetVideoCandidates()
+    {
+        string fileName = string.IsNullOrWhiteSpace(videoFileName) ? "logo.mp4" : videoFileName.Trim();
+        string extension = Path.GetExtension(fileName);
+
+        if (string.IsNullOrEmpty(extension))
+        {
+            return new[]
+            {
+                fileName + ".mp4",
+                fileName + ".webm"
+            };
+        }
+
+        string alternateExtension = extension.Equals(".mp4", StringComparison.OrdinalIgnoreCase) ? ".webm" : ".mp4";
+        string alternateFileName = Path.GetFileNameWithoutExtension(fileName) + alternateExtension;
+        return fileName.Equals(alternateFileName, StringComparison.OrdinalIgnoreCase)
+            ? new[] { fileName }
+            : new[] { fileName, alternateFileName };
     }
 
     #endregion

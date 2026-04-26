@@ -299,7 +299,7 @@ public class HUDBuilder : MonoBehaviour
         apIcon = iconObj.AddComponent<Image>();
         apIcon.color = APBarYellow;
         // 闪电符号
-        CreateTMPText("LightningSymbol", iconObj.transform, "\u26A1",
+        CreateTMPText("LightningSymbol", iconObj.transform, "AP",
             20f, TextDark, TextAlignmentOptions.Center, new Vector2(30, 30));
 
         // AP 数值文本（中央叠加）
@@ -343,7 +343,7 @@ public class HUDBuilder : MonoBehaviour
         // 心情
         moodStatText = CreateStatIcon(statsPanel.transform, "MoodStat", "\u263A", IconCircleBlue, "70");
         // 体力/压力
-        energyStatText = CreateStatIcon(statsPanel.transform, "EnergyStat", "\u2764", IconCircleRed, "20");
+        energyStatText = CreateStatIcon(statsPanel.transform, "EnergyStat", "HP", IconCircleRed, "20");
 
         // 兼容旧引用
         moneyText = moneyStatText;
@@ -515,7 +515,7 @@ public class HUDBuilder : MonoBehaviour
         btnMapIcon.colors = cb;
 
         // 地图图标符号
-        CreateTMPText("MapSymbol", mapObj.transform, "\uD83D\uDDFA",
+        CreateTMPText("MapSymbol", mapObj.transform, "MAP",
             28f, TextBrown, TextAlignmentOptions.Center, new Vector2(65, 65));
 
         // 兼容旧 btnMap
@@ -707,7 +707,7 @@ public class HUDBuilder : MonoBehaviour
         fhlg.childControlWidth = false;
         fhlg.childControlHeight = true;
 
-        CreateTMPText("FeatureIcon", featureObj.transform, "\u2709",
+        CreateTMPText("FeatureIcon", featureObj.transform, "MSG",
             20f, TextDark, TextAlignmentOptions.Center, new Vector2(28, 35));
         CreateTMPText("FeatureLabel", featureObj.transform, "社交互动",
             16f, TextDark, TextAlignmentOptions.Left, new Vector2(120, 35));

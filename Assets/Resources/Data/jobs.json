@@ -1,0 +1,142 @@
+{
+  "internships": [
+    {
+      "id": "intern_tech",
+      "name": "互联网公司实习",
+      "description": "在知名互联网公司担任实习生，接触前沿技术",
+      "requirements": [
+        {"type": "attribute", "target": "Study", "min": 80}
+      ],
+      "baseIncome": 3000,
+      "apCost": 3,
+      "effects": [
+        {"type": "attribute", "target": "Leadership", "value": 5}
+      ],
+      "unlockSemester": 4
+    },
+    {
+      "id": "intern_finance",
+      "name": "金融公司实习",
+      "description": "在金融机构实习，提升商业素养",
+      "requirements": [
+        {"type": "attribute", "target": "Study", "min": 70},
+        {"type": "attribute", "target": "Charm", "min": 60}
+      ],
+      "baseIncome": 2500,
+      "apCost": 3,
+      "effects": [
+        {"type": "attribute", "target": "Charm", "value": 3},
+        {"type": "attribute", "target": "Leadership", "value": 3}
+      ],
+      "unlockSemester": 4
+    },
+    {
+      "id": "intern_media",
+      "name": "新媒体实习",
+      "description": "在新媒体公司工作，锻炼表达能力",
+      "requirements": [
+        {"type": "attribute", "target": "Charm", "min": 70}
+      ],
+      "baseIncome": 2000,
+      "apCost": 2,
+      "effects": [
+        {"type": "attribute", "target": "Charm", "value": 5}
+      ],
+      "unlockSemester": 4
+    },
+    {
+      "id": "intern_research",
+      "name": "科研助理",
+      "description": "跟随导师参与科研项目",
+      "requirements": [
+        {"type": "attribute", "target": "Study", "min": 90}
+      ],
+      "baseIncome": 1500,
+      "apCost": 2,
+      "effects": [
+        {"type": "attribute", "target": "Study", "value": 5}
+      ],
+      "unlockSemester": 4
+    }
+  ],
+  "sideHustles": [
+    {
+      "id": "side_tutor",
+      "name": "家教",
+      "description": "辅导中小学生功课",
+      "requirements": [
+        {"type": "attribute", "target": "Study", "min": 70}
+      ],
+      "baseIncome": 800,
+      "apCost": 1,
+      "effects": [
+        {"type": "attribute", "target": "Study", "value": 2}
+      ]
+    },
+    {
+      "id": "side_delivery",
+      "name": "外卖配送",
+      "description": "校园外卖兼职配送员",
+      "requirements": [],
+      "baseIncome": 500,
+      "apCost": 1,
+      "effects": [
+        {"type": "attribute", "target": "Physique", "value": 2}
+      ]
+    },
+    {
+      "id": "side_freelance",
+      "name": "自由设计",
+      "description": "接单做平面设计和海报",
+      "requirements": [
+        {"type": "attribute", "target": "Charm", "min": 60}
+      ],
+      "baseIncome": 1000,
+      "apCost": 2,
+      "effects": [
+        {"type": "attribute", "target": "Charm", "value": 3}
+      ]
+    },
+    {
+      "id": "side_campus_agent",
+      "name": "校园代理",
+      "description": "代理各类校园商品和服务",
+      "requirements": [
+        {"type": "attribute", "target": "Leadership", "min": 50}
+      ],
+      "baseIncome": 600,
+      "apCost": 1,
+      "effects": [
+        {"type": "attribute", "target": "Leadership", "value": 2}
+      ]
+    },
+    {
+      "id": "side_livestream",
+      "name": "直播带货",
+      "description": "在直播平台分享学生生活",
+      "requirements": [
+        {"type": "attribute", "target": "Charm", "min": 80}
+      ],
+      "baseIncome": 1200,
+      "apCost": 2,
+      "effects": [
+        {"type": "attribute", "target": "Charm", "value": 4},
+        {"type": "attribute", "target": "Stress", "value": 3}
+      ]
+    },
+    {
+      "id": "side_writing",
+      "name": "网络写手",
+      "description": "在网络平台写文章赚稿费",
+      "requirements": [
+        {"type": "attribute", "target": "Study", "min": 60}
+      ],
+      "baseIncome": 700,
+      "apCost": 1,
+      "effects": [
+        {"type": "attribute", "target": "Study", "value": 2},
+        {"type": "attribute", "target": "Stress", "value": 2}
+      ]
+    }
+  ]
+}

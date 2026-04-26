@@ -1,0 +1,375 @@
+{
+  "missions": [
+    {
+      "missionId": "M001",
+      "missionName": "初入校园",
+      "description": "熟悉校园环境，开始你的大学生活",
+      "type": "MainStory",
+      "priority": 1,
+      "triggerConditions": [
+        {
+          "conditionType": "Round",
+          "minValue": 1,
+          "comparisonOperator": ">="
+        }
+      ],
+      "prerequisiteMissions": [],
+      "objectives": [
+        {
+          "objectiveId": "M001_OBJ1",
+          "type": "ReachRound",
+          "description": "度过第一个回合",
+          "targetId": "",
+          "targetValue": 1,
+          "currentValue": 0,
+          "isCompleted": false
+        },
+        {
+          "objectiveId": "M001_OBJ2",
+          "type": "ActionCount",
+          "description": "进行一次自习",
+          "targetId": "study",
+          "targetValue": 1,
+          "currentValue": 0,
+          "isCompleted": false
+        }
+      ],
+      "rewards": [
+        {
+          "type": "Money",
+          "targetId": "",
+          "value": 500,
+          "description": "金钱 +500"
+        },
+        {
+          "type": "Attribute",
+          "targetId": "Mood",
+          "value": 10,
+          "description": "心情 +10"
+        }
+      ],
+      "timeLimit": 0,
+      "autoAccept": true,
+      "canAbandon": false
+    },
+    {
+      "missionId": "M002",
+      "missionName": "学业起步",
+      "description": "努力学习，提升学力属性",
+      "type": "MainStory",
+      "priority": 2,
+      "triggerConditions": [
+        {
+          "conditionType": "Round",
+          "minValue": 2,
+          "comparisonOperator": ">="
+        }
+      ],
+      "prerequisiteMissions": ["M001"],
+      "objectives": [
+        {
+          "objectiveId": "M002_OBJ1",
+          "type": "AttributeThreshold",
+          "description": "学力达到30",
+          "targetId": "Study",
+          "targetValue": 30,
+          "currentValue": 0,
+          "isCompleted": false
+        }
+      ],
+      "rewards": [
+        {
+          "type": "Money",
+          "targetId": "",
+          "value": 300,
+          "description": "金钱 +300"
+        },
+        {
+          "type": "Attribute",
+          "targetId": "Leadership",
+          "value": 5,
+          "description": "领导力 +5"
+        }
+      ],
+      "timeLimit": 10,
+      "autoAccept": true,
+      "canAbandon": false
+    },
+    {
+      "missionId": "M003",
+      "missionName": "社交达人",
+      "description": "结识新朋友，提升NPC好感度",
+      "type": "SideQuest",
+      "priority": 10,
+      "triggerConditions": [
+        {
+          "conditionType": "Round",
+          "minValue": 3,
+          "comparisonOperator": ">="
+        }
+      ],
+      "prerequisiteMissions": [],
+      "objectives": [
+        {
+          "objectiveId": "M003_OBJ1",
+          "type": "NPCAffinityThreshold",
+          "description": "与林知秋的好感度达到20",
+          "targetId": "lin_zhiqiu",
+          "targetValue": 20,
+          "currentValue": 0,
+          "isCompleted": false
+        }
+      ],
+      "rewards": [
+        {
+          "type": "Attribute",
+          "targetId": "Charm",
+          "value": 10,
+          "description": "魅力 +10"
+        },
+        {
+          "type": "Money",
+          "targetId": "",
+          "value": 200,
+          "description": "金钱 +200"
+        }
+      ],
+      "timeLimit": 0,
+      "autoAccept": false,
+      "canAbandon": true
+    },
+    {
+      "missionId": "M004",
+      "missionName": "社团新人",
+      "description": "加入一个社团，丰富课余生活",
+      "type": "SideQuest",
+      "priority": 11,
+      "triggerConditions": [
+        {
+          "conditionType": "Round",
+          "minValue": 5,
+          "comparisonOperator": ">="
+        }
+      ],
+      "prerequisiteMissions": [],
+      "objectives": [
+        {
+          "objectiveId": "M004_OBJ1",
+          "type": "JoinClub",
+          "description": "加入任意社团",
+          "targetId": "",
+          "targetValue": 1,
+          "currentValue": 0,
+          "isCompleted": false
+        }
+      ],
+      "rewards": [
+        {
+          "type": "Attribute",
+          "targetId": "Leadership",
+          "value": 8,
+          "description": "领导力 +8"
+        },
+        {
+          "type": "Attribute",
+          "targetId": "Mood",
+          "value": 15,
+          "description": "心情 +15"
+        }
+      ],
+      "timeLimit": 0,
+      "autoAccept": false,
+      "canAbandon": true
+    },
+    {
+      "missionId": "M005",
+      "missionName": "期中冲刺",
+      "description": "为期中考试做准备",
+      "type": "MainStory",
+      "priority": 3,
+      "triggerConditions": [
+        {
+          "conditionType": "Round",
+          "minValue": 15,
+          "comparisonOperator": ">="
+        }
+      ],
+      "prerequisiteMissions": ["M002"],
+      "objectives": [
+        {
+          "objectiveId": "M005_OBJ1",
+          "type": "AttributeThreshold",
+          "description": "学力达到60",
+          "targetId": "Study",
+          "targetValue": 60,
+          "currentValue": 0,
+          "isCompleted": false
+        },
+        {
+          "objectiveId": "M005_OBJ2",
+          "type": "ActionCount",
+          "description": "自习5次",
+          "targetId": "study",
+          "targetValue": 5,
+          "currentValue": 0,
+          "isCompleted": false
+        }
+      ],
+      "rewards": [
+        {
+          "type": "Money",
+          "targetId": "",
+          "value": 800,
+          "description": "金钱 +800"
+        },
+        {
+          "type": "Attribute",
+          "targetId": "Luck",
+          "value": 5,
+          "description": "幸运 +5"
+        }
+      ],
+      "timeLimit": 20,
+      "autoAccept": true,
+      "canAbandon": false
+    },
+    {
+      "missionId": "M006",
+      "missionName": "健康生活",
+      "description": "保持身体健康，提升体魄",
+      "type": "SideQuest",
+      "priority": 12,
+      "triggerConditions": [
+        {
+          "conditionType": "Round",
+          "minValue": 8,
+          "comparisonOperator": ">="
+        }
+      ],
+      "prerequisiteMissions": [],
+      "objectives": [
+        {
+          "objectiveId": "M006_OBJ1",
+          "type": "AttributeThreshold",
+          "description": "体魄达到40",
+          "targetId": "Physique",
+          "targetValue": 40,
+          "currentValue": 0,
+          "isCompleted": false
+        },
+        {
+          "objectiveId": "M006_OBJ2",
+          "type": "ActionCount",
+          "description": "锻炼5次",
+          "targetId": "exercise",
+          "targetValue": 5,
+          "currentValue": 0,
+          "isCompleted": false
+        }
+      ],
+      "rewards": [
+        {
+          "type": "Attribute",
+          "targetId": "Physique",
+          "value": 10,
+          "description": "体魄 +10"
+        },
+        {
+          "type": "Attribute",
+          "targetId": "Stress",
+          "value": -10,
+          "description": "压力 -10"
+        }
+      ],
+      "timeLimit": 0,
+      "autoAccept": false,
+      "canAbandon": true
+    },
+    {
+      "missionId": "M007",
+      "missionName": "财富积累",
+      "description": "通过兼职或其他方式积累财富",
+      "type": "SideQuest",
+      "priority": 13,
+      "triggerConditions": [
+        {
+          "conditionType": "Round",
+          "minValue": 10,
+          "comparisonOperator": ">="
+        }
+      ],
+      "prerequisiteMissions": [],
+      "objectives": [
+        {
+          "objectiveId": "M007_OBJ1",
+          "type": "MoneyThreshold",
+          "description": "金钱达到5000",
+          "targetId": "",
+          "targetValue": 5000,
+          "currentValue": 0,
+          "isCompleted": false
+        }
+      ],
+      "rewards": [
+        {
+          "type": "Money",
+          "targetId": "",
+          "value": 1000,
+          "description": "金钱 +1000"
+        },
+        {
+          "type": "Unlock",
+          "targetId": "financial_expert",
+          "value": 1,
+          "description": "解锁「理财达人」称号"
+        }
+      ],
+      "timeLimit": 0,
+      "autoAccept": false,
+      "canAbandon": true
+    },
+    {
+      "missionId": "M008",
+      "missionName": "学期总结",
+      "description": "完成第一学期的学习",
+      "type": "MainStory",
+      "priority": 4,
+      "triggerConditions": [
+        {
+          "conditionType": "Semester",
+          "minValue": 2,
+          "comparisonOperator": ">="
+        }
+      ],
+      "prerequisiteMissions": ["M005"],
+      "objectives": [
+        {
+          "objectiveId": "M008_OBJ1",
+          "type": "ReachSemester",
+          "description": "进入第二学期",
+          "targetId": "",
+          "targetValue": 2,
+          "currentValue": 0,
+          "isCompleted": false
+        }
+      ],
+      "rewards": [
+        {
+          "type": "Money",
+          "targetId": "",
+          "value": 1500,
+          "description": "金钱 +1500"
+        },
+        {
+          "type": "Attribute",
+          "targetId": "Mood",
+          "value": 20,
+          "description": "心情 +20"
+        }
+      ],
+      "timeLimit": 0,
+      "autoAccept": true,
+      "canAbandon": false
+    }
+  ]
+}

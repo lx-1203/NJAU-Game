@@ -1,0 +1,304 @@
+{
+  "baseScoreThresholds": [
+    { "minPhysique": 120, "baseScore": 80 },
+    { "minPhysique": 80,  "baseScore": 65 },
+    { "minPhysique": 50,  "baseScore": 50 },
+    { "minPhysique": 0,   "baseScore": 30 }
+  ],
+  "gradeThresholds": [
+    { "minScore": 90, "grade": "Excellent" },
+    { "minScore": 75, "grade": "Good" },
+    { "minScore": 60, "grade": "Pass" },
+    { "minScore": 0,  "grade": "Fail" }
+  ],
+  "gradeEffects": [
+    { "grade": "Excellent", "moodDelta": 5,  "stressDelta": 0 },
+    { "grade": "Good",      "moodDelta": 0,  "stressDelta": 0 },
+    { "grade": "Pass",      "moodDelta": 0,  "stressDelta": 3 },
+    { "grade": "Fail",      "moodDelta": -8, "stressDelta": 10 }
+  ],
+  "tests": [
+    {
+      "id": "run",
+      "name": "中长跑",
+      "description": "1000米/800米跑步测试",
+      "phases": [
+        {
+          "name": "起跑",
+          "strategies": [
+            {
+              "type": "Conservative",
+              "name": "稳健起跑",
+              "description": "按自己的节奏起跑，保存体力",
+              "bonus": 0,
+              "hasSideEffect": false
+            },
+            {
+              "type": "Aggressive",
+              "name": "抢跑冲刺",
+              "description": "拼命加速抢位，但有岔气风险",
+              "bonus": 10,
+              "hasSideEffect": true,
+              "sideEffectKey": "sideStitch"
+            },
+            {
+              "type": "Passive",
+              "name": "慢慢来",
+              "description": "随便跑跑，落在最后",
+              "bonus": -10,
+              "hasSideEffect": false
+            }
+          ]
+        },
+        {
+          "name": "途中跑",
+          "strategies": [
+            {
+              "type": "Conservative",
+              "name": "匀速坚持",
+              "description": "保持稳定配速",
+              "bonus": 5,
+              "hasSideEffect": false
+            },
+            {
+              "type": "Aggressive",
+              "name": "加速超越",
+              "description": "途中加速超人，但若之前抢跑可能岔气",
+              "bonus": 10,
+              "hasSideEffect": false,
+              "conditionalOnSideStitch": true,
+              "sideStitchSuccessRate": 0.7,
+              "sideStitchSuccessBonus": 15,
+              "sideStitchFailBonus": -20
+            },
+            {
+              "type": "Passive",
+              "name": "减速摸鱼",
+              "description": "降低配速，越跑越慢",
+              "bonus": -5,
+              "hasSideEffect": false
+            }
+          ]
+        },
+        {
+          "name": "冲刺",
+          "strategies": [
+            {
+              "type": "Conservative",
+              "name": "稳步冲线",
+              "description": "按照既定速度冲过终点",
+              "bonus": 5,
+              "hasSideEffect": false
+            },
+            {
+              "type": "Aggressive",
+              "name": "全力冲刺",
+              "description": "最后100米全力以赴",
+              "bonus": 10,
+              "hasSideEffect": false
+            },
+            {
+              "type": "Passive",
+              "name": "走过终点",
+              "description": "已经不想跑了，走着过线",
+              "bonus": -15,
+              "hasSideEffect": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "strength",
+      "name": "力量测试",
+      "description": "引体向上/仰卧起坐",
+      "phases": [
+        {
+          "name": "开始",
+          "strategies": [
+            {
+              "type": "Conservative",
+              "name": "标准动作",
+              "description": "按照标准姿势稳定发力",
+              "bonus": 5,
+              "hasSideEffect": false
+            },
+            {
+              "type": "Aggressive",
+              "name": "快速起步",
+              "description": "加快频率多做几个",
+              "bonus": 10,
+              "hasSideEffect": false
+            },
+            {
+              "type": "Passive",
+              "name": "磨磨蹭蹭",
+              "description": "磨蹭半天才开始",
+              "bonus": -5,
+              "hasSideEffect": false
+            }
+          ]
+        },
+        {
+          "name": "中段",
+          "strategies": [
+            {
+              "type": "Conservative",
+              "name": "稳定输出",
+              "description": "保持节奏继续做",
+              "bonus": 5,
+              "hasSideEffect": false
+            },
+            {
+              "type": "Aggressive",
+              "name": "咬牙坚持",
+              "description": "拼尽全力坚持，但有力竭风险",
+              "bonus": 0,
+              "hasSideEffect": false,
+              "hasRandomOutcome": true,
+              "successRate": 0.7,
+              "successBonus": 10,
+              "failBonus": -10
+            },
+            {
+              "type": "Passive",
+              "name": "中途休息",
+              "description": "停下来休息一会",
+              "bonus": -10,
+              "hasSideEffect": false
+            }
+          ]
+        },
+        {
+          "name": "结尾",
+          "strategies": [
+            {
+              "type": "Conservative",
+              "name": "再做一个",
+              "description": "安全地多做最后一个",
+              "bonus": 3,
+              "hasSideEffect": false
+            },
+            {
+              "type": "Aggressive",
+              "name": "找人帮忙",
+              "description": "偷偷让旁边同学帮忙托一下",
+              "bonus": 0,
+              "hasSideEffect": false,
+              "hasRandomOutcome": true,
+              "successRate": 0.7,
+              "successBonus": 2,
+              "failBonus": -5,
+              "successAttributeEffects": { "guilt": 3 },
+              "failAttributeEffects": { "mood": -5 }
+            },
+            {
+              "type": "Passive",
+              "name": "安全停止",
+              "description": "够了就行，早点结束",
+              "bonus": -5,
+              "hasSideEffect": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "jump",
+      "name": "立定跳远",
+      "description": "三次机会取最好成绩",
+      "baseDistanceFormula": {
+        "physiqueMultiplier": 1.5,
+        "baseOffset": 50.0
+      },
+      "scoreMapping": [
+        { "minDistance": 263, "score": 100 },
+        { "minDistance": 248, "score": 90 },
+        { "minDistance": 228, "score": 75 },
+        { "minDistance": 208, "score": 60 },
+        { "minDistance": 188, "score": 40 },
+        { "minDistance": 0,   "score": 20 }
+      ],
+      "phases": [
+        {
+          "name": "第一跳",
+          "strategies": [
+            {
+              "type": "Conservative",
+              "name": "正常起跳",
+              "description": "标准姿势起跳，发挥稳定",
+              "jumpVarianceMin": -5.0,
+              "jumpVarianceMax": 5.0
+            },
+            {
+              "type": "Aggressive",
+              "name": "深蹲发力",
+              "description": "蓄力深蹲跳远，但可能踩线犯规",
+              "successRate": 0.7,
+              "successDistanceBonus": 15.0,
+              "foulOnFail": true
+            },
+            {
+              "type": "Passive",
+              "name": "随意一跳",
+              "description": "随便跳跳算了",
+              "jumpDistancePenalty": -20.0
+            }
+          ]
+        },
+        {
+          "name": "第二跳",
+          "strategies": [
+            {
+              "type": "Conservative",
+              "name": "正常起跳",
+              "description": "标准姿势起跳，发挥稳定",
+              "jumpVarianceMin": -5.0,
+              "jumpVarianceMax": 5.0
+            },
+            {
+              "type": "Aggressive",
+              "name": "深蹲发力",
+              "description": "蓄力深蹲跳远，但可能踩线犯规",
+              "successRate": 0.7,
+              "successDistanceBonus": 15.0,
+              "foulOnFail": true
+            },
+            {
+              "type": "Passive",
+              "name": "随意一跳",
+              "description": "随便跳跳算了",
+              "jumpDistancePenalty": -20.0
+            }
+          ]
+        },
+        {
+          "name": "第三跳",
+          "strategies": [
+            {
+              "type": "Conservative",
+              "name": "正常起跳",
+              "description": "标准姿势起跳，发挥稳定",
+              "jumpVarianceMin": -5.0,
+              "jumpVarianceMax": 5.0
+            },
+            {
+              "type": "Aggressive",
+              "name": "深蹲发力",
+              "description": "蓄力深蹲跳远，但可能踩线犯规",
+              "successRate": 0.7,
+              "successDistanceBonus": 15.0,
+              "foulOnFail": true
+            },
+            {
+              "type": "Passive",
+              "name": "随意一跳",
+              "description": "随便跳跳算了",
+              "jumpDistancePenalty": -20.0
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

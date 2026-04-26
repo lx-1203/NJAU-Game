@@ -146,6 +146,7 @@ public class SaveManager : MonoBehaviour
         {
             string json = File.ReadAllText(filePath);
             SaveData data = JsonUtility.FromJson<SaveData>(json);
+            data?.EnsureInitialized();
             Debug.Log($"[SaveManager] 读档成功: 槽位{slot}");
             OnLoadCompleted?.Invoke(slot);
             return data;

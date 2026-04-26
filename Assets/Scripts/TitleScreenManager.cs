@@ -2,6 +2,8 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.Video;
 using System.Collections;
+using System;
+using System.IO;
 using TMPro;
 
 /// <summary>
@@ -56,7 +58,9 @@ public class TitleScreenManager : MonoBehaviour
     private int standbyPlayerIndex = -1;
     private bool isTransitioning = false;
     private bool hasEnteredMenu = false;
+    private bool transitionRequested = false;
     private string resolvedVideoPath;
+    private string resolvedVideoUrl;
 
     // ===== 菜单 UI =====
     private CanvasGroup menuOverlay;
@@ -95,7 +99,8 @@ public class TitleScreenManager : MonoBehaviour
 
     private void Awake()
     {
-        resolvedVideoPath = System.IO.Path.Combine(Application.streamingAssetsPath, videoFileName).Replace("\\", "/");
+        UIFlowGuard.CleanupBlockingUI();
+        ResolveVideoSource();
         CacheColors();
         BuildUI();
     }
@@ -669,6 +674,8 @@ public class TitleScreenManager : MonoBehaviour
             return;
         }
 
+        UIFlowGuard.EnsureEventSystem();
+
         menuOverlay.gameObject.SetActive(true);
         menuOverlay.alpha = 0f;
         menuOverlay.interactable = false;
@@ -741,7 +748,7 @@ public class TitleScreenManager : MonoBehaviour
             {
                 SaveManager.PendingLoadData = data;
                 Debug.Log("[TitleScreen] 已加载自动存档，准备进入游戏");
-                StartGame();
+                BeginGameTransition();
             }
             else
             {
@@ -756,19 +763,49 @@ public class TitleScreenManager : MonoBehaviour
 
     public void StartGame()
     {
+        UIFlowGuard.EnsureEventSystem();
+
+        if (transitionRequested)
+        {
+            return;
+        }
+
         // 显示角色创建UI
         if (CharacterCreationUI.Instance == null)
         {
             GameObject obj = new GameObject("CharacterCreationUI");
             CharacterCreationUI ui = obj.AddComponent<CharacterCreationUI>();
-            ui.OnCreationComplete += () => { StartCoroutine(TransitionToGameScene()); };
+            ui.OnCreationComplete -= HandleCharacterCreationComplete;
+            ui.OnCreationComplete += HandleCharacterCreationComplete;
             ui.Show();
         }
         else
         {
-            CharacterCreationUI.Instance.OnCreationComplete += () => { StartCoroutine(TransitionToGameScene()); };
+            CharacterCreationUI.Instance.OnCreationComplete -= HandleCharacterCreationComplete;
+            CharacterCreationUI.Instance.OnCreationComplete += HandleCharacterCreationComplete;
             CharacterCreationUI.Instance.Show();
         }
+    }
+
+    private void HandleCharacterCreationComplete()
+    {
+        if (CharacterCreationUI.Instance != null)
+        {
+            CharacterCreationUI.Instance.OnCreationComplete -= HandleCharacterCreationComplete;
+        }
+
+        BeginGameTransition();
+    }
+
+    private void BeginGameTransition()
+    {
+        if (transitionRequested)
+        {
+            return;
+        }
+
+        transitionRequested = true;
+        StartCoroutine(TransitionToGameScene());
     }
 
     public void QuitGame()
@@ -784,8 +821,13 @@ public class TitleScreenManager : MonoBehaviour
 
     private IEnumerator TransitionToGameScene()
     {
-        menuOverlay.interactable = false;
-        menuOverlay.blocksRaycasts = false;
+        UIFlowGuard.CleanupBlockingUI();
+
+        if (menuOverlay != null)
+        {
+            menuOverlay.interactable = false;
+            menuOverlay.blocksRaycasts = false;
+        }
 
         float fadeDuration = 0.45f;
         float elapsed = 0f;
@@ -911,7 +953,7 @@ public class TitleScreenManager : MonoBehaviour
 
         VideoPlayer player = playerGO.AddComponent<VideoPlayer>();
         player.source = VideoSource.Url;
-        player.url = resolvedVideoPath;
+        player.url = resolvedVideoUrl;
         player.renderMode = VideoRenderMode.RenderTexture;
         player.targetTexture = videoTextures[index];
         player.isLooping = false;
@@ -1134,6 +1176,49 @@ public class TitleScreenManager : MonoBehaviour
     private int GetOtherPlayerIndex(int index)
     {
         return index == 0 ? 1 : 0;
+    }
+
+    private void ResolveVideoSource()
+    {
+        resolvedVideoPath = string.Empty;
+        resolvedVideoUrl = string.Empty;
+
+        foreach (string candidate in GetVideoCandidates())
+        {
+            string absolutePath = Path.Combine(Application.streamingAssetsPath, candidate);
+            if (!File.Exists(absolutePath))
+            {
+                continue;
+            }
+
+            resolvedVideoPath = absolutePath;
+            resolvedVideoUrl = new Uri(absolutePath).AbsoluteUri;
+            Debug.Log("[TitleScreen] Using background video: " + resolvedVideoPath);
+            return;
+        }
+
+        Debug.LogWarning("[TitleScreen] No menu background video found in StreamingAssets.");
+    }
+
+    private string[] GetVideoCandidates()
+    {
+        string fileName = string.IsNullOrWhiteSpace(videoFileName) ? "Start screen.mp4" : videoFileName.Trim();
+        string extension = Path.GetExtension(fileName);
+
+        if (string.IsNullOrEmpty(extension))
+        {
+            return new[]
+            {
+                fileName + ".mp4",
+                fileName + ".webm"
+            };
+        }
+
+        string alternateExtension = extension.Equals(".mp4", StringComparison.OrdinalIgnoreCase) ? ".webm" : ".mp4";
+        string alternateFileName = Path.GetFileNameWithoutExtension(fileName) + alternateExtension;
+        return fileName.Equals(alternateFileName, StringComparison.OrdinalIgnoreCase)
+            ? new[] { fileName }
+            : new[] { fileName, alternateFileName };
     }
 
     #endregion

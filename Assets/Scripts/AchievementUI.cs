@@ -226,7 +226,7 @@ public class AchievementUI : MonoBehaviour
         iconBg.color = new Color(1f, 0.84f, 0f, 0.15f);
 
         TextMeshProUGUI iconText = CreateTMPText(iconObj.transform, "IconText",
-            "\U0001F3C6", 36, COLOR_GOLD, TextAlignmentOptions.Center);
+            "AC", 36, COLOR_GOLD, TextAlignmentOptions.Center);
         RectTransform iconTextRect = iconText.GetComponent<RectTransform>();
         iconTextRect.anchorMin = Vector2.zero;
         iconTextRect.anchorMax = Vector2.one;
@@ -350,6 +350,23 @@ public class AchievementUI : MonoBehaviour
     {
         if (!isReviewShowing) return;
         StartCoroutine(ReviewPanelCloseCoroutine());
+    }
+
+    public void HideReviewPanelImmediate()
+    {
+        StopAllCoroutines();
+
+        if (reviewCanvasGroup != null)
+        {
+            reviewCanvasGroup.alpha = 0f;
+        }
+
+        if (reviewCanvas != null)
+        {
+            reviewCanvas.gameObject.SetActive(false);
+        }
+
+        isReviewShowing = false;
     }
 
     /// <summary>
@@ -563,7 +580,7 @@ public class AchievementUI : MonoBehaviour
             ? new Color(1f, 0.84f, 0f, 0.15f)
             : new Color(0.3f, 0.3f, 0.3f, 0.2f);
 
-        string iconSymbol = unlocked ? "\U0001F3C6" : "\u2753";
+        string iconSymbol = unlocked ? "OK" : "?";
         Color iconColor = unlocked ? COLOR_GOLD : COLOR_GRAY_LOCK;
         TextMeshProUGUI iconText = CreateTMPText(iconObj.transform, "IconText",
             iconSymbol, 32, iconColor, TextAlignmentOptions.Center);
@@ -614,7 +631,7 @@ public class AchievementUI : MonoBehaviour
         RectTransform statusRect = statusObj.AddComponent<RectTransform>();
         statusRect.sizeDelta = new Vector2(50f, 50f);
 
-        string statusSymbol = unlocked ? "\u2713" : "\U0001F512";
+        string statusSymbol = unlocked ? "V" : "L";
         Color statusColor = unlocked ? COLOR_GREEN_CHECK : COLOR_GRAY_LOCK;
         int statusSize = unlocked ? 32 : 28;
         TextMeshProUGUI statusText = CreateTMPText(statusObj.transform, "StatusText",

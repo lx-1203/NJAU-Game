@@ -423,6 +423,11 @@ public class DialogueSystem : MonoBehaviour, IDialogueTrigger
         OnTextComplete();
     }
 
+    public void SetTextSpeed(float speed)
+    {
+        textSpeed = Mathf.Max(0.001f, speed);
+    }
+
     /// <summary>
     /// 文字显示完毕后的处理
     /// </summary>

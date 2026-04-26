@@ -68,6 +68,8 @@ public class HUDManager : MonoBehaviour
 
     private void Start()
     {
+        SanitizeActionIcons();
+
         EnsureDataInstances();
 
         builder = gameObject.AddComponent<HUDBuilder>();
@@ -90,6 +92,44 @@ public class HUDManager : MonoBehaviour
         RefreshAll();
         StartCoroutine(PlayEntryAnimation());
         StartCoroutine(ShowInitialNews());
+    }
+
+    private void SanitizeActionIcons()
+    {
+        ActionIcons["study"] = "ST";
+        ActionIcons["attend_class"] = "CL";
+        ActionIcons["social"] = "SO";
+        ActionIcons["play_game"] = "GM";
+        ActionIcons["sleep"] = "SL";
+        ActionIcons["goout"] = "GO";
+        ActionIcons["eat"] = "EA";
+        ActionIcons["exercise"] = "EX";
+        ActionIcons["sports_test"] = "SP";
+        ActionIcons["shop"] = "SH";
+        ActionIcons["pickup_express"] = "PK";
+        ActionIcons["order_takeout"] = "TO";
+        ActionIcons["memorize_words"] = "WD";
+    }
+
+    private void Update()
+    {
+        if (!CanProcessHotkeys())
+        {
+            return;
+        }
+
+        if (Input.GetKeyDown(KeyCode.Tab))
+        {
+            ToggleInfoPanel();
+        }
+        else if (Input.GetKeyDown(KeyCode.Alpha1))
+        {
+            OpenSocialPanel();
+        }
+        else if (Input.GetKeyDown(KeyCode.Alpha2))
+        {
+            ToggleTalentPanel();
+        }
     }
 
     private void BindSystemButtons()
@@ -223,6 +263,86 @@ public class HUDManager : MonoBehaviour
             RomanceSystem.Instance.OnRomanceHealthChanged -= OnRomanceHealthChanged;
         }
         if (ConfessionSystem.Instance != null) ConfessionSystem.Instance.OnConfessionResult -= OnConfessionResult;
+        if (campusMapUI != null) campusMapUI.Destroy();
+    }
+
+    private bool CanProcessHotkeys()
+    {
+        if (IsModalOpen)
+        {
+            return false;
+        }
+
+        if (DialogueSystem.Instance != null && DialogueSystem.Instance.IsDialogueActive)
+        {
+            return false;
+        }
+
+        if (EventExecutor.Instance != null && EventExecutor.Instance.IsExecuting)
+        {
+            return false;
+        }
+
+        if (PauseMenuUI.Instance != null && PauseMenuUI.Instance.IsOpen)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    private void ToggleInfoPanel()
+    {
+        if (InfoPanelManager.Instance == null)
+        {
+            return;
+        }
+
+        if (InfoPanelManager.Instance.IsOpen)
+        {
+            InfoPanelManager.Instance.ClosePanel();
+        }
+        else
+        {
+            InfoPanelManager.Instance.OpenPanel(0);
+        }
+    }
+
+    private void OpenSocialPanel()
+    {
+        if (builder == null || builder.npcInteractionMenu == null)
+        {
+            return;
+        }
+
+        if (builder.hudAnimator != null && builder.btnFeature != null)
+        {
+            builder.hudAnimator.ButtonPressEffect(builder.btnFeature);
+        }
+
+        builder.npcInteractionMenu.ShowForNPC(null);
+    }
+
+    private void ToggleTalentPanel()
+    {
+        if (TalentUI.Instance == null)
+        {
+            return;
+        }
+
+        if (builder != null && builder.hudAnimator != null && builder.btnTalent != null)
+        {
+            builder.hudAnimator.ButtonPressEffect(builder.btnTalent);
+        }
+
+        if (TalentUI.Instance.IsOpen)
+        {
+            TalentUI.Instance.ClosePanel();
+        }
+        else
+        {
+            TalentUI.Instance.ShowPanel();
+        }
     }
 
     private void EnsureDataInstances()

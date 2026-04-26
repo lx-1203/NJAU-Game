@@ -219,6 +219,29 @@ public class SaveData
     public int campusRunCompleted = 0;
     public int campusRunProxy = 0;
 
+    // ========== 任务系统（MissionSystem 存档） ==========
+    public MissionSaveData missionData = new MissionSaveData();
+
     // ========== 游戏时长 ==========
     public float totalPlayTimeSeconds = 0f;
+
+    public void EnsureInitialized()
+    {
+        meta ??= new SaveMetaInfo();
+        npcRelationships ??= new List<NPCRelationshipSaveData>();
+        triggeredEventIds ??= new List<string>();
+        eventStates ??= new List<StringIntPair>();
+        eventRecords ??= new List<EventHistoryRecord>();
+        eventFlags ??= new List<StringBoolPair>();
+        unlockedAchievements ??= new List<string>();
+        courseRecords ??= new List<CourseRecord>();
+        semesterGPAHistory ??= new List<SemesterGPA>();
+        failedCourses ??= new List<ExamResult>();
+        lastMidtermResults ??= new List<ExamResult>();
+        transactionRecords ??= new List<TransactionRecord>();
+        clubRecords ??= new List<ClubMemberRecord>();
+        clubExitCooldowns ??= new List<StringIntPair>();
+        missionData ??= new MissionSaveData();
+        missionData.EnsureInitialized();
+    }
 }

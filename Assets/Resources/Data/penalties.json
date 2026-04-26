@@ -1,0 +1,117 @@
+{
+  "guiltPenalties": [
+    {
+      "tier": 1,
+      "name": "轻度负罪感",
+      "threshold": 30,
+      "stressPerRound": 3,
+      "moodPenalty": -2,
+      "mentalHealthPenalty": 0,
+      "efficiencyMultiplier": 0.8,
+      "extraAPCost": 0,
+      "description": "轻度负罪感: 压力+3, 心情-2"
+    },
+    {
+      "tier": 2,
+      "name": "中度负罪感",
+      "threshold": 60,
+      "stressPerRound": 6,
+      "moodPenalty": -5,
+      "mentalHealthPenalty": -2,
+      "efficiencyMultiplier": 0.5,
+      "extraAPCost": 1,
+      "description": "中度负罪感: 压力+6, 心情-5, 心理健康-2"
+    },
+    {
+      "tier": 3,
+      "name": "重度负罪感",
+      "threshold": 90,
+      "stressPerRound": 10,
+      "moodPenalty": -8,
+      "mentalHealthPenalty": -4,
+      "randomAttributeDecay": -5,
+      "impulseSpendMin": 50,
+      "impulseSpendMax": 200,
+      "efficiencyMultiplier": 0.2,
+      "extraAPCost": 2,
+      "warningMessage": "负罪感压得你喘不过气来，你开始冲动消费来麻痹自己...",
+      "description": "重度负罪感: 压力+10, 心情-8, 心理健康-4, 核心属性随机-5, 冲动消费50-200"
+    },
+    {
+      "tier": 4,
+      "name": "临界负罪感",
+      "threshold": 150,
+      "stressPerRound": 15,
+      "moodPenalty": -10,
+      "mentalHealthPenalty": -15,
+      "slackingDelta": 8,
+      "darknessDelta": 3,
+      "efficiencyMultiplier": 0.0,
+      "extraAPCost": 2,
+      "warningMessage": "负罪感已到临界！你感到一切都在崩塌...",
+      "description": "临界破防: 压力+15, 心情-10, 心理健康-15, 摆烂+8, 黑暗值+3"
+    }
+  ],
+  "slackingPenalties": [
+    {
+      "tier": 1,
+      "name": "轻度摆烂",
+      "threshold": 30,
+      "moodDelta": 2,
+      "studyMultiplier": 0.8,
+      "description": "轻度摆烂: 心情+2 (摆着爽), 学力收益×0.8"
+    },
+    {
+      "tier": 2,
+      "name": "中度摆烂",
+      "threshold": 60,
+      "studyDelta": -3,
+      "studyMultiplier": 0.5,
+      "description": "中度摆烂: 学力-3, 学力收益×0.5"
+    },
+    {
+      "tier": 3,
+      "name": "重度摆烂",
+      "threshold": 90,
+      "studyDelta": -5,
+      "leadershipDelta": -3,
+      "studyMultiplier": 0.5,
+      "warningMessage": "辅导员找你谈话：再这样下去，恐怕要发学业警告了...",
+      "description": "重度摆烂: 学力-5, 领导力-3"
+    },
+    {
+      "tier": 4,
+      "name": "退学摆烂",
+      "threshold": 120,
+      "triggerEndingFlag": "forced_expulsion",
+      "warningMessage": "你已经完全放弃了自己。辅导员通知你：学校决定劝退...",
+      "description": "彻底摆烂触发退学结局"
+    }
+  ],
+  "mentalHealthConfig": {
+    "maxValue": 100,
+    "minValue": 0,
+    "highStressThreshold": 60,
+    "highStressDrain": -3,
+    "lowMoodThreshold": 40,
+    "lowMoodDrain": -3,
+    "debtDrain": -5,
+    "recoveryMoodMin": 70,
+    "recoveryStressMax": 30,
+    "recoveryAmount": 2,
+    "warningThreshold": 20,
+    "criticalThreshold": 0,
+    "warningMessage": "你感到前所未有的疲惫和空虚，也许该找人聊聊...",
+    "criticalMessage": "一切都变得灰暗，你已经很久没有笑过了...",
+    "criticalFlag": "depression_critical"
+  },
+  "behaviorTracking": {
+    "noStudyRoundsForSlacking": 2,
+    "slackingFromNoStudy": 5,
+    "noSocialRoundsForPenalty": 3,
+    "slackingFromNoSocial": 4,
+    "mentalHealthFromNoSocial": -5,
+    "studyReduceSlacking": 2,
+    "attendClassReduceSlacking": 1
+  }
+}

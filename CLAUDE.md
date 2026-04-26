@@ -17,6 +17,25 @@ MCP 协议: Streamable HTTP, endpoint `http://localhost:8080/mcp`
 - Ctrl+P 始终从 SplashScreen 开始 (已配置 PlayModeStartScene)
 - 所有 UI 通过代码动态创建 (TitleScreenManager.cs)
 
+## Canvas 层级规范 (sortingOrder)
+- 50: 任务追踪UI (MissionTrackerCanvas) - 右侧悬浮任务列表
+- 100: HUD 主界面 (HUDCanvas)
+- 150: 任务通知弹窗 (MissionNotificationCanvas) - 右上角滑入通知
+- 150: 成就弹窗通知 (AchievementUI)
+- 180: 信息面板 (InfoPanelCanvas) - 个人信息/人际关系/任务
+- 200: 对话系统 (DialogueCanvas)
+- 200: 商店面板 (ShopCanvas)
+- 200: 社团面板 (ClubPanelCanvas)
+- 200: 任务面板 (MissionPanelCanvas) - 查看所有任务
+- 200: 结局展示 (EndingUI)
+- 200: 调试控制台 (DebugConsole)
+- 250: 游戏内设置面板 (SettingsCanvas)
+- 300: 成就回顾面板 (AchievementUI Review)
+- 300: 标题界面设置面板 (SettingsCanvas)
+- 500: 考试UI (ExamUICanvas)
+
+**原则**: 数值越大越靠前，弹窗/对话类UI使用200+，考试等强制交互使用500
+
 ## 关键脚本
 - `Assets/Scripts/TitleScreenManager.cs` - 标题界面管理器 (视频背景+菜单)
 - `Assets/Scripts/RippleEffect.cs` - 水涟漪特效 (点击触发)
@@ -49,10 +68,27 @@ MCP 协议: Streamable HTTP, endpoint `http://localhost:8080/mcp`
 - `Assets/Scripts/DebtSystem.cs` - 债务系统 (4级阈值: 200/0/-2000/-5000, 透支惩罚压力+10)
 - `Assets/Scripts/ShopSystem.cs` - 商店系统 (17种商品, 6分类, 债务限购, 通过EconomyManager交易)
 - `Assets/Scripts/ShopUIBuilder.cs` - 商店UI构建器 (独立Canvas, 分类+商品列表+交易弹窗, 纯代码)
+- `Assets/Scripts/InfoPanelBuilder.cs` - 信息面板UI构建器 (独立Canvas sortingOrder=180, 三个子面板: 个人信息/人际关系/任务, 顶部导航栏切换)
+- `Assets/Scripts/InfoPanelManager.cs` - 信息面板管理器 (数据绑定+事件订阅+实时刷新, 单例模式)
+- `Assets/Scripts/HUDManager.cs` - HUD管理器 (数据绑定+动态底栏按钮+地图UI集成+透支变红+商店按钮+社团按钮+信息按钮+债务订阅+社团回合结算+事件期间按钮锁定)
+- `Assets/Scripts/JobSelectionUI.cs` - 兼职实习UI (独立Canvas sortingOrder=200, 实习/副业选项)
+- `Assets/Scripts/PhysicalTestUI.cs` - 体侧测试UI (独立Canvas sortingOrder=500)
+- `Assets/Scripts/ConfirmDialogUI.cs` - 确认弹窗UI (独立Canvas sortingOrder=600)
+- `Assets/Scripts/ShopUIBuilder.cs` - 商店UI构建器 (独立Canvas, 分类+商品列表+交易弹窗, 纯代码)
 - `Assets/Scripts/HUDManager.cs` - HUD管理器 (数据绑定+动态底栏按钮+地图UI集成+透支变红+商店按钮+社团按钮+债务订阅+社团回合结算+事件期间按钮锁定)
 - `Assets/Scripts/HUDBuilder.cs` - HUD构建器 (纯代码UI构建, 含NPCInteractionMenu+商店+社团面板+警告图标)
 - `Assets/Scripts/PlayerController.cs` - 玩家控制器 (移动/跳跃/动画, 对话和事件期间锁定移动)
 - `Assets/Scripts/GameSceneInitializer.cs` - 游戏场景初始化器
+
+## 设置系统 (SettingsSystem)
+- `Assets/Scripts/SettingsData.cs` - 设置数据模型 (音频/显示/游戏性配置, 序列化到PlayerPrefs)
+- `Assets/Scripts/SettingsManager.cs` - 设置管理器单例 (保存/加载/应用设置, 事件通知, F1快捷键)
+- `Assets/Scripts/SettingsUIBuilder.cs` - 设置UI构建器 (纯代码, Canvas sortingOrder=250/300, 音量/分辨率/全屏/UI缩放/文本速度)
+- 入口: 标题界面"设置"按钮, 游戏内F1键, 暂停菜单"设置"项
+- 持久化: PlayerPrefs (Settings_* 键名前缀)
+- 设置项: 主音量/音乐音量/音效音量/静音, 全屏模式/分辨率/UI缩放, 文本速度/语言(预留)
+- Canvas层级: 标题界面300, 游戏内250
+- 快捷键: F1打开设置, Esc关闭设置
 
 ## 社团系统 (ClubSystem)
 - `Assets/Scripts/ClubDefinitions.cs` - 社团数据模型 (ClubDefinition/JoinRequirement/PromotionRank/PromotionPath/PartyMembershipStage/ClubMembership/IClubMinigame)
@@ -60,6 +96,43 @@ MCP 协议: Streamable HTTP, endpoint `http://localhost:8080/mcp`
 - `Assets/Scripts/ClubPanelBuilder.cs` - 社团面板UI构建器 (独立Canvas sortingOrder=200, 左侧列表+右侧详情+入党进度条)
 - `Assets/Scripts/ClubPanelManager.cs` - 社团面板控制器 (列表分组:已加入/可加入/特殊, 详情刷新, 条件提示, 按钮绑定)
 - `Assets/Resources/Data/ClubData.json` - 社团JSON配置 (9社团+3晋升路径+6入党阶段+加入条件+官方组织标记)
+
+## 信息面板系统 (InfoPanelSystem)
+- `Assets/Scripts/InfoPanelBuilder.cs` - 信息面板UI构建器 (独立Canvas sortingOrder=180, 纯代码构建)
+- `Assets/Scripts/InfoPanelManager.cs` - 信息面板管理器 (单例模式, 数据绑定+事件订阅+实时刷新)
+- 三个子面板:
+  - **个人信息面板**: 基础信息(姓名/性别/专业/时间/年龄) + 核心属性(学力/魅力/体魄/领导力, 使用AttributeBar) + 状态值(压力/心情进度条) + 隐性属性(黑暗值/负罪感/幸运) + 学业信息(GPA/学分) + 经济信息(金钱/债务等级) + 社团信息(已加入社团/职务/入党进度)
+  - **人际关系面板**: 左侧NPC列表(按好感度降序, 星级显示) + 右侧详情区(好感度进度条/关系等级/恋爱状态/性格偏好/最近3次互动记录) + 社交互动按钮(打开NPCInteractionMenu)
+  - **任务面板**: 已由独立任务系统实现，信息面板中的任务标签可作为快捷入口
+- 顶部导航栏: 三个标签按钮快速切换, 标签激活时高亮显示
+- 入口: HUD底栏"信息"按钮 (btnInfo)
+- 数据源: GameState, PlayerAttributes, AffinitySystem, NPCDatabase, ExamSystem, ClubSystem, EconomyManager, DebtSystem
+- 事件订阅: GameState.OnStateChanged, PlayerAttributes.OnAttributesChanged, AffinitySystem.OnAffinityChanged (实时刷新)
+- 互动记录: AffinitySystem扩展GetRecentInteractions方法, NPCRelationshipData新增interactionHistory字段(List<InteractionRecord>), 存档支持
+- 初始化顺序: 在GameSceneInitializer中, HUDManager之后初始化InfoPanelManager
+
+## 任务系统 (MissionSystem)
+- `Assets/Scripts/MissionData.cs` - 任务数据模型 (MissionType/MissionStatus/MissionObjectiveType/MissionRewardType枚举, MissionDefinition/MissionObjective/MissionReward/MissionRuntimeData/MissionSaveData)
+- `Assets/Scripts/MissionSystem.cs` - 任务系统核心单例 (JSON加载/触发条件检查/进度追踪/完成判定/奖励发放/ISaveable存档集成)
+- `Assets/Scripts/MissionUI.cs` - 任务UI管理器 (DontDestroyOnLoad, 右上角通知弹窗+右侧任务追踪+任务完成弹窗)
+- `Assets/Scripts/MissionPanelBuilder.cs` - 任务面板构建器 (独立Canvas sortingOrder=200, 查看所有任务: 进行中/已完成, J键打开)
+- `Assets/Resources/Data/missions.json` - 任务JSON配置 (8个示例任务: 主线M001~M008, 支线M003/M004/M006/M007)
+- 任务类型:
+  - **MainStory**: 主线任务, 强制推进剧情, 自动接取, 不可放弃
+  - **SideQuest**: 支线任务, 可选内容, 手动接取, 可放弃
+- 触发方式: 自动触发 (满足条件时自动解锁, autoAccept=true则自动接取)
+- 目标类型: ReachRound/ReachSemester/AttributeThreshold/MoneyThreshold/NPCAffinityThreshold/JoinClub/ActionCount/PassExam/CompleteEvent/Custom
+- 奖励类型: Money(金钱)/Attribute(属性)/Unlock(解锁标记)/Item(物品,预留)
+- UI组件:
+  - **右上角通知**: 任务解锁/接取/完成/失败时滑入弹窗 (Canvas sortingOrder=150, 队列机制, 3秒自动消失)
+  - **右侧追踪**: 显示进行中任务的目标进度 (Canvas sortingOrder=50, 实时更新, 无任务时隐藏)
+  - **完成弹窗**: 任务完成时弹出奖励详情 (中央弹窗, 缩放动画, 显示奖励列表)
+  - **任务面板**: J键打开, 查看所有任务 (进行中/已完成分组, 显示任务类型/描述/目标进度)
+- 事件订阅: TurnManager(回合推进/超时检测) + ActionSystem(行动计数) + AffinitySystem(好感度) + ClubSystem(加入社团) + ExamSystem(考试通过) + EventHistory(事件完成)
+- 存档集成: 实现ISaveable接口, SaveData.missionData字段, 保存activeMissions/completedMissionIds/failedMissionIds
+- 初始化顺序: MissionSystem → MissionUI → MissionPanelBuilder (在GameSceneInitializer中, 惩罚系统之后, Provider注入之前)
+- HUD集成: HUDBuilder.btnMission按钮 → HUDManager绑定 → 打开MissionPanelBuilder
+- 快捷键: J键打开任务面板, ESC关闭任务面板
 
 ## 存档系统 (SaveSystem)
 - `Assets/Scripts/SaveSystem/ISaveable.cs` - 可存档接口 (SaveToData/LoadFromData)
@@ -92,7 +165,7 @@ MCP 协议: Streamable HTTP, endpoint `http://localhost:8080/mcp`
 - 睡觉特殊: 消耗1行动点+清空剩余 → 立即触发回合推进
 - 地点移动消耗: 免费移动，不消耗行动点
 - 底栏按钮: 静态按钮(HUDBuilder创建)被HideStaticButtons()隐藏, 改由RefreshBottomBar()动态创建
-- 初始化顺序: SaveManager → NewGamePlusManager → GameState → PlayerAttributes → LocationManager → ActionSystem → ClubSystem → EconomyManager → DebtSystem → ShopSystem → RomanceSystem → ConfessionSystem → AchievementSystem → AchievementUI → SemesterSummarySystem → EndingDeterminer → TurnManager → ExamSystem → CheatingSystem → EventHistory → EventScheduler → DialogueSystem → EventExecutor → NPCEventHub → NPCDatabase → AffinitySystem → RomanceBridge → NPCManager → DebugConsoleManager(仅Debug构建)
+- 初始化顺序: SaveManager → NewGamePlusManager → GameState → PlayerAttributes → LocationManager → ActionSystem → ClubSystem → EconomyManager → DebtSystem → ShopSystem → RomanceSystem → ConfessionSystem → CampusRunSystem → PhysicalTestSystem → AchievementSystem → AchievementUI → SemesterSummarySystem → EndingDeterminer → TurnManager → ExamSystem → CheatingSystem → EventHistory → EventScheduler → DialogueSystem → EventExecutor → SettingsManager → NPCEventHub → NPCDatabase → AffinitySystem → RomanceBridge → NPCManager → LocationZoneDetector → NewsSystem → TalentSystem → TalentUI → JobSystem → PenaltySystem → MissionSystem → MissionUI → MissionPanelBuilder → Provider注入 → HUDManager → InfoPanelManager → PauseMenu → DebugConsoleManager(仅Debug构建)
 
 ## 存档系统
 - 存档路径: `Application.persistentDataPath/saves/` (autosave.json + save_1~3.json)
@@ -249,6 +322,10 @@ MCP 协议: Streamable HTTP, endpoint `http://localhost:8080/mcp`
 - 结局数据: `Resources/Data/endings.json` (24个结局定义, 8层优先级)
 - 成就数据: `Resources/Data/achievements.json` (20个成就定义)
 - 事件数据: `Resources/Data/Events/*.json` (main_events/fixed_events/conditional_events/dark_events)
+- 天赋数据: `Resources/Data/talents.json`
+- 新闻数据: `Resources/Data/news.json`
+- 体测数据: `Resources/Data/physical_tests.json`
+- 兼职数据: `Resources/Data/jobs.json`
 
 ## 考试与绩点系统 (ExamSystem)
 - `Assets/Scripts/Exam/ExamData.cs` - 数据类 (ExamType/CheatResult枚举, CourseDefinition/ExamQuestion/QuestionGroup/ExamResult/SemesterGPA)
@@ -319,19 +396,27 @@ MCP 协议: Streamable HTTP, endpoint `http://localhost:8080/mcp`
 - Canvas: sortingOrder=200
 
 ## 成就系统 (AchievementSystem)
-- `Assets/Scripts/AchievementData.cs` - 数据模型 (AchievementConditionType枚举~20种, AchievementCondition, AchievementDefinition, AchievementSaveData)
-- `Assets/Scripts/AchievementSystem.cs` - 成就系统核心单例 (JSON加载/条件检查/PlayerPrefs持久化/学期追踪)
+- `Assets/Scripts/AchievementData.cs` - 数据模型 (AchievementConditionType枚举20种, AchievementCondition, AchievementDefinition, AchievementSaveData)
+- `Assets/Scripts/AchievementSystem.cs` - 成就系统核心单例 (JSON加载/条件检查/ISaveable存档集成/学期追踪)
 - `Assets/Scripts/AchievementUI.cs` - 成就UI管理器 (DontDestroyOnLoad, 弹窗通知+回顾面板)
 - `Assets/Resources/Data/achievements.json` - 20个成就定义 (ACH_001~ACH_020, 属性/行动/金钱/时间等)
 - 弹窗通知: 成就解锁→右上角滑入弹窗, 队列机制, Canvas sortingOrder=150, blocksRaycasts=false
 - 回顾面板: 标题界面"成就"按钮→AchievementUI.ShowReviewPanel(), Canvas sortingOrder=300
   - 已解锁: 金色边框+🏆+名称+描述+✓绿色
   - 未解锁: 灰色边框+❓+??????+🔒灰色
-- 持久化: PlayerPrefs(key="AchievementData"), JSON序列化
-- 条件类型: Study/Charm/Physique/Leadership≥X, ActionCount≥X, Money≥X, GPA≥X, Semester/Year, NPC好感等
+- 持久化: 实现ISaveable接口, 通过SaveManager统一存档, 支持多槽位隔离
+- 条件类型: Study/Charm/Physique/Leadership≥X, ActionCount≥X, Money≥X, GPA≥X, Semester/Year, NPC好感, SemesterGrade等
+- 触发时机: 行动执行后(ActionSystem.OnActionExecuted) + 回合推进后(TurnManager) + 学期结算前(SemesterSummarySystem) + 考试完成后(ExamSystem)
 - 事件: OnAchievementUnlocked(AchievementDefinition)
-- 学期成就追踪: currentSemesterAchievements, ResetSemesterAchievements()
+- 学期成就追踪: currentSemesterAchievements, 学期切换时自动调用ResetSemesterAchievements()
 - 标题界面集成: TitleScreenManager.OnTopIconClicked(index==1) → AchievementUI.ShowReviewPanel()
+- 修复记录 (2026-04-23):
+  - 实现ISaveable接口, 从PlayerPrefs迁移到SaveData存档系统
+  - 修复SemesterGrade条件逻辑: 从"检查最后一个学期"改为"检查是否存在任一学期达标"
+  - 修复ActionSystem订阅失败问题: 增加协程重试机制
+  - 集成学期重置: SemesterSummarySystem在学期切换时调用ResetSemesterAchievements()
+  - 多触发点: TurnManager回合推进后、ExamSystem考试完成后、SemesterSummarySystem学期结算前均触发检测
+
 
 ## 游戏事件系统 (EventSystem)
 - `Assets/Scripts/GameEventData.cs` - 事件数据模型 (EventType/EventPriority/TriggerPhase枚举, EventTriggerCondition/EventDialogue/EventEffect/EventChoice/EventDefinition)

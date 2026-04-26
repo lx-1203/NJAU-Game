@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.EventSystems;
 
 /// <summary>
 /// 游戏场景初始化器
@@ -8,6 +9,9 @@ public class GameSceneInitializer : MonoBehaviour
 {
     private void Start()
     {
+        UIFlowGuard.CleanupBlockingUI();
+        EnsureEventSystem();
+
         // 存档管理器（必须在其他系统之前初始化）
         SetupSaveManager();
 
@@ -35,6 +39,7 @@ public class GameSceneInitializer : MonoBehaviour
         SetupExamSystem();
         SetupCheatingSystem();
         SetupEventHistory();
+        SetupMissionSystem();
         SetupEventScheduler();
         SetupDialogueSystem();
 
@@ -66,6 +71,16 @@ public class GameSceneInitializer : MonoBehaviour
 
         // 惩罚系统（依赖 TurnManager, ActionSystem, PlayerAttributes, TalentSystem）
         SetupPenaltySystem();
+
+        // 游戏内功能 UI / 管理器
+        SetupSettingsManager();
+        SetupPauseMenuUI();
+        SetupInfoPanelManager();
+        SetupMissionUI();
+        SetupMissionPanelBuilder();
+        SetupJobSelectionUI();
+        SetupPhysicalTestUI();
+        SetupConfirmDialogUI();
 
         // 注入真实 Provider（所有子系统已初始化完毕）
         if (SemesterSummarySystem.Instance != null)
@@ -272,6 +287,14 @@ public class GameSceneInitializer : MonoBehaviour
         }
     }
 
+    private void EnsureEventSystem()
+    {
+        if (FindFirstObjectByType<EventSystem>() == null)
+        {
+            UIFlowGuard.EnsureEventSystem();
+        }
+    }
+
     // ========== HUD 管理器 ==========
 
     private void SetupHUDManager()
@@ -427,6 +450,78 @@ public class GameSceneInitializer : MonoBehaviour
         }
     }
 
+    private void SetupSettingsManager()
+    {
+        if (SettingsManager.Instance == null)
+        {
+            GameObject obj = new GameObject("SettingsManager");
+            obj.AddComponent<SettingsManager>();
+        }
+    }
+
+    private void SetupPauseMenuUI()
+    {
+        if (PauseMenuUI.Instance == null)
+        {
+            GameObject obj = new GameObject("PauseMenuUI");
+            obj.AddComponent<PauseMenuUI>();
+        }
+    }
+
+    private void SetupInfoPanelManager()
+    {
+        if (InfoPanelManager.Instance == null)
+        {
+            GameObject obj = new GameObject("InfoPanelManager");
+            obj.AddComponent<InfoPanelManager>();
+        }
+    }
+
+    private void SetupMissionUI()
+    {
+        if (MissionUI.Instance == null)
+        {
+            GameObject obj = new GameObject("MissionUI");
+            obj.AddComponent<MissionUI>();
+        }
+    }
+
+    private void SetupMissionPanelBuilder()
+    {
+        if (MissionPanelBuilder.Instance == null)
+        {
+            GameObject obj = new GameObject("MissionPanelBuilder");
+            obj.AddComponent<MissionPanelBuilder>();
+        }
+    }
+
+    private void SetupJobSelectionUI()
+    {
+        if (JobSelectionUI.Instance == null)
+        {
+            GameObject obj = new GameObject("JobSelectionUI");
+            obj.AddComponent<JobSelectionUI>();
+        }
+    }
+
+    private void SetupPhysicalTestUI()
+    {
+        if (PhysicalTestUI.Instance == null)
+        {
+            GameObject obj = new GameObject("PhysicalTestUI");
+            obj.AddComponent<PhysicalTestUI>();
+        }
+    }
+
+    private void SetupConfirmDialogUI()
+    {
+        if (ConfirmDialogUI.Instance == null)
+        {
+            GameObject obj = new GameObject("ConfirmDialogUI");
+            obj.AddComponent<ConfirmDialogUI>();
+        }
+    }
+
     // ========== 事件系统（原有） ==========
 
     private void SetupEventHistory()
@@ -435,6 +530,15 @@ public class GameSceneInitializer : MonoBehaviour
         {
             GameObject obj = new GameObject("EventHistory");
             obj.AddComponent<EventHistory>();
+        }
+    }
+
+    private void SetupMissionSystem()
+    {
+        if (MissionSystem.Instance == null)
+        {
+            GameObject obj = new GameObject("MissionSystem");
+            obj.AddComponent<MissionSystem>();
         }
     }
 

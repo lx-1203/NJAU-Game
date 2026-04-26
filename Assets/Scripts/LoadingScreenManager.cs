@@ -49,6 +49,7 @@ public class LoadingScreenManager : MonoBehaviour
     private bool canSkip = false;
     private bool hasSkipped = false;
     private string resolvedTargetSceneName;
+    private bool waitingForTargetSceneActivation = false;
 
     // 计时器
     private float loadingStartTime;
@@ -62,6 +63,9 @@ public class LoadingScreenManager : MonoBehaviour
 
     private void Awake()
     {
+        UIFlowGuard.RestoreInteractiveState();
+        UIFlowGuard.EnsureEventSystem();
+
         // 如果没有指定 UI 组件，尝试获取子物体上的
         if (loadingScreenUI == null)
         {
@@ -83,6 +87,8 @@ public class LoadingScreenManager : MonoBehaviour
 
     private void Start()
     {
+        SceneManager.sceneLoaded += OnSceneLoaded;
+
         // 获取目标场景名称
         string targetScene = SceneLoader.TargetSceneName;
 
@@ -96,6 +102,11 @@ public class LoadingScreenManager : MonoBehaviour
 
         // 启动加载流程
         StartLoading(targetScene);
+    }
+
+    private void OnDestroy()
+    {
+        SceneManager.sceneLoaded -= OnSceneLoaded;
     }
 
     private void Update()
@@ -332,13 +343,49 @@ public class LoadingScreenManager : MonoBehaviour
         // 激活已经加载完成的目标场景
         if (targetSceneLoadOperation != null)
         {
+            waitingForTargetSceneActivation = true;
             targetSceneLoadOperation.allowSceneActivation = true;
             targetSceneLoadOperation = null;
             return;
         }
 
         Debug.LogWarning("[LoadingScreenManager] 未找到可激活的已加载场景任务，回退为直接加载目标场景。");
+        waitingForTargetSceneActivation = true;
         SceneManager.LoadScene(resolvedTargetSceneName);
+    }
+
+    private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        if (!waitingForTargetSceneActivation)
+        {
+            return;
+        }
+
+        if (!string.IsNullOrEmpty(resolvedTargetSceneName) && scene.name != resolvedTargetSceneName)
+        {
+            return;
+        }
+
+        waitingForTargetSceneActivation = false;
+        StartCoroutine(CleanupAfterSceneActivation());
+    }
+
+    private IEnumerator CleanupAfterSceneActivation()
+    {
+        yield return null;
+
+        CanvasGroup rootGroup = loadingScreenUI != null
+            ? loadingScreenUI.GetRootCanvasGroup()
+            : GetComponent<CanvasGroup>();
+
+        if (rootGroup != null)
+        {
+            rootGroup.alpha = 0f;
+            rootGroup.interactable = false;
+            rootGroup.blocksRaycasts = false;
+        }
+
+        Destroy(gameObject);
     }
 
     #endregion

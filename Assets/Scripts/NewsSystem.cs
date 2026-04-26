@@ -1,6 +1,9 @@
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
+using UnityEngine.SceneManagement;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 
@@ -84,6 +87,7 @@ public class NewsSystem : MonoBehaviour
 
     // ========== UI 引用 ==========
     private GameObject newsCanvas;
+    private Coroutine autoDismissCoroutine;
 
     // ========== 生命周期 ==========
 
@@ -96,6 +100,17 @@ public class NewsSystem : MonoBehaviour
         }
         Instance = this;
         DontDestroyOnLoad(gameObject);
+        SceneManager.sceneLoaded += OnSceneLoaded;
+    }
+
+    private void OnDestroy()
+    {
+        SceneManager.sceneLoaded -= OnSceneLoaded;
+
+        if (Instance == this)
+        {
+            Instance = null;
+        }
     }
 
     // ========== 公共接口 ==========
@@ -107,6 +122,8 @@ public class NewsSystem : MonoBehaviour
     {
         if (isShowing) return;
         if (GameState.Instance == null) return;
+
+        EnsureEventSystem();
 
         int year = GameState.Instance.CurrentYear;
         int semester = GameState.Instance.CurrentSemester;
@@ -122,6 +139,12 @@ public class NewsSystem : MonoBehaviour
     /// </summary>
     public void DismissNews()
     {
+        if (autoDismissCoroutine != null)
+        {
+            StopCoroutine(autoDismissCoroutine);
+            autoDismissCoroutine = null;
+        }
+
         if (newsCanvas != null)
         {
             Destroy(newsCanvas);
@@ -129,6 +152,29 @@ public class NewsSystem : MonoBehaviour
         }
         isShowing = false;
         OnNewsDismissed?.Invoke();
+    }
+
+    private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        if (!isShowing && newsCanvas == null)
+        {
+            return;
+        }
+
+        DismissNews();
+    }
+
+    private void Update()
+    {
+        if (!isShowing) return;
+
+        if (Input.GetKeyDown(KeyCode.Space) ||
+            Input.GetKeyDown(KeyCode.Return) ||
+            Input.GetKeyDown(KeyCode.KeypadEnter) ||
+            Input.GetKeyDown(KeyCode.Escape))
+        {
+            DismissNews();
+        }
     }
 
     // ========== 新闻生成 ==========
@@ -547,6 +593,9 @@ public class NewsSystem : MonoBehaviour
 
     private void BuildNewsUI(List<NewsItem> news, int year, int semester, int round)
     {
+        BuildFallbackNewsUI(news, year, semester, round);
+        return;
+
         if (newsCanvas != null) Destroy(newsCanvas);
 
         // Canvas
@@ -690,6 +739,8 @@ public class NewsSystem : MonoBehaviour
         btnTextRT.anchorMin = Vector2.zero;
         btnTextRT.anchorMax = Vector2.one;
         btnTextRT.sizeDelta = Vector2.zero;
+
+        DisablePassiveRaycasts(overlay.transform);
     }
 
     // ========== 新闻条目UI ==========
@@ -884,6 +935,237 @@ public class NewsSystem : MonoBehaviour
         TextMeshProUGUI tmp = obj.AddComponent<TextMeshProUGUI>();
         tmp.enableWordWrapping = true;
         tmp.overflowMode = TextOverflowModes.Overflow;
+        tmp.raycastTarget = false;
         return tmp;
+    }
+
+    private void BuildFallbackNewsUI(List<NewsItem> news, int year, int semester, int round)
+    {
+        if (newsCanvas != null)
+        {
+            Destroy(newsCanvas);
+        }
+
+        newsCanvas = new GameObject("NewsCanvas");
+        Canvas canvas = newsCanvas.AddComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        canvas.sortingOrder = 180;
+
+        CanvasScaler scaler = newsCanvas.AddComponent<CanvasScaler>();
+        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        scaler.referenceResolution = new Vector2(1920, 1080);
+        scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
+        scaler.matchWidthOrHeight = 0.5f;
+
+        newsCanvas.AddComponent<GraphicRaycaster>();
+
+        GameObject overlay = CreateUIElement("Overlay", newsCanvas.transform);
+        RectTransform overlayRT = overlay.GetComponent<RectTransform>();
+        overlayRT.anchorMin = Vector2.zero;
+        overlayRT.anchorMax = Vector2.one;
+        overlayRT.offsetMin = Vector2.zero;
+        overlayRT.offsetMax = Vector2.zero;
+
+        Image overlayImage = overlay.AddComponent<Image>();
+        overlayImage.color = new Color(0f, 0f, 0f, 0.6f);
+
+        Button overlayButton = overlay.AddComponent<Button>();
+        overlayButton.transition = Selectable.Transition.None;
+        overlayButton.targetGraphic = overlayImage;
+        overlayButton.onClick.AddListener(DismissNews);
+
+        GameObject paper = CreateUIElement("Paper", overlay.transform);
+        RectTransform paperRT = paper.GetComponent<RectTransform>();
+        paperRT.anchorMin = new Vector2(0.1f, 0.08f);
+        paperRT.anchorMax = new Vector2(0.9f, 0.92f);
+        paperRT.offsetMin = Vector2.zero;
+        paperRT.offsetMax = Vector2.zero;
+
+        Image paperImage = paper.AddComponent<Image>();
+        paperImage.color = new Color(0.95f, 0.93f, 0.88f, 1f);
+
+        Button paperButton = paper.AddComponent<Button>();
+        paperButton.transition = Selectable.Transition.None;
+        paperButton.targetGraphic = paperImage;
+        paperButton.onClick.AddListener(DismissNews);
+
+        GameObject header = CreateUIElement("Header", paper.transform);
+        RectTransform headerRT = header.GetComponent<RectTransform>();
+        headerRT.anchorMin = new Vector2(0f, 0.88f);
+        headerRT.anchorMax = new Vector2(1f, 1f);
+        headerRT.offsetMin = Vector2.zero;
+        headerRT.offsetMax = Vector2.zero;
+
+        Image headerImage = header.AddComponent<Image>();
+        headerImage.color = new Color(0.42f, 0.08f, 0.08f, 1f);
+        headerImage.raycastTarget = false;
+
+        TextMeshProUGUI headerText = CreateTMP(header.transform, "HeaderText");
+        headerText.text = $"南友青年报  第{GetIssueNumber(year, semester, round)}期\n{GetYearDisplayName(year)}{GetSemesterDisplayName(semester)} 第{round}回合";
+        headerText.fontSize = 28;
+        headerText.fontStyle = FontStyles.Bold;
+        headerText.color = Color.white;
+        headerText.alignment = TextAlignmentOptions.Center;
+        RectTransform headerTextRT = headerText.rectTransform;
+        headerTextRT.anchorMin = Vector2.zero;
+        headerTextRT.anchorMax = Vector2.one;
+        headerTextRT.offsetMin = Vector2.zero;
+        headerTextRT.offsetMax = Vector2.zero;
+
+        GameObject body = CreateUIElement("Body", paper.transform);
+        RectTransform bodyRT = body.GetComponent<RectTransform>();
+        bodyRT.anchorMin = new Vector2(0.05f, 0.16f);
+        bodyRT.anchorMax = new Vector2(0.95f, 0.84f);
+        bodyRT.offsetMin = Vector2.zero;
+        bodyRT.offsetMax = Vector2.zero;
+
+        Image bodyImage = body.AddComponent<Image>();
+        bodyImage.color = new Color(1f, 1f, 1f, 0.08f);
+        bodyImage.raycastTarget = false;
+
+        TextMeshProUGUI bodyText = CreateTMP(body.transform, "BodyText");
+        bodyText.text = BuildFallbackNewsText(news);
+        bodyText.fontSize = 20;
+        bodyText.color = new Color(0.18f, 0.18f, 0.18f, 1f);
+        bodyText.alignment = TextAlignmentOptions.TopLeft;
+        bodyText.enableWordWrapping = true;
+        bodyText.overflowMode = TextOverflowModes.Overflow;
+        RectTransform bodyTextRT = bodyText.rectTransform;
+        bodyTextRT.anchorMin = new Vector2(0.03f, 0.03f);
+        bodyTextRT.anchorMax = new Vector2(0.97f, 0.97f);
+        bodyTextRT.offsetMin = Vector2.zero;
+        bodyTextRT.offsetMax = Vector2.zero;
+
+        GameObject btnArea = CreateUIElement("ButtonArea", paper.transform);
+        RectTransform btnAreaRT = btnArea.GetComponent<RectTransform>();
+        btnAreaRT.anchorMin = new Vector2(0.3f, 0.03f);
+        btnAreaRT.anchorMax = new Vector2(0.7f, 0.11f);
+        btnAreaRT.offsetMin = Vector2.zero;
+        btnAreaRT.offsetMax = Vector2.zero;
+
+        Image btnBg = btnArea.AddComponent<Image>();
+        btnBg.color = new Color(0.68f, 0.44f, 0.08f, 1f);
+
+        Button btn = btnArea.AddComponent<Button>();
+        btn.transition = Selectable.Transition.ColorTint;
+        btn.targetGraphic = btnBg;
+        btn.onClick.AddListener(DismissNews);
+
+        TextMeshProUGUI btnText = CreateTMP(btnArea.transform, "BtnText");
+        btnText.text = "开始新的一天";
+        btnText.fontSize = 24;
+        btnText.fontStyle = FontStyles.Bold;
+        btnText.color = Color.white;
+        btnText.alignment = TextAlignmentOptions.Center;
+        RectTransform btnTextRT = btnText.rectTransform;
+        btnTextRT.anchorMin = Vector2.zero;
+        btnTextRT.anchorMax = Vector2.one;
+        btnTextRT.offsetMin = Vector2.zero;
+        btnTextRT.offsetMax = Vector2.zero;
+
+        if (autoDismissCoroutine != null)
+        {
+            StopCoroutine(autoDismissCoroutine);
+        }
+        autoDismissCoroutine = StartCoroutine(AutoDismissNewsAfterDelay(0.8f));
+    }
+
+    private IEnumerator AutoDismissNewsAfterDelay(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        autoDismissCoroutine = null;
+
+        if (isShowing)
+        {
+            DismissNews();
+        }
+    }
+
+    private string BuildFallbackNewsText(List<NewsItem> news)
+    {
+        if (news == null || news.Count == 0)
+        {
+            return "今日校园平静无事。\n\n点击下方按钮继续。";
+        }
+
+        System.Text.StringBuilder sb = new System.Text.StringBuilder();
+
+        int count = Mathf.Min(news.Count, 5);
+        for (int i = 0; i < count; i++)
+        {
+            NewsItem item = news[i];
+            string title = string.IsNullOrWhiteSpace(item.title) ? GetNewsTypeLabel(item.type) : item.title;
+            string content = string.IsNullOrWhiteSpace(item.content) ? "暂无内容" : item.content;
+
+            sb.Append(title);
+            sb.Append('\n');
+            sb.Append(content);
+            sb.Append("\n\n");
+        }
+
+        sb.Append("点击“开始新的一天”继续。");
+        return sb.ToString();
+    }
+
+    private string GetNewsTypeLabel(NewsType type)
+    {
+        switch (type)
+        {
+            case NewsType.Headline: return "头条";
+            case NewsType.Trending: return "热搜";
+            case NewsType.Gossip: return "树洞";
+            case NewsType.Notice: return "通知";
+            case NewsType.Ad: return "推广";
+            default: return "校园新闻";
+        }
+    }
+
+    private string GetYearDisplayName(int year)
+    {
+        switch (year)
+        {
+            case 1: return "大一";
+            case 2: return "大二";
+            case 3: return "大三";
+            case 4: return "大四";
+            default: return $"第{year}年";
+        }
+    }
+
+    private string GetSemesterDisplayName(int semester)
+    {
+        return semester == 1 ? "上学期" : "下学期";
+    }
+
+    private int GetIssueNumber(int year, int semester, int round)
+    {
+        return (year - 1) * 10 + (semester - 1) * 5 + round;
+    }
+
+    private void DisablePassiveRaycasts(Transform root)
+    {
+        if (root == null) return;
+
+        Graphic[] graphics = root.GetComponentsInChildren<Graphic>(true);
+        foreach (Graphic graphic in graphics)
+        {
+            if (graphic == null) continue;
+            if (graphic.GetComponent<Button>() != null) continue;
+            if (graphic.GetComponent<ScrollRect>() != null) continue;
+
+            graphic.raycastTarget = false;
+        }
+    }
+
+    private void EnsureEventSystem()
+    {
+        if (FindFirstObjectByType<EventSystem>() != null)
+        {
+            return;
+        }
+
+        GameObject eventSystemObj = new GameObject("EventSystem");
+        eventSystemObj.AddComponent<EventSystem>();
+        eventSystemObj.AddComponent<StandaloneInputModule>();
     }
 }
