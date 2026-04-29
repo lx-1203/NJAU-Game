@@ -6,6 +6,16 @@ using UnityEngine;
 [RequireComponent(typeof(SpriteRenderer))]
 public class PlayerController : MonoBehaviour
 {
+    private const int MaleGenderValue = 0;
+    private const int FemaleGenderValue = 1;
+
+    private const string MaleIdleResourcePath = "MalePlayerIdleFrames";
+    private const string MaleWalkResourcePath = "MalePlayerWalkFrames";
+    private const string MaleJumpResourcePath = "MalePlayerJumpFrames";
+    private const string FemaleIdleResourcePath = "PlayerIdleFrames";
+    private const string FemaleWalkResourcePath = "PlayerWalkFrames";
+    private const string FemaleJumpResourcePath = "PlayerJumpFrames";
+
     [Header("Movement")]
     [SerializeField] private float moveSpeed = 5f;
     [SerializeField] private float jumpForce = 10f;
@@ -45,6 +55,7 @@ public class PlayerController : MonoBehaviour
     private float interactionStopDistance;
     private float jumpHoldTimer;
     private bool rightMouseDrivingJump;
+    private bool spriteFacesLeftByDefault = true;
 
     private const string AnimIdle = "Idle";
     private const string AnimWalk = "Walk";
@@ -75,9 +86,18 @@ public class PlayerController : MonoBehaviour
 
     private void ConfigureAnimations()
     {
-        animator.LoadFromResources("PlayerIdleFrames", AnimIdle, idleFrameRate, true);
-        animator.LoadFromResources("PlayerWalkFrames", AnimWalk, walkFrameRate, true, true);
-        animator.LoadFromResources("PlayerJumpFrames", AnimJump, jumpFrameRate, false);
+        int gender = GameState.Instance != null ? GameState.Instance.PlayerGender : MaleGenderValue;
+        bool useFemaleResources = gender == FemaleGenderValue;
+        spriteFacesLeftByDefault = useFemaleResources;
+        bool reverseWalkFrames = useFemaleResources;
+
+        string idleResourcePath = useFemaleResources ? FemaleIdleResourcePath : MaleIdleResourcePath;
+        string walkResourcePath = useFemaleResources ? FemaleWalkResourcePath : MaleWalkResourcePath;
+        string jumpResourcePath = useFemaleResources ? FemaleJumpResourcePath : MaleJumpResourcePath;
+
+        animator.LoadFromResources(idleResourcePath, AnimIdle, idleFrameRate, true);
+        animator.LoadFromResources(walkResourcePath, AnimWalk, walkFrameRate, true, reverseWalkFrames);
+        animator.LoadFromResources(jumpResourcePath, AnimJump, jumpFrameRate, false);
 
         if (spriteRenderer != null && spriteRenderer.sprite != null)
         {
@@ -260,8 +280,9 @@ public class PlayerController : MonoBehaviour
 
         if (spriteRenderer != null)
         {
-            // This sprite set faces left by default, so facing right needs flipX.
-            spriteRenderer.flipX = shouldFaceRight;
+            spriteRenderer.flipX = spriteFacesLeftByDefault
+                ? shouldFaceRight
+                : !shouldFaceRight;
         }
     }
 

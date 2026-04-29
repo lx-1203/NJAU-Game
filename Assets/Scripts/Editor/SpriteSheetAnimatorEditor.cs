@@ -27,6 +27,9 @@ public class SpriteSheetAnimatorEditor : Editor
         EditorGUILayout.Space(5);
         EditorGUILayout.HelpBox(
             "Character animation frames are now loaded from Resources folders:\n" +
+            "Assets/Resources/MalePlayerIdleFrames\n" +
+            "Assets/Resources/MalePlayerWalkFrames\n" +
+            "Assets/Resources/MalePlayerJumpFrames\n" +
             "Assets/Resources/PlayerIdleFrames\n" +
             "Assets/Resources/PlayerWalkFrames\n" +
             "Assets/Resources/PlayerJumpFrames\n" +

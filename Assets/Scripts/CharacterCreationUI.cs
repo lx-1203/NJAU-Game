@@ -10,6 +10,9 @@ using System;
 /// </summary>
 public class CharacterCreationUI : MonoBehaviour
 {
+    private const string MalePreviewResource = "MalePlayerIdleFrames/IdleFrame_00";
+    private const string FemalePreviewResource = "PlayerSprite";
+
     public static CharacterCreationUI Instance { get; private set; }
     public static bool HasPendingCharacter { get; private set; }
     public static string PendingPlayerName { get; private set; } = "";
@@ -165,8 +168,8 @@ public class CharacterCreationUI : MonoBehaviour
 
         ToggleGroup tg = genderGroup.AddComponent<ToggleGroup>();
 
-        maleToggle = CreateGenderCard(genderGroup.transform, "男", "NPCSprite", tg, true, new Color(0.72f, 0.9f, 1f, 1f));
-        femaleToggle = CreateGenderCard(genderGroup.transform, "女", "PlayerSprite", tg, false, new Color(1f, 0.76f, 0.86f, 1f));
+        maleToggle = CreateGenderCard(genderGroup.transform, "男", MalePreviewResource, tg, true, new Color(0.72f, 0.9f, 1f, 1f));
+        femaleToggle = CreateGenderCard(genderGroup.transform, "女", FemalePreviewResource, tg, false, new Color(1f, 0.76f, 0.86f, 1f));
         maleCardBg = maleToggle.targetGraphic as Image;
         femaleCardBg = femaleToggle.targetGraphic as Image;
         maleToggle.onValueChanged.AddListener(_ => RefreshGenderCards());

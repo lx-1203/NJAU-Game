@@ -177,7 +177,8 @@ public class InfoPanelManager : MonoBehaviour
 
         // 基础信息
         builder.txtPlayerName.text = $"姓名：{gs.PlayerName}";
-        builder.txtPlayerInfo.text = $"性别：{gs.PlayerGender}    专业：{gs.PlayerMajor}";
+        string genderDisplay = gs.PlayerGender == 1 ? "女" : "男";
+        builder.txtPlayerInfo.text = $"性别：{genderDisplay}    专业：{gs.PlayerMajor}";
 
         int age = 18 + (gs.CurrentYear - 1);
         builder.txtTimeInfo.text = $"{gs.GetTimeDescription()}    年龄：{age}岁";
