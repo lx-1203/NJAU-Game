@@ -1,0 +1,19 @@
+--- Assets/Scripts/HUDManager.cs
++++ Assets/Scripts/HUDManager.cs
+@@ -599,6 +599,15 @@
+             Button btn = CreateDynamicActionButton(actionRow, action);
+             dynamicActionButtons.Add(btn);
+         }
++
++        // 添加兼职实习按钮
++        if (JobSelectionUI.Instance != null)
++        {
++            GameObject jobBtnObj = JobSelectionUI.AddJobButton(actionRow);
++            if (jobBtnObj != null)
++            {
++                dynamicActionButtons.Add(jobBtnObj.GetComponent<Button>());
++            }
++        }
+     }
+ 
+     private void ClearDynamicButtons()

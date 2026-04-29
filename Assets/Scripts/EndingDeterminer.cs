@@ -425,6 +425,8 @@ public class EndingDeterminer : MonoBehaviour
         // 总回合数
         result.totalRounds = CalculateTotalRounds();
 
+        TitleScreenManager.UnlockGalleryEnding(ending.id, ending.cgId);
+
         return result;
     }
 

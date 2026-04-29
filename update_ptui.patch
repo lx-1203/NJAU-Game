@@ -1,0 +1,17 @@
+--- Assets/Scripts/PhysicalTestUI.cs
++++ Assets/Scripts/PhysicalTestUI.cs
+@@ -433,6 +433,7 @@
+         resultTotalText.color = result.totalScore >= 60 ? TextGold : TextFail;
+ 
+         // 评级本地化映射
+         string gradeStr = result.grade;
+         switch (result.grade)
+@@ -448,6 +449,7 @@
+     public void Hide()
+     {
+         if (testPanel != null) testPanel.SetActive(false);
+         if (resultPanel != null) resultPanel.SetActive(false);
++        OnUIClosed?.Invoke();
+     }
+ 
+     // ========== 工具方法 ==========

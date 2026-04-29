@@ -54,6 +54,8 @@ public class PhysicalTestUI : MonoBehaviour
     private TextMeshProUGUI resultJumpText;
     private TextMeshProUGUI resultTotalText;
     private TextMeshProUGUI resultGradeText;
+    private Button startTestButton;
+    private Button resultConfirmButton;
 
     // 当前选择的策略 3项目 x 3阶段 = 9
     private TestStrategy[] currentStrategies = new TestStrategy[9];
@@ -94,6 +96,21 @@ public class PhysicalTestUI : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.Escape))
         {
             Hide();
+            return;
+        }
+
+        if (!UIInputHelper.IsConfirmPressed())
+        {
+            return;
+        }
+
+        if (resultPanel != null && resultPanel.activeSelf)
+        {
+            UIInputHelper.TryClick(resultConfirmButton);
+        }
+        else if (testPanel != null && testPanel.activeSelf)
+        {
+            UIInputHelper.TryClick(startTestButton);
         }
     }
 
@@ -129,6 +146,7 @@ public class PhysicalTestUI : MonoBehaviour
 
         testPanel.SetActive(true);
         resultPanel.SetActive(false);
+        UIInputHelper.FocusSelectable(startTestButton);
     }
 
     public void Hide()
@@ -209,6 +227,7 @@ public class PhysicalTestUI : MonoBehaviour
         Button startBtn = CreateButton("StartBtn", footerArea.transform, "开始测试",
             new Vector2(0.35f, 0.2f), new Vector2(0.65f, 0.8f), ConfirmBtnColor);
         startBtn.onClick.AddListener(OnStartTestClicked);
+        startTestButton = startBtn;
     }
 
     private void BuildTestItemCard(Transform parent, string title, int startIndex, string[] phaseNames)
@@ -370,6 +389,7 @@ public class PhysicalTestUI : MonoBehaviour
         Button confirmBtn = CreateButton("ConfirmBtn", resultPanel.transform, "确认",
             new Vector2(0.35f, 0.05f), new Vector2(0.65f, 0.15f), ConfirmBtnColor);
         confirmBtn.onClick.AddListener(Hide);
+        resultConfirmButton = confirmBtn;
     }
 
     private TextMeshProUGUI CreateScoreRow(Transform parent, string label)
@@ -489,6 +509,7 @@ public class PhysicalTestUI : MonoBehaviour
         resultGradeText.text = gradeStr;
 
         resultPanel.SetActive(true);
+        UIInputHelper.FocusSelectable(resultConfirmButton);
     }
 
     // ========== 工具方法 ==========

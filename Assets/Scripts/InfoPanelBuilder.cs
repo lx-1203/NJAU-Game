@@ -270,7 +270,7 @@ public class InfoPanelBuilder : MonoBehaviour
         txtPlayerName = CreateTMPText("PlayerName", section.transform, "姓名：XXX", 18f, TextWhite,
             TextAlignmentOptions.Left, new Vector2(1150, 30));
 
-        txtPlayerInfo = CreateTMPText("PlayerInfo", section.transform, "性别：男    专业：生物科学", 16f, TextGray,
+        txtPlayerInfo = CreateTMPText("PlayerInfo", section.transform, "性别：男    专业：生物科学专业", 16f, TextGray,
             TextAlignmentOptions.Left, new Vector2(1150, 25));
 
         txtTimeInfo = CreateTMPText("TimeInfo", section.transform, "大一上 · 回合2 · 10月    年龄：18岁", 16f, TextGray,
@@ -723,4 +723,3 @@ public class InfoPanelBuilder : MonoBehaviour
         img.color = SeparatorColor;
     }
 }
-

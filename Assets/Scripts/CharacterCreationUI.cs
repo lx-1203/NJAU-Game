@@ -11,6 +11,10 @@ using System;
 public class CharacterCreationUI : MonoBehaviour
 {
     public static CharacterCreationUI Instance { get; private set; }
+    public static bool HasPendingCharacter { get; private set; }
+    public static string PendingPlayerName { get; private set; } = "";
+    public static int PendingPlayerGender { get; private set; } = 0;
+    public static string PendingPlayerMajor { get; private set; } = "";
 
     public event Action OnCreationComplete;
 
@@ -20,6 +24,8 @@ public class CharacterCreationUI : MonoBehaviour
     private Toggle femaleToggle;
     private TMP_Dropdown majorDropdown;
     private Button confirmBtn;
+    private Image maleCardBg;
+    private Image femaleCardBg;
 
     private static readonly Color BgColor = new Color(0.12f, 0.12f, 0.18f, 0.95f);
     private static readonly Color InputBgColor = new Color(0.2f, 0.2f, 0.25f, 1f);
@@ -71,7 +77,7 @@ public class CharacterCreationUI : MonoBehaviour
         RectTransform containerRt = containerObj.GetComponent<RectTransform>();
         containerRt.anchorMin = new Vector2(0.5f, 0.5f);
         containerRt.anchorMax = new Vector2(0.5f, 0.5f);
-        containerRt.sizeDelta = new Vector2(600, 500);
+        containerRt.sizeDelta = new Vector2(900, 700);
         containerRt.anchoredPosition = Vector2.zero;
         Image containerImg = containerObj.AddComponent<Image>();
         containerImg.color = new Color(0.1f, 0.1f, 0.15f, 1f);
@@ -150,19 +156,22 @@ public class CharacterCreationUI : MonoBehaviour
         // 性别选择组
         GameObject genderGroup = new GameObject("GenderGroup", typeof(RectTransform));
         genderGroup.transform.SetParent(containerObj.transform, false);
-        genderGroup.GetComponent<RectTransform>().sizeDelta = new Vector2(0, 50);
+        genderGroup.GetComponent<RectTransform>().sizeDelta = new Vector2(0, 330);
         HorizontalLayoutGroup hlgGender = genderGroup.AddComponent<HorizontalLayoutGroup>();
-        hlgGender.spacing = 20;
-
-        TextMeshProUGUI genderLabel = CreateTMP(genderGroup.transform, "Label", "性别:");
-        genderLabel.fontSize = 24;
-        genderLabel.alignment = TextAlignmentOptions.MidlineRight;
-        genderLabel.GetComponent<RectTransform>().sizeDelta = new Vector2(100, 50);
+        hlgGender.spacing = 28;
+        hlgGender.childAlignment = TextAnchor.MiddleCenter;
+        hlgGender.childControlWidth = false;
+        hlgGender.childControlHeight = false;
 
         ToggleGroup tg = genderGroup.AddComponent<ToggleGroup>();
 
-        maleToggle = CreateToggle(genderGroup.transform, "男", tg, true);
-        femaleToggle = CreateToggle(genderGroup.transform, "女", tg, false);
+        maleToggle = CreateGenderCard(genderGroup.transform, "男", "NPCSprite", tg, true, new Color(0.72f, 0.9f, 1f, 1f));
+        femaleToggle = CreateGenderCard(genderGroup.transform, "女", "PlayerSprite", tg, false, new Color(1f, 0.76f, 0.86f, 1f));
+        maleCardBg = maleToggle.targetGraphic as Image;
+        femaleCardBg = femaleToggle.targetGraphic as Image;
+        maleToggle.onValueChanged.AddListener(_ => RefreshGenderCards());
+        femaleToggle.onValueChanged.AddListener(_ => RefreshGenderCards());
+        RefreshGenderCards();
 
         // 专业选择组
         GameObject majorGroup = new GameObject("MajorGroup", typeof(RectTransform));
@@ -183,7 +192,7 @@ public class CharacterCreationUI : MonoBehaviour
         dropdownBg.color = InputBgColor;
         majorDropdown = dropdownObj.AddComponent<TMP_Dropdown>();
 
-        TextMeshProUGUI dpLabel = CreateTMP(dropdownObj.transform, "Label", "生物科学");
+        TextMeshProUGUI dpLabel = CreateTMP(dropdownObj.transform, "Label", "生物科学专业");
         dpLabel.fontSize = 24;
         dpLabel.alignment = TextAlignmentOptions.MidlineLeft;
         RectTransform dpLabelRt = dpLabel.GetComponent<RectTransform>();
@@ -271,11 +280,7 @@ public class CharacterCreationUI : MonoBehaviour
         majorDropdown.targetGraphic = dropdownBg;
         majorDropdown.options = new List<TMP_Dropdown.OptionData>
         {
-            new TMP_Dropdown.OptionData("生物科学"),
-            new TMP_Dropdown.OptionData("农学"),
-            new TMP_Dropdown.OptionData("动物医学"),
-            new TMP_Dropdown.OptionData("计算机科学"),
-            new TMP_Dropdown.OptionData("汉语言文学")
+            new TMP_Dropdown.OptionData("生物科学专业")
         };
 
         // 确认按钮
@@ -297,6 +302,94 @@ public class CharacterCreationUI : MonoBehaviour
         btnTextRt.anchorMax = Vector2.one;
         btnTextRt.offsetMin = Vector2.zero;
         btnTextRt.offsetMax = Vector2.zero;
+
+        UIInputHelper.FocusSelectable(confirmBtn);
+    }
+
+    private Toggle CreateGenderCard(Transform parent, string label, string spriteResource, ToggleGroup group, bool isOn, Color accentColor)
+    {
+        GameObject cardObj = new GameObject($"GenderCard_{label}", typeof(RectTransform));
+        cardObj.transform.SetParent(parent, false);
+        RectTransform cardRt = cardObj.GetComponent<RectTransform>();
+        cardRt.sizeDelta = new Vector2(280, 320);
+
+        Image cardBg = cardObj.AddComponent<Image>();
+        cardBg.color = new Color(0.18f, 0.18f, 0.24f, 1f);
+
+        Toggle toggle = cardObj.AddComponent<Toggle>();
+        toggle.group = group;
+        toggle.isOn = isOn;
+        toggle.targetGraphic = cardBg;
+
+        GameObject photoObj = new GameObject("Preview", typeof(RectTransform));
+        photoObj.transform.SetParent(cardObj.transform, false);
+        RectTransform photoRt = photoObj.GetComponent<RectTransform>();
+        photoRt.anchorMin = new Vector2(0.5f, 1f);
+        photoRt.anchorMax = new Vector2(0.5f, 1f);
+        photoRt.pivot = new Vector2(0.5f, 1f);
+        photoRt.sizeDelta = new Vector2(220, 235);
+        photoRt.anchoredPosition = new Vector2(0, -24);
+        Image photoBg = photoObj.AddComponent<Image>();
+        photoBg.color = accentColor;
+
+        GameObject portraitObj = new GameObject("Portrait", typeof(RectTransform));
+        portraitObj.transform.SetParent(photoObj.transform, false);
+        RectTransform portraitRt = portraitObj.GetComponent<RectTransform>();
+        portraitRt.anchorMin = Vector2.zero;
+        portraitRt.anchorMax = Vector2.one;
+        portraitRt.offsetMin = new Vector2(18, 12);
+        portraitRt.offsetMax = new Vector2(-18, -12);
+        Image portraitImg = portraitObj.AddComponent<Image>();
+        portraitImg.sprite = Resources.Load<Sprite>(spriteResource);
+        portraitImg.preserveAspect = true;
+        portraitImg.color = Color.white;
+
+        GameObject checkObj = new GameObject("Checkmark", typeof(RectTransform));
+        checkObj.transform.SetParent(cardObj.transform, false);
+        RectTransform checkRt = checkObj.GetComponent<RectTransform>();
+        checkRt.anchorMin = new Vector2(1, 1);
+        checkRt.anchorMax = new Vector2(1, 1);
+        checkRt.pivot = new Vector2(1, 1);
+        checkRt.sizeDelta = new Vector2(48, 48);
+        checkRt.anchoredPosition = new Vector2(-14, -14);
+        TextMeshProUGUI checkText = checkObj.AddComponent<TextMeshProUGUI>();
+        checkText.text = "✓";
+        checkText.fontSize = 38;
+        checkText.fontStyle = FontStyles.Bold;
+        checkText.alignment = TextAlignmentOptions.Center;
+        checkText.color = new Color(1f, 0.85f, 0.3f);
+        toggle.graphic = checkText;
+
+        TextMeshProUGUI text = CreateTMP(cardObj.transform, "Label", label);
+        text.fontSize = 28;
+        text.fontStyle = FontStyles.Bold;
+        text.alignment = TextAlignmentOptions.Center;
+        text.color = Color.white;
+        RectTransform textRt = text.GetComponent<RectTransform>();
+        textRt.anchorMin = new Vector2(0, 0);
+        textRt.anchorMax = new Vector2(1, 0);
+        textRt.pivot = new Vector2(0.5f, 0);
+        textRt.sizeDelta = new Vector2(0, 58);
+        textRt.anchoredPosition = Vector2.zero;
+
+        return toggle;
+    }
+
+    private void RefreshGenderCards()
+    {
+        if (maleCardBg != null)
+        {
+            maleCardBg.color = maleToggle != null && maleToggle.isOn
+                ? new Color(0.32f, 0.5f, 0.62f, 1f)
+                : new Color(0.18f, 0.18f, 0.24f, 1f);
+        }
+
+        if (femaleCardBg != null)
+        {
+            femaleCardBg.color = femaleToggle != null && femaleToggle.isOn
+                ? new Color(0.58f, 0.34f, 0.46f, 1f)
+                : new Color(0.18f, 0.18f, 0.24f, 1f);
+        }
     }
 
     private Toggle CreateToggle(Transform parent, string label, ToggleGroup group, bool isOn)
@@ -359,13 +452,31 @@ public class CharacterCreationUI : MonoBehaviour
         confirmBtn.interactable = !string.IsNullOrWhiteSpace(text);
     }
 
+    private void Update()
+    {
+        if (canvasObj == null || !UIInputHelper.IsConfirmPressed())
+        {
+            return;
+        }
+
+        if (confirmBtn != null && confirmBtn.interactable)
+        {
+            OnConfirmClicked();
+        }
+    }
+
     private void OnConfirmClicked()
     {
+        PendingPlayerName = nameInput.text.Trim();
+        PendingPlayerGender = femaleToggle.isOn ? 1 : 0;
+        PendingPlayerMajor = majorDropdown.options[majorDropdown.value].text;
+        HasPendingCharacter = true;
+
         if (GameState.Instance != null)
         {
-            GameState.Instance.PlayerName = nameInput.text.Trim();
-            GameState.Instance.PlayerGender = femaleToggle.isOn ? 1 : 0;
-            GameState.Instance.PlayerMajor = majorDropdown.options[majorDropdown.value].text;
+            GameState.Instance.PlayerName = PendingPlayerName;
+            GameState.Instance.PlayerGender = PendingPlayerGender;
+            GameState.Instance.PlayerMajor = PendingPlayerMajor;
 
             Debug.Log($"[CharacterCreation] 角色创建完成: {GameState.Instance.PlayerName}, {(GameState.Instance.PlayerGender == 0 ? "男" : "女")}, {GameState.Instance.PlayerMajor}");
         }

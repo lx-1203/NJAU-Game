@@ -61,6 +61,14 @@ public class ExamUIManager : MonoBehaviour
     /// <summary>是否正在进行考试</summary>
     public bool IsExamActive => currentState != ExamUIState.Idle && currentState != ExamUIState.Done;
 
+    private void Update()
+    {
+        if (currentState == ExamUIState.Scorecard && UIInputHelper.IsConfirmPressed())
+        {
+            UIInputHelper.TryClick(builder != null ? builder.confirmButton : null);
+        }
+    }
+
     // ========== 考试序列控制 ==========
 
     /// <summary>
@@ -484,6 +492,7 @@ public class ExamUIManager : MonoBehaviour
         // 绑定确认按钮
         builder.confirmButton.onClick.RemoveAllListeners();
         builder.confirmButton.onClick.AddListener(HandleConfirmClick);
+        UIInputHelper.FocusSelectable(builder.confirmButton);
 
         builder.scorecardPanel.SetActive(true);
     }

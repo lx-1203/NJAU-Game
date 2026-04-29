@@ -1,0 +1,58 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="True">
+    <Style src="Components/Common.uss" />
+    <Style src="MCPSetupWindow.uss" />
+    <ui:ScrollView name="root-container" mode="Vertical">
+        <ui:Label text="MCP for Unity 设置" name="title" class="title" />
+
+        <ui:VisualElement class="section">
+            <ui:Label text="系统要求" class="section-title" />
+            <ui:VisualElement class="section-content">
+                <ui:Label text="MCP for Unity 需要 Python 3.10+ 和 UV 包管理器才能运行。" class="help-text description-text" />
+
+                <!-- 依赖状态 -->
+                <ui:VisualElement name="dependency-list">
+                    <!-- Python 状态 -->
+                    <ui:VisualElement class="dependency-item">
+                        <ui:VisualElement class="dependency-row">
+                            <ui:Label text="Python" class="dependency-name" />
+                            <ui:Label name="python-version" text="..." class="setting-value" />
+                            <ui:VisualElement name="python-indicator" class="status-indicator-small" />
+                        </ui:VisualElement>
+                        <ui:Label name="python-details" class="help-text dependency-details" />
+                    </ui:VisualElement>
+
+                    <!-- UV 状态 -->
+                    <ui:VisualElement class="dependency-item">
+                        <ui:VisualElement class="dependency-row">
+                            <ui:Label text="UV 包管理器" class="dependency-name" />
+                            <ui:Label name="uv-version" text="..." class="setting-value" />
+                            <ui:VisualElement name="uv-indicator" class="status-indicator-small" />
+                        </ui:VisualElement>
+                        <ui:Label name="uv-details" class="help-text dependency-details" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+
+                <!-- 总体状态信息 -->
+                <ui:VisualElement name="status-message-container">
+                    <ui:Label name="status-message" class="help-text" />
+                </ui:VisualElement>
+
+                <!-- 安装说明（缺少依赖时显示） -->
+                <ui:VisualElement name="installation-section" class="installation-container">
+                    <ui:Label text="安装说明" class="installation-title" />
+                    <ui:Label name="installation-instructions" class="help-text" />
+                    <ui:VisualElement class="install-links-row">
+                        <ui:Button name="open-python-link-button" text="打开 Python 安装页面" class="secondary-button install-link-button" />
+                        <ui:Button name="open-uv-link-button" text="打开 UV 安装页面" class="secondary-button install-link-button" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+            </ui:VisualElement>
+        </ui:VisualElement>
+
+        <!-- 操作按钮 -->
+        <ui:VisualElement class="button-container">
+            <ui:Button name="refresh-button" text="刷新" class="setup-button secondary-button" />
+            <ui:Button name="done-button" text="完成" class="setup-button action-button" />
+        </ui:VisualElement>
+    </ui:ScrollView>
+</ui:UXML>

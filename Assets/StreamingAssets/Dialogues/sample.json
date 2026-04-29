@@ -4,7 +4,7 @@
         {
             "id": "D001",
             "speaker": "张明",
-            "portrait": "NPCSprite",
+            "portrait": "",
             "content": "嘿，你来了！最近学习怎么样？",
             "next": "D002",
             "choices": null
@@ -28,7 +28,7 @@
         {
             "id": "D004",
             "speaker": "张明",
-            "portrait": "NPCSprite",
+            "portrait": "",
             "content": "对了，我正好想问你——要不要一起去图书馆复习？期末考试快到了。",
             "next": null,
             "choices": [
@@ -78,7 +78,7 @@
         {
             "id": "D005",
             "speaker": "张明",
-            "portrait": "NPCSprite",
+            "portrait": "",
             "content": "太好了！走吧，我知道图书馆三楼有个安静的角落。",
             "next": "D009",
             "choices": null
@@ -86,7 +86,7 @@
         {
             "id": "D006",
             "speaker": "张明",
-            "portrait": "NPCSprite",
+            "portrait": "",
             "content": "也好，你学习一向认真。那我就不打扰你了，加油！",
             "next": "D010",
             "choices": null
@@ -94,7 +94,7 @@
         {
             "id": "D007",
             "speaker": "张明",
-            "portrait": "NPCSprite",
+            "portrait": "",
             "content": "真的吗？太够意思了！走，去食堂旁边那家新开的面馆！",
             "next": "D010",
             "choices": null
@@ -102,7 +102,7 @@
         {
             "id": "D008",
             "speaker": "张明",
-            "portrait": "NPCSprite",
+            "portrait": "",
             "content": "好吧，那你忙你的。有空再聊！",
             "next": null,
             "choices": null

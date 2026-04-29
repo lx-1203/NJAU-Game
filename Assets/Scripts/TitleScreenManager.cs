@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.Video;
 using System.Collections;
+using System.Collections.Generic;
 using System;
 using System.IO;
 using TMPro;
@@ -24,6 +25,9 @@ public class TitleScreenManager : MonoBehaviour
     [Tooltip("开始游戏时进入的场景名称")]
     public string gameSceneName = "GameScene";
 
+    [Tooltip("新游戏进入 GameScene 前是否播放开场校园叙事")]
+    public bool playOpeningStoryOnNewGame = true;
+
     [Header("颜色配置（可选覆盖）")]
     [Tooltip("如果为空则使用内置默认色")]
     public UILayoutConfig layoutConfig;
@@ -43,6 +47,8 @@ public class TitleScreenManager : MonoBehaviour
     private const string MusicVolumeKey = "MusicVolume";
     private const string SfxVolumeKey = "SFXVolume";
     private const string FullscreenKey = "Fullscreen";
+    private const string GalleryUnlockedEndingsKey = "Gallery_UnlockedEndings";
+    private const string GalleryUnlockedCgsKey = "Gallery_UnlockedCGs";
 
     // ===== 运行时引用 =====
     private Canvas canvas;
@@ -81,6 +87,62 @@ public class TitleScreenManager : MonoBehaviour
     private Button cgButton;
     private Button creditsButton;
 
+    // ===== 制作人面板 =====
+    private GameObject creditsPanel;
+    private CanvasGroup creditsPanelGroup;
+    private RectTransform creditsListContent;
+    private RectTransform creditsTagsRoot;
+    private TextMeshProUGUI creditsDetailTitle;
+    private TextMeshProUGUI creditsDetailRole;
+    private TextMeshProUGUI creditsDetailDescription;
+    private readonly List<Button> creditsEntryButtons = new List<Button>();
+    private int currentCreditsEntryIndex = 0;
+
+    // ===== 教程面板 =====
+    private GameObject tutorialPanel;
+    private CanvasGroup tutorialPanelGroup;
+    private RectTransform tutorialItemListContent;
+    private RectTransform tutorialDetailContent;
+    private TextMeshProUGUI tutorialSectionTitle;
+    private TextMeshProUGUI tutorialEntryTitle;
+    private TextMeshProUGUI tutorialEntryDescription;
+    private readonly List<Button> tutorialCategoryButtons = new List<Button>();
+    private readonly List<Button> tutorialEntryButtons = new List<Button>();
+    private int currentTutorialCategoryIndex = 0;
+    private int currentTutorialEntryIndex = 0;
+
+    // ===== 更新日志面板 =====
+    private GameObject changelogPanel;
+    private CanvasGroup changelogPanelGroup;
+    private RectTransform changelogContent;
+    private Button changelogButton;
+
+    // ===== 游戏CG / 结局面板 =====
+    private GameObject galleryPanel;
+    private CanvasGroup galleryPanelGroup;
+    private RectTransform galleryGridContent;
+    private TextMeshProUGUI gallerySectionTitle;
+    private TextMeshProUGUI galleryPreviewTitle;
+    private TextMeshProUGUI galleryPreviewSubtitle;
+    private TextMeshProUGUI galleryPreviewDescription;
+    private TextMeshProUGUI galleryCounterText;
+    private Image galleryPreviewImage;
+    private TextMeshProUGUI galleryPreviewImageLabel;
+    private Button galleryOpenButton;
+    private readonly List<Button> galleryTabButtons = new List<Button>();
+    private readonly List<Button> galleryEntryButtons = new List<Button>();
+    private readonly List<GalleryCategory> galleryCategories = new List<GalleryCategory>();
+    private int currentGalleryCategoryIndex = 0;
+    private int currentGalleryEntryIndex = 0;
+
+    private GameObject galleryViewerPanel;
+    private CanvasGroup galleryViewerGroup;
+    private Image galleryViewerImage;
+    private TextMeshProUGUI galleryViewerImageLabel;
+    private TextMeshProUGUI galleryViewerTitle;
+    private TextMeshProUGUI galleryViewerSubtitle;
+    private TextMeshProUGUI galleryViewerDescription;
+
     // ===== 版本号 =====
     private TMP_Text versionText;
 
@@ -91,6 +153,133 @@ public class TitleScreenManager : MonoBehaviour
     private Color secondaryColor;
     private Color panelColor;
     private Color subPanelColor;
+
+    private static readonly Color TutorialBackdropColor = new Color(0.17f, 0.14f, 0.12f, 0.9f);
+    private static readonly Color TutorialFrameColor = new Color(0.73f, 0.67f, 0.61f, 0.98f);
+    private static readonly Color TutorialPaperColor = new Color(0.975f, 0.955f, 0.915f, 1f);
+    private static readonly Color TutorialPaperLineColor = new Color(0.89f, 0.84f, 0.75f, 0.33f);
+    private static readonly Color TutorialAccentColor = new Color(0.61f, 0.39f, 0.22f, 1f);
+    private static readonly Color TutorialHighlightColor = new Color(0.98f, 0.92f, 0.69f, 1f);
+    private static readonly Color TutorialTextColor = new Color(0.38f, 0.23f, 0.14f, 1f);
+    private static readonly Color TutorialMutedTextColor = new Color(0.52f, 0.4f, 0.3f, 0.95f);
+    private static readonly Color TutorialListHoverColor = new Color(1f, 0.95f, 0.78f, 0.7f);
+    private static readonly Color TutorialListNormalColor = new Color(1f, 1f, 1f, 0f);
+
+    private sealed class TutorialEntry
+    {
+        public string Title;
+        public string Lead;
+        public string Description;
+        public string[] Highlights;
+
+        public TutorialEntry(string title, string lead, string description, params string[] highlights)
+        {
+            Title = title;
+            Lead = lead;
+            Description = description;
+            Highlights = highlights ?? Array.Empty<string>();
+        }
+    }
+
+    private sealed class TutorialCategory
+    {
+        public string Name;
+        public List<TutorialEntry> Entries;
+
+        public TutorialCategory(string name, params TutorialEntry[] entries)
+        {
+            Name = name;
+            Entries = new List<TutorialEntry>(entries ?? Array.Empty<TutorialEntry>());
+        }
+    }
+
+    private sealed class GalleryEntry
+    {
+        public string Id;
+        public string Title;
+        public string Subtitle;
+        public string Description;
+        public string ResourceKey;
+        public string Badge;
+        public bool IsUnlocked;
+    }
+
+    private sealed class GalleryCategory
+    {
+        public string Name;
+        public List<GalleryEntry> Entries = new List<GalleryEntry>();
+    }
+
+    private sealed class CreditsEntry
+    {
+        public string Title;
+        public string Role;
+        public string Description;
+        public string[] Tags;
+
+        public CreditsEntry(string title, string role, string description, params string[] tags)
+        {
+            Title = title;
+            Role = role;
+            Description = description;
+            Tags = tags ?? Array.Empty<string>();
+        }
+    }
+
+    private readonly List<CreditsEntry> creditsEntries = new List<CreditsEntry>
+    {
+        new CreditsEntry("总制作", "项目策划 / 系统统筹", "负责《钟山下》的整体玩法框架、大学生活循环、系统节奏与内容整合。", "玩法框架", "系统节奏", "内容整合"),
+        new CreditsEntry("程序实现", "Unity / 纯代码 UI / 存档系统", "实现标题界面、HUD、任务、成就、考试、社团、恋爱、事件、存档等核心系统，并保持各模块可独立维护。", "Unity", "C#", "模块化"),
+        new CreditsEntry("美术与界面", "视觉风格 / 界面布局", "以手账、纸张、校园笔记为主视觉参考，统一首页入口、教程、成就、CG 与制作人界面的阅读体验。", "手账风", "纸张界面", "校园感"),
+        new CreditsEntry("文本与世界观", "剧情设定 / 人物关系", "围绕大学四年成长主题，搭建人物关系、校园事件、结局路线与不同价值取舍。", "大学四年", "人物关系", "多结局"),
+        new CreditsEntry("特别鸣谢", "测试 / 反馈 / 灵感", "感谢所有参与测试、提供反馈、提出想法与陪伴项目迭代的人。", "测试反馈", "灵感来源", "持续迭代")
+    };
+
+    private readonly List<TutorialCategory> tutorialCategories = new List<TutorialCategory>
+    {
+        new TutorialCategory("属性",
+            new TutorialEntry("智力", "决定课程学习、考试通过率与部分学术事件。", "智力越高，学习类行动带来的成长越稳定，也更容易解锁偏学术路线的内容。", "课程成绩", "考试修正", "学术事件"),
+            new TutorialEntry("情商", "影响社交对话、关系推进与部分组织活动。", "情商主要作用在角色互动和分支选择，很多人物线与组织机会都会检查这项数值。", "社交判定", "人物剧情", "组织互动"),
+            new TutorialEntry("体魄", "决定体测、运动、部分兼职与高压状态下的稳定性。", "体魄不仅决定运动收益，也会影响你在高压力阶段是否容易崩盘。", "体测表现", "运动收益", "抗压稳定"),
+            new TutorialEntry("精力", "每天可支配行动能力的直接体现。", "精力不足会让你无法连续高强度安排学习、社交和兼职，需要用休息和节奏管理来维持。", "行动安排", "休息恢复", "效率上限"),
+            new TutorialEntry("零花钱", "覆盖消费、部分活动门槛与经济路线发展。", "钱不只是资源，还会影响很多机会是否出现。部分事件能让你快速赚钱，也可能快速负债。", "商店消费", "活动门槛", "债务风险"),
+            new TutorialEntry("成就", "记录阶段性达成，用来回看你的关键进展。", "成就既是收藏，也经常是路线完成度的旁证，能帮助你判断当前周目的发展方向。", "路线进度", "关键节点", "收集目标")
+        ),
+        new TutorialCategory("机制",
+            new TutorialEntry("行动回合", "每个阶段都有固定行动次数。", "学习、社交、兼职、探索都会消耗回合，首页教程建议你优先熟悉每回合的机会成本。", "阶段规划", "行动消耗", "路线节奏"),
+            new TutorialEntry("课程与考试", "课程成绩会在学期末集中结算。", "平时学习、专项训练和临时抱佛脚都会进入考试判定，但收益和风险不同。", "平时积累", "考试结算", "高风险补救"),
+            new TutorialEntry("压力与心情", "长期失衡会拖慢成长，甚至触发负面链条。", "不要只追单一属性。高压低心情会降低稳定性，很多负面事件都从这里开始。", "状态管理", "负面事件", "恢复手段")
+        ),
+        new TutorialCategory("方法论",
+            new TutorialEntry("前期思路", "先建立一条稳定增长线，再考虑扩张。", "开局推荐先确定 1 到 2 个主目标，比如学业线加社交线，避免什么都做导致资源分散。", "主线选择", "资源集中", "前期稳态"),
+            new TutorialEntry("中期转向", "根据事件、人物和经济情况调整路径。", "中期最容易因为新机会而分心。教程建议只在回报明显超过当前路线时再切换。", "机会判断", "路径切换", "收益比较"),
+            new TutorialEntry("补短板", "不要让明显短板卡住关键节点。", "某些系统会检查最低门槛。与其追求极致数值，不如保证关键属性不过低。", "门槛检查", "低风险推进", "容错空间")
+        ),
+        new TutorialCategory("人格",
+            new TutorialEntry("性格取向", "你的选择会逐步塑造角色气质。", "很多选项不会立刻给出巨大收益，但会持续影响人物评价、事件风格和后续分支。", "人物印象", "分支语气", "长期累积"),
+            new TutorialEntry("动力与热情", "决定你能否持续推进长期目标。", "短期高收益不一定适合长期路线。热情和动力更像耐久值，决定你能走多远。", "长期路线", "持续投入", "发展韧性")
+        ),
+        new TutorialCategory("专长",
+            new TutorialEntry("能力专精", "围绕一项主属性构筑专长最有效。", "专长不是平均加点，而是把行动、人物与资源集中到一条能持续放大的线。", "属性联动", "路线强化", "收益放大"),
+            new TutorialEntry("跨界组合", "少量副属性能显著提高路线手感。", "比如学业线搭配一点情商，能让许多人物事件更顺；兼职线搭配体魄，容错更高。", "副属性支持", "事件兼容", "容错增强")
+        ),
+        new TutorialCategory("人物",
+            new TutorialEntry("角色关系", "人物不只是剧情对象，也是资源与信息来源。", "关系推进后，很多人物会带来独有行动、特殊事件或成长捷径。", "专属事件", "隐藏机会", "互动收益"),
+            new TutorialEntry("好感管理", "不要只看短期涨幅，要看后续解锁。", "有些人物前期收益不高，但后续路线价值很大。教程面板建议优先观察他们能解锁什么。", "解锁条件", "长期收益", "路线价值")
+        ),
+        new TutorialCategory("职业",
+            new TutorialEntry("兼职选择", "兼职是钱和成长的交换。", "低门槛兼职适合保底，高门槛兼职更适合中后期冲收益。选择时看你缺的是钱、属性还是事件。", "保底收入", "高门槛回报", "路线匹配"),
+            new TutorialEntry("发展方向", "职业倾向会反向影响你的养成重点。", "如果你想走更现实的功利路线，经济和执行相关属性的比重要尽早提上来。", "养成重点", "路线风格", "资源倾斜")
+        ),
+        new TutorialCategory("人生观",
+            new TutorialEntry("价值取舍", "每次选择都在定义你想成为什么样的人。", "成长并不只看面板变大。不同价值取向会让同一事件出现完全不同的结果。", "事件分歧", "路线气质", "结局影响"),
+            new TutorialEntry("长短期平衡", "眼前收益和长线结果经常冲突。", "教程建议你先想清楚这一周目最想验证什么，再决定是否为了即时收益打破原计划。", "即时收益", "长期布局", "周目目标")
+        ),
+        new TutorialCategory("其他",
+            new TutorialEntry("存档与回看", "关键节点前后都值得留一个档。", "很多系统是连锁反应式的，保留关键节点存档会让你更容易验证不同路线。", "关键节点", "分支对比", "路线实验"),
+            new TutorialEntry("首页入口", "教程、成就、CG 和制作人信息都在首页右上角。", "教程适合新开局前快速复习，成就回看适合复盘当前周目，两个入口会持续补充。", "教程入口", "成就回看", "开局复习")
+        )
+    };
 
     // ===== 呼吸动画协程 =====
     private Coroutine breathCoroutine;
@@ -287,10 +476,15 @@ public class TitleScreenManager : MonoBehaviour
 
         // 不加遮罩，保持视频背景完全可见
         CreateMainMenuPanel(overlayGO.transform as RectTransform);
+        CreateChangelogEntryButton(overlayGO.transform as RectTransform);
         CreateTopRightIcons(overlayGO.transform as RectTransform);
         CreateLogoArea(overlayGO.transform as RectTransform);
         CreateVersionText(overlayGO.transform as RectTransform);
         CreateSettingsPanel(overlayGO.transform as RectTransform);
+        CreateTutorialPanel(overlayGO.transform as RectTransform);
+        CreateGalleryPanel(overlayGO.transform as RectTransform);
+        CreateCreditsPanel(overlayGO.transform as RectTransform);
+        CreateChangelogPanel(overlayGO.transform as RectTransform);
 
         overlayGO.SetActive(false);
     }
@@ -344,6 +538,46 @@ public class TitleScreenManager : MonoBehaviour
             shadow.effectColor = new Color(0f, 0f, 0f, 0.6f);
             shadow.effectDistance = new Vector2(3f, -3f);
         }
+    }
+
+    private void CreateChangelogEntryButton(RectTransform parent)
+    {
+        GameObject buttonGO = CreateUIElement("ChangelogEntryButton", parent);
+        RectTransform rect = buttonGO.GetComponent<RectTransform>();
+        rect.anchorMin = new Vector2(0f, 0f);
+        rect.anchorMax = new Vector2(0f, 0f);
+        rect.pivot = new Vector2(0f, 0f);
+        rect.sizeDelta = new Vector2(300f, 74f);
+        rect.anchoredPosition = new Vector2(44f, 46f);
+
+        Image bg = buttonGO.AddComponent<Image>();
+        bg.color = new Color(0.92f, 0.78f, 0.58f, 0.9f);
+
+        Outline outline = buttonGO.AddComponent<Outline>();
+        outline.effectColor = new Color(0.36f, 0.18f, 0.08f, 0.65f);
+        outline.effectDistance = new Vector2(2f, -2f);
+
+        changelogButton = buttonGO.AddComponent<Button>();
+        changelogButton.targetGraphic = bg;
+        changelogButton.onClick.AddListener(ShowChangelogPanel);
+
+        ColorBlock colors = changelogButton.colors;
+        colors.normalColor = Color.white;
+        colors.highlightedColor = new Color(1f, 0.96f, 0.84f, 1f);
+        colors.pressedColor = new Color(0.9f, 0.78f, 0.58f, 1f);
+        changelogButton.colors = colors;
+
+        TextMeshProUGUI label = CreateTMPBlock(rect, "Label", "更新日志", 30f, new Color(0.44f, 0.18f, 0.08f, 1f), TextAlignmentOptions.Center);
+        StretchFull(label.rectTransform);
+        label.fontStyle = FontStyles.Bold;
+        label.margin = new Vector4(36f, 0f, 0f, 0f);
+
+        TextMeshProUGUI icon = CreateTMPBlock(rect, "Icon", "▣", 34f, new Color(0.95f, 0.88f, 0.66f, 1f), TextAlignmentOptions.Center);
+        icon.rectTransform.anchorMin = new Vector2(0f, 0.5f);
+        icon.rectTransform.anchorMax = new Vector2(0f, 0.5f);
+        icon.rectTransform.pivot = new Vector2(0f, 0.5f);
+        icon.rectTransform.sizeDelta = new Vector2(64f, 54f);
+        icon.rectTransform.anchoredPosition = new Vector2(18f, 0f);
     }
 
     /// <summary>
@@ -424,16 +658,33 @@ public class TitleScreenManager : MonoBehaviour
 
     private void OnTopIconClicked(int index, string name)
     {
+        if (index == 0)
+        {
+            ShowTutorialPanel();
+            return;
+        }
+
         switch (index)
         {
             case 1: // 成就回顾
-                // 确保 AchievementUI 实例存在
+                if (AchievementSystem.Instance == null)
+                {
+                    GameObject systemObject = new GameObject("AchievementSystem");
+                    systemObject.AddComponent<AchievementSystem>();
+                }
+
                 if (AchievementUI.Instance == null)
                 {
                     GameObject obj = new GameObject("AchievementUI");
                     obj.AddComponent<AchievementUI>();
                 }
                 AchievementUI.Instance.ShowReviewPanel();
+                return;
+            case 2: // 游戏CG / 结局
+                ShowGalleryPanel();
+                return;
+            case 3: // 制作人详情
+                ShowCreditsPanel();
                 return;
             default:
                 Debug.Log($"[TitleScreen] 点击右上角：{name}（功能待接入）");
@@ -542,18 +793,24 @@ public class TitleScreenManager : MonoBehaviour
         txt.fontStyle = highlight ? FontStyles.Bold : FontStyles.Normal;
         txt.raycastTarget = false;
 
+        // 额外 UI 黑色阴影，增强浅色背景上的可读性
+        Shadow textShadow = textGO.AddComponent<Shadow>();
+        textShadow.effectColor = new Color(0f, 0f, 0f, highlight ? 0.95f : 0.85f);
+        textShadow.effectDistance = highlight ? new Vector2(3.5f, -3.5f) : new Vector2(3f, -3f);
+        textShadow.useGraphicAlpha = true;
+
         // TMP 描边（Outline）— 通过 materialForRendering 设置
-        txt.outlineWidth = 0.2f;
-        txt.outlineColor = new Color32(0, 0, 0, 180);
+        txt.outlineWidth = highlight ? 0.25f : 0.22f;
+        txt.outlineColor = new Color32(0, 0, 0, 210);
 
         // TMP 字体材质阴影（Underlay）— 实例化材质避免共享污染
         txt.fontMaterial = new Material(txt.fontMaterial);
         txt.fontMaterial.EnableKeyword("UNDERLAY_ON");
-        txt.fontMaterial.SetColor("_UnderlayColor", new Color(0f, 0f, 0f, 0.6f));
-        txt.fontMaterial.SetFloat("_UnderlayOffsetX", 0.8f);
-        txt.fontMaterial.SetFloat("_UnderlayOffsetY", -0.8f);
-        txt.fontMaterial.SetFloat("_UnderlayDilate", 0.2f);
-        txt.fontMaterial.SetFloat("_UnderlaySoftness", 0.15f);
+        txt.fontMaterial.SetColor("_UnderlayColor", new Color(0f, 0f, 0f, highlight ? 0.75f : 0.65f));
+        txt.fontMaterial.SetFloat("_UnderlayOffsetX", highlight ? 1.1f : 0.9f);
+        txt.fontMaterial.SetFloat("_UnderlayOffsetY", highlight ? -1.1f : -0.9f);
+        txt.fontMaterial.SetFloat("_UnderlayDilate", 0.22f);
+        txt.fontMaterial.SetFloat("_UnderlaySoftness", 0.12f);
 
         // 底部细分割线
         GameObject lineGO = CreateUIElement("Line", rt);
@@ -609,6 +866,1148 @@ public class TitleScreenManager : MonoBehaviour
         }
 
         LoadSettings();
+    }
+
+    private void CreateChangelogPanel(RectTransform parent)
+    {
+        changelogPanel = CreateUIElement("ChangelogPanel", parent);
+        changelogPanel.transform.SetAsLastSibling();
+        StretchFull(changelogPanel.GetComponent<RectTransform>());
+        changelogPanel.SetActive(false);
+
+        Image overlay = changelogPanel.AddComponent<Image>();
+        overlay.color = new Color(0f, 0f, 0f, 0.52f);
+
+        changelogPanelGroup = changelogPanel.AddComponent<CanvasGroup>();
+        changelogPanelGroup.alpha = 0f;
+        changelogPanelGroup.interactable = false;
+        changelogPanelGroup.blocksRaycasts = false;
+
+        RectTransform frame = CreateUIElement("ChangelogFrame", changelogPanel.transform as RectTransform).GetComponent<RectTransform>();
+        frame.anchorMin = new Vector2(0.5f, 0.5f);
+        frame.anchorMax = new Vector2(0.5f, 0.5f);
+        frame.pivot = new Vector2(0.5f, 0.5f);
+        frame.sizeDelta = new Vector2(970f, 710f);
+        frame.anchoredPosition = new Vector2(0f, -8f);
+
+        Image frameBg = frame.gameObject.AddComponent<Image>();
+        frameBg.color = new Color(0.98f, 0.95f, 0.88f, 1f);
+        Outline frameOutline = frame.gameObject.AddComponent<Outline>();
+        frameOutline.effectColor = new Color(0.27f, 0.18f, 0.1f, 0.38f);
+        frameOutline.effectDistance = new Vector2(6f, -6f);
+
+        RectTransform header = CreateUIElement("Header", frame).GetComponent<RectTransform>();
+        header.anchorMin = new Vector2(0f, 1f);
+        header.anchorMax = new Vector2(1f, 1f);
+        header.pivot = new Vector2(0.5f, 1f);
+        header.sizeDelta = new Vector2(0f, 74f);
+        header.anchoredPosition = Vector2.zero;
+        header.gameObject.AddComponent<Image>().color = new Color(1f, 0.92f, 0.65f, 1f);
+        CreateTutorialGridBackground(header);
+
+        TextMeshProUGUI title = CreateTMPBlock(header, "Title", "更新日志", 32f, TutorialAccentColor, TextAlignmentOptions.Center);
+        StretchFull(title.rectTransform);
+        title.fontStyle = FontStyles.Bold;
+
+        RectTransform scrollRoot = CreateUIElement("ChangelogScroll", frame).GetComponent<RectTransform>();
+        scrollRoot.anchorMin = new Vector2(0f, 0f);
+        scrollRoot.anchorMax = new Vector2(1f, 1f);
+        scrollRoot.offsetMin = new Vector2(54f, 92f);
+        scrollRoot.offsetMax = new Vector2(-54f, -92f);
+
+        ScrollRect scroll = CreateTutorialScrollView(scrollRoot, out changelogContent);
+        scroll.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHideAndExpandViewport;
+        VerticalLayoutGroup layout = changelogContent.gameObject.AddComponent<VerticalLayoutGroup>();
+        layout.spacing = 20f;
+        layout.childAlignment = TextAnchor.UpperLeft;
+        layout.childControlWidth = true;
+        layout.childControlHeight = false;
+        layout.childForceExpandWidth = true;
+        layout.childForceExpandHeight = false;
+        layout.padding = new RectOffset(0, 24, 10, 20);
+        ContentSizeFitter fitter = changelogContent.gameObject.AddComponent<ContentSizeFitter>();
+        fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+        AddChangelogLine("更新补丁 1.90", 31f, new Color(0.1f, 0.45f, 0.9f, 1f), FontStyles.Bold, 46f);
+        AddChangelogLine("同学录增加Q版CG栏目", 26f, TutorialTextColor, FontStyles.Bold, 42f);
+        AddChangelogLine("创意工坊的立绘编辑页面增加“Q版头像”设置", 26f, TutorialTextColor, FontStyles.Bold, 42f);
+        AddChangelogLine("修复了状态事件的选项数量不正确的问题", 26f, TutorialTextColor, FontStyles.Bold, 42f);
+        AddChangelogLine("修复了状态事件的点击无法进入下一句的问题", 26f, TutorialTextColor, FontStyles.Bold, 42f);
+        AddChangelogLine("修复了“已养成性格”卡住的问题", 26f, TutorialTextColor, FontStyles.Bold, 42f);
+        AddChangelogLine("完善了大量百科错误", 26f, TutorialTextColor, FontStyles.Bold, 42f);
+        AddChangelogLine("修复了开放人格对职业潜力的错误加成", 26f, TutorialTextColor, FontStyles.Bold, 42f);
+        AddChangelogLine("调整了各挚友特性加性格倾向的数值", 26f, TutorialTextColor, FontStyles.Bold, 42f);
+        AddChangelogLine("修复跑步小游戏中点击跳过按钮导致双倍奖励的bug", 26f, TutorialTextColor, FontStyles.Bold, 42f);
+        AddChangelogLine("修复了部分文本错误", 26f, TutorialTextColor, FontStyles.Bold, 42f);
+        AddChangelogLine("\n后续版本会继续补充首页入口、同学录和系统体验优化。", 23f, TutorialMutedTextColor, FontStyles.Normal, 78f);
+
+        Button closeButton = CreateMenuButton(frame, "ChangelogCloseButton", "关闭", new Vector2(0f, -320f), new Color(0.98f, 0.78f, 0.38f, 1f), HideChangelogPanel);
+        RectTransform closeRect = closeButton.GetComponent<RectTransform>();
+        closeRect.sizeDelta = new Vector2(170f, 52f);
+        TextMeshProUGUI closeLabel = closeButton.GetComponentInChildren<TextMeshProUGUI>();
+        if (closeLabel != null)
+        {
+            closeLabel.fontSize = 27f;
+            closeLabel.color = TutorialAccentColor;
+            closeLabel.fontStyle = FontStyles.Bold;
+        }
+    }
+
+    private void AddChangelogLine(string text, float fontSize, Color color, FontStyles style, float preferredHeight)
+    {
+        TextMeshProUGUI line = CreateTMPLayoutItem(changelogContent, "ChangelogLine", text, fontSize, color, style, preferredHeight);
+        line.enableWordWrapping = true;
+        line.lineSpacing = 8f;
+    }
+
+    private void CreateCreditsPanel(RectTransform parent)
+    {
+        creditsPanel = CreateUIElement("CreditsPanel", parent);
+        StretchFull(creditsPanel.GetComponent<RectTransform>());
+        creditsPanel.SetActive(false);
+
+        Image overlay = creditsPanel.AddComponent<Image>();
+        overlay.color = new Color(0f, 0f, 0f, 0.42f);
+
+        creditsPanelGroup = creditsPanel.AddComponent<CanvasGroup>();
+        creditsPanelGroup.alpha = 0f;
+        creditsPanelGroup.interactable = false;
+        creditsPanelGroup.blocksRaycasts = false;
+
+        RectTransform frameRect = CreateUIElement("CreditsFrame", creditsPanel.transform as RectTransform).GetComponent<RectTransform>();
+        frameRect.anchorMin = new Vector2(0.08f, 0.08f);
+        frameRect.anchorMax = new Vector2(0.92f, 0.9f);
+        frameRect.offsetMin = Vector2.zero;
+        frameRect.offsetMax = Vector2.zero;
+        Image frameImage = frameRect.gameObject.AddComponent<Image>();
+        frameImage.color = TutorialFrameColor;
+        Outline frameOutline = frameRect.gameObject.AddComponent<Outline>();
+        frameOutline.effectColor = new Color(0.58f, 0.38f, 0.18f, 0.48f);
+        frameOutline.effectDistance = new Vector2(6f, -6f);
+
+        RectTransform paperRect = CreateUIElement("CreditsPaper", frameRect).GetComponent<RectTransform>();
+        paperRect.anchorMin = new Vector2(0.02f, 0.03f);
+        paperRect.anchorMax = new Vector2(0.98f, 0.9f);
+        paperRect.offsetMin = Vector2.zero;
+        paperRect.offsetMax = Vector2.zero;
+        paperRect.gameObject.AddComponent<Image>().color = TutorialPaperColor;
+        CreateTutorialGridBackground(paperRect);
+
+        RectTransform tab = CreateUIElement("CreditsTab", frameRect).GetComponent<RectTransform>();
+        tab.anchorMin = new Vector2(0.42f, 0.9f);
+        tab.anchorMax = new Vector2(0.58f, 1f);
+        tab.offsetMin = Vector2.zero;
+        tab.offsetMax = Vector2.zero;
+        tab.gameObject.AddComponent<Image>().color = TutorialHighlightColor;
+        TextMeshProUGUI tabText = CreateTMPBlock(tab, "Label", "STAFF", 28f, TutorialAccentColor, TextAlignmentOptions.Center);
+        StretchFull(tabText.rectTransform);
+        tabText.fontStyle = FontStyles.Bold;
+
+        CreateTutorialCloseButton(frameRect, HideCreditsPanel);
+
+        TextMeshProUGUI title = CreateTMPBlock(frameRect, "CreditsTitle", "制作人", 48f, TutorialAccentColor, TextAlignmentOptions.Left);
+        title.rectTransform.anchorMin = new Vector2(0.04f, 0.91f);
+        title.rectTransform.anchorMax = new Vector2(0.24f, 1f);
+        title.rectTransform.offsetMin = Vector2.zero;
+        title.rectTransform.offsetMax = Vector2.zero;
+        title.fontStyle = FontStyles.Bold;
+
+        RectTransform contentRoot = CreateUIElement("CreditsContent", paperRect).GetComponent<RectTransform>();
+        contentRoot.anchorMin = new Vector2(0.035f, 0.055f);
+        contentRoot.anchorMax = new Vector2(0.965f, 0.945f);
+        contentRoot.offsetMin = Vector2.zero;
+        contentRoot.offsetMax = Vector2.zero;
+
+        RectTransform listPane = CreateUIElement("CreditsListPane", contentRoot).GetComponent<RectTransform>();
+        listPane.anchorMin = new Vector2(0f, 0f);
+        listPane.anchorMax = new Vector2(0.31f, 1f);
+        listPane.offsetMin = new Vector2(8f, 8f);
+        listPane.offsetMax = new Vector2(-18f, -8f);
+        listPane.gameObject.AddComponent<Image>().color = new Color(0.98f, 0.93f, 0.82f, 0.9f);
+
+        TextMeshProUGUI listTitle = CreateTMPBlock(listPane, "ListTitle", "目录", 30f, TutorialAccentColor, TextAlignmentOptions.Center);
+        listTitle.rectTransform.anchorMin = new Vector2(0f, 0.9f);
+        listTitle.rectTransform.anchorMax = new Vector2(1f, 1f);
+        listTitle.rectTransform.offsetMin = Vector2.zero;
+        listTitle.rectTransform.offsetMax = Vector2.zero;
+        listTitle.fontStyle = FontStyles.Bold;
+
+        RectTransform listScrollRoot = CreateUIElement("CreditsListScroll", listPane).GetComponent<RectTransform>();
+        listScrollRoot.anchorMin = new Vector2(0.05f, 0.06f);
+        listScrollRoot.anchorMax = new Vector2(0.95f, 0.88f);
+        listScrollRoot.offsetMin = Vector2.zero;
+        listScrollRoot.offsetMax = Vector2.zero;
+        ScrollRect listScroll = CreateTutorialScrollView(listScrollRoot, out creditsListContent);
+        listScroll.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHideAndExpandViewport;
+        VerticalLayoutGroup listLayout = creditsListContent.gameObject.AddComponent<VerticalLayoutGroup>();
+        listLayout.spacing = 12f;
+        listLayout.childAlignment = TextAnchor.UpperLeft;
+        listLayout.childControlWidth = true;
+        listLayout.childControlHeight = false;
+        listLayout.childForceExpandWidth = true;
+        listLayout.childForceExpandHeight = false;
+        ContentSizeFitter listFitter = creditsListContent.gameObject.AddComponent<ContentSizeFitter>();
+        listFitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+        RectTransform detailPane = CreateUIElement("CreditsDetailPane", contentRoot).GetComponent<RectTransform>();
+        detailPane.anchorMin = new Vector2(0.33f, 0f);
+        detailPane.anchorMax = new Vector2(1f, 1f);
+        detailPane.offsetMin = new Vector2(18f, 8f);
+        detailPane.offsetMax = new Vector2(-8f, -8f);
+        detailPane.gameObject.AddComponent<Image>().color = new Color(0.995f, 0.97f, 0.9f, 0.96f);
+
+        RectTransform stamp = CreateUIElement("CreditsStamp", detailPane).GetComponent<RectTransform>();
+        stamp.anchorMin = new Vector2(1f, 1f);
+        stamp.anchorMax = new Vector2(1f, 1f);
+        stamp.pivot = new Vector2(0.5f, 0.5f);
+        stamp.sizeDelta = new Vector2(140f, 140f);
+        stamp.anchoredPosition = new Vector2(-96f, -90f);
+        Image stampImage = stamp.gameObject.AddComponent<Image>();
+        stampImage.color = new Color(0.88f, 0.32f, 0.2f, 0.16f);
+        stampImage.raycastTarget = false;
+        TextMeshProUGUI stampText = CreateTMPBlock(stamp, "StampText", "钟山下", 31f, new Color(0.7f, 0.2f, 0.12f, 0.58f), TextAlignmentOptions.Center);
+        StretchFull(stampText.rectTransform);
+        stampText.fontStyle = FontStyles.Bold;
+
+        creditsDetailTitle = CreateTMPBlock(detailPane, "DetailTitle", string.Empty, 42f, TutorialTextColor, TextAlignmentOptions.Left);
+        creditsDetailTitle.rectTransform.anchorMin = new Vector2(0.07f, 0.78f);
+        creditsDetailTitle.rectTransform.anchorMax = new Vector2(0.72f, 0.9f);
+        creditsDetailTitle.rectTransform.offsetMin = Vector2.zero;
+        creditsDetailTitle.rectTransform.offsetMax = Vector2.zero;
+        creditsDetailTitle.fontStyle = FontStyles.Bold;
+
+        creditsDetailRole = CreateTMPBlock(detailPane, "DetailRole", string.Empty, 26f, TutorialAccentColor, TextAlignmentOptions.Left);
+        creditsDetailRole.rectTransform.anchorMin = new Vector2(0.07f, 0.68f);
+        creditsDetailRole.rectTransform.anchorMax = new Vector2(0.78f, 0.77f);
+        creditsDetailRole.rectTransform.offsetMin = Vector2.zero;
+        creditsDetailRole.rectTransform.offsetMax = Vector2.zero;
+
+        RectTransform divider = CreateUIElement("CreditsDivider", detailPane).GetComponent<RectTransform>();
+        divider.anchorMin = new Vector2(0.07f, 0.65f);
+        divider.anchorMax = new Vector2(0.88f, 0.65f);
+        divider.sizeDelta = new Vector2(0f, 2f);
+        divider.anchoredPosition = Vector2.zero;
+        divider.gameObject.AddComponent<Image>().color = new Color(0.72f, 0.52f, 0.3f, 0.36f);
+
+        creditsDetailDescription = CreateTMPBlock(detailPane, "DetailDescription", string.Empty, 25f, TutorialMutedTextColor, TextAlignmentOptions.TopLeft);
+        creditsDetailDescription.rectTransform.anchorMin = new Vector2(0.07f, 0.34f);
+        creditsDetailDescription.rectTransform.anchorMax = new Vector2(0.9f, 0.62f);
+        creditsDetailDescription.rectTransform.offsetMin = Vector2.zero;
+        creditsDetailDescription.rectTransform.offsetMax = Vector2.zero;
+        creditsDetailDescription.enableWordWrapping = true;
+        creditsDetailDescription.lineSpacing = 8f;
+
+        creditsTagsRoot = CreateUIElement("CreditsTags", detailPane).GetComponent<RectTransform>();
+        creditsTagsRoot.anchorMin = new Vector2(0.07f, 0.2f);
+        creditsTagsRoot.anchorMax = new Vector2(0.9f, 0.31f);
+        creditsTagsRoot.offsetMin = Vector2.zero;
+        creditsTagsRoot.offsetMax = Vector2.zero;
+        HorizontalLayoutGroup tagLayout = creditsTagsRoot.gameObject.AddComponent<HorizontalLayoutGroup>();
+        tagLayout.spacing = 12f;
+        tagLayout.childAlignment = TextAnchor.MiddleLeft;
+        tagLayout.childControlWidth = false;
+        tagLayout.childControlHeight = true;
+        tagLayout.childForceExpandWidth = false;
+        tagLayout.childForceExpandHeight = false;
+
+        TextMeshProUGUI footer = CreateTMPBlock(detailPane, "CreditsFooter", "感谢每一次选择、每一次反馈，以及每一个把钟山下玩下去的周目。", 22f, TutorialMutedTextColor, TextAlignmentOptions.Center);
+        footer.rectTransform.anchorMin = new Vector2(0.06f, 0.06f);
+        footer.rectTransform.anchorMax = new Vector2(0.94f, 0.15f);
+        footer.rectTransform.offsetMin = Vector2.zero;
+        footer.rectTransform.offsetMax = Vector2.zero;
+        footer.fontStyle = FontStyles.Italic;
+
+        RebuildCreditsList();
+        SelectCreditsEntry(0);
+    }
+
+    private void ShowCreditsPanel()
+    {
+        if (creditsPanel == null)
+        {
+            return;
+        }
+
+        creditsPanel.SetActive(true);
+        creditsPanel.transform.SetAsLastSibling();
+        creditsPanelGroup.alpha = 1f;
+        creditsPanelGroup.interactable = true;
+        creditsPanelGroup.blocksRaycasts = true;
+        SelectCreditsEntry(currentCreditsEntryIndex);
+    }
+
+    private void HideCreditsPanel()
+    {
+        if (creditsPanel == null)
+        {
+            return;
+        }
+
+        creditsPanelGroup.alpha = 0f;
+        creditsPanelGroup.interactable = false;
+        creditsPanelGroup.blocksRaycasts = false;
+        creditsPanel.SetActive(false);
+    }
+
+    private void RebuildCreditsList()
+    {
+        creditsEntryButtons.Clear();
+        for (int i = creditsListContent.childCount - 1; i >= 0; i--)
+        {
+            Destroy(creditsListContent.GetChild(i).gameObject);
+        }
+
+        for (int i = 0; i < creditsEntries.Count; i++)
+        {
+            int captured = i;
+            creditsEntryButtons.Add(CreateTutorialEntryButton(creditsListContent, creditsEntries[i].Title, () => SelectCreditsEntry(captured)));
+        }
+
+        LayoutRebuilder.ForceRebuildLayoutImmediate(creditsListContent);
+    }
+
+    private void SelectCreditsEntry(int index)
+    {
+        if (creditsEntries.Count == 0)
+        {
+            return;
+        }
+
+        currentCreditsEntryIndex = Mathf.Clamp(index, 0, creditsEntries.Count - 1);
+        CreditsEntry entry = creditsEntries[currentCreditsEntryIndex];
+
+        for (int i = 0; i < creditsEntryButtons.Count; i++)
+        {
+            UpdateTutorialEntryButtonState(creditsEntryButtons[i], i == currentCreditsEntryIndex);
+        }
+
+        creditsDetailTitle.text = entry.Title;
+        creditsDetailRole.text = entry.Role;
+        creditsDetailDescription.text = entry.Description;
+        RefreshCreditsTags(entry.Tags);
+    }
+
+    private void RefreshCreditsTags(string[] tags)
+    {
+        for (int i = creditsTagsRoot.childCount - 1; i >= 0; i--)
+        {
+            Destroy(creditsTagsRoot.GetChild(i).gameObject);
+        }
+
+        if (tags == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < tags.Length; i++)
+        {
+            CreateTutorialTag(creditsTagsRoot, tags[i]);
+        }
+    }
+
+    private void ShowChangelogPanel()
+    {
+        if (changelogPanel == null)
+        {
+            return;
+        }
+
+        changelogPanel.SetActive(true);
+        changelogPanel.transform.SetAsLastSibling();
+        changelogPanelGroup.alpha = 1f;
+        changelogPanelGroup.interactable = true;
+        changelogPanelGroup.blocksRaycasts = true;
+    }
+
+    private void HideChangelogPanel()
+    {
+        if (changelogPanel == null)
+        {
+            return;
+        }
+
+        changelogPanelGroup.alpha = 0f;
+        changelogPanelGroup.interactable = false;
+        changelogPanelGroup.blocksRaycasts = false;
+        changelogPanel.SetActive(false);
+    }
+
+    private void CreateGalleryPanel(RectTransform parent)
+    {
+        LoadGalleryCategories();
+
+        galleryPanel = CreateUIElement("GalleryPanel", parent);
+        StretchFull(galleryPanel.GetComponent<RectTransform>());
+        galleryPanel.SetActive(false);
+
+        Image overlay = galleryPanel.AddComponent<Image>();
+        overlay.color = new Color(0f, 0f, 0f, 0.42f);
+
+        galleryPanelGroup = galleryPanel.AddComponent<CanvasGroup>();
+        galleryPanelGroup.alpha = 0f;
+        galleryPanelGroup.interactable = false;
+        galleryPanelGroup.blocksRaycasts = false;
+
+        RectTransform frameRect = CreateUIElement("GalleryFrame", galleryPanel.transform as RectTransform).GetComponent<RectTransform>();
+        frameRect.anchorMin = new Vector2(0.06f, 0.06f);
+        frameRect.anchorMax = new Vector2(0.94f, 0.92f);
+        frameRect.offsetMin = Vector2.zero;
+        frameRect.offsetMax = Vector2.zero;
+        Image frameImage = frameRect.gameObject.AddComponent<Image>();
+        frameImage.color = TutorialFrameColor;
+        Outline frameOutline = frameRect.gameObject.AddComponent<Outline>();
+        frameOutline.effectColor = new Color(0.58f, 0.38f, 0.18f, 0.48f);
+        frameOutline.effectDistance = new Vector2(6f, -6f);
+
+        RectTransform paperRect = CreateUIElement("GalleryPaper", frameRect).GetComponent<RectTransform>();
+        paperRect.anchorMin = new Vector2(0.018f, 0.025f);
+        paperRect.anchorMax = new Vector2(0.982f, 0.91f);
+        paperRect.offsetMin = Vector2.zero;
+        paperRect.offsetMax = Vector2.zero;
+        Image paperImage = paperRect.gameObject.AddComponent<Image>();
+        paperImage.color = TutorialPaperColor;
+        CreateTutorialGridBackground(paperRect);
+
+        RectTransform tabsRoot = CreateUIElement("GalleryTabs", frameRect).GetComponent<RectTransform>();
+        tabsRoot.anchorMin = new Vector2(0.24f, 0.91f);
+        tabsRoot.anchorMax = new Vector2(0.76f, 1f);
+        tabsRoot.offsetMin = Vector2.zero;
+        tabsRoot.offsetMax = Vector2.zero;
+        HorizontalLayoutGroup tabsLayout = tabsRoot.gameObject.AddComponent<HorizontalLayoutGroup>();
+        tabsLayout.spacing = 20f;
+        tabsLayout.childAlignment = TextAnchor.LowerCenter;
+        tabsLayout.childControlWidth = true;
+        tabsLayout.childControlHeight = true;
+        tabsLayout.childForceExpandWidth = true;
+        tabsLayout.childForceExpandHeight = true;
+
+        galleryTabButtons.Clear();
+        for (int i = 0; i < galleryCategories.Count; i++)
+        {
+            int captured = i;
+            galleryTabButtons.Add(CreateTutorialCategoryButton(tabsRoot, galleryCategories[i].Name, () => SelectGalleryCategory(captured)));
+        }
+
+        CreateTutorialCloseButton(frameRect, HideGalleryPanel);
+
+        TextMeshProUGUI title = CreateTMPBlock(frameRect, "GalleryTitle", "游戏CG/结局", 46f, TutorialAccentColor, TextAlignmentOptions.Left);
+        title.rectTransform.anchorMin = new Vector2(0.04f, 0.91f);
+        title.rectTransform.anchorMax = new Vector2(0.24f, 1f);
+        title.rectTransform.offsetMin = Vector2.zero;
+        title.rectTransform.offsetMax = Vector2.zero;
+        title.fontStyle = FontStyles.Bold;
+
+        RectTransform contentRoot = CreateUIElement("GalleryContent", paperRect).GetComponent<RectTransform>();
+        contentRoot.anchorMin = new Vector2(0.025f, 0.04f);
+        contentRoot.anchorMax = new Vector2(0.975f, 0.96f);
+        contentRoot.offsetMin = Vector2.zero;
+        contentRoot.offsetMax = Vector2.zero;
+
+        RectTransform gridPane = CreateUIElement("GridPane", contentRoot).GetComponent<RectTransform>();
+        gridPane.anchorMin = new Vector2(0f, 0.08f);
+        gridPane.anchorMax = new Vector2(0.68f, 1f);
+        gridPane.offsetMin = new Vector2(10f, 10f);
+        gridPane.offsetMax = new Vector2(-22f, -12f);
+
+        ScrollRect gridScroll = CreateTutorialScrollView(gridPane, out galleryGridContent);
+        gridScroll.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHideAndExpandViewport;
+        GridLayoutGroup grid = galleryGridContent.gameObject.AddComponent<GridLayoutGroup>();
+        grid.cellSize = new Vector2(280f, 170f);
+        grid.spacing = new Vector2(18f, 18f);
+        grid.padding = new RectOffset(8, 24, 8, 24);
+        grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+        grid.constraintCount = 3;
+        ContentSizeFitter gridFitter = galleryGridContent.gameObject.AddComponent<ContentSizeFitter>();
+        gridFitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+        RectTransform previewPane = CreateUIElement("PreviewPane", contentRoot).GetComponent<RectTransform>();
+        previewPane.anchorMin = new Vector2(0.69f, 0.08f);
+        previewPane.anchorMax = new Vector2(1f, 1f);
+        previewPane.offsetMin = new Vector2(18f, 10f);
+        previewPane.offsetMax = new Vector2(-12f, -12f);
+        previewPane.gameObject.AddComponent<Image>().color = new Color(0.98f, 0.93f, 0.82f, 0.92f);
+
+        gallerySectionTitle = CreateTMPBlock(previewPane, "PreviewHeader", "游戏CG/结局", 31f, TutorialAccentColor, TextAlignmentOptions.Center);
+        gallerySectionTitle.rectTransform.anchorMin = new Vector2(0f, 0.91f);
+        gallerySectionTitle.rectTransform.anchorMax = new Vector2(1f, 1f);
+        gallerySectionTitle.rectTransform.offsetMin = Vector2.zero;
+        gallerySectionTitle.rectTransform.offsetMax = Vector2.zero;
+        gallerySectionTitle.fontStyle = FontStyles.Bold;
+
+        RectTransform imageFrame = CreateUIElement("PreviewImageFrame", previewPane).GetComponent<RectTransform>();
+        imageFrame.anchorMin = new Vector2(0.06f, 0.5f);
+        imageFrame.anchorMax = new Vector2(0.94f, 0.88f);
+        imageFrame.offsetMin = Vector2.zero;
+        imageFrame.offsetMax = Vector2.zero;
+        Image previewBg = imageFrame.gameObject.AddComponent<Image>();
+        previewBg.color = new Color(0.36f, 0.37f, 0.34f, 0.96f);
+        galleryPreviewImage = previewBg;
+        galleryPreviewImage.preserveAspect = true;
+        galleryPreviewImageLabel = CreateTMPBlock(imageFrame, "ImageLabel", "未解锁", 24f, Color.white, TextAlignmentOptions.Center);
+        StretchFull(galleryPreviewImageLabel.rectTransform);
+        galleryPreviewImageLabel.fontStyle = FontStyles.Bold;
+
+        galleryPreviewTitle = CreateTMPBlock(previewPane, "PreviewTitle", string.Empty, 30f, TutorialTextColor, TextAlignmentOptions.Center);
+        galleryPreviewTitle.rectTransform.anchorMin = new Vector2(0.05f, 0.41f);
+        galleryPreviewTitle.rectTransform.anchorMax = new Vector2(0.95f, 0.49f);
+        galleryPreviewTitle.rectTransform.offsetMin = Vector2.zero;
+        galleryPreviewTitle.rectTransform.offsetMax = Vector2.zero;
+        galleryPreviewTitle.fontStyle = FontStyles.Bold;
+
+        galleryPreviewSubtitle = CreateTMPBlock(previewPane, "PreviewSubtitle", string.Empty, 22f, TutorialAccentColor, TextAlignmentOptions.Center);
+        galleryPreviewSubtitle.rectTransform.anchorMin = new Vector2(0.05f, 0.35f);
+        galleryPreviewSubtitle.rectTransform.anchorMax = new Vector2(0.95f, 0.41f);
+        galleryPreviewSubtitle.rectTransform.offsetMin = Vector2.zero;
+        galleryPreviewSubtitle.rectTransform.offsetMax = Vector2.zero;
+
+        galleryPreviewDescription = CreateTMPBlock(previewPane, "PreviewDescription", string.Empty, 21f, TutorialMutedTextColor, TextAlignmentOptions.TopLeft);
+        galleryPreviewDescription.rectTransform.anchorMin = new Vector2(0.08f, 0.15f);
+        galleryPreviewDescription.rectTransform.anchorMax = new Vector2(0.92f, 0.34f);
+        galleryPreviewDescription.rectTransform.offsetMin = Vector2.zero;
+        galleryPreviewDescription.rectTransform.offsetMax = Vector2.zero;
+        galleryPreviewDescription.enableWordWrapping = true;
+        galleryPreviewDescription.lineSpacing = 6f;
+
+        galleryOpenButton = CreateMenuButton(previewPane, "GalleryOpenButton", "查看", new Vector2(0f, -250f), new Color(0.98f, 0.78f, 0.38f, 1f), OpenSelectedGalleryEntry);
+        RectTransform openRect = galleryOpenButton.GetComponent<RectTransform>();
+        openRect.anchorMin = new Vector2(0.5f, 0f);
+        openRect.anchorMax = new Vector2(0.5f, 0f);
+        openRect.sizeDelta = new Vector2(180f, 54f);
+        openRect.anchoredPosition = new Vector2(0f, 38f);
+
+        galleryCounterText = CreateTMPBlock(contentRoot, "GalleryCounter", string.Empty, 24f, TutorialMutedTextColor, TextAlignmentOptions.Right);
+        galleryCounterText.rectTransform.anchorMin = new Vector2(0f, 0f);
+        galleryCounterText.rectTransform.anchorMax = new Vector2(1f, 0.07f);
+        galleryCounterText.rectTransform.offsetMin = new Vector2(20f, 0f);
+        galleryCounterText.rectTransform.offsetMax = new Vector2(-26f, 0f);
+        galleryCounterText.fontStyle = FontStyles.Bold;
+
+        CreateGalleryViewer(galleryPanel.transform as RectTransform);
+        SelectGalleryCategory(0);
+    }
+
+    private void LoadGalleryCategories()
+    {
+        galleryCategories.Clear();
+        GalleryCategory cgCategory = new GalleryCategory { Name = "游戏CG" };
+        GalleryCategory endingCategory = new GalleryCategory { Name = "结局" };
+        HashSet<string> seenCgIds = new HashSet<string>();
+        HashSet<string> unlockedEndings = LoadGallerySet(GalleryUnlockedEndingsKey);
+        HashSet<string> unlockedCgs = LoadGallerySet(GalleryUnlockedCgsKey);
+
+        TextAsset jsonAsset = Resources.Load<TextAsset>("Data/endings");
+        if (jsonAsset != null)
+        {
+            EndingDataRoot root = JsonUtility.FromJson<EndingDataRoot>(jsonAsset.text);
+            if (root != null && root.endings != null)
+            {
+                for (int i = 0; i < root.endings.Count; i++)
+                {
+                    EndingDefinition ending = root.endings[i];
+                    string indexLabel = (i + 1).ToString("000");
+                    bool endingUnlocked = unlockedEndings.Contains(ending.id);
+                    bool cgUnlocked = !string.IsNullOrEmpty(ending.cgId) && unlockedCgs.Contains(ending.cgId);
+
+                    endingCategory.Entries.Add(new GalleryEntry
+                    {
+                        Id = ending.id,
+                        Title = ending.name,
+                        Subtitle = GetStarText(ending.stars),
+                        Description = ending.description,
+                        ResourceKey = ending.cgId,
+                        Badge = indexLabel,
+                        IsUnlocked = endingUnlocked
+                    });
+
+                    if (!string.IsNullOrEmpty(ending.cgId) && seenCgIds.Add(ending.cgId))
+                    {
+                        cgCategory.Entries.Add(new GalleryEntry
+                        {
+                            Id = ending.cgId,
+                            Title = ending.name,
+                            Subtitle = GetStarText(ending.stars),
+                            Description = ending.description,
+                            ResourceKey = ending.cgId,
+                            Badge = indexLabel,
+                            IsUnlocked = cgUnlocked || endingUnlocked
+                        });
+                    }
+                }
+            }
+        }
+
+        galleryCategories.Add(cgCategory);
+        galleryCategories.Add(endingCategory);
+    }
+
+    private void ShowGalleryPanel()
+    {
+        if (galleryPanel == null)
+        {
+            return;
+        }
+
+        LoadGalleryCategories();
+        galleryPanel.SetActive(true);
+        galleryPanel.transform.SetAsLastSibling();
+        galleryPanelGroup.alpha = 1f;
+        galleryPanelGroup.interactable = true;
+        galleryPanelGroup.blocksRaycasts = true;
+        SelectGalleryCategory(currentGalleryCategoryIndex);
+    }
+
+    private void HideGalleryPanel()
+    {
+        if (galleryPanel == null)
+        {
+            return;
+        }
+
+        HideGalleryViewer();
+        galleryPanelGroup.alpha = 0f;
+        galleryPanelGroup.interactable = false;
+        galleryPanelGroup.blocksRaycasts = false;
+        galleryPanel.SetActive(false);
+    }
+
+    private void SelectGalleryCategory(int categoryIndex)
+    {
+        if (galleryCategories.Count == 0)
+        {
+            return;
+        }
+
+        currentGalleryCategoryIndex = Mathf.Clamp(categoryIndex, 0, galleryCategories.Count - 1);
+        currentGalleryEntryIndex = 0;
+
+        for (int i = 0; i < galleryTabButtons.Count; i++)
+        {
+            UpdateTutorialCategoryButtonState(galleryTabButtons[i], i == currentGalleryCategoryIndex);
+        }
+
+        RebuildGalleryGrid();
+        UpdateGalleryPreview();
+    }
+
+    private void RebuildGalleryGrid()
+    {
+        galleryEntryButtons.Clear();
+        for (int i = galleryGridContent.childCount - 1; i >= 0; i--)
+        {
+            Destroy(galleryGridContent.GetChild(i).gameObject);
+        }
+
+        List<GalleryEntry> entries = galleryCategories[currentGalleryCategoryIndex].Entries;
+        for (int i = 0; i < entries.Count; i++)
+        {
+            int captured = i;
+            galleryEntryButtons.Add(CreateGalleryEntryButton(galleryGridContent, entries[i], () =>
+            {
+                currentGalleryEntryIndex = captured;
+                UpdateGallerySelection();
+                UpdateGalleryPreview();
+            }));
+        }
+
+        LayoutRebuilder.ForceRebuildLayoutImmediate(galleryGridContent);
+        UpdateGallerySelection();
+    }
+
+    private Button CreateGalleryEntryButton(RectTransform parent, GalleryEntry entry, UnityEngine.Events.UnityAction onClick)
+    {
+        GameObject buttonGO = CreateUIElement(entry.Id + "Card", parent);
+        Image bg = buttonGO.AddComponent<Image>();
+        bg.color = entry.IsUnlocked ? new Color(0.96f, 0.93f, 0.85f, 1f) : new Color(0.34f, 0.35f, 0.32f, 0.96f);
+        Outline outline = buttonGO.AddComponent<Outline>();
+        outline.effectColor = new Color(0.35f, 0.28f, 0.2f, 0.45f);
+        outline.effectDistance = new Vector2(3f, -3f);
+
+        Button button = buttonGO.AddComponent<Button>();
+        button.targetGraphic = bg;
+        button.onClick.AddListener(onClick);
+
+        RectTransform rect = buttonGO.GetComponent<RectTransform>();
+        TextMeshProUGUI badge = CreateTMPBlock(rect, "Badge", entry.Badge, 22f, Color.white, TextAlignmentOptions.Left);
+        badge.rectTransform.anchorMin = new Vector2(0f, 1f);
+        badge.rectTransform.anchorMax = new Vector2(1f, 1f);
+        badge.rectTransform.offsetMin = new Vector2(10f, -42f);
+        badge.rectTransform.offsetMax = new Vector2(-10f, 0f);
+        badge.fontStyle = FontStyles.Bold;
+
+        TextMeshProUGUI lockIcon = CreateTMPBlock(rect, "Lock", entry.IsUnlocked ? "" : "LOCK", 26f, new Color(0.82f, 0.82f, 0.78f, 1f), TextAlignmentOptions.Center);
+        StretchFull(lockIcon.rectTransform);
+
+        TextMeshProUGUI title = CreateTMPBlock(rect, "Title", entry.IsUnlocked ? entry.Title : "??????", 22f, entry.IsUnlocked ? TutorialTextColor : Color.white, TextAlignmentOptions.Right);
+        title.rectTransform.anchorMin = new Vector2(0f, 0f);
+        title.rectTransform.anchorMax = new Vector2(1f, 0.28f);
+        title.rectTransform.offsetMin = new Vector2(10f, 8f);
+        title.rectTransform.offsetMax = new Vector2(-12f, 0f);
+        title.fontStyle = FontStyles.Bold;
+
+        return button;
+    }
+
+    private void UpdateGallerySelection()
+    {
+        for (int i = 0; i < galleryEntryButtons.Count; i++)
+        {
+            Image bg = galleryEntryButtons[i].GetComponent<Image>();
+            if (bg != null)
+            {
+                GalleryEntry entry = galleryCategories[currentGalleryCategoryIndex].Entries[i];
+                bg.color = i == currentGalleryEntryIndex
+                    ? new Color(1f, 0.92f, 0.64f, 1f)
+                    : (entry.IsUnlocked ? new Color(0.96f, 0.93f, 0.85f, 1f) : new Color(0.34f, 0.35f, 0.32f, 0.96f));
+            }
+        }
+    }
+
+    private void UpdateGalleryPreview()
+    {
+        GalleryEntry entry = GetSelectedGalleryEntry();
+        if (entry == null)
+        {
+            galleryPreviewTitle.text = "暂无内容";
+            galleryPreviewSubtitle.text = string.Empty;
+            galleryPreviewDescription.text = string.Empty;
+            galleryPreviewImage.sprite = null;
+            galleryPreviewImageLabel.text = string.Empty;
+            galleryOpenButton.interactable = false;
+            return;
+        }
+
+        gallerySectionTitle.text = galleryCategories[currentGalleryCategoryIndex].Name;
+        galleryPreviewTitle.text = entry.IsUnlocked ? entry.Title : "尚未解锁";
+        galleryPreviewSubtitle.text = entry.IsUnlocked ? entry.Subtitle : "继续游玩以收集该内容";
+        galleryPreviewDescription.text = entry.IsUnlocked ? entry.Description : "达成对应结局后，这里会显示完整的CG与结局说明。";
+        galleryOpenButton.interactable = entry.IsUnlocked;
+        SetGalleryImage(galleryPreviewImage, galleryPreviewImageLabel, entry);
+
+        int unlocked = 0;
+        List<GalleryEntry> entries = galleryCategories[currentGalleryCategoryIndex].Entries;
+        for (int i = 0; i < entries.Count; i++)
+        {
+            if (entries[i].IsUnlocked) unlocked++;
+        }
+        galleryCounterText.text = $"已收集 {unlocked}/{entries.Count}";
+    }
+
+    private GalleryEntry GetSelectedGalleryEntry()
+    {
+        if (galleryCategories.Count == 0) return null;
+        List<GalleryEntry> entries = galleryCategories[currentGalleryCategoryIndex].Entries;
+        if (entries.Count == 0) return null;
+        currentGalleryEntryIndex = Mathf.Clamp(currentGalleryEntryIndex, 0, entries.Count - 1);
+        return entries[currentGalleryEntryIndex];
+    }
+
+    private void OpenSelectedGalleryEntry()
+    {
+        GalleryEntry entry = GetSelectedGalleryEntry();
+        if (entry == null || !entry.IsUnlocked)
+        {
+            return;
+        }
+
+        galleryViewerPanel.SetActive(true);
+        galleryViewerPanel.transform.SetAsLastSibling();
+        galleryViewerGroup.alpha = 1f;
+        galleryViewerGroup.interactable = true;
+        galleryViewerGroup.blocksRaycasts = true;
+        galleryViewerTitle.text = entry.Title;
+        galleryViewerSubtitle.text = entry.Subtitle;
+        galleryViewerDescription.text = entry.Description;
+        SetGalleryImage(galleryViewerImage, galleryViewerImageLabel, entry);
+    }
+
+    private void CreateGalleryViewer(RectTransform parent)
+    {
+        galleryViewerPanel = CreateUIElement("GalleryViewer", parent);
+        StretchFull(galleryViewerPanel.GetComponent<RectTransform>());
+        galleryViewerPanel.SetActive(false);
+        galleryViewerPanel.AddComponent<Image>().color = new Color(0f, 0f, 0f, 0.72f);
+        galleryViewerGroup = galleryViewerPanel.AddComponent<CanvasGroup>();
+        galleryViewerGroup.alpha = 0f;
+        galleryViewerGroup.interactable = false;
+        galleryViewerGroup.blocksRaycasts = false;
+
+        RectTransform frame = CreateUIElement("ViewerFrame", galleryViewerPanel.transform as RectTransform).GetComponent<RectTransform>();
+        frame.anchorMin = new Vector2(0.12f, 0.08f);
+        frame.anchorMax = new Vector2(0.88f, 0.92f);
+        frame.offsetMin = Vector2.zero;
+        frame.offsetMax = Vector2.zero;
+        frame.gameObject.AddComponent<Image>().color = new Color(0.97f, 0.94f, 0.88f, 1f);
+
+        RectTransform imageFrame = CreateUIElement("ViewerImageFrame", frame).GetComponent<RectTransform>();
+        imageFrame.anchorMin = new Vector2(0.05f, 0.22f);
+        imageFrame.anchorMax = new Vector2(0.95f, 0.86f);
+        imageFrame.offsetMin = Vector2.zero;
+        imageFrame.offsetMax = Vector2.zero;
+        Image viewerBg = imageFrame.gameObject.AddComponent<Image>();
+        viewerBg.color = new Color(0.28f, 0.29f, 0.27f, 1f);
+        galleryViewerImage = viewerBg;
+        galleryViewerImage.preserveAspect = true;
+        galleryViewerImageLabel = CreateTMPBlock(imageFrame, "ViewerImageLabel", string.Empty, 30f, Color.white, TextAlignmentOptions.Center);
+        StretchFull(galleryViewerImageLabel.rectTransform);
+
+        galleryViewerTitle = CreateTMPBlock(frame, "ViewerTitle", string.Empty, 42f, TutorialTextColor, TextAlignmentOptions.Center);
+        galleryViewerTitle.rectTransform.anchorMin = new Vector2(0.08f, 0.88f);
+        galleryViewerTitle.rectTransform.anchorMax = new Vector2(0.92f, 0.98f);
+        galleryViewerTitle.rectTransform.offsetMin = Vector2.zero;
+        galleryViewerTitle.rectTransform.offsetMax = Vector2.zero;
+        galleryViewerTitle.fontStyle = FontStyles.Bold;
+
+        galleryViewerSubtitle = CreateTMPBlock(frame, "ViewerSubtitle", string.Empty, 24f, TutorialAccentColor, TextAlignmentOptions.Center);
+        galleryViewerSubtitle.rectTransform.anchorMin = new Vector2(0.08f, 0.16f);
+        galleryViewerSubtitle.rectTransform.anchorMax = new Vector2(0.92f, 0.21f);
+        galleryViewerSubtitle.rectTransform.offsetMin = Vector2.zero;
+        galleryViewerSubtitle.rectTransform.offsetMax = Vector2.zero;
+
+        galleryViewerDescription = CreateTMPBlock(frame, "ViewerDescription", string.Empty, 23f, TutorialMutedTextColor, TextAlignmentOptions.TopLeft);
+        galleryViewerDescription.rectTransform.anchorMin = new Vector2(0.08f, 0.06f);
+        galleryViewerDescription.rectTransform.anchorMax = new Vector2(0.92f, 0.15f);
+        galleryViewerDescription.rectTransform.offsetMin = Vector2.zero;
+        galleryViewerDescription.rectTransform.offsetMax = Vector2.zero;
+        galleryViewerDescription.enableWordWrapping = true;
+
+        CreateTutorialCloseButton(frame, HideGalleryViewer);
+    }
+
+    private void HideGalleryViewer()
+    {
+        if (galleryViewerPanel == null)
+        {
+            return;
+        }
+
+        galleryViewerGroup.alpha = 0f;
+        galleryViewerGroup.interactable = false;
+        galleryViewerGroup.blocksRaycasts = false;
+        galleryViewerPanel.SetActive(false);
+    }
+
+    private void SetGalleryImage(Image image, TextMeshProUGUI label, GalleryEntry entry)
+    {
+        Sprite sprite = entry.IsUnlocked && !string.IsNullOrEmpty(entry.ResourceKey)
+            ? Resources.Load<Sprite>($"CG/{entry.ResourceKey}")
+            : null;
+        image.sprite = sprite;
+        image.color = sprite != null ? Color.white : new Color(0.36f, 0.37f, 0.34f, 0.96f);
+        label.text = sprite != null ? string.Empty : (entry.IsUnlocked ? $"CG: {entry.ResourceKey}" : "LOCK");
+    }
+
+    private static HashSet<string> LoadGallerySet(string key)
+    {
+        HashSet<string> values = new HashSet<string>();
+        string raw = PlayerPrefs.GetString(key, string.Empty);
+        if (string.IsNullOrEmpty(raw)) return values;
+        string[] parts = raw.Split('|');
+        for (int i = 0; i < parts.Length; i++)
+        {
+            if (!string.IsNullOrWhiteSpace(parts[i])) values.Add(parts[i]);
+        }
+        return values;
+    }
+
+    private static void SaveGallerySet(string key, HashSet<string> values)
+    {
+        PlayerPrefs.SetString(key, string.Join("|", new List<string>(values).ToArray()));
+    }
+
+    public static void UnlockGalleryEnding(string endingId, string cgId)
+    {
+        HashSet<string> endings = LoadGallerySet(GalleryUnlockedEndingsKey);
+        HashSet<string> cgs = LoadGallerySet(GalleryUnlockedCgsKey);
+        bool changed = false;
+
+        if (!string.IsNullOrWhiteSpace(endingId) && endings.Add(endingId)) changed = true;
+        if (!string.IsNullOrWhiteSpace(cgId) && cgs.Add(cgId)) changed = true;
+
+        if (changed)
+        {
+            SaveGallerySet(GalleryUnlockedEndingsKey, endings);
+            SaveGallerySet(GalleryUnlockedCgsKey, cgs);
+            PlayerPrefs.Save();
+        }
+    }
+
+    private string GetStarText(int stars)
+    {
+        if (stars <= 0) return "特殊结局";
+        return new string('★', stars);
+    }
+
+    private void CreateTutorialPanel(RectTransform parent)
+    {
+        tutorialPanel = CreateUIElement("TutorialPanel", parent);
+        StretchFull(tutorialPanel.GetComponent<RectTransform>());
+        tutorialPanel.SetActive(false);
+
+        Image overlay = tutorialPanel.AddComponent<Image>();
+        overlay.color = new Color(0f, 0f, 0f, 0.35f);
+
+        tutorialPanelGroup = tutorialPanel.AddComponent<CanvasGroup>();
+        tutorialPanelGroup.alpha = 0f;
+        tutorialPanelGroup.interactable = false;
+        tutorialPanelGroup.blocksRaycasts = false;
+
+        RectTransform frameRect = CreateUIElement("TutorialFrame", tutorialPanel.transform as RectTransform).GetComponent<RectTransform>();
+        frameRect.anchorMin = new Vector2(0.08f, 0.08f);
+        frameRect.anchorMax = new Vector2(0.92f, 0.9f);
+        frameRect.offsetMin = Vector2.zero;
+        frameRect.offsetMax = Vector2.zero;
+        Image frameImage = frameRect.gameObject.AddComponent<Image>();
+        frameImage.color = TutorialBackdropColor;
+        Outline frameOutline = frameRect.gameObject.AddComponent<Outline>();
+        frameOutline.effectColor = new Color(0.82f, 0.74f, 0.63f, 0.55f);
+        frameOutline.effectDistance = new Vector2(3f, -3f);
+
+        RectTransform bodyRect = CreateUIElement("TutorialBody", frameRect).GetComponent<RectTransform>();
+        bodyRect.anchorMin = new Vector2(0.06f, 0.1f);
+        bodyRect.anchorMax = new Vector2(0.94f, 0.88f);
+        bodyRect.offsetMin = Vector2.zero;
+        bodyRect.offsetMax = Vector2.zero;
+        Image bodyImage = bodyRect.gameObject.AddComponent<Image>();
+        bodyImage.color = TutorialFrameColor;
+
+        RectTransform paperRect = CreateUIElement("TutorialPaper", bodyRect).GetComponent<RectTransform>();
+        paperRect.anchorMin = new Vector2(0.03f, 0.03f);
+        paperRect.anchorMax = new Vector2(0.97f, 0.97f);
+        paperRect.offsetMin = Vector2.zero;
+        paperRect.offsetMax = Vector2.zero;
+        Image paperImage = paperRect.gameObject.AddComponent<Image>();
+        paperImage.color = TutorialPaperColor;
+        CreateTutorialGridBackground(paperRect);
+
+        RectTransform tabsRoot = CreateUIElement("TutorialTabs", frameRect).GetComponent<RectTransform>();
+        tabsRoot.anchorMin = new Vector2(0.06f, 0.88f);
+        tabsRoot.anchorMax = new Vector2(0.94f, 0.98f);
+        tabsRoot.offsetMin = Vector2.zero;
+        tabsRoot.offsetMax = Vector2.zero;
+        HorizontalLayoutGroup tabsLayout = tabsRoot.gameObject.AddComponent<HorizontalLayoutGroup>();
+        tabsLayout.spacing = 14f;
+        tabsLayout.childAlignment = TextAnchor.LowerLeft;
+        tabsLayout.childControlWidth = true;
+        tabsLayout.childControlHeight = true;
+        tabsLayout.childForceExpandWidth = true;
+        tabsLayout.childForceExpandHeight = true;
+        tabsLayout.padding = new RectOffset(0, 110, 0, 0);
+
+        for (int i = 0; i < tutorialCategories.Count; i++)
+        {
+            int captured = i;
+            tutorialCategoryButtons.Add(CreateTutorialCategoryButton(tabsRoot, tutorialCategories[i].Name, () => SelectTutorialCategory(captured)));
+        }
+
+        CreateTutorialCloseButton(frameRect, HideTutorialPanel);
+
+        RectTransform contentRoot = CreateUIElement("TutorialContent", paperRect).GetComponent<RectTransform>();
+        contentRoot.anchorMin = new Vector2(0.02f, 0.03f);
+        contentRoot.anchorMax = new Vector2(0.98f, 0.97f);
+        contentRoot.offsetMin = Vector2.zero;
+        contentRoot.offsetMax = Vector2.zero;
+
+        RectTransform leftPane = CreateUIElement("LeftPane", contentRoot).GetComponent<RectTransform>();
+        leftPane.anchorMin = new Vector2(0f, 0f);
+        leftPane.anchorMax = new Vector2(0.28f, 1f);
+        leftPane.offsetMin = new Vector2(16f, 18f);
+        leftPane.offsetMax = new Vector2(-18f, -18f);
+
+        RectTransform divider = CreateUIElement("Divider", contentRoot).GetComponent<RectTransform>();
+        divider.anchorMin = new Vector2(0.295f, 0.05f);
+        divider.anchorMax = new Vector2(0.295f, 0.95f);
+        divider.sizeDelta = new Vector2(3f, 0f);
+        divider.anchoredPosition = Vector2.zero;
+        divider.gameObject.AddComponent<Image>().color = new Color(0.84f, 0.75f, 0.65f, 0.8f);
+
+        RectTransform rightPane = CreateUIElement("RightPane", contentRoot).GetComponent<RectTransform>();
+        rightPane.anchorMin = new Vector2(0.315f, 0f);
+        rightPane.anchorMax = new Vector2(1f, 1f);
+        rightPane.offsetMin = new Vector2(18f, 18f);
+        rightPane.offsetMax = new Vector2(-16f, -18f);
+
+        ScrollRect leftScroll = CreateTutorialScrollView(leftPane, out tutorialItemListContent);
+        leftScroll.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHideAndExpandViewport;
+        VerticalLayoutGroup leftLayout = tutorialItemListContent.gameObject.AddComponent<VerticalLayoutGroup>();
+        leftLayout.spacing = 10f;
+        leftLayout.childAlignment = TextAnchor.UpperLeft;
+        leftLayout.childControlWidth = true;
+        leftLayout.childControlHeight = false;
+        leftLayout.childForceExpandWidth = true;
+        leftLayout.childForceExpandHeight = false;
+        ContentSizeFitter leftFitter = tutorialItemListContent.gameObject.AddComponent<ContentSizeFitter>();
+        leftFitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+        tutorialSectionTitle = CreateTMPBlock(rightPane, "SectionTitle", string.Empty, 42f, TutorialAccentColor, TextAlignmentOptions.Center);
+        SetAnchoredBox(tutorialSectionTitle.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -26f), new Vector2(520f, 56f));
+        tutorialSectionTitle.fontStyle = FontStyles.Bold;
+
+        RectTransform titleRule = CreateUIElement("TitleRule", rightPane).GetComponent<RectTransform>();
+        titleRule.anchorMin = new Vector2(0.08f, 1f);
+        titleRule.anchorMax = new Vector2(0.92f, 1f);
+        titleRule.pivot = new Vector2(0.5f, 1f);
+        titleRule.sizeDelta = new Vector2(0f, 2f);
+        titleRule.anchoredPosition = new Vector2(0f, -74f);
+        titleRule.gameObject.AddComponent<Image>().color = new Color(0.85f, 0.76f, 0.67f, 0.55f);
+
+        ScrollRect rightScroll = CreateTutorialScrollView(rightPane, out tutorialDetailContent);
+        RectTransform rightScrollRect = rightScroll.GetComponent<RectTransform>();
+        rightScrollRect.anchorMin = new Vector2(0f, 0f);
+        rightScrollRect.anchorMax = new Vector2(1f, 1f);
+        rightScrollRect.offsetMin = new Vector2(0f, 10f);
+        rightScrollRect.offsetMax = new Vector2(0f, -92f);
+        rightScroll.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHideAndExpandViewport;
+
+        VerticalLayoutGroup detailLayout = tutorialDetailContent.gameObject.AddComponent<VerticalLayoutGroup>();
+        detailLayout.spacing = 24f;
+        detailLayout.childAlignment = TextAnchor.UpperLeft;
+        detailLayout.childControlWidth = true;
+        detailLayout.childControlHeight = false;
+        detailLayout.childForceExpandWidth = true;
+        detailLayout.childForceExpandHeight = false;
+        detailLayout.padding = new RectOffset(20, 20, 8, 20);
+        ContentSizeFitter detailFitter = tutorialDetailContent.gameObject.AddComponent<ContentSizeFitter>();
+        detailFitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+        tutorialEntryTitle = CreateTMPLayoutItem(tutorialDetailContent, "EntryTitle", string.Empty, 34f, TutorialTextColor, FontStyles.Bold, 54f);
+        tutorialEntryDescription = CreateTMPLayoutItem(tutorialDetailContent, "EntryDescription", string.Empty, 24f, TutorialMutedTextColor, FontStyles.Normal, 180f);
+        tutorialEntryDescription.enableWordWrapping = true;
+        tutorialEntryDescription.lineSpacing = 8f;
+
+        CreateTutorialPreviewCard(tutorialDetailContent);
+
+        LayoutRebuilder.ForceRebuildLayoutImmediate(frameRect);
+        SelectTutorialCategory(0);
+    }
+
+    private void ShowTutorialPanel()
+    {
+        if (tutorialPanel == null)
+        {
+            return;
+        }
+
+        tutorialPanel.SetActive(true);
+        tutorialPanelGroup.alpha = 1f;
+        tutorialPanelGroup.interactable = true;
+        tutorialPanelGroup.blocksRaycasts = true;
+        SelectTutorialCategory(currentTutorialCategoryIndex);
+    }
+
+    private void HideTutorialPanel()
+    {
+        if (tutorialPanel == null)
+        {
+            return;
+        }
+
+        tutorialPanelGroup.alpha = 0f;
+        tutorialPanelGroup.interactable = false;
+        tutorialPanelGroup.blocksRaycasts = false;
+        tutorialPanel.SetActive(false);
+    }
+
+    private void SelectTutorialCategory(int categoryIndex)
+    {
+        if (tutorialCategories.Count == 0)
+        {
+            return;
+        }
+
+        currentTutorialCategoryIndex = Mathf.Clamp(categoryIndex, 0, tutorialCategories.Count - 1);
+        currentTutorialEntryIndex = 0;
+
+        for (int i = 0; i < tutorialCategoryButtons.Count; i++)
+        {
+            UpdateTutorialCategoryButtonState(tutorialCategoryButtons[i], i == currentTutorialCategoryIndex);
+        }
+
+        RebuildTutorialEntryList();
+        UpdateTutorialEntryDetail();
+    }
+
+    private void RebuildTutorialEntryList()
+    {
+        tutorialEntryButtons.Clear();
+
+        for (int i = tutorialItemListContent.childCount - 1; i >= 0; i--)
+        {
+            Destroy(tutorialItemListContent.GetChild(i).gameObject);
+        }
+
+        List<TutorialEntry> entries = tutorialCategories[currentTutorialCategoryIndex].Entries;
+        for (int i = 0; i < entries.Count; i++)
+        {
+            int captured = i;
+            Button button = CreateTutorialEntryButton(tutorialItemListContent, entries[i].Title, () =>
+            {
+                currentTutorialEntryIndex = captured;
+                UpdateTutorialEntrySelection();
+                UpdateTutorialEntryDetail();
+            });
+            tutorialEntryButtons.Add(button);
+        }
+
+        LayoutRebuilder.ForceRebuildLayoutImmediate(tutorialItemListContent);
+        UpdateTutorialEntrySelection();
+    }
+
+    private void UpdateTutorialEntrySelection()
+    {
+        for (int i = 0; i < tutorialEntryButtons.Count; i++)
+        {
+            UpdateTutorialEntryButtonState(tutorialEntryButtons[i], i == currentTutorialEntryIndex);
+        }
+    }
+
+    private void UpdateTutorialEntryDetail()
+    {
+        TutorialCategory category = tutorialCategories[currentTutorialCategoryIndex];
+        if (category.Entries.Count == 0)
+        {
+            tutorialSectionTitle.text = category.Name;
+            tutorialEntryTitle.text = "暂无内容";
+            tutorialEntryDescription.text = string.Empty;
+            return;
+        }
+
+        currentTutorialEntryIndex = Mathf.Clamp(currentTutorialEntryIndex, 0, category.Entries.Count - 1);
+        TutorialEntry entry = category.Entries[currentTutorialEntryIndex];
+        tutorialSectionTitle.text = category.Name;
+        tutorialEntryTitle.text = entry.Title;
+        tutorialEntryDescription.text = $"{entry.Lead}\n\n{entry.Description}";
+
+        RefreshTutorialHighlights(entry.Highlights);
+    }
+
+    private void RefreshTutorialHighlights(string[] highlights)
+    {
+        Transform preview = tutorialDetailContent.Find("PreviewCard");
+        if (preview == null)
+        {
+            return;
+        }
+
+        Transform tagsRoot = preview.Find("TagRow");
+        if (tagsRoot == null)
+        {
+            return;
+        }
+
+        for (int i = tagsRoot.childCount - 1; i >= 0; i--)
+        {
+            Destroy(tagsRoot.GetChild(i).gameObject);
+        }
+
+        if (highlights == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < highlights.Length; i++)
+        {
+            CreateTutorialTag(tagsRoot as RectTransform, highlights[i]);
+        }
     }
 
     private void CreateFadeOverlay()
@@ -748,7 +2147,7 @@ public class TitleScreenManager : MonoBehaviour
             {
                 SaveManager.PendingLoadData = data;
                 Debug.Log("[TitleScreen] 已加载自动存档，准备进入游戏");
-                BeginGameTransition();
+                BeginGameTransition(false);
             }
             else
             {
@@ -794,10 +2193,10 @@ public class TitleScreenManager : MonoBehaviour
             CharacterCreationUI.Instance.OnCreationComplete -= HandleCharacterCreationComplete;
         }
 
-        BeginGameTransition();
+        BeginGameTransition(playOpeningStoryOnNewGame);
     }
 
-    private void BeginGameTransition()
+    private void BeginGameTransition(bool playOpeningStory)
     {
         if (transitionRequested)
         {
@@ -805,7 +2204,7 @@ public class TitleScreenManager : MonoBehaviour
         }
 
         transitionRequested = true;
-        StartCoroutine(TransitionToGameScene());
+        StartCoroutine(TransitionToGameScene(playOpeningStory));
     }
 
     public void QuitGame()
@@ -819,7 +2218,7 @@ public class TitleScreenManager : MonoBehaviour
         #endif
     }
 
-    private IEnumerator TransitionToGameScene()
+    private IEnumerator TransitionToGameScene(bool playOpeningStory)
     {
         UIFlowGuard.CleanupBlockingUI();
 
@@ -842,7 +2241,15 @@ public class TitleScreenManager : MonoBehaviour
         }
 
         fadeOverlay.alpha = 1f;
-        SceneLoader.LoadScene(gameSceneName);
+
+        if (playOpeningStory)
+        {
+            OpeningStoryManager.Play(gameSceneName);
+        }
+        else
+        {
+            SceneLoader.LoadScene(gameSceneName);
+        }
     }
 
     #endregion
@@ -1262,6 +2669,338 @@ public class TitleScreenManager : MonoBehaviour
     #endregion
 
     #region UI 组件工厂
+
+    private void CreateTutorialGridBackground(RectTransform parent)
+    {
+        for (int i = 1; i < 10; i++)
+        {
+            RectTransform vertical = CreateUIElement("GridV_" + i, parent).GetComponent<RectTransform>();
+            vertical.anchorMin = new Vector2(i / 10f, 0f);
+            vertical.anchorMax = new Vector2(i / 10f, 1f);
+            vertical.sizeDelta = new Vector2(1f, 0f);
+            vertical.anchoredPosition = Vector2.zero;
+            vertical.gameObject.AddComponent<Image>().color = TutorialPaperLineColor;
+        }
+
+        for (int i = 1; i < 16; i++)
+        {
+            RectTransform horizontal = CreateUIElement("GridH_" + i, parent).GetComponent<RectTransform>();
+            horizontal.anchorMin = new Vector2(0f, i / 16f);
+            horizontal.anchorMax = new Vector2(1f, i / 16f);
+            horizontal.sizeDelta = new Vector2(0f, 1f);
+            horizontal.anchoredPosition = Vector2.zero;
+            horizontal.gameObject.AddComponent<Image>().color = TutorialPaperLineColor;
+        }
+    }
+
+    private Button CreateTutorialCategoryButton(RectTransform parent, string label, UnityEngine.Events.UnityAction onClick)
+    {
+        GameObject buttonGO = CreateUIElement(label + "Tab", parent);
+        LayoutElement layout = buttonGO.AddComponent<LayoutElement>();
+        layout.preferredWidth = 140f;
+        layout.preferredHeight = 72f;
+
+        Image bg = buttonGO.AddComponent<Image>();
+        bg.color = Color.white;
+
+        Button button = buttonGO.AddComponent<Button>();
+        button.targetGraphic = bg;
+        button.onClick.AddListener(onClick);
+
+        TextMeshProUGUI text = CreateTMPBlock(buttonGO.transform as RectTransform, "Label", label, 28f, TutorialTextColor, TextAlignmentOptions.Center);
+        StretchFull(text.rectTransform);
+        text.fontStyle = FontStyles.Bold;
+
+        return button;
+    }
+
+    private Button CreateTutorialEntryButton(RectTransform parent, string label, UnityEngine.Events.UnityAction onClick)
+    {
+        GameObject buttonGO = CreateUIElement(label + "Item", parent);
+        RectTransform rect = buttonGO.GetComponent<RectTransform>();
+        rect.sizeDelta = new Vector2(0f, 58f);
+        LayoutElement layout = buttonGO.AddComponent<LayoutElement>();
+        layout.preferredHeight = 58f;
+
+        Image bg = buttonGO.AddComponent<Image>();
+        bg.color = TutorialListNormalColor;
+
+        Button button = buttonGO.AddComponent<Button>();
+        button.targetGraphic = bg;
+        ColorBlock colors = button.colors;
+        colors.normalColor = Color.white;
+        colors.highlightedColor = TutorialListHoverColor;
+        colors.pressedColor = new Color(0.96f, 0.88f, 0.62f, 0.92f);
+        colors.selectedColor = colors.pressedColor;
+        button.colors = colors;
+        button.onClick.AddListener(onClick);
+
+        TextMeshProUGUI text = CreateTMPBlock(rect, "Label", label, 24f, TutorialMutedTextColor, TextAlignmentOptions.Left);
+        StretchFull(text.rectTransform);
+        text.margin = new Vector4(20f, 0f, 0f, 0f);
+
+        return button;
+    }
+
+    private void UpdateTutorialCategoryButtonState(Button button, bool selected)
+    {
+        if (button == null)
+        {
+            return;
+        }
+
+        Image bg = button.GetComponent<Image>();
+        if (bg != null)
+        {
+            bg.color = selected ? TutorialHighlightColor : new Color(0.96f, 0.95f, 0.93f, 0.92f);
+        }
+
+        TextMeshProUGUI text = button.GetComponentInChildren<TextMeshProUGUI>();
+        if (text != null)
+        {
+            text.color = selected ? TutorialAccentColor : new Color(0.47f, 0.39f, 0.34f, 0.95f);
+        }
+    }
+
+    private void UpdateTutorialEntryButtonState(Button button, bool selected)
+    {
+        if (button == null)
+        {
+            return;
+        }
+
+        Image bg = button.GetComponent<Image>();
+        if (bg != null)
+        {
+            bg.color = selected ? new Color(0.99f, 0.95f, 0.78f, 0.95f) : TutorialListNormalColor;
+        }
+
+        TextMeshProUGUI text = button.GetComponentInChildren<TextMeshProUGUI>();
+        if (text != null)
+        {
+            text.color = selected ? TutorialAccentColor : TutorialMutedTextColor;
+            text.fontStyle = selected ? FontStyles.Bold : FontStyles.Normal;
+        }
+    }
+
+    private ScrollRect CreateTutorialScrollView(RectTransform parent, out RectTransform content)
+    {
+        GameObject scrollGO = CreateUIElement("ScrollView", parent);
+        RectTransform scrollRect = scrollGO.GetComponent<RectTransform>();
+        StretchFull(scrollRect);
+
+        Image bg = scrollGO.AddComponent<Image>();
+        bg.color = new Color(1f, 1f, 1f, 0.02f);
+
+        ScrollRect scroll = scrollGO.AddComponent<ScrollRect>();
+        scroll.horizontal = false;
+        scroll.vertical = true;
+        scroll.movementType = ScrollRect.MovementType.Clamped;
+        scroll.scrollSensitivity = 24f;
+
+        RectTransform viewport = CreateUIElement("Viewport", scrollRect).GetComponent<RectTransform>();
+        StretchFull(viewport);
+        viewport.gameObject.AddComponent<Image>().color = Color.clear;
+        Mask mask = viewport.gameObject.AddComponent<Mask>();
+        mask.showMaskGraphic = false;
+
+        content = CreateUIElement("Content", viewport).GetComponent<RectTransform>();
+        content.anchorMin = new Vector2(0f, 1f);
+        content.anchorMax = new Vector2(1f, 1f);
+        content.pivot = new Vector2(0.5f, 1f);
+        content.anchoredPosition = Vector2.zero;
+        content.sizeDelta = new Vector2(0f, 0f);
+
+        scroll.viewport = viewport;
+        scroll.content = content;
+        return scroll;
+    }
+
+    private void CreateTutorialPreviewCard(RectTransform parent)
+    {
+        RectTransform card = CreateUIElement("PreviewCard", parent).GetComponent<RectTransform>();
+        card.sizeDelta = new Vector2(0f, 360f);
+        LayoutElement layout = card.gameObject.AddComponent<LayoutElement>();
+        layout.preferredHeight = 360f;
+
+        Image bg = card.gameObject.AddComponent<Image>();
+        bg.color = new Color(0.97f, 0.93f, 0.84f, 0.96f);
+
+        RectTransform titleBar = CreateUIElement("CardTitleBar", card).GetComponent<RectTransform>();
+        titleBar.anchorMin = new Vector2(0f, 1f);
+        titleBar.anchorMax = new Vector2(1f, 1f);
+        titleBar.pivot = new Vector2(0.5f, 1f);
+        titleBar.sizeDelta = new Vector2(0f, 56f);
+        titleBar.anchoredPosition = Vector2.zero;
+        titleBar.gameObject.AddComponent<Image>().color = new Color(0.97f, 0.89f, 0.58f, 1f);
+
+        TextMeshProUGUI cardTitle = CreateTMPBlock(titleBar, "CardTitle", "教程提示", 24f, TutorialAccentColor, TextAlignmentOptions.Left);
+        StretchFull(cardTitle.rectTransform);
+        cardTitle.margin = new Vector4(22f, 6f, 0f, 0f);
+        cardTitle.fontStyle = FontStyles.Bold;
+
+        RectTransform barsRoot = CreateUIElement("BarsRoot", card).GetComponent<RectTransform>();
+        barsRoot.anchorMin = new Vector2(0.06f, 0.48f);
+        barsRoot.anchorMax = new Vector2(0.56f, 0.83f);
+        barsRoot.offsetMin = Vector2.zero;
+        barsRoot.offsetMax = Vector2.zero;
+        CreateTutorialStatRow(barsRoot, "学业成长", new Color(0.26f, 0.57f, 0.92f, 1f), 0.74f, 0);
+        CreateTutorialStatRow(barsRoot, "社交推进", new Color(0.96f, 0.63f, 0.25f, 1f), 0.42f, 1);
+        CreateTutorialStatRow(barsRoot, "体能稳定", new Color(0.44f, 0.82f, 0.3f, 1f), 0.58f, 2);
+
+        RectTransform miniCard = CreateUIElement("MiniCard", card).GetComponent<RectTransform>();
+        miniCard.anchorMin = new Vector2(0.6f, 0.42f);
+        miniCard.anchorMax = new Vector2(0.94f, 0.8f);
+        miniCard.offsetMin = Vector2.zero;
+        miniCard.offsetMax = Vector2.zero;
+        miniCard.gameObject.AddComponent<Image>().color = new Color(0.995f, 0.97f, 0.9f, 1f);
+
+        RectTransform miniTitle = CreateUIElement("MiniTitle", miniCard).GetComponent<RectTransform>();
+        miniTitle.anchorMin = new Vector2(0f, 1f);
+        miniTitle.anchorMax = new Vector2(1f, 1f);
+        miniTitle.pivot = new Vector2(0.5f, 1f);
+        miniTitle.sizeDelta = new Vector2(0f, 48f);
+        miniTitle.anchoredPosition = Vector2.zero;
+        miniTitle.gameObject.AddComponent<Image>().color = new Color(0.99f, 0.92f, 0.68f, 1f);
+
+        TextMeshProUGUI miniTitleText = CreateTMPBlock(miniTitle, "Label", "关键信息", 22f, TutorialAccentColor, TextAlignmentOptions.Left);
+        StretchFull(miniTitleText.rectTransform);
+        miniTitleText.margin = new Vector4(18f, 6f, 0f, 0f);
+        miniTitleText.fontStyle = FontStyles.Bold;
+
+        TextMeshProUGUI line1 = CreateTMPBlock(miniCard, "Line1", "先做主线，再补短板", 21f, TutorialMutedTextColor, TextAlignmentOptions.Left);
+        line1.rectTransform.anchorMin = new Vector2(0f, 1f);
+        line1.rectTransform.anchorMax = new Vector2(1f, 1f);
+        line1.rectTransform.pivot = new Vector2(0.5f, 1f);
+        line1.rectTransform.offsetMin = new Vector2(16f, -114f);
+        line1.rectTransform.offsetMax = new Vector2(-16f, -78f);
+
+        TextMeshProUGUI line2 = CreateTMPBlock(miniCard, "Line2", "保持状态平衡，别让压力失控", 21f, TutorialMutedTextColor, TextAlignmentOptions.Left);
+        line2.rectTransform.anchorMin = new Vector2(0f, 1f);
+        line2.rectTransform.anchorMax = new Vector2(1f, 1f);
+        line2.rectTransform.pivot = new Vector2(0.5f, 1f);
+        line2.rectTransform.offsetMin = new Vector2(16f, -158f);
+        line2.rectTransform.offsetMax = new Vector2(-16f, -122f);
+
+        RectTransform tagRow = CreateUIElement("TagRow", card).GetComponent<RectTransform>();
+        tagRow.anchorMin = new Vector2(0.05f, 0.06f);
+        tagRow.anchorMax = new Vector2(0.95f, 0.24f);
+        tagRow.offsetMin = Vector2.zero;
+        tagRow.offsetMax = Vector2.zero;
+        HorizontalLayoutGroup tagLayout = tagRow.gameObject.AddComponent<HorizontalLayoutGroup>();
+        tagLayout.spacing = 12f;
+        tagLayout.childAlignment = TextAnchor.MiddleLeft;
+        tagLayout.childControlWidth = false;
+        tagLayout.childControlHeight = true;
+        tagLayout.childForceExpandWidth = false;
+        tagLayout.childForceExpandHeight = false;
+    }
+
+    private void CreateTutorialStatRow(RectTransform parent, string label, Color fillColor, float fillAmount, int rowIndex)
+    {
+        RectTransform row = CreateUIElement(label + "Row", parent).GetComponent<RectTransform>();
+        row.anchorMin = new Vector2(0f, 1f);
+        row.anchorMax = new Vector2(1f, 1f);
+        row.pivot = new Vector2(0.5f, 1f);
+        row.sizeDelta = new Vector2(0f, 58f);
+        row.anchoredPosition = new Vector2(0f, -rowIndex * 74f);
+
+        TextMeshProUGUI name = CreateTMPBlock(row, "Label", label, 21f, TutorialAccentColor, TextAlignmentOptions.Left);
+        name.rectTransform.anchorMin = new Vector2(0f, 0.5f);
+        name.rectTransform.anchorMax = new Vector2(0f, 0.5f);
+        name.rectTransform.pivot = new Vector2(0f, 0.5f);
+        name.rectTransform.sizeDelta = new Vector2(140f, 34f);
+        name.rectTransform.anchoredPosition = new Vector2(0f, 0f);
+
+        RectTransform barBg = CreateUIElement("BarBg", row).GetComponent<RectTransform>();
+        barBg.anchorMin = new Vector2(0f, 0.5f);
+        barBg.anchorMax = new Vector2(1f, 0.5f);
+        barBg.offsetMin = new Vector2(150f, -12f);
+        barBg.offsetMax = new Vector2(-8f, 12f);
+        barBg.gameObject.AddComponent<Image>().color = new Color(0.82f, 0.76f, 0.67f, 0.45f);
+
+        RectTransform fill = CreateUIElement("Fill", barBg).GetComponent<RectTransform>();
+        fill.anchorMin = new Vector2(0f, 0f);
+        fill.anchorMax = new Vector2(fillAmount, 1f);
+        fill.offsetMin = new Vector2(4f, 4f);
+        fill.offsetMax = new Vector2(-4f, -4f);
+        fill.gameObject.AddComponent<Image>().color = fillColor;
+    }
+
+    private void CreateTutorialTag(RectTransform parent, string text)
+    {
+        GameObject tag = CreateUIElement(text + "Tag", parent);
+        LayoutElement layout = tag.AddComponent<LayoutElement>();
+        layout.preferredWidth = Mathf.Max(120f, text.Length * 26f);
+        layout.preferredHeight = 40f;
+        Image bg = tag.AddComponent<Image>();
+        bg.color = new Color(0.99f, 0.91f, 0.62f, 0.98f);
+
+        TextMeshProUGUI label = CreateTMPBlock(tag.transform as RectTransform, "Label", text, 18f, TutorialAccentColor, TextAlignmentOptions.Center);
+        StretchFull(label.rectTransform);
+        label.fontStyle = FontStyles.Bold;
+    }
+
+    private Button CreateTutorialCloseButton(RectTransform parent, UnityEngine.Events.UnityAction onClick)
+    {
+        GameObject buttonGO = CreateUIElement("TutorialCloseButton", parent);
+        RectTransform rect = buttonGO.GetComponent<RectTransform>();
+        rect.anchorMin = new Vector2(1f, 1f);
+        rect.anchorMax = new Vector2(1f, 1f);
+        rect.pivot = new Vector2(1f, 1f);
+        rect.sizeDelta = new Vector2(72f, 72f);
+        rect.anchoredPosition = new Vector2(16f, 14f);
+
+        Image bg = buttonGO.AddComponent<Image>();
+        bg.color = new Color(0.85f, 0.68f, 0.5f, 0.12f);
+
+        Button button = buttonGO.AddComponent<Button>();
+        button.targetGraphic = bg;
+        button.onClick.AddListener(onClick);
+
+        TextMeshProUGUI label = CreateTMPBlock(rect, "Label", "×", 52f, Color.white, TextAlignmentOptions.Center);
+        StretchFull(label.rectTransform);
+
+        return button;
+    }
+
+    private TextMeshProUGUI CreateTMPBlock(RectTransform parent, string name, string text, float fontSize, Color color, TextAlignmentOptions alignment)
+    {
+        GameObject go = CreateUIElement(name, parent);
+        TextMeshProUGUI tmp = go.AddComponent<TextMeshProUGUI>();
+        tmp.text = text;
+        tmp.fontSize = fontSize;
+        tmp.color = color;
+        tmp.alignment = alignment;
+        tmp.raycastTarget = false;
+
+        if (FontManager.Instance != null && FontManager.Instance.ChineseFont != null)
+        {
+            tmp.font = FontManager.Instance.ChineseFont;
+        }
+
+        return tmp;
+    }
+
+    private TextMeshProUGUI CreateTMPLayoutItem(RectTransform parent, string name, string text, float fontSize, Color color, FontStyles style, float preferredHeight)
+    {
+        TextMeshProUGUI tmp = CreateTMPBlock(parent, name, text, fontSize, color, TextAlignmentOptions.TopLeft);
+        tmp.fontStyle = style;
+        RectTransform rect = tmp.rectTransform;
+        rect.sizeDelta = new Vector2(0f, preferredHeight);
+        LayoutElement layout = tmp.gameObject.AddComponent<LayoutElement>();
+        layout.preferredHeight = preferredHeight;
+        return tmp;
+    }
+
+    private void SetAnchoredBox(RectTransform rect, Vector2 anchorMin, Vector2 anchorMax, Vector2 anchoredPosition, Vector2 sizeDelta)
+    {
+        rect.anchorMin = anchorMin;
+        rect.anchorMax = anchorMax;
+        rect.pivot = new Vector2(0.5f, 0.5f);
+        rect.anchoredPosition = anchoredPosition;
+        rect.sizeDelta = sizeDelta;
+    }
 
     private GameObject CreatePanel(string name, RectTransform parent, Vector2 anchor, Vector2 size, Color color)
     {

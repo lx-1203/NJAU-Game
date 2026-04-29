@@ -50,6 +50,10 @@ public class SettingsUIBuilder : MonoBehaviour
     private Slider uiScaleSlider;
     private Slider textSpeedSlider;
     private TMP_Dropdown languageDropdown;
+    private Button confirmDialogConfirmButton;
+    private GameObject confirmDialogCanvasObj;
+    private Action confirmDialogConfirmAction;
+    private Action confirmDialogCancelAction;
 
     // ========== 生命周期 ==========
 
@@ -66,8 +70,29 @@ public class SettingsUIBuilder : MonoBehaviour
 
     private void Update()
     {
+        if (!isOpen)
+        {
+            return;
+        }
+
+        if (confirmDialogCanvasObj != null)
+        {
+            if (Input.GetKeyDown(KeyCode.Escape))
+            {
+                confirmDialogCancelAction?.Invoke();
+                return;
+            }
+
+            if (UIInputHelper.IsConfirmPressed())
+            {
+                UIInputHelper.TryClick(confirmDialogConfirmButton);
+            }
+
+            return;
+        }
+
         // Esc 键关闭面板
-        if (isOpen && Input.GetKeyDown(KeyCode.Escape))
+        if (Input.GetKeyDown(KeyCode.Escape))
         {
             HideSettings();
         }
@@ -106,6 +131,7 @@ public class SettingsUIBuilder : MonoBehaviour
         if (Instance == null) return;
 
         Instance.isOpen = false;
+        Instance.ClearConfirmDialog();
         if (Instance.rootCanvasObj != null)
         {
             Destroy(Instance.rootCanvasObj);
@@ -799,8 +825,11 @@ public class SettingsUIBuilder : MonoBehaviour
 
     private void CreateConfirmDialog(string message, Action onConfirm)
     {
+        ClearConfirmDialog();
+
         // 创建对话框Canvas（比设置面板高1层）
-        GameObject dialogCanvasObj = new GameObject("ConfirmDialogCanvas");
+        confirmDialogCanvasObj = new GameObject("ConfirmDialogCanvas");
+        GameObject dialogCanvasObj = confirmDialogCanvasObj;
         dialogCanvasObj.transform.SetParent(transform, false);
 
         Canvas dialogCanvas = dialogCanvasObj.AddComponent<Canvas>();
@@ -836,20 +865,38 @@ public class SettingsUIBuilder : MonoBehaviour
             new Vector2(0.5f, 0.5f), new Vector2(360f, 80f), new Vector2(0f, 20f));
 
         // 确认按钮
+        confirmDialogConfirmAction = () =>
+        {
+            Action callback = onConfirm;
+            ClearConfirmDialog();
+            callback?.Invoke();
+        };
+
+        confirmDialogCancelAction = ClearConfirmDialog;
+
         Button confirmBtn = CreateMenuButton(panelRT, "确  认", BtnNormal, BtnHover,
             new Vector2(140f, 45f), new Vector2(-80f, -50f));
-        confirmBtn.onClick.AddListener(() =>
-        {
-            onConfirm?.Invoke();
-            Destroy(dialogCanvasObj);
-        });
+        confirmBtn.onClick.AddListener(() => confirmDialogConfirmAction?.Invoke());
+        confirmDialogConfirmButton = confirmBtn;
 
         // 取消按钮
         Button cancelBtn = CreateMenuButton(panelRT, "取  消", new Color(0.3f, 0.3f, 0.3f, 0.9f), BtnHover,
             new Vector2(140f, 45f), new Vector2(80f, -50f));
-        cancelBtn.onClick.AddListener(() =>
+        cancelBtn.onClick.AddListener(() => confirmDialogCancelAction?.Invoke());
+
+        UIInputHelper.FocusSelectable(confirmDialogConfirmButton);
+    }
+
+    private void ClearConfirmDialog()
+    {
+        if (confirmDialogCanvasObj != null)
         {
-            Destroy(dialogCanvasObj);
-        });
+            Destroy(confirmDialogCanvasObj);
+            confirmDialogCanvasObj = null;
+        }
+
+        confirmDialogConfirmButton = null;
+        confirmDialogConfirmAction = null;
+        confirmDialogCancelAction = null;
     }
 }

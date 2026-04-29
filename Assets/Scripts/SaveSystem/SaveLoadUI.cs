@@ -33,6 +33,34 @@ public class SaveLoadUI : MonoBehaviour
     private Canvas canvas;
     private RectTransform canvasRect;
     private GameObject confirmDialog;
+    private Button backButton;
+    private Button confirmDialogConfirmButton;
+    private Action confirmDialogConfirmAction;
+    private Action confirmDialogCancelAction;
+
+    private void Update()
+    {
+        if (confirmDialog != null)
+        {
+            if (Input.GetKeyDown(KeyCode.Escape))
+            {
+                confirmDialogCancelAction?.Invoke();
+                return;
+            }
+
+            if (UIInputHelper.IsConfirmPressed())
+            {
+                UIInputHelper.TryClick(confirmDialogConfirmButton);
+            }
+
+            return;
+        }
+
+        if (Input.GetKeyDown(KeyCode.Escape))
+        {
+            Close();
+        }
+    }
 
     // ========== 静态入口 ==========
 
@@ -378,6 +406,7 @@ public class SaveLoadUI : MonoBehaviour
         cb.pressedColor = new Color(0.82f, 0.82f, 0.82f, 1f);
         btn.colors = cb;
         btn.onClick.AddListener(Close);
+        backButton = btn;
 
         // 按钮文字
         GameObject textGO = CreateUIElement("Label", rt);
@@ -499,6 +528,35 @@ public class SaveLoadUI : MonoBehaviour
             Destroy(confirmDialog);
         }
 
+        confirmDialogConfirmAction = () =>
+        {
+            if (confirmDialog != null)
+            {
+                Destroy(confirmDialog);
+                confirmDialog = null;
+            }
+
+            confirmDialogConfirmButton = null;
+            Action callback = onConfirm;
+            confirmDialogConfirmAction = null;
+            confirmDialogCancelAction = null;
+            callback?.Invoke();
+        };
+
+        confirmDialogCancelAction = () =>
+        {
+            if (confirmDialog != null)
+            {
+                Destroy(confirmDialog);
+                confirmDialog = null;
+            }
+
+            confirmDialogConfirmButton = null;
+            confirmDialogConfirmAction = null;
+            confirmDialogCancelAction = null;
+            UIInputHelper.FocusSelectable(backButton);
+        };
+
         // 对话框遮罩
         confirmDialog = CreateUIElement("ConfirmDialog", canvasRect);
         StretchFull(confirmDialog.GetComponent<RectTransform>());
@@ -543,29 +601,21 @@ public class SaveLoadUI : MonoBehaviour
         float btnSpacing = 30f;
 
         // 确认按钮
-        CreateDialogButton(panelRT, "ConfirmBtn", "确认", ButtonPrimary,
+        confirmDialogConfirmButton = CreateDialogButton(panelRT, "ConfirmBtn", "确认", ButtonPrimary,
             new Vector2(-btnSpacing - btnWidth / 2f + btnWidth / 2f, btnY),
-            new Vector2(btnWidth, btnHeight), () =>
-            {
-                Destroy(confirmDialog);
-                confirmDialog = null;
-                onConfirm?.Invoke();
-            });
+            new Vector2(btnWidth, btnHeight), () => confirmDialogConfirmAction?.Invoke());
 
         // 取消按钮
         CreateDialogButton(panelRT, "CancelBtn", "取消", new Color(0.40f, 0.40f, 0.45f),
             new Vector2(btnSpacing + btnWidth / 2f - btnWidth / 2f, btnY),
-            new Vector2(btnWidth, btnHeight), () =>
-            {
-                Destroy(confirmDialog);
-                confirmDialog = null;
-            });
+            new Vector2(btnWidth, btnHeight), () => confirmDialogCancelAction?.Invoke());
 
         // 确保对话框在最上层
         confirmDialog.transform.SetAsLastSibling();
+        UIInputHelper.FocusSelectable(confirmDialogConfirmButton);
     }
 
-    private void CreateDialogButton(RectTransform parent, string name, string label,
+    private Button CreateDialogButton(RectTransform parent, string name, string label,
         Color bgColor, Vector2 position, Vector2 size, Action onClick)
     {
         GameObject btnGO = CreateUIElement(name, parent);
@@ -598,6 +648,7 @@ public class SaveLoadUI : MonoBehaviour
         text.color = TextWhite;
         text.raycastTarget = false;
         ApplyChineseFont(text);
+        return btn;
     }
 
     // ========== 工具方法 ==========

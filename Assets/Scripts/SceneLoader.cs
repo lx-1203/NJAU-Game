@@ -27,6 +27,25 @@ public static class SceneLoader
             return;
         }
 
+        if (OpeningStoryManager.TryInterceptSceneLoad(sceneName))
+        {
+            return;
+        }
+
+        LoadSceneAfterOpening(sceneName);
+    }
+
+    /// <summary>
+    /// Loads a scene through the loading screen without triggering the new-game opening again.
+    /// </summary>
+    public static void LoadSceneAfterOpening(string sceneName)
+    {
+        if (string.IsNullOrEmpty(sceneName))
+        {
+            Debug.LogError("[SceneLoader] 目标场景名称不能为空！");
+            return;
+        }
+
         // 记录目标场景名称
         TargetSceneName = sceneName;
         Debug.Log($"[SceneLoader] 准备加载场景: {sceneName}，进入加载界面...");

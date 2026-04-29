@@ -256,16 +256,7 @@ public class DialogueSystem : MonoBehaviour, IDialogueTrigger
 
         // 头像
         uiBuilder.portraitContainer.SetActive(true);
-        Sprite npcSprite = Resources.Load<Sprite>("NPCSprite");
-        if (npcSprite != null)
-        {
-            uiBuilder.portraitImage.sprite = npcSprite;
-            uiBuilder.portraitImage.color = Color.white;
-        }
-        else
-        {
-            uiBuilder.portraitImage.color = new Color(0.2f, 0.2f, 0.3f, 0.8f);
-        }
+        SetPortraitPlaceholder();
 
         // 触发事件
         OnDialogueStart?.Invoke(speakerName);
@@ -355,14 +346,25 @@ public class DialogueSystem : MonoBehaviour, IDialogueTrigger
                 }
                 else
                 {
-                    uiBuilder.portraitImage.color = new Color(0.2f, 0.2f, 0.3f, 0.8f);
+                    SetPortraitPlaceholder();
                 }
             }
             else
             {
-                uiBuilder.portraitImage.color = new Color(0.2f, 0.2f, 0.3f, 0.8f);
+                SetPortraitPlaceholder();
             }
         }
+    }
+
+    private void SetPortraitPlaceholder()
+    {
+        if (uiBuilder == null || uiBuilder.portraitImage == null)
+        {
+            return;
+        }
+
+        uiBuilder.portraitImage.sprite = null;
+        uiBuilder.portraitImage.color = new Color(0.2f, 0.2f, 0.3f, 0.8f);
     }
 
     /// <summary>

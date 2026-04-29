@@ -45,7 +45,7 @@ public class GameState : MonoBehaviour, ISaveable
     [Header("玩家身份")]
     [SerializeField] private string playerName = "学生";
     [SerializeField] private int playerGender = 0;   // 0=男, 1=女
-    [SerializeField] private string playerMajor = "生物科学";
+    [SerializeField] private string playerMajor = "生物科学专业";
 
     // ========== 属性访问器（写入时自动通知） ==========
 

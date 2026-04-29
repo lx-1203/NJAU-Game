@@ -1,95 +1,98 @@
 using System.Collections;
 using System.Collections.Generic;
-using UnityEngine;
-using UnityEngine.UI;
+using System.Linq;
 using TMPro;
+using UnityEngine;
+using UnityEngine.Events;
+using UnityEngine.UI;
 
 /// <summary>
-/// 成就UI管理器
-/// 包含游戏内成就解锁弹窗通知和标题界面成就回顾面板
+/// 成就 UI：负责游戏内解锁提示，以及首页/暂停页可打开的成就回顾界面。
 /// </summary>
 public class AchievementUI : MonoBehaviour
 {
-    // ========== 单例 ==========
-
-    /// <summary>
-    /// 全局单例实例
-    /// </summary>
     public static AchievementUI Instance { get; private set; }
 
-    // ========== 公开属性 ==========
-
-    /// <summary>
-    /// 回顾面板是否正在显示
-    /// </summary>
     public bool isReviewShowing { get; private set; }
 
-    // ========== 弹窗相关字段 ==========
+    private enum ReviewCategory
+    {
+        Basic,
+        Study,
+        Social,
+        Sport,
+        Money,
+        Growth
+    }
 
-    /// <summary>弹窗独立Canvas</summary>
+    private enum ReviewFilter
+    {
+        All,
+        Locked,
+        Unlocked
+    }
+
+    private const float NotificationSlideDuration = 0.28f;
+    private const float NotificationStayDuration = 2.3f;
+    private const float NotificationFadeDuration = 0.35f;
+    private const float ReviewFadeDuration = 0.22f;
+    private const int NotificationCanvasOrder = 150;
+    private const int ReviewCanvasOrder = 300;
+
+    private static readonly Color Gold = new Color32(0xF2, 0xC7, 0x6C, 0xFF);
+    private static readonly Color WarmPaper = new Color32(0xF7, 0xF0, 0xDF, 0xFF);
+    private static readonly Color PanelBrown = new Color32(0x6E, 0x5A, 0x49, 0xF4);
+    private static readonly Color PanelInner = new Color32(0xFB, 0xF7, 0xEE, 0xFF);
+    private static readonly Color AccentBrown = new Color32(0x78, 0x5A, 0x40, 0xFF);
+    private static readonly Color AccentMuted = new Color32(0x98, 0x88, 0x76, 0xFF);
+    private static readonly Color Green = new Color32(0x1F, 0xB3, 0x47, 0xFF);
+    private static readonly Color Blue = new Color32(0x2B, 0x7B, 0xF5, 0xFF);
+    private static readonly Color Overlay = new Color(0f, 0f, 0f, 0.58f);
+    private static readonly Color TabIdle = new Color32(0xEF, 0xEA, 0xE2, 0xF2);
+    private static readonly Color TabActive = new Color32(0xFF, 0xF1, 0xB8, 0xFF);
+    private static readonly Color FilterIdle = new Color32(0xF5, 0xF2, 0xEC, 0xF7);
+    private static readonly Color FilterActive = new Color32(0xF8, 0xC9, 0xC8, 0xFF);
+    private static readonly Color ItemUnlocked = new Color32(0xFF, 0xF4, 0xC7, 0xFF);
+    private static readonly Color ItemLocked = new Color32(0xE8, 0xDE, 0xCC, 0xE8);
+    private static readonly Color ItemBorder = new Color32(0xE2, 0xD6, 0xBC, 0xFF);
+    private static readonly Color LockedIcon = new Color32(0xA9, 0xA4, 0x9B, 0xFF);
+
+    private readonly Queue<AchievementDefinition> notificationQueue = new Queue<AchievementDefinition>();
+    private readonly Dictionary<ReviewCategory, Button> categoryButtons = new Dictionary<ReviewCategory, Button>();
+    private readonly Dictionary<ReviewCategory, TextMeshProUGUI> categoryTexts = new Dictionary<ReviewCategory, TextMeshProUGUI>();
+    private readonly Dictionary<ReviewFilter, Button> filterButtons = new Dictionary<ReviewFilter, Button>();
+    private readonly Dictionary<ReviewFilter, TextMeshProUGUI> filterTexts = new Dictionary<ReviewFilter, TextMeshProUGUI>();
+
     private Canvas notificationCanvas;
-    /// <summary>弹窗通知队列</summary>
-    private Queue<AchievementDefinition> notificationQueue = new Queue<AchievementDefinition>();
-    /// <summary>当前是否正在显示弹窗</summary>
-    private bool isShowingNotification = false;
+    private bool isShowingNotification;
 
-    // ========== 回顾面板相关字段 ==========
-
-    /// <summary>回顾面板独立Canvas</summary>
     private Canvas reviewCanvas;
-    /// <summary>回顾面板根物体</summary>
-    private GameObject reviewPanelRoot;
-    /// <summary>成就列表容器 (ScrollRect 的 content)</summary>
-    private RectTransform reviewListContent;
-    /// <summary>进度文字</summary>
-    private TextMeshProUGUI progressText;
-    /// <summary>面板主体 (用于动画)</summary>
-    private RectTransform reviewPanelBody;
-    /// <summary>面板 CanvasGroup (用于淡入淡出)</summary>
     private CanvasGroup reviewCanvasGroup;
+    private RectTransform reviewPanelBody;
+    private RectTransform reviewListContent;
+    private TextMeshProUGUI summaryText;
+    private TextMeshProUGUI titleProgressText;
+    private ScrollRect reviewScrollRect;
+    private Coroutine reviewAnimationCoroutine;
 
-    // ========== 常量 ==========
-
-    private const float NOTIFICATION_SLIDE_DURATION = 0.3f;
-    private const float NOTIFICATION_STAY_DURATION = 2.5f;
-    private const float NOTIFICATION_FADE_DURATION = 0.5f;
-    private const float REVIEW_FADE_DURATION = 0.3f;
-    private const float REVIEW_ITEM_STAGGER = 0.05f;
-    private const int NOTIFICATION_CANVAS_ORDER = 150;
-    private const int REVIEW_CANVAS_ORDER = 300;
-
-    // ========== 颜色常量 ==========
-
-    private static readonly Color COLOR_GOLD = new Color(1f, 0.84f, 0f, 1f);
-    private static readonly Color COLOR_DARK_BG = new Color(0.12f, 0.12f, 0.16f, 0.92f);
-    private static readonly Color COLOR_GOLD_BORDER = new Color(1f, 0.84f, 0f, 0.8f);
-    private static readonly Color COLOR_GRAY_BORDER = new Color(0.4f, 0.4f, 0.4f, 0.6f);
-    private static readonly Color COLOR_GREEN_CHECK = new Color(0.2f, 0.9f, 0.3f, 1f);
-    private static readonly Color COLOR_GRAY_LOCK = new Color(0.5f, 0.5f, 0.5f, 1f);
-    private static readonly Color COLOR_OVERLAY = new Color(0f, 0f, 0f, 0.7f);
-    private static readonly Color COLOR_ITEM_BG = new Color(0.18f, 0.18f, 0.22f, 0.95f);
-    private static readonly Color COLOR_ITEM_LOCKED_BG = new Color(0.14f, 0.14f, 0.16f, 0.9f);
-
-    // ========== 生命周期 ==========
+    private ReviewCategory currentCategory = ReviewCategory.Basic;
+    private ReviewFilter currentFilter = ReviewFilter.All;
 
     private void Awake()
     {
-        // 单例初始化
         if (Instance != null && Instance != this)
         {
             Destroy(gameObject);
             return;
         }
+
         Instance = this;
         DontDestroyOnLoad(gameObject);
-
-        // 创建弹窗Canvas (只创建一次)
         CreateNotificationCanvas();
     }
 
     private void Start()
     {
-        // 安全订阅成就解锁事件
         if (AchievementSystem.Instance != null)
         {
             AchievementSystem.Instance.OnAchievementUnlocked += OnAchievementUnlocked;
@@ -102,7 +105,6 @@ public class AchievementUI : MonoBehaviour
 
     private void OnDestroy()
     {
-        // 取消订阅事件
         if (AchievementSystem.Instance != null)
         {
             AchievementSystem.Instance.OnAchievementUnlocked -= OnAchievementUnlocked;
@@ -114,23 +116,16 @@ public class AchievementUI : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// 等待 AchievementSystem 初始化后再订阅
-    /// </summary>
     private IEnumerator WaitAndSubscribe()
     {
         while (AchievementSystem.Instance == null)
         {
             yield return null;
         }
+
         AchievementSystem.Instance.OnAchievementUnlocked += OnAchievementUnlocked;
     }
 
-    // ========== 事件回调 ==========
-
-    /// <summary>
-    /// 成就解锁回调，将成就加入弹窗队列
-    /// </summary>
     private void OnAchievementUnlocked(AchievementDefinition def)
     {
         notificationQueue.Enqueue(def);
@@ -140,31 +135,21 @@ public class AchievementUI : MonoBehaviour
         }
     }
 
-    // ========== A. 弹窗通知系统 ==========
-
-    /// <summary>
-    /// 创建弹窗专用Canvas (sortingOrder=150)
-    /// </summary>
     private void CreateNotificationCanvas()
     {
-        GameObject canvasObj = new GameObject("AchievementNotificationCanvas");
-        canvasObj.transform.SetParent(transform);
+        GameObject canvasObject = new GameObject("AchievementNotificationCanvas");
+        canvasObject.transform.SetParent(transform, false);
 
-        notificationCanvas = canvasObj.AddComponent<Canvas>();
+        notificationCanvas = canvasObject.AddComponent<Canvas>();
         notificationCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        notificationCanvas.sortingOrder = NOTIFICATION_CANVAS_ORDER;
+        notificationCanvas.sortingOrder = NotificationCanvasOrder;
 
-        CanvasScaler scaler = canvasObj.AddComponent<CanvasScaler>();
+        CanvasScaler scaler = canvasObject.AddComponent<CanvasScaler>();
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        scaler.referenceResolution = new Vector2(1920, 1080);
+        scaler.referenceResolution = new Vector2(1920f, 1080f);
         scaler.matchWidthOrHeight = 0.5f;
-
-        // 弹窗Canvas不需要GraphicRaycaster，确保不阻断游戏交互
     }
 
-    /// <summary>
-    /// 从队列取出下一个成就并显示弹窗
-    /// </summary>
     private void ShowNextNotification()
     {
         if (notificationQueue.Count == 0)
@@ -174,160 +159,130 @@ public class AchievementUI : MonoBehaviour
         }
 
         isShowingNotification = true;
-        AchievementDefinition def = notificationQueue.Dequeue();
-        GameObject popup = CreateNotificationPopup(def);
+        AchievementDefinition definition = notificationQueue.Dequeue();
+        GameObject popup = CreateNotificationPopup(definition);
         StartCoroutine(NotificationCoroutine(popup));
     }
 
-    /// <summary>
-    /// 创建单个弹窗GameObject
-    /// </summary>
     private GameObject CreateNotificationPopup(AchievementDefinition def)
     {
-        // 弹窗根物体
-        GameObject popupObj = new GameObject("NotificationPopup");
-        popupObj.transform.SetParent(notificationCanvas.transform, false);
+        GameObject popupObject = new GameObject("AchievementNotification");
+        popupObject.transform.SetParent(notificationCanvas.transform, false);
 
-        RectTransform popupRect = popupObj.AddComponent<RectTransform>();
+        RectTransform popupRect = popupObject.AddComponent<RectTransform>();
         popupRect.anchorMin = new Vector2(1f, 1f);
         popupRect.anchorMax = new Vector2(1f, 1f);
         popupRect.pivot = new Vector2(1f, 1f);
-        popupRect.anchoredPosition = new Vector2(-30f, -30f);
-        popupRect.sizeDelta = new Vector2(420f, 120f);
+        popupRect.anchoredPosition = new Vector2(460f, -36f);
+        popupRect.sizeDelta = new Vector2(430f, 126f);
 
-        // CanvasGroup 用于淡出动画 & 不阻断交互
-        CanvasGroup cg = popupObj.AddComponent<CanvasGroup>();
-        cg.blocksRaycasts = false;
-        cg.interactable = false;
+        Image background = popupObject.AddComponent<Image>();
+        background.color = new Color(0.13f, 0.11f, 0.09f, 0.95f);
 
-        // 背景 (深色半透明)
-        Image bgImage = popupObj.AddComponent<Image>();
-        bgImage.color = COLOR_DARK_BG;
-        bgImage.type = Image.Type.Sliced;
+        Outline outline = popupObject.AddComponent<Outline>();
+        outline.effectColor = new Color(1f, 0.9f, 0.62f, 0.4f);
+        outline.effectDistance = new Vector2(2f, -2f);
 
-        // 横向布局
-        HorizontalLayoutGroup hLayout = popupObj.AddComponent<HorizontalLayoutGroup>();
-        hLayout.padding = new RectOffset(16, 16, 12, 12);
-        hLayout.spacing = 14f;
-        hLayout.childAlignment = TextAnchor.MiddleLeft;
-        hLayout.childControlWidth = false;
-        hLayout.childControlHeight = false;
-        hLayout.childForceExpandWidth = false;
-        hLayout.childForceExpandHeight = false;
+        CanvasGroup canvasGroup = popupObject.AddComponent<CanvasGroup>();
+        canvasGroup.blocksRaycasts = false;
+        canvasGroup.interactable = false;
 
-        // 左侧: 图标占位 (金色奖杯文字)
-        GameObject iconObj = new GameObject("Icon");
-        iconObj.transform.SetParent(popupObj.transform, false);
-        RectTransform iconRect = iconObj.AddComponent<RectTransform>();
-        iconRect.sizeDelta = new Vector2(64f, 64f);
+        HorizontalLayoutGroup layout = popupObject.AddComponent<HorizontalLayoutGroup>();
+        layout.padding = new RectOffset(16, 16, 16, 16);
+        layout.spacing = 14f;
+        layout.childAlignment = TextAnchor.MiddleLeft;
+        layout.childForceExpandWidth = false;
+        layout.childForceExpandHeight = false;
 
-        // 图标背景
-        Image iconBg = iconObj.AddComponent<Image>();
-        iconBg.color = new Color(1f, 0.84f, 0f, 0.15f);
+        GameObject iconRoot = CreateUIObject("IconRoot", popupRect);
+        LayoutElement iconLayout = iconRoot.AddComponent<LayoutElement>();
+        iconLayout.preferredWidth = 72f;
+        iconLayout.preferredHeight = 72f;
+        Image iconBg = iconRoot.AddComponent<Image>();
+        iconBg.color = new Color(Gold.r, Gold.g, Gold.b, 0.18f);
 
-        TextMeshProUGUI iconText = CreateTMPText(iconObj.transform, "IconText",
-            "AC", 36, COLOR_GOLD, TextAlignmentOptions.Center);
-        RectTransform iconTextRect = iconText.GetComponent<RectTransform>();
-        iconTextRect.anchorMin = Vector2.zero;
-        iconTextRect.anchorMax = Vector2.one;
-        iconTextRect.sizeDelta = Vector2.zero;
-        iconTextRect.anchoredPosition = Vector2.zero;
+        TextMeshProUGUI iconText = CreateTMPText(iconRoot.transform, "Icon", "★", 42f, Gold, TextAlignmentOptions.Center);
+        Stretch(iconText.rectTransform);
 
-        // 右侧: 纵向容器
-        GameObject rightObj = new GameObject("RightContent");
-        rightObj.transform.SetParent(popupObj.transform, false);
-        RectTransform rightRect = rightObj.AddComponent<RectTransform>();
-        rightRect.sizeDelta = new Vector2(300f, 96f);
+        GameObject contentRoot = CreateUIObject("ContentRoot", popupRect);
+        LayoutElement contentLayout = contentRoot.AddComponent<LayoutElement>();
+        contentLayout.preferredWidth = 300f;
+        contentLayout.preferredHeight = 82f;
 
-        VerticalLayoutGroup vLayout = rightObj.AddComponent<VerticalLayoutGroup>();
-        vLayout.padding = new RectOffset(0, 0, 2, 2);
-        vLayout.spacing = 2f;
-        vLayout.childAlignment = TextAnchor.UpperLeft;
-        vLayout.childControlWidth = true;
-        vLayout.childControlHeight = false;
-        vLayout.childForceExpandWidth = true;
-        vLayout.childForceExpandHeight = false;
+        VerticalLayoutGroup contentGroup = contentRoot.AddComponent<VerticalLayoutGroup>();
+        contentGroup.spacing = 2f;
+        contentGroup.childAlignment = TextAnchor.UpperLeft;
+        contentGroup.childControlWidth = true;
+        contentGroup.childControlHeight = false;
+        contentGroup.childForceExpandWidth = true;
+        contentGroup.childForceExpandHeight = false;
 
-        // "成就解锁!" 小字
-        TextMeshProUGUI unlockLabel = CreateTMPText(rightObj.transform, "UnlockLabel",
-            "\u6210\u5c31\u89e3\u9501!", 18, COLOR_GOLD, TextAlignmentOptions.TopLeft);
-        unlockLabel.GetComponent<RectTransform>().sizeDelta = new Vector2(300f, 24f);
-        unlockLabel.fontStyle = FontStyles.Bold;
+        TextMeshProUGUI unlockText = CreateTMPText(contentRoot.transform, "UnlockText", "成就解锁", 19f, Gold, TextAlignmentOptions.Left);
+        unlockText.fontStyle = FontStyles.Bold;
+        unlockText.rectTransform.sizeDelta = new Vector2(300f, 26f);
 
-        // 成就名称 大字
-        TextMeshProUGUI nameText = CreateTMPText(rightObj.transform, "NameText",
-            def.name, 26, Color.white, TextAlignmentOptions.TopLeft);
-        nameText.GetComponent<RectTransform>().sizeDelta = new Vector2(300f, 34f);
+        TextMeshProUGUI nameText = CreateTMPText(contentRoot.transform, "NameText", def.name, 28f, Color.white, TextAlignmentOptions.Left);
         nameText.fontStyle = FontStyles.Bold;
+        nameText.rectTransform.sizeDelta = new Vector2(300f, 34f);
 
-        // 描述 小字
-        TextMeshProUGUI descText = CreateTMPText(rightObj.transform, "DescText",
-            def.description, 16, new Color(0.75f, 0.75f, 0.75f, 1f), TextAlignmentOptions.TopLeft);
-        descText.GetComponent<RectTransform>().sizeDelta = new Vector2(300f, 24f);
+        TextMeshProUGUI descText = CreateTMPText(contentRoot.transform, "DescText", def.description, 17f, new Color(0.86f, 0.82f, 0.74f, 1f), TextAlignmentOptions.Left);
+        descText.rectTransform.sizeDelta = new Vector2(300f, 24f);
 
-        return popupObj;
+        return popupObject;
     }
 
-    /// <summary>
-    /// 弹窗生命周期协程: SlideIn → 停留 → FadeOut → 销毁 → 下一个
-    /// </summary>
     private IEnumerator NotificationCoroutine(GameObject popup)
     {
-        if (popup == null) yield break;
+        if (popup == null)
+        {
+            yield break;
+        }
 
-        RectTransform rect = popup.GetComponent<RectTransform>();
-        CanvasGroup cg = popup.GetComponent<CanvasGroup>();
-        AnimationCurve easeCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
+        RectTransform popupRect = popup.GetComponent<RectTransform>();
+        CanvasGroup canvasGroup = popup.GetComponent<CanvasGroup>();
+        float targetX = -36f;
+        float startX = 460f;
+        float y = popupRect.anchoredPosition.y;
 
-        // 初始位置 (屏幕右侧外部)
-        float targetX = -30f;
-        float startX = 450f; // 在屏幕右侧外
-        float targetY = rect.anchoredPosition.y;
-
-        // SlideIn 动画 (0.3s)
         float elapsed = 0f;
-        while (elapsed < NOTIFICATION_SLIDE_DURATION)
+        while (elapsed < NotificationSlideDuration)
         {
             elapsed += Time.unscaledDeltaTime;
-            float t = easeCurve.Evaluate(Mathf.Clamp01(elapsed / NOTIFICATION_SLIDE_DURATION));
-            float x = Mathf.Lerp(startX, targetX, t);
-            rect.anchoredPosition = new Vector2(x, targetY);
+            float t = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(elapsed / NotificationSlideDuration));
+            popupRect.anchoredPosition = new Vector2(Mathf.Lerp(startX, targetX, t), y);
             yield return null;
         }
-        rect.anchoredPosition = new Vector2(targetX, targetY);
 
-        // 停留 2.5s
-        yield return new WaitForSecondsRealtime(NOTIFICATION_STAY_DURATION);
+        popupRect.anchoredPosition = new Vector2(targetX, y);
+        yield return new WaitForSecondsRealtime(NotificationStayDuration);
 
-        // FadeOut 动画 (0.5s)
         elapsed = 0f;
-        while (elapsed < NOTIFICATION_FADE_DURATION)
+        while (elapsed < NotificationFadeDuration)
         {
             elapsed += Time.unscaledDeltaTime;
-            float t = easeCurve.Evaluate(Mathf.Clamp01(elapsed / NOTIFICATION_FADE_DURATION));
-            cg.alpha = Mathf.Lerp(1f, 0f, t);
+            float t = Mathf.Clamp01(elapsed / NotificationFadeDuration);
+            canvasGroup.alpha = 1f - t;
             yield return null;
         }
-        cg.alpha = 0f;
 
-        // 销毁弹窗
         Destroy(popup);
-
-        // 显示队列中下一个
         ShowNextNotification();
     }
 
-    // ========== B. 成就回顾面板 ==========
-
-    /// <summary>
-    /// 显示成就回顾面板 (从标题界面调用)
-    /// </summary>
     public void ShowReviewPanel()
     {
-        if (isReviewShowing) return;
+        UIFlowGuard.EnsureEventSystem();
+
+        if (isReviewShowing)
+        {
+            RefreshReviewList();
+            return;
+        }
+
         isReviewShowing = true;
 
-        // 懒加载: 首次调用时创建Canvas和面板
+        EnsureReviewDependencies();
+
         if (reviewCanvas == null)
         {
             CreateReviewCanvas();
@@ -335,30 +290,34 @@ public class AchievementUI : MonoBehaviour
         }
 
         reviewCanvas.gameObject.SetActive(true);
-
-        // 刷新列表数据
         RefreshReviewList();
-
-        // 播放打开动画
-        StartCoroutine(ReviewPanelOpenCoroutine());
+        if (reviewAnimationCoroutine != null)
+        {
+            StopCoroutine(reviewAnimationCoroutine);
+        }
+        reviewAnimationCoroutine = StartCoroutine(ReviewPanelOpenCoroutine());
     }
 
-    /// <summary>
-    /// 隐藏成就回顾面板
-    /// </summary>
     public void HideReviewPanel()
     {
-        if (!isReviewShowing) return;
-        StartCoroutine(ReviewPanelCloseCoroutine());
+        if (!isReviewShowing || reviewCanvas == null)
+        {
+            return;
+        }
+
+        if (reviewAnimationCoroutine != null)
+        {
+            StopCoroutine(reviewAnimationCoroutine);
+        }
+        reviewAnimationCoroutine = StartCoroutine(ReviewPanelCloseCoroutine());
     }
 
     public void HideReviewPanelImmediate()
     {
-        StopAllCoroutines();
-
-        if (reviewCanvasGroup != null)
+        if (reviewAnimationCoroutine != null)
         {
-            reviewCanvasGroup.alpha = 0f;
+            StopCoroutine(reviewAnimationCoroutine);
+            reviewAnimationCoroutine = null;
         }
 
         if (reviewCanvas != null)
@@ -366,467 +325,856 @@ public class AchievementUI : MonoBehaviour
             reviewCanvas.gameObject.SetActive(false);
         }
 
+        if (reviewCanvasGroup != null)
+        {
+            reviewCanvasGroup.alpha = 0f;
+        }
+
         isReviewShowing = false;
     }
 
-    /// <summary>
-    /// 创建回顾面板专用Canvas (sortingOrder=300)
-    /// </summary>
+    private void EnsureReviewDependencies()
+    {
+        if (AchievementSystem.Instance == null)
+        {
+            GameObject systemObject = new GameObject("AchievementSystem");
+            systemObject.AddComponent<AchievementSystem>();
+        }
+    }
+
     private void CreateReviewCanvas()
     {
-        GameObject canvasObj = new GameObject("AchievementReviewCanvas");
-        canvasObj.transform.SetParent(transform);
+        GameObject canvasObject = new GameObject("AchievementReviewCanvas");
+        canvasObject.transform.SetParent(transform, false);
 
-        reviewCanvas = canvasObj.AddComponent<Canvas>();
+        reviewCanvas = canvasObject.AddComponent<Canvas>();
         reviewCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        reviewCanvas.sortingOrder = REVIEW_CANVAS_ORDER;
+        reviewCanvas.sortingOrder = ReviewCanvasOrder;
 
-        CanvasScaler scaler = canvasObj.AddComponent<CanvasScaler>();
+        CanvasScaler scaler = canvasObject.AddComponent<CanvasScaler>();
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        scaler.referenceResolution = new Vector2(1920, 1080);
+        scaler.referenceResolution = new Vector2(1920f, 1080f);
         scaler.matchWidthOrHeight = 0.5f;
 
-        canvasObj.AddComponent<GraphicRaycaster>();
+        canvasObject.AddComponent<GraphicRaycaster>();
 
-        // 整体 CanvasGroup 用于淡入淡出
-        reviewCanvasGroup = canvasObj.AddComponent<CanvasGroup>();
+        reviewCanvasGroup = canvasObject.AddComponent<CanvasGroup>();
         reviewCanvasGroup.alpha = 0f;
     }
 
-    /// <summary>
-    /// 创建回顾面板内容 (全屏覆盖)
-    /// </summary>
     private void CreateReviewPanel()
     {
-        // 面板根物体 (全屏)
-        reviewPanelRoot = new GameObject("ReviewPanelRoot");
-        reviewPanelRoot.transform.SetParent(reviewCanvas.transform, false);
+        GameObject root = CreateUIObject("ReviewRoot", reviewCanvas.transform as RectTransform);
+        RectTransform rootRect = root.GetComponent<RectTransform>();
+        Stretch(rootRect);
 
-        RectTransform rootRect = reviewPanelRoot.AddComponent<RectTransform>();
-        rootRect.anchorMin = Vector2.zero;
-        rootRect.anchorMax = Vector2.one;
-        rootRect.sizeDelta = Vector2.zero;
-        rootRect.anchoredPosition = Vector2.zero;
+        Image overlay = root.AddComponent<Image>();
+        overlay.color = Overlay;
 
-        // 半透明黑色背景遮罩
-        Image overlay = reviewPanelRoot.AddComponent<Image>();
-        overlay.color = COLOR_OVERLAY;
+        Button overlayButton = root.AddComponent<Button>();
+        overlayButton.transition = Selectable.Transition.None;
+        overlayButton.onClick.AddListener(HideReviewPanel);
 
-        // 面板主体 (居中，带边距)
-        GameObject panelBody = new GameObject("PanelBody");
-        panelBody.transform.SetParent(reviewPanelRoot.transform, false);
+        GameObject shell = CreateUIObject("PanelShell", rootRect);
+        reviewPanelBody = shell.GetComponent<RectTransform>();
+        reviewPanelBody.anchorMin = new Vector2(0.08f, 0.07f);
+        reviewPanelBody.anchorMax = new Vector2(0.92f, 0.92f);
+        reviewPanelBody.pivot = new Vector2(0.5f, 0.5f);
+        reviewPanelBody.offsetMin = Vector2.zero;
+        reviewPanelBody.offsetMax = Vector2.zero;
 
-        reviewPanelBody = panelBody.AddComponent<RectTransform>();
-        reviewPanelBody.anchorMin = new Vector2(0.1f, 0.05f);
-        reviewPanelBody.anchorMax = new Vector2(0.9f, 0.95f);
-        reviewPanelBody.sizeDelta = Vector2.zero;
-        reviewPanelBody.anchoredPosition = Vector2.zero;
+        Image shellImage = shell.AddComponent<Image>();
+        shellImage.color = PanelBrown;
+        Outline shellOutline = shell.AddComponent<Outline>();
+        shellOutline.effectColor = new Color(0.88f, 0.78f, 0.6f, 0.55f);
+        shellOutline.effectDistance = new Vector2(3f, -3f);
 
-        Image panelBg = panelBody.AddComponent<Image>();
-        panelBg.color = new Color(0.1f, 0.1f, 0.14f, 0.98f);
+        GameObject chrome = CreateUIObject("Chrome", reviewPanelBody);
+        RectTransform chromeRect = chrome.GetComponent<RectTransform>();
+        chromeRect.anchorMin = Vector2.zero;
+        chromeRect.anchorMax = Vector2.one;
+        chromeRect.offsetMin = new Vector2(16f, 16f);
+        chromeRect.offsetMax = new Vector2(-16f, -16f);
+        Image chromeImage = chrome.AddComponent<Image>();
+        chromeImage.color = new Color(0.38f, 0.31f, 0.26f, 0.62f);
 
-        VerticalLayoutGroup panelLayout = panelBody.AddComponent<VerticalLayoutGroup>();
-        panelLayout.padding = new RectOffset(30, 30, 20, 20);
-        panelLayout.spacing = 10f;
-        panelLayout.childAlignment = TextAnchor.UpperCenter;
-        panelLayout.childControlWidth = true;
-        panelLayout.childControlHeight = false;
-        panelLayout.childForceExpandWidth = true;
-        panelLayout.childForceExpandHeight = false;
+        Button chromeButton = chrome.AddComponent<Button>();
+        chromeButton.transition = Selectable.Transition.None;
 
-        // ===== 顶部栏: 返回按钮 + 标题 =====
-        GameObject topBar = new GameObject("TopBar");
-        topBar.transform.SetParent(panelBody.transform, false);
-        RectTransform topBarRect = topBar.AddComponent<RectTransform>();
-        topBarRect.sizeDelta = new Vector2(0f, 60f);
+        CreateTopTabs(reviewPanelBody);
+        CreateCloseButton(reviewPanelBody);
+        CreateInnerPanel(reviewPanelBody);
+    }
 
-        HorizontalLayoutGroup topLayout = topBar.AddComponent<HorizontalLayoutGroup>();
-        topLayout.padding = new RectOffset(10, 10, 5, 5);
-        topLayout.spacing = 20f;
-        topLayout.childAlignment = TextAnchor.MiddleLeft;
-        topLayout.childControlWidth = false;
-        topLayout.childControlHeight = true;
-        topLayout.childForceExpandWidth = false;
-        topLayout.childForceExpandHeight = true;
+    private void CreateTopTabs(RectTransform parent)
+    {
+        GameObject tabBar = CreateUIObject("TabBar", parent);
+        RectTransform tabBarRect = tabBar.GetComponent<RectTransform>();
+        tabBarRect.anchorMin = new Vector2(0.16f, 0.915f);
+        tabBarRect.anchorMax = new Vector2(0.88f, 1.02f);
+        tabBarRect.offsetMin = Vector2.zero;
+        tabBarRect.offsetMax = Vector2.zero;
 
-        // 返回按钮
-        GameObject backBtnObj = CreateButton(topBar.transform, "BackButton",
-            "\u2190\u8fd4\u56de", 22, new Vector2(120f, 50f), HideReviewPanel);
-        Image backBtnImg = backBtnObj.GetComponent<Image>();
-        backBtnImg.color = new Color(0.25f, 0.25f, 0.3f, 1f);
+        HorizontalLayoutGroup tabLayout = tabBar.AddComponent<HorizontalLayoutGroup>();
+        tabLayout.spacing = 18f;
+        tabLayout.childAlignment = TextAnchor.MiddleCenter;
+        tabLayout.childControlWidth = false;
+        tabLayout.childControlHeight = false;
+        tabLayout.childForceExpandWidth = false;
+        tabLayout.childForceExpandHeight = false;
 
-        // 标题文字
-        TextMeshProUGUI titleText = CreateTMPText(topBar.transform, "TitleText",
-            "\u6210\u5c31\u56de\u987e", 36, Color.white, TextAlignmentOptions.Center);
+        CreateCategoryTab(tabBar.transform, ReviewCategory.Basic, "属性");
+        CreateCategoryTab(tabBar.transform, ReviewCategory.Study, "学业");
+        CreateCategoryTab(tabBar.transform, ReviewCategory.Social, "人际");
+        CreateCategoryTab(tabBar.transform, ReviewCategory.Sport, "体魄");
+        CreateCategoryTab(tabBar.transform, ReviewCategory.Money, "财富");
+        CreateCategoryTab(tabBar.transform, ReviewCategory.Growth, "其他");
+    }
+
+    private void CreateCloseButton(RectTransform parent)
+    {
+        GameObject closeButtonObject = CreateButton(parent, "CloseButton", "×", 56f, new Vector2(74f, 74f), HideReviewPanel);
+        RectTransform closeRect = closeButtonObject.GetComponent<RectTransform>();
+        closeRect.anchorMin = new Vector2(0.985f, 0.995f);
+        closeRect.anchorMax = new Vector2(0.985f, 0.995f);
+        closeRect.pivot = new Vector2(0.5f, 0.5f);
+        closeRect.anchoredPosition = Vector2.zero;
+
+        Image image = closeButtonObject.GetComponent<Image>();
+        image.color = new Color(0.72f, 0.58f, 0.44f, 0.95f);
+
+        TextMeshProUGUI text = closeButtonObject.GetComponentInChildren<TextMeshProUGUI>();
+        text.color = new Color(1f, 0.97f, 0.93f, 1f);
+    }
+
+    private void CreateInnerPanel(RectTransform parent)
+    {
+        GameObject board = CreateUIObject("Board", parent);
+        RectTransform boardRect = board.GetComponent<RectTransform>();
+        boardRect.anchorMin = new Vector2(0.12f, 0.07f);
+        boardRect.anchorMax = new Vector2(0.95f, 0.88f);
+        boardRect.offsetMin = Vector2.zero;
+        boardRect.offsetMax = Vector2.zero;
+
+        Image boardImage = board.AddComponent<Image>();
+        boardImage.color = Gold;
+
+        GameObject paper = CreateUIObject("Paper", boardRect);
+        RectTransform paperRect = paper.GetComponent<RectTransform>();
+        paperRect.anchorMin = Vector2.zero;
+        paperRect.anchorMax = Vector2.one;
+        paperRect.offsetMin = new Vector2(22f, 20f);
+        paperRect.offsetMax = new Vector2(-22f, -20f);
+        Image paperImage = paper.AddComponent<Image>();
+        paperImage.color = PanelInner;
+
+        Outline paperOutline = paper.AddComponent<Outline>();
+        paperOutline.effectColor = new Color(0.79f, 0.72f, 0.59f, 0.55f);
+        paperOutline.effectDistance = new Vector2(2f, -2f);
+
+        CreateFilterRibbonStack(parent);
+        CreateDecorativePocket(parent);
+        CreateNotebookPageShadow(parent);
+        CreateBoardHeader(paperRect);
+        CreateAchievementScrollArea(paperRect);
+        CreateBoardSummary(paperRect);
+    }
+
+    private void CreateFilterRibbonStack(RectTransform parent)
+    {
+        GameObject stack = CreateUIObject("FilterStack", parent);
+        RectTransform stackRect = stack.GetComponent<RectTransform>();
+        stackRect.anchorMin = new Vector2(0.015f, 0.52f);
+        stackRect.anchorMax = new Vector2(0.145f, 0.83f);
+        stackRect.offsetMin = Vector2.zero;
+        stackRect.offsetMax = Vector2.zero;
+
+        VerticalLayoutGroup layout = stack.AddComponent<VerticalLayoutGroup>();
+        layout.spacing = 18f;
+        layout.childAlignment = TextAnchor.MiddleCenter;
+        layout.childControlWidth = true;
+        layout.childControlHeight = false;
+        layout.childForceExpandWidth = true;
+        layout.childForceExpandHeight = false;
+
+        CreateFilterButton(stack.transform, ReviewFilter.All, "所有");
+        CreateFilterButton(stack.transform, ReviewFilter.Locked, "未完成");
+        CreateFilterButton(stack.transform, ReviewFilter.Unlocked, "已完成");
+    }
+
+    private void CreateDecorativePocket(RectTransform parent)
+    {
+        GameObject pocket = CreateUIObject("SidePocket", parent);
+        RectTransform pocketRect = pocket.GetComponent<RectTransform>();
+        pocketRect.anchorMin = new Vector2(0.965f, 0.34f);
+        pocketRect.anchorMax = new Vector2(1.04f, 0.58f);
+        pocketRect.offsetMin = Vector2.zero;
+        pocketRect.offsetMax = Vector2.zero;
+        Image pocketImage = pocket.AddComponent<Image>();
+        pocketImage.color = new Color(0.42f, 0.33f, 0.28f, 0.86f);
+        pocketImage.raycastTarget = false;
+        Outline outline = pocket.AddComponent<Outline>();
+        outline.effectColor = new Color(0.82f, 0.72f, 0.62f, 0.45f);
+        outline.effectDistance = new Vector2(2f, -2f);
+
+        TextMeshProUGUI dot = CreateTMPText(pocket.transform, "Dot", "●", 34f, new Color(0.75f, 0.84f, 0.86f, 0.95f), TextAlignmentOptions.Center);
+        dot.raycastTarget = false;
+        Stretch(dot.rectTransform);
+    }
+
+    private void CreateNotebookPageShadow(RectTransform parent)
+    {
+        for (int i = 0; i < 3; i++)
+        {
+            GameObject page = CreateUIObject("PageShadow" + i, parent);
+            RectTransform rect = page.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0.14f + i * 0.008f, 0.055f + i * 0.012f);
+            rect.anchorMax = new Vector2(0.955f + i * 0.008f, 0.855f + i * 0.012f);
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+            rect.SetAsFirstSibling();
+            Image image = page.AddComponent<Image>();
+            image.color = new Color(0.82f, 0.78f, 0.63f, 0.35f - i * 0.06f);
+            image.raycastTarget = false;
+        }
+    }
+
+    private void CreateBoardHeader(RectTransform parent)
+    {
+        GameObject header = CreateUIObject("Header", parent);
+        RectTransform headerRect = header.GetComponent<RectTransform>();
+        headerRect.anchorMin = new Vector2(0.03f, 0.87f);
+        headerRect.anchorMax = new Vector2(0.97f, 0.965f);
+        headerRect.offsetMin = Vector2.zero;
+        headerRect.offsetMax = Vector2.zero;
+
+        GameObject titleRoot = CreateUIObject("HeaderTitle", headerRect);
+        RectTransform titleRect = titleRoot.GetComponent<RectTransform>();
+        titleRect.anchorMin = new Vector2(0f, 0f);
+        titleRect.anchorMax = new Vector2(0.52f, 1f);
+        titleRect.offsetMin = new Vector2(20f, 0f);
+        titleRect.offsetMax = Vector2.zero;
+
+        TextMeshProUGUI titleText = CreateTMPText(titleRoot.transform, "Title", "成就回顾", 40f, AccentBrown, TextAlignmentOptions.Left);
+        Stretch(titleText.rectTransform);
         titleText.fontStyle = FontStyles.Bold;
-        RectTransform titleRect = titleText.GetComponent<RectTransform>();
-        titleRect.sizeDelta = new Vector2(400f, 50f);
 
-        // ===== 中部: ScrollRect 列表 =====
-        GameObject scrollObj = new GameObject("ScrollView");
-        scrollObj.transform.SetParent(panelBody.transform, false);
-        RectTransform scrollRect = scrollObj.AddComponent<RectTransform>();
-        scrollRect.sizeDelta = new Vector2(0f, 0f);
+        GameObject progressRoot = CreateUIObject("HeaderProgress", headerRect);
+        RectTransform progressRect = progressRoot.GetComponent<RectTransform>();
+        progressRect.anchorMin = new Vector2(0.52f, 0f);
+        progressRect.anchorMax = new Vector2(1f, 1f);
+        progressRect.offsetMin = new Vector2(0f, 0f);
+        progressRect.offsetMax = new Vector2(-18f, 0f);
 
-        // ScrollView 需要占据剩余空间
-        LayoutElement scrollLE = scrollObj.AddComponent<LayoutElement>();
-        scrollLE.flexibleHeight = 1f;
-        scrollLE.minHeight = 200f;
+        titleProgressText = CreateTMPText(progressRoot.transform, "Progress", "0/0", 28f, AccentMuted, TextAlignmentOptions.Right);
+        Stretch(titleProgressText.rectTransform);
+        titleProgressText.fontStyle = FontStyles.Bold;
+    }
 
-        Image scrollBg = scrollObj.AddComponent<Image>();
-        scrollBg.color = new Color(0.08f, 0.08f, 0.1f, 0.5f);
+    private void CreateAchievementScrollArea(RectTransform parent)
+    {
+        GameObject scrollObject = CreateUIObject("ScrollView", parent);
+        RectTransform scrollRect = scrollObject.GetComponent<RectTransform>();
+        scrollRect.anchorMin = new Vector2(0.03f, 0.08f);
+        scrollRect.anchorMax = new Vector2(0.97f, 0.85f);
+        scrollRect.offsetMin = Vector2.zero;
+        scrollRect.offsetMax = Vector2.zero;
 
-        ScrollRect scroll = scrollObj.AddComponent<ScrollRect>();
-        scroll.horizontal = false;
-        scroll.vertical = true;
-        scroll.movementType = ScrollRect.MovementType.Clamped;
-        scroll.scrollSensitivity = 30f;
+        Image scrollBg = scrollObject.AddComponent<Image>();
+        scrollBg.color = new Color(0.96f, 0.93f, 0.84f, 0.82f);
+        CreateGridBackground(scrollRect);
 
-        // Viewport
-        GameObject viewportObj = new GameObject("Viewport");
-        viewportObj.transform.SetParent(scrollObj.transform, false);
-        RectTransform viewportRect = viewportObj.AddComponent<RectTransform>();
-        viewportRect.anchorMin = Vector2.zero;
-        viewportRect.anchorMax = Vector2.one;
-        viewportRect.sizeDelta = Vector2.zero;
-        viewportRect.anchoredPosition = Vector2.zero;
+        reviewScrollRect = scrollObject.AddComponent<ScrollRect>();
+        reviewScrollRect.horizontal = false;
+        reviewScrollRect.vertical = true;
+        reviewScrollRect.scrollSensitivity = 28f;
+        reviewScrollRect.movementType = ScrollRect.MovementType.Clamped;
 
-        viewportObj.AddComponent<Image>().color = Color.clear;
-        Mask viewportMask = viewportObj.AddComponent<Mask>();
-        viewportMask.showMaskGraphic = false;
+        GameObject viewport = CreateUIObject("Viewport", scrollRect);
+        RectTransform viewportRect = viewport.GetComponent<RectTransform>();
+        Stretch(viewportRect);
+        viewport.AddComponent<Image>().color = Color.clear;
+        Mask mask = viewport.AddComponent<Mask>();
+        mask.showMaskGraphic = false;
+        viewport.transform.SetAsLastSibling();
 
-        scroll.viewport = viewportRect;
-
-        // Content (列表容器)
-        GameObject contentObj = new GameObject("Content");
-        contentObj.transform.SetParent(viewportObj.transform, false);
-        reviewListContent = contentObj.AddComponent<RectTransform>();
+        GameObject content = CreateUIObject("Content", viewportRect);
+        reviewListContent = content.GetComponent<RectTransform>();
         reviewListContent.anchorMin = new Vector2(0f, 1f);
         reviewListContent.anchorMax = new Vector2(1f, 1f);
         reviewListContent.pivot = new Vector2(0.5f, 1f);
+        reviewListContent.offsetMin = new Vector2(18f, 0f);
+        reviewListContent.offsetMax = new Vector2(-18f, 0f);
         reviewListContent.anchoredPosition = Vector2.zero;
         reviewListContent.sizeDelta = new Vector2(0f, 0f);
 
-        VerticalLayoutGroup contentLayout = contentObj.AddComponent<VerticalLayoutGroup>();
-        contentLayout.padding = new RectOffset(15, 15, 10, 10);
-        contentLayout.spacing = 8f;
-        contentLayout.childAlignment = TextAnchor.UpperCenter;
-        contentLayout.childControlWidth = true;
-        contentLayout.childControlHeight = false;
-        contentLayout.childForceExpandWidth = true;
-        contentLayout.childForceExpandHeight = false;
+        GridLayoutGroup grid = content.AddComponent<GridLayoutGroup>();
+        grid.cellSize = new Vector2(592f, 118f);
+        grid.spacing = new Vector2(18f, 16f);
+        grid.padding = new RectOffset(8, 8, 8, 28);
+        grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+        grid.constraintCount = 2;
+        grid.startAxis = GridLayoutGroup.Axis.Horizontal;
+        grid.startCorner = GridLayoutGroup.Corner.UpperLeft;
 
-        ContentSizeFitter contentFitter = contentObj.AddComponent<ContentSizeFitter>();
-        contentFitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        ContentSizeFitter fitter = content.AddComponent<ContentSizeFitter>();
+        fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
-        scroll.content = reviewListContent;
-
-        // ===== 底部: 进度文字 =====
-        GameObject bottomBar = new GameObject("BottomBar");
-        bottomBar.transform.SetParent(panelBody.transform, false);
-        RectTransform bottomRect = bottomBar.AddComponent<RectTransform>();
-        bottomRect.sizeDelta = new Vector2(0f, 50f);
-
-        progressText = CreateTMPText(bottomBar.transform, "ProgressText",
-            "\u5df2\u89e3\u9501: 0/0", 24, new Color(0.8f, 0.8f, 0.8f, 1f),
-            TextAlignmentOptions.Center);
-        RectTransform progressRect = progressText.GetComponent<RectTransform>();
-        progressRect.anchorMin = Vector2.zero;
-        progressRect.anchorMax = Vector2.one;
-        progressRect.sizeDelta = Vector2.zero;
-        progressRect.anchoredPosition = Vector2.zero;
+        reviewScrollRect.viewport = viewportRect;
+        reviewScrollRect.content = reviewListContent;
     }
 
-    /// <summary>
-    /// 创建单个成就条目
-    /// </summary>
-    private GameObject CreateAchievementItem(AchievementDefinition def, bool unlocked)
+    private void CreateBoardSummary(RectTransform parent)
     {
-        // 条目根物体
-        GameObject itemObj = new GameObject("AchievementItem_" + def.id);
-        RectTransform itemRect = itemObj.AddComponent<RectTransform>();
-        itemRect.sizeDelta = new Vector2(0f, 90f);
+        GameObject footer = CreateUIObject("Summary", parent);
+        RectTransform footerRect = footer.GetComponent<RectTransform>();
+        footerRect.anchorMin = new Vector2(0.03f, 0.015f);
+        footerRect.anchorMax = new Vector2(0.97f, 0.07f);
+        footerRect.offsetMin = Vector2.zero;
+        footerRect.offsetMax = Vector2.zero;
 
-        // 背景 + 边框效果 (通过 Outline 模拟)
-        Image itemBg = itemObj.AddComponent<Image>();
-        itemBg.color = unlocked ? COLOR_ITEM_BG : COLOR_ITEM_LOCKED_BG;
-
-        Outline itemOutline = itemObj.AddComponent<Outline>();
-        itemOutline.effectColor = unlocked ? COLOR_GOLD_BORDER : COLOR_GRAY_BORDER;
-        itemOutline.effectDistance = new Vector2(2f, 2f);
-
-        // 用于条目淡入动画
-        CanvasGroup itemCG = itemObj.AddComponent<CanvasGroup>();
-        itemCG.alpha = 0f;
-
-        // 横向布局
-        HorizontalLayoutGroup hLayout = itemObj.AddComponent<HorizontalLayoutGroup>();
-        hLayout.padding = new RectOffset(14, 14, 10, 10);
-        hLayout.spacing = 14f;
-        hLayout.childAlignment = TextAnchor.MiddleLeft;
-        hLayout.childControlWidth = false;
-        hLayout.childControlHeight = false;
-        hLayout.childForceExpandWidth = false;
-        hLayout.childForceExpandHeight = false;
-
-        // 左侧: 图标占位
-        GameObject iconObj = new GameObject("Icon");
-        iconObj.transform.SetParent(itemObj.transform, false);
-        RectTransform iconRect = iconObj.AddComponent<RectTransform>();
-        iconRect.sizeDelta = new Vector2(60f, 60f);
-
-        Image iconBg = iconObj.AddComponent<Image>();
-        iconBg.color = unlocked
-            ? new Color(1f, 0.84f, 0f, 0.15f)
-            : new Color(0.3f, 0.3f, 0.3f, 0.2f);
-
-        string iconSymbol = unlocked ? "OK" : "?";
-        Color iconColor = unlocked ? COLOR_GOLD : COLOR_GRAY_LOCK;
-        TextMeshProUGUI iconText = CreateTMPText(iconObj.transform, "IconText",
-            iconSymbol, 32, iconColor, TextAlignmentOptions.Center);
-        RectTransform iconTextRect = iconText.GetComponent<RectTransform>();
-        iconTextRect.anchorMin = Vector2.zero;
-        iconTextRect.anchorMax = Vector2.one;
-        iconTextRect.sizeDelta = Vector2.zero;
-        iconTextRect.anchoredPosition = Vector2.zero;
-
-        // 中间: 名称 + 描述 (纵向)
-        GameObject midObj = new GameObject("MidContent");
-        midObj.transform.SetParent(itemObj.transform, false);
-        RectTransform midRect = midObj.AddComponent<RectTransform>();
-        midRect.sizeDelta = new Vector2(0f, 70f);
-
-        LayoutElement midLE = midObj.AddComponent<LayoutElement>();
-        midLE.flexibleWidth = 1f;
-        midLE.preferredHeight = 70f;
-
-        VerticalLayoutGroup vLayout = midObj.AddComponent<VerticalLayoutGroup>();
-        vLayout.spacing = 4f;
-        vLayout.childAlignment = TextAnchor.MiddleLeft;
-        vLayout.childControlWidth = true;
-        vLayout.childControlHeight = false;
-        vLayout.childForceExpandWidth = true;
-        vLayout.childForceExpandHeight = false;
-
-        // 名称
-        string displayName = unlocked ? def.name : "??????";
-        Color nameColor = unlocked ? Color.white : new Color(0.5f, 0.5f, 0.5f, 1f);
-        TextMeshProUGUI nameText = CreateTMPText(midObj.transform, "NameText",
-            displayName, 24, nameColor, TextAlignmentOptions.MidlineLeft);
-        nameText.fontStyle = FontStyles.Bold;
-        nameText.GetComponent<RectTransform>().sizeDelta = new Vector2(0f, 32f);
-
-        // 描述
-        string displayDesc = unlocked ? def.description : "??????";
-        Color descColor = unlocked
-            ? new Color(0.7f, 0.7f, 0.7f, 1f)
-            : new Color(0.4f, 0.4f, 0.4f, 1f);
-        TextMeshProUGUI descText = CreateTMPText(midObj.transform, "DescText",
-            displayDesc, 18, descColor, TextAlignmentOptions.MidlineLeft);
-        descText.GetComponent<RectTransform>().sizeDelta = new Vector2(0f, 26f);
-
-        // 右侧: 状态标记
-        GameObject statusObj = new GameObject("Status");
-        statusObj.transform.SetParent(itemObj.transform, false);
-        RectTransform statusRect = statusObj.AddComponent<RectTransform>();
-        statusRect.sizeDelta = new Vector2(50f, 50f);
-
-        string statusSymbol = unlocked ? "V" : "L";
-        Color statusColor = unlocked ? COLOR_GREEN_CHECK : COLOR_GRAY_LOCK;
-        int statusSize = unlocked ? 32 : 28;
-        TextMeshProUGUI statusText = CreateTMPText(statusObj.transform, "StatusText",
-            statusSymbol, statusSize, statusColor, TextAlignmentOptions.Center);
-        RectTransform statusTextRect = statusText.GetComponent<RectTransform>();
-        statusTextRect.anchorMin = Vector2.zero;
-        statusTextRect.anchorMax = Vector2.one;
-        statusTextRect.sizeDelta = Vector2.zero;
-        statusTextRect.anchoredPosition = Vector2.zero;
-
-        return itemObj;
+        summaryText = CreateTMPText(footer.transform, "SummaryText", string.Empty, 22f, AccentMuted, TextAlignmentOptions.Center);
+        Stretch(summaryText.rectTransform);
     }
 
-    /// <summary>
-    /// 刷新回顾列表内容
-    /// </summary>
+    private void CreateGridBackground(RectTransform parent)
+    {
+        Color lineColor = new Color(0.78f, 0.72f, 0.62f, 0.24f);
+        for (int i = 1; i < 12; i++)
+        {
+            RectTransform line = CreateUIObject("GridV" + i, parent).GetComponent<RectTransform>();
+            line.anchorMin = new Vector2(i / 12f, 0f);
+            line.anchorMax = new Vector2(i / 12f, 1f);
+            line.sizeDelta = new Vector2(1f, 0f);
+            line.anchoredPosition = Vector2.zero;
+            Image image = line.gameObject.AddComponent<Image>();
+            image.color = lineColor;
+            image.raycastTarget = false;
+        }
+
+        for (int i = 1; i < 9; i++)
+        {
+            RectTransform line = CreateUIObject("GridH" + i, parent).GetComponent<RectTransform>();
+            line.anchorMin = new Vector2(0f, i / 9f);
+            line.anchorMax = new Vector2(1f, i / 9f);
+            line.sizeDelta = new Vector2(0f, 1f);
+            line.anchoredPosition = Vector2.zero;
+            Image image = line.gameObject.AddComponent<Image>();
+            image.color = lineColor;
+            image.raycastTarget = false;
+        }
+    }
+
+    private void CreateCategoryTab(Transform parent, ReviewCategory category, string label)
+    {
+        GameObject tabObject = CreateButton(parent, label + "Tab", label, 30f, new Vector2(156f, 66f), () => SetCategory(category));
+        Image image = tabObject.GetComponent<Image>();
+        image.color = TabIdle;
+
+        TextMeshProUGUI text = tabObject.GetComponentInChildren<TextMeshProUGUI>();
+        text.color = AccentMuted;
+        text.fontStyle = FontStyles.Bold;
+
+        categoryButtons[category] = tabObject.GetComponent<Button>();
+        categoryTexts[category] = text;
+    }
+
+    private void CreateFilterButton(Transform parent, ReviewFilter filter, string label)
+    {
+        GameObject buttonObject = CreateButton(parent, label + "Filter", label, 30f, new Vector2(190f, 82f), () => SetFilter(filter));
+        Image image = buttonObject.GetComponent<Image>();
+        image.color = FilterIdle;
+
+        LayoutElement layoutElement = buttonObject.AddComponent<LayoutElement>();
+        layoutElement.preferredHeight = 82f;
+
+        TextMeshProUGUI text = buttonObject.GetComponentInChildren<TextMeshProUGUI>();
+        text.color = AccentBrown;
+        text.fontStyle = FontStyles.Bold;
+
+        filterButtons[filter] = buttonObject.GetComponent<Button>();
+        filterTexts[filter] = text;
+    }
+
+    private void SetCategory(ReviewCategory category)
+    {
+        if (currentCategory == category && reviewCanvas != null && reviewCanvas.gameObject.activeSelf)
+        {
+            return;
+        }
+
+        currentCategory = category;
+        RefreshReviewList();
+    }
+
+    private void SetFilter(ReviewFilter filter)
+    {
+        if (currentFilter == filter && reviewCanvas != null && reviewCanvas.gameObject.activeSelf)
+        {
+            return;
+        }
+
+        currentFilter = filter;
+        RefreshReviewList();
+    }
+
     private void RefreshReviewList()
     {
-        if (reviewListContent == null) return;
-        if (AchievementSystem.Instance == null) return;
+        if (reviewListContent == null || AchievementSystem.Instance == null)
+        {
+            return;
+        }
 
-        // 清除旧条目
         for (int i = reviewListContent.childCount - 1; i >= 0; i--)
         {
             Destroy(reviewListContent.GetChild(i).gameObject);
         }
 
-        // 获取所有成就
-        var allAchievements = AchievementSystem.Instance.GetAllAchievements();
-        var unlockedAchievements = AchievementSystem.Instance.GetUnlockedAchievements();
-        int unlockedCount = unlockedAchievements != null ? unlockedAchievements.Count : 0;
-        int totalCount = allAchievements != null ? allAchievements.Count : 0;
+        List<AchievementDefinition> allAchievements = AchievementSystem.Instance.GetAllAchievements() ?? new List<AchievementDefinition>();
+        List<AchievementDefinition> categoryAchievements = allAchievements
+            .Where(def => GetCategoryForAchievement(def) == currentCategory)
+            .ToList();
 
-        // 创建条目 (已解锁的排前面)
-        if (allAchievements != null)
+        List<AchievementDefinition> filteredAchievements = categoryAchievements
+            .Where(PassesCurrentFilter)
+            .OrderByDescending(def => AchievementSystem.Instance.IsUnlocked(def.id))
+            .ThenBy(def => def.id)
+            .ToList();
+
+        foreach (AchievementDefinition definition in filteredAchievements)
         {
-            foreach (var def in allAchievements)
-            {
-                bool unlocked = AchievementSystem.Instance.IsUnlocked(def.id);
-                GameObject item = CreateAchievementItem(def, unlocked);
-                item.transform.SetParent(reviewListContent, false);
-            }
+            bool unlocked = AchievementSystem.Instance.IsUnlocked(definition.id);
+            GameObject item = CreateAchievementItem(definition, unlocked);
+            item.transform.SetParent(reviewListContent, false);
         }
 
-        // 更新进度文字
-        if (progressText != null)
+        if (reviewScrollRect != null)
         {
-            progressText.text = string.Format("\u5df2\u89e3\u9501: {0}/{1}", unlockedCount, totalCount);
+            Canvas.ForceUpdateCanvases();
+            reviewScrollRect.verticalNormalizedPosition = 1f;
+        }
+
+        int totalUnlocked = AchievementSystem.Instance.GetUnlockedCount();
+        int totalCount = allAchievements.Count;
+        int categoryUnlocked = categoryAchievements.Count(def => AchievementSystem.Instance.IsUnlocked(def.id));
+
+        if (titleProgressText != null)
+        {
+            titleProgressText.text = string.Format("{0}/{1}", totalUnlocked, totalCount);
+        }
+
+        if (summaryText != null)
+        {
+            summaryText.text = string.Format("{0}  {1}/{2}", GetSummaryLabel(), categoryUnlocked, categoryAchievements.Count);
+        }
+
+        UpdateCategoryTabStyles();
+        UpdateFilterStyles(filteredAchievements.Count);
+    }
+
+    private void UpdateCategoryTabStyles()
+    {
+        List<AchievementDefinition> allAchievements = AchievementSystem.Instance != null
+            ? AchievementSystem.Instance.GetAllAchievements() ?? new List<AchievementDefinition>()
+            : new List<AchievementDefinition>();
+
+        foreach (KeyValuePair<ReviewCategory, Button> pair in categoryButtons)
+        {
+            bool active = pair.Key == currentCategory;
+            Image image = pair.Value.GetComponent<Image>();
+            if (image != null)
+            {
+                image.color = active ? TabActive : TabIdle;
+            }
+
+            if (categoryTexts.TryGetValue(pair.Key, out TextMeshProUGUI text))
+            {
+                int unlocked = allAchievements.Count(def => GetCategoryForAchievement(def) == pair.Key && AchievementSystem.Instance != null && AchievementSystem.Instance.IsUnlocked(def.id));
+                int total = allAchievements.Count(def => GetCategoryForAchievement(def) == pair.Key);
+                text.text = string.Format("{0}{1}", GetCategoryLabel(pair.Key), total > 0 ? $" {unlocked}/{total}" : string.Empty);
+                text.fontSize = active ? 29f : 27f;
+                text.color = active ? AccentBrown : AccentMuted;
+            }
         }
     }
 
-    // ========== 回顾面板动画 ==========
+    private void UpdateFilterStyles(int visibleCount)
+    {
+        foreach (KeyValuePair<ReviewFilter, Button> pair in filterButtons)
+        {
+            bool active = pair.Key == currentFilter;
+            Image image = pair.Value.GetComponent<Image>();
+            if (image != null)
+            {
+                image.color = active ? FilterActive : FilterIdle;
+            }
 
-    /// <summary>
-    /// 回顾面板打开动画: FadeIn + SlideIn + 列表条目依次淡入
-    /// </summary>
+            if (filterTexts.TryGetValue(pair.Key, out TextMeshProUGUI text))
+            {
+                text.color = active ? new Color32(0x5C, 0x35, 0x2D, 0xFF) : AccentBrown;
+                if (active)
+                {
+                    text.text = string.Format("{0}\n{1}", GetFilterLabel(pair.Key), visibleCount);
+                    text.fontSize = 21f;
+                }
+                else
+                {
+                    text.text = GetFilterLabel(pair.Key);
+                    text.fontSize = 28f;
+                }
+            }
+        }
+    }
+
+    private GameObject CreateAchievementItem(AchievementDefinition definition, bool unlocked)
+    {
+        GameObject itemObject = CreateUIObject("Achievement_" + definition.id, null);
+        RectTransform itemRect = itemObject.GetComponent<RectTransform>();
+        itemRect.sizeDelta = new Vector2(592f, 118f);
+
+        Image background = itemObject.AddComponent<Image>();
+        background.color = unlocked ? ItemUnlocked : ItemLocked;
+
+        Outline outline = itemObject.AddComponent<Outline>();
+        outline.effectColor = ItemBorder;
+        outline.effectDistance = new Vector2(2f, -2f);
+
+        HorizontalLayoutGroup layout = itemObject.AddComponent<HorizontalLayoutGroup>();
+        layout.padding = new RectOffset(18, 18, 14, 14);
+        layout.spacing = 16f;
+        layout.childAlignment = TextAnchor.MiddleLeft;
+        layout.childControlWidth = false;
+        layout.childControlHeight = false;
+        layout.childForceExpandWidth = false;
+        layout.childForceExpandHeight = false;
+
+        GameObject iconRoot = CreateUIObject("IconRoot", itemRect);
+        LayoutElement iconLayout = iconRoot.AddComponent<LayoutElement>();
+        iconLayout.preferredWidth = 72f;
+        iconLayout.preferredHeight = 72f;
+
+        Image iconBg = iconRoot.AddComponent<Image>();
+        iconBg.color = unlocked ? WarmPaper : new Color(1f, 1f, 1f, 0.28f);
+
+        iconRoot.transform.SetAsLastSibling();
+        TextMeshProUGUI iconText = CreateTMPText(iconRoot.transform, "Icon", unlocked ? GetUnlockedIcon(definition) : "锁", 31f, unlocked ? AccentBrown : LockedIcon, TextAlignmentOptions.Center);
+        Stretch(iconText.rectTransform);
+
+        GameObject textRoot = CreateUIObject("TextRoot", itemRect);
+        LayoutElement textLayout = textRoot.AddComponent<LayoutElement>();
+        textLayout.flexibleWidth = 1f;
+        textLayout.preferredHeight = 78f;
+
+        VerticalLayoutGroup textGroup = textRoot.AddComponent<VerticalLayoutGroup>();
+        textGroup.spacing = 6f;
+        textGroup.childAlignment = TextAnchor.MiddleLeft;
+        textGroup.childControlWidth = true;
+        textGroup.childControlHeight = false;
+        textGroup.childForceExpandWidth = true;
+        textGroup.childForceExpandHeight = false;
+
+        TextMeshProUGUI nameText = CreateTMPText(
+            textRoot.transform,
+            "Name",
+            unlocked ? definition.name : "???",
+            26f,
+            unlocked ? AccentBrown : AccentMuted,
+            TextAlignmentOptions.Left);
+        nameText.fontStyle = FontStyles.Bold;
+        nameText.rectTransform.sizeDelta = new Vector2(0f, 34f);
+
+        TextMeshProUGUI descText = CreateTMPText(
+            textRoot.transform,
+            "Desc",
+            unlocked ? definition.description : "解锁后显示",
+            18f,
+            unlocked ? AccentMuted : new Color(0.56f, 0.53f, 0.5f, 1f),
+            TextAlignmentOptions.Left);
+        descText.rectTransform.sizeDelta = new Vector2(0f, 28f);
+
+        GameObject rewardRoot = CreateUIObject("RewardRoot", itemRect);
+        LayoutElement rewardLayout = rewardRoot.AddComponent<LayoutElement>();
+        rewardLayout.preferredWidth = 128f;
+        rewardLayout.preferredHeight = 66f;
+
+        VerticalLayoutGroup rewardGroup = rewardRoot.AddComponent<VerticalLayoutGroup>();
+        rewardGroup.spacing = 6f;
+        rewardGroup.childAlignment = TextAnchor.MiddleRight;
+        rewardGroup.childControlWidth = true;
+        rewardGroup.childControlHeight = false;
+        rewardGroup.childForceExpandWidth = true;
+        rewardGroup.childForceExpandHeight = false;
+
+        TextMeshProUGUI rewardText = CreateTMPText(rewardRoot.transform, "Reward", string.Format("荣誉 +{0}", definition.points), 19f, Green, TextAlignmentOptions.Right);
+        rewardText.fontStyle = FontStyles.Bold | FontStyles.Italic;
+        rewardText.rectTransform.sizeDelta = new Vector2(120f, 24f);
+
+        TextMeshProUGUI statusText = CreateTMPText(rewardRoot.transform, "Status", unlocked ? "已完成" : "未完成", 17f, unlocked ? Blue : AccentMuted, TextAlignmentOptions.Right);
+        statusText.rectTransform.sizeDelta = new Vector2(120f, 22f);
+
+        if (unlocked)
+        {
+            GameObject seal = CreateUIObject("Seal", itemRect);
+            RectTransform sealRect = seal.GetComponent<RectTransform>();
+            sealRect.anchorMin = new Vector2(1f, 1f);
+            sealRect.anchorMax = new Vector2(1f, 1f);
+            sealRect.pivot = new Vector2(0.5f, 0.5f);
+            sealRect.sizeDelta = new Vector2(58f, 58f);
+            sealRect.anchoredPosition = new Vector2(-34f, -26f);
+            Image sealImage = seal.AddComponent<Image>();
+            sealImage.color = new Color(1f, 0.86f, 0.24f, 0.92f);
+            sealImage.raycastTarget = false;
+            TextMeshProUGUI sealText = CreateTMPText(seal.transform, "Check", "✓", 38f, Color.white, TextAlignmentOptions.Center);
+            Stretch(sealText.rectTransform);
+        }
+
+        return itemObject;
+    }
+
+    private bool PassesCurrentFilter(AchievementDefinition definition)
+    {
+        bool unlocked = AchievementSystem.Instance != null && AchievementSystem.Instance.IsUnlocked(definition.id);
+
+        switch (currentFilter)
+        {
+            case ReviewFilter.Locked:
+                return !unlocked;
+            case ReviewFilter.Unlocked:
+                return unlocked;
+            default:
+                return true;
+        }
+    }
+
+    private ReviewCategory GetCategoryForAchievement(AchievementDefinition definition)
+    {
+        if (definition == null || definition.conditions == null || definition.conditions.Count == 0)
+        {
+            return ReviewCategory.Basic;
+        }
+
+        AchievementConditionType type = definition.conditions[0].GetConditionType();
+        switch (type)
+        {
+            case AchievementConditionType.Study_GreaterOrEqual:
+            case AchievementConditionType.StudyCount_GreaterOrEqual:
+            case AchievementConditionType.GPA_GreaterOrEqual:
+            case AchievementConditionType.SemesterGrade_Equals:
+                return ReviewCategory.Study;
+
+            case AchievementConditionType.Charm_GreaterOrEqual:
+            case AchievementConditionType.SocialCount_GreaterOrEqual:
+            case AchievementConditionType.FriendCount_GreaterOrEqual:
+                return ReviewCategory.Social;
+
+            case AchievementConditionType.Physique_GreaterOrEqual:
+            case AchievementConditionType.SleepCount_GreaterOrEqual:
+            case AchievementConditionType.GoOutCount_GreaterOrEqual:
+                return ReviewCategory.Sport;
+
+            case AchievementConditionType.Money_GreaterOrEqual:
+            case AchievementConditionType.Money_Less:
+            case AchievementConditionType.TotalSpent_GreaterOrEqual:
+                return ReviewCategory.Money;
+
+            case AchievementConditionType.TotalRounds_GreaterOrEqual:
+            case AchievementConditionType.Semester_Equals:
+                return ReviewCategory.Basic;
+
+            case AchievementConditionType.Leadership_GreaterOrEqual:
+            case AchievementConditionType.Stress_GreaterOrEqual:
+            case AchievementConditionType.Mood_GreaterOrEqual:
+            case AchievementConditionType.AllAttributes_GreaterOrEqual:
+                return ReviewCategory.Basic;
+
+            default:
+                return ReviewCategory.Growth;
+        }
+    }
+
+    private string GetCategoryLabel(ReviewCategory category)
+    {
+        switch (category)
+        {
+            case ReviewCategory.Study:
+                return "学业";
+            case ReviewCategory.Social:
+                return "人际";
+            case ReviewCategory.Sport:
+                return "体魄";
+            case ReviewCategory.Money:
+                return "财富";
+            case ReviewCategory.Growth:
+                return "其他";
+            default:
+                return "属性";
+        }
+    }
+
+    private string GetFilterLabel(ReviewFilter filter)
+    {
+        switch (filter)
+        {
+            case ReviewFilter.Locked:
+                return "未完成";
+            case ReviewFilter.Unlocked:
+                return "已完成";
+            default:
+                return "所有";
+        }
+    }
+
+    private string GetSummaryLabel()
+    {
+        return string.Format("{0}分类 · {1}", GetCategoryLabel(currentCategory), GetFilterLabel(currentFilter));
+    }
+
+    private string GetUnlockedIcon(AchievementDefinition definition)
+    {
+        switch (GetCategoryForAchievement(definition))
+        {
+            case ReviewCategory.Study:
+                return "学";
+            case ReviewCategory.Social:
+                return "友";
+            case ReviewCategory.Sport:
+                return "体";
+            case ReviewCategory.Money:
+                return "财";
+            case ReviewCategory.Growth:
+                return "星";
+            default:
+                return "新";
+        }
+    }
+
     private IEnumerator ReviewPanelOpenCoroutine()
     {
-        AnimationCurve easeCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
+        if (reviewCanvasGroup == null || reviewPanelBody == null)
+        {
+            yield break;
+        }
 
-        // 面板整体 FadeIn + SlideIn
+        reviewPanelBody.localScale = new Vector3(0.97f, 0.97f, 1f);
+        Vector2 startPosition = new Vector2(0f, -36f);
+        Vector2 endPosition = Vector2.zero;
         float elapsed = 0f;
-        Vector2 bodyStart = new Vector2(0f, -50f);
-        Vector2 bodyEnd = Vector2.zero;
 
-        while (elapsed < REVIEW_FADE_DURATION)
+        while (elapsed < ReviewFadeDuration)
         {
             elapsed += Time.unscaledDeltaTime;
-            float t = easeCurve.Evaluate(Mathf.Clamp01(elapsed / REVIEW_FADE_DURATION));
+            float t = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(elapsed / ReviewFadeDuration));
             reviewCanvasGroup.alpha = t;
-            if (reviewPanelBody != null)
-            {
-                reviewPanelBody.anchoredPosition = Vector2.Lerp(bodyStart, bodyEnd, t);
-            }
+            reviewPanelBody.anchoredPosition = Vector2.Lerp(startPosition, endPosition, t);
+            float scale = Mathf.Lerp(0.97f, 1f, t);
+            reviewPanelBody.localScale = new Vector3(scale, scale, 1f);
             yield return null;
         }
-        reviewCanvasGroup.alpha = 1f;
-        if (reviewPanelBody != null)
-        {
-            reviewPanelBody.anchoredPosition = bodyEnd;
-        }
 
-        // 列表条目依次 FadeIn
-        if (reviewListContent != null)
-        {
-            for (int i = 0; i < reviewListContent.childCount; i++)
-            {
-                CanvasGroup itemCG = reviewListContent.GetChild(i).GetComponent<CanvasGroup>();
-                if (itemCG != null)
-                {
-                    StartCoroutine(FadeInItem(itemCG, 0.2f));
-                }
-                yield return new WaitForSecondsRealtime(REVIEW_ITEM_STAGGER);
-            }
-        }
+        reviewCanvasGroup.alpha = 1f;
+        reviewPanelBody.anchoredPosition = endPosition;
+        reviewPanelBody.localScale = Vector3.one;
+        reviewAnimationCoroutine = null;
     }
 
-    /// <summary>
-    /// 回顾面板关闭动画: FadeOut
-    /// </summary>
     private IEnumerator ReviewPanelCloseCoroutine()
     {
-        AnimationCurve easeCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
-        float elapsed = 0f;
+        if (reviewCanvasGroup == null)
+        {
+            isReviewShowing = false;
+            yield break;
+        }
 
-        while (elapsed < REVIEW_FADE_DURATION)
+        float elapsed = 0f;
+        float startAlpha = reviewCanvasGroup.alpha;
+
+        while (elapsed < ReviewFadeDuration)
         {
             elapsed += Time.unscaledDeltaTime;
-            float t = easeCurve.Evaluate(Mathf.Clamp01(elapsed / REVIEW_FADE_DURATION));
-            reviewCanvasGroup.alpha = Mathf.Lerp(1f, 0f, t);
+            float t = Mathf.Clamp01(elapsed / ReviewFadeDuration);
+            reviewCanvasGroup.alpha = Mathf.Lerp(startAlpha, 0f, t);
+            if (reviewPanelBody != null)
+            {
+                float scale = Mathf.Lerp(1f, 0.98f, t);
+                reviewPanelBody.localScale = new Vector3(scale, scale, 1f);
+            }
             yield return null;
         }
+
         reviewCanvasGroup.alpha = 0f;
-
         reviewCanvas.gameObject.SetActive(false);
-        isReviewShowing = false;
-    }
-
-    /// <summary>
-    /// 单个条目淡入动画
-    /// </summary>
-    private IEnumerator FadeInItem(CanvasGroup cg, float duration)
-    {
-        AnimationCurve easeCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
-        float elapsed = 0f;
-
-        while (elapsed < duration)
+        if (reviewPanelBody != null)
         {
-            elapsed += Time.unscaledDeltaTime;
-            float t = easeCurve.Evaluate(Mathf.Clamp01(elapsed / duration));
-            cg.alpha = t;
-            yield return null;
+            reviewPanelBody.localScale = Vector3.one;
         }
-        cg.alpha = 1f;
+        isReviewShowing = false;
+        reviewAnimationCoroutine = null;
     }
 
-    // ========== UI 工具方法 ==========
-
-    /// <summary>
-    /// 创建 TextMeshProUGUI 文本组件
-    /// </summary>
-    private TextMeshProUGUI CreateTMPText(Transform parent, string name, string text,
-        float fontSize, Color color, TextAlignmentOptions alignment)
+    private TextMeshProUGUI CreateTMPText(Transform parent, string name, string text, float fontSize, Color color, TextAlignmentOptions alignment)
     {
-        GameObject textObj = new GameObject(name);
-        textObj.transform.SetParent(parent, false);
-
-        TextMeshProUGUI tmp = textObj.AddComponent<TextMeshProUGUI>();
+        GameObject textObject = CreateUIObject(name, parent as RectTransform);
+        TextMeshProUGUI tmp = textObject.AddComponent<TextMeshProUGUI>();
         tmp.text = text;
         tmp.fontSize = fontSize;
         tmp.color = color;
         tmp.alignment = alignment;
-        tmp.enableWordWrapping = true;
+        tmp.enableWordWrapping = false;
         tmp.overflowMode = TextOverflowModes.Ellipsis;
-        tmp.raycastTarget = false;
+        if (FontManager.Instance != null && FontManager.Instance.ChineseFont != null)
+        {
+            tmp.font = FontManager.Instance.ChineseFont;
+        }
 
         return tmp;
     }
 
-    /// <summary>
-    /// 创建按钮
-    /// </summary>
-    private GameObject CreateButton(Transform parent, string name, string label,
-        float fontSize, Vector2 size, UnityEngine.Events.UnityAction onClick)
+    private GameObject CreateButton(Transform parent, string name, string label, float fontSize, Vector2 size, UnityAction onClick)
     {
-        GameObject btnObj = new GameObject(name);
-        btnObj.transform.SetParent(parent, false);
+        GameObject buttonObject = CreateUIObject(name, parent as RectTransform);
+        RectTransform buttonRect = buttonObject.GetComponent<RectTransform>();
+        buttonRect.sizeDelta = size;
 
-        RectTransform btnRect = btnObj.AddComponent<RectTransform>();
-        btnRect.sizeDelta = size;
+        Image image = buttonObject.AddComponent<Image>();
+        image.color = Color.white;
 
-        Image btnImg = btnObj.AddComponent<Image>();
-        btnImg.color = new Color(0.3f, 0.3f, 0.35f, 1f);
-
-        Button btn = btnObj.AddComponent<Button>();
-        ColorBlock colors = btn.colors;
-        colors.normalColor = new Color(0.3f, 0.3f, 0.35f, 1f);
-        colors.highlightedColor = new Color(0.4f, 0.4f, 0.45f, 1f);
-        colors.pressedColor = new Color(0.2f, 0.2f, 0.25f, 1f);
-        btn.colors = colors;
+        Button button = buttonObject.AddComponent<Button>();
+        ColorBlock colors = button.colors;
+        colors.normalColor = Color.white;
+        colors.highlightedColor = new Color(0.96f, 0.96f, 0.96f, 1f);
+        colors.pressedColor = new Color(0.88f, 0.88f, 0.88f, 1f);
+        colors.selectedColor = Color.white;
+        button.colors = colors;
+        button.targetGraphic = image;
 
         if (onClick != null)
         {
-            btn.onClick.AddListener(onClick);
+            button.onClick.AddListener(onClick);
         }
 
-        TextMeshProUGUI btnText = CreateTMPText(btnObj.transform, "Text",
-            label, fontSize, Color.white, TextAlignmentOptions.Center);
-        RectTransform textRect = btnText.GetComponent<RectTransform>();
-        textRect.anchorMin = Vector2.zero;
-        textRect.anchorMax = Vector2.one;
-        textRect.sizeDelta = Vector2.zero;
-        textRect.anchoredPosition = Vector2.zero;
-        btnText.raycastTarget = false;
+        TextMeshProUGUI buttonText = CreateTMPText(buttonObject.transform, "Text", label, fontSize, AccentBrown, TextAlignmentOptions.Center);
+        Stretch(buttonText.rectTransform);
+        buttonText.fontStyle = FontStyles.Bold;
 
-        return btnObj;
+        return buttonObject;
+    }
+
+    private GameObject CreateUIObject(string name, RectTransform parent)
+    {
+        GameObject gameObject = new GameObject(name, typeof(RectTransform));
+        if (parent != null)
+        {
+            gameObject.transform.SetParent(parent, false);
+        }
+
+        return gameObject;
+    }
+
+    private void Stretch(RectTransform rectTransform)
+    {
+        rectTransform.anchorMin = Vector2.zero;
+        rectTransform.anchorMax = Vector2.one;
+        rectTransform.offsetMin = Vector2.zero;
+        rectTransform.offsetMax = Vector2.zero;
     }
 }

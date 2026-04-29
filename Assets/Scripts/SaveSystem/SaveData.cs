@@ -181,6 +181,10 @@ public class SaveData
     // ========== 成就 ==========
     public List<string> unlockedAchievements = new List<string>();
 
+    // ========== 游戏CG / 结局 ==========
+    public List<string> unlockedEndingIds = new List<string>();
+    public List<string> unlockedCgIds = new List<string>();
+
     // ========== 地点 ==========
     public string currentLocation = "";
 
@@ -234,6 +238,8 @@ public class SaveData
         eventRecords ??= new List<EventHistoryRecord>();
         eventFlags ??= new List<StringBoolPair>();
         unlockedAchievements ??= new List<string>();
+        unlockedEndingIds ??= new List<string>();
+        unlockedCgIds ??= new List<string>();
         courseRecords ??= new List<CourseRecord>();
         semesterGPAHistory ??= new List<SemesterGPA>();
         failedCourses ??= new List<ExamResult>();

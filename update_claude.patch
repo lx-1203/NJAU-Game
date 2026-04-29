@@ -1,0 +1,23 @@
+--- CLAUDE.md
++++ CLAUDE.md
+@@ -70,6 +70,9 @@
+ - `Assets/Scripts/InfoPanelBuilder.cs` - 信息面板UI构建器 (独立Canvas sortingOrder=180, 三个子面板: 个人信息/人际关系/任务, 顶部导航栏切换)
+ - `Assets/Scripts/InfoPanelManager.cs` - 信息面板管理器 (数据绑定+事件订阅+实时刷新, 单例模式)
+ - `Assets/Scripts/HUDManager.cs` - HUD管理器 (数据绑定+动态底栏按钮+地图UI集成+透支变红+商店按钮+社团按钮+信息按钮+债务订阅+社团回合结算+事件期间按钮锁定)
++- `Assets/Scripts/JobSelectionUI.cs` - 兼职实习UI (独立Canvas sortingOrder=200, 实习/副业选项)
++- `Assets/Scripts/PhysicalTestUI.cs` - 体侧测试UI (独立Canvas sortingOrder=500)
++- `Assets/Scripts/ConfirmDialogUI.cs` - 确认弹窗UI (独立Canvas sortingOrder=600)
+ - `Assets/Scripts/ShopUIBuilder.cs` - 商店UI构建器 (独立Canvas, 分类+商品列表+交易弹窗, 纯代码)
+ - `Assets/Scripts/HUDManager.cs` - HUD管理器 (数据绑定+动态底栏按钮+地图UI集成+透支变红+商店按钮+社团按钮+债务订阅+社团回合结算+事件期间按钮锁定)
+ - `Assets/Scripts/HUDBuilder.cs` - HUD构建器 (纯代码UI构建, 含NPCInteractionMenu+商店+社团面板+警告图标)
+@@ -194,6 +197,10 @@
+ - 结局数据: `Resources/Data/endings.json` (24个结局定义, 8层优先级)
+ - 成就数据: `Resources/Data/achievements.json` (20个成就定义)
+ - 事件数据: `Resources/Data/Events/*.json` (main_events/fixed_events/conditional_events/dark_events)
++- 天赋数据: `Resources/Data/talents.json`
++- 新闻数据: `Resources/Data/news.json`
++- 体测数据: `Resources/Data/physical_tests.json`
++- 兼职数据: `Resources/Data/jobs.json`
+ 
+ ## 考试与绩点系统 (ExamSystem)
+ - `Assets/Scripts/Exam/ExamData.cs` - 数据类 (ExamType/CheatResult枚举, CourseDefinition/ExamQuestion/QuestionGroup/ExamResult/SemesterGPA)

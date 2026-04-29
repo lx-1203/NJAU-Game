@@ -62,9 +62,20 @@ public class ConfirmDialogUI : MonoBehaviour
 
     private void Update()
     {
-        if (isOpen && Input.GetKeyDown(KeyCode.Escape))
+        if (!isOpen)
+        {
+            return;
+        }
+
+        if (Input.GetKeyDown(KeyCode.Escape))
         {
             OnCancelClicked();
+            return;
+        }
+
+        if (UIInputHelper.IsConfirmPressed())
+        {
+            UIInputHelper.TryClick(confirmButton);
         }
     }
 
@@ -141,6 +152,7 @@ public class ConfirmDialogUI : MonoBehaviour
 
         BuildUI(title, message, showCancel);
         isOpen = true;
+        UIInputHelper.FocusSelectable(confirmButton);
 
         // 缩放动画
         StartCoroutine(PlayOpenAnimation());
@@ -284,6 +296,7 @@ public class ConfirmDialogUI : MonoBehaviour
         // 确保最终状态
         panelRT.localScale = Vector3.one;
         cg.alpha = 1f;
+        UIInputHelper.FocusSelectable(confirmButton);
     }
 
     // ========== UI 辅助方法 ==========
