@@ -53,6 +53,7 @@ public class HUDBuilder : MonoBehaviour
 
     // --- 左下角：角色卡片 ---
     [HideInInspector] public GameObject characterCard;
+    [HideInInspector] public Button btnCharacterCard;
     [HideInInspector] public Image characterAvatar;            // 小头像
     [HideInInspector] public TextMeshProUGUI playerNameText;   // 姓名
     [HideInInspector] public TextMeshProUGUI playerGradeText;  // 年级
@@ -540,6 +541,16 @@ public class HUDBuilder : MonoBehaviour
         Image bg = characterCard.AddComponent<Image>();
         bg.color = CardBgLight;
 
+        btnCharacterCard = characterCard.AddComponent<Button>();
+        btnCharacterCard.targetGraphic = bg;
+        ColorBlock cardColors = btnCharacterCard.colors;
+        cardColors.normalColor = CardBgLight;
+        cardColors.highlightedColor = new Color(0.90f, 0.96f, 1.0f, 0.98f);
+        cardColors.pressedColor = new Color(0.78f, 0.88f, 0.95f, 0.98f);
+        cardColors.selectedColor = cardColors.highlightedColor;
+        cardColors.fadeDuration = 0.08f;
+        btnCharacterCard.colors = cardColors;
+
         // 卡片内布局
         HorizontalLayoutGroup hlg = characterCard.AddComponent<HorizontalLayoutGroup>();
         hlg.spacing = 8f;
@@ -658,7 +669,7 @@ public class HUDBuilder : MonoBehaviour
         rt.anchorMin = new Vector2(1, 0);
         rt.anchorMax = new Vector2(1, 0);
         rt.pivot = new Vector2(1, 0);
-        rt.anchoredPosition = new Vector2(-15, 5);
+        rt.anchoredPosition = new Vector2(-18, 96);
         rt.sizeDelta = new Vector2(360, 32);
 
         Image bg = hotkeyPanel.AddComponent<Image>();
@@ -674,7 +685,7 @@ public class HUDBuilder : MonoBehaviour
         hlg.childForceExpandHeight = true;
 
         CreateHotkeyLabel(hotkeyPanel.transform, "Tab", "信息");
-        CreateHotkeyLabel(hotkeyPanel.transform, "1", "社交");
+        CreateHotkeyLabel(hotkeyPanel.transform, "1", "行动");
         CreateHotkeyLabel(hotkeyPanel.transform, "2", "成长");
         CreateHotkeyLabel(hotkeyPanel.transform, "Esc", "菜单");
 
@@ -685,8 +696,8 @@ public class HUDBuilder : MonoBehaviour
         frt.anchorMin = new Vector2(1, 0);
         frt.anchorMax = new Vector2(1, 0);
         frt.pivot = new Vector2(1, 0);
-        frt.anchoredPosition = new Vector2(-15, 42);
-        frt.sizeDelta = new Vector2(200, 45);
+        frt.anchoredPosition = new Vector2(-18, 18);
+        frt.sizeDelta = new Vector2(280, 74);
 
         Image fBg = featureObj.AddComponent<Image>();
         fBg.color = FeatureBtnBg;
@@ -701,15 +712,15 @@ public class HUDBuilder : MonoBehaviour
 
         // 信封图标 + 文字
         HorizontalLayoutGroup fhlg = featureObj.AddComponent<HorizontalLayoutGroup>();
-        fhlg.spacing = 8f;
-        fhlg.padding = new RectOffset(12, 12, 5, 5);
+        fhlg.spacing = 10f;
+        fhlg.padding = new RectOffset(18, 18, 8, 8);
         fhlg.childAlignment = TextAnchor.MiddleCenter;
         fhlg.childControlWidth = false;
         fhlg.childControlHeight = true;
 
-        CreateTMPText("FeatureIcon", featureObj.transform, "MSG",
-            20f, TextDark, TextAlignmentOptions.Center, new Vector2(28, 35));
-        CreateTMPText("FeatureLabel", featureObj.transform, "社交互动",
+        CreateTMPText("FeatureIcon", featureObj.transform, "ACT",
+            24f, TextDark, TextAlignmentOptions.Center, new Vector2(40, 44));
+        CreateTMPText("FeatureLabel", featureObj.transform, "\u884C\u52A8",
             16f, TextDark, TextAlignmentOptions.Left, new Vector2(120, 35));
 
         // 兼容旧 btnSocial

@@ -1,154 +1,274 @@
 #if DEVELOPMENT_BUILD || UNITY_EDITOR
+using System.Collections.Generic;
+using System.Text;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
-using TMPro;
 
-/// <summary>
-/// 事件调试模块（占位）—— 事件触发/跳过
-/// </summary>
 public class EventModule : MonoBehaviour, IDebugModule
 {
     private static readonly Color TextWhite = new Color(0.92f, 0.92f, 0.92f);
-    private static readonly Color TextGold  = new Color(1.0f, 0.85f, 0.30f);
-    private static readonly Color TextGray  = new Color(0.6f, 0.6f, 0.65f);
-    private static readonly Color BtnColor  = new Color(0.20f, 0.35f, 0.60f, 1.0f);
+    private static readonly Color TextGold = new Color(1.0f, 0.85f, 0.30f);
+    private static readonly Color TextGray = new Color(0.6f, 0.6f, 0.65f);
+    private static readonly Color BtnGreen = new Color(0.20f, 0.55f, 0.30f, 1.0f);
+    private static readonly Color BtnRed = new Color(0.60f, 0.20f, 0.20f, 1.0f);
 
     private TMP_InputField eventIdInput;
+    private TMP_InputField flagInput;
     private TextMeshProUGUI statusText;
+    private TextMeshProUGUI queueText;
+    private TextMeshProUGUI historyText;
 
     public void Init(RectTransform parent)
     {
-        GameObject content = CreateUIElement("Content", parent);
-        StretchFull(content.GetComponent<RectTransform>());
+        GameObject scrollObj = CreateUIElement("ScrollView", parent);
+        StretchFull(scrollObj.GetComponent<RectTransform>());
 
-        VerticalLayoutGroup vlg = content.AddComponent<VerticalLayoutGroup>();
-        vlg.spacing = 10f;
-        vlg.padding = new RectOffset(20, 20, 16, 16);
-        vlg.childAlignment = TextAnchor.UpperCenter;
-        vlg.childControlWidth = true;
-        vlg.childControlHeight = false;
-        vlg.childForceExpandWidth = true;
-        vlg.childForceExpandHeight = false;
+        ScrollRect scrollRect = scrollObj.AddComponent<ScrollRect>();
+        scrollRect.horizontal = false;
+        scrollRect.vertical = true;
 
-        // 标题
-        CreateLabel(content.transform, "— 事件调试 —", 18f, TextGold, 30f);
+        GameObject viewport = CreateUIElement("Viewport", scrollObj.transform);
+        StretchFull(viewport.GetComponent<RectTransform>());
+        viewport.AddComponent<RectMask2D>();
+        scrollRect.viewport = viewport.GetComponent<RectTransform>();
 
-        // 状态提示
-        statusText = CreateLabel(content.transform, "事件系统待接入", 15f, TextGray, 28f);
+        GameObject content = CreateUIElement("Content", viewport.transform);
+        RectTransform contentRT = content.GetComponent<RectTransform>();
+        contentRT.anchorMin = new Vector2(0, 1);
+        contentRT.anchorMax = new Vector2(1, 1);
+        contentRT.pivot = new Vector2(0.5f, 1);
 
-        // 事件ID输入
-        GameObject inputRow = CreateUIElement("EventIdRow", content.transform);
-        RectTransform rowRT = inputRow.GetComponent<RectTransform>();
-        rowRT.sizeDelta = new Vector2(0, 40f);
+        VerticalLayoutGroup layout = content.AddComponent<VerticalLayoutGroup>();
+        layout.spacing = 12f;
+        layout.padding = new RectOffset(20, 20, 16, 16);
+        layout.childAlignment = TextAnchor.UpperCenter;
+        layout.childControlWidth = true;
+        layout.childControlHeight = false;
+        layout.childForceExpandWidth = true;
+        layout.childForceExpandHeight = false;
 
-        HorizontalLayoutGroup hlg = inputRow.AddComponent<HorizontalLayoutGroup>();
-        hlg.spacing = 10f;
-        hlg.padding = new RectOffset(4, 4, 2, 2);
-        hlg.childAlignment = TextAnchor.MiddleLeft;
-        hlg.childControlWidth = false;
-        hlg.childControlHeight = true;
-        hlg.childForceExpandWidth = false;
-        hlg.childForceExpandHeight = true;
+        ContentSizeFitter fitter = content.AddComponent<ContentSizeFitter>();
+        fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        scrollRect.content = contentRT;
 
-        CreateLabel(inputRow.transform, "事件ID", 15f, TextWhite, 36f, 80f);
-        eventIdInput = CreateInputField(inputRow.transform, "输入事件ID", 260f, 32f);
+        CreateLabel(content.transform, "Event Debug", 18f, TextGold, 30f);
+        statusText = CreateLabel(content.transform, string.Empty, 14f, TextGray, 44f);
 
-        // 按钮行
-        GameObject btnRow = CreateUIElement("BtnRow", content.transform);
-        RectTransform btnRowRT = btnRow.GetComponent<RectTransform>();
-        btnRowRT.sizeDelta = new Vector2(0, 44f);
+        GameObject eventRow = CreateRow(content.transform, 34f);
+        CreateLabel(eventRow.transform, "Event ID", 14f, TextWhite, 30f, 72f);
+        eventIdInput = CreateInputField(eventRow.transform, "event_id", 260f, 30f);
 
-        HorizontalLayoutGroup btnHlg = btnRow.AddComponent<HorizontalLayoutGroup>();
-        btnHlg.spacing = 12f;
-        btnHlg.padding = new RectOffset(4, 4, 2, 2);
-        btnHlg.childAlignment = TextAnchor.MiddleCenter;
-        btnHlg.childControlWidth = false;
-        btnHlg.childControlHeight = true;
-        btnHlg.childForceExpandWidth = false;
-        btnHlg.childForceExpandHeight = true;
+        GameObject eventButtons = CreateRow(content.transform, 36f);
+        CreateButton(eventButtons.transform, "Trigger", 120f, BtnGreen, ForceTriggerEvent);
+        CreateButton(eventButtons.transform, "Skip", 120f, BtnRed, SkipEvent);
 
-        CreateButton(btnRow.transform, "强制触发", 150f, () =>
-        {
-            string id = eventIdInput != null ? eventIdInput.text : "";
-            if (string.IsNullOrEmpty(id))
-            {
-                statusText.text = "请输入事件ID";
-                return;
-            }
-            if (EventScheduler.Instance != null)
-            {
-                EventScheduler.Instance.EnqueueEvent(id);
-                DebugConsoleManager.Log("事件", $"已强制触发事件: {id}");
-                statusText.text = $"已触发: {id}";
-            }
-            else
-            {
-                statusText.text = "EventScheduler 未初始化";
-            }
-        });
+        GameObject flagRow = CreateRow(content.transform, 34f);
+        CreateLabel(flagRow.transform, "Flag", 14f, TextWhite, 30f, 72f);
+        flagInput = CreateInputField(flagRow.transform, "flag_name", 260f, 30f);
 
-        CreateButton(btnRow.transform, "跳过事件", 150f, () =>
-        {
-            string id = eventIdInput != null ? eventIdInput.text : "";
-            if (string.IsNullOrEmpty(id))
-            {
-                statusText.text = "请输入事件ID";
-                return;
-            }
-            if (EventHistory.Instance != null)
-            {
-                EventHistory.Instance.RecordEvent(id, -1);
-                DebugConsoleManager.Log("事件", $"已跳过事件: {id} (标记为已触发)");
-                statusText.text = $"已跳过: {id}";
-            }
-            else
-            {
-                statusText.text = "EventHistory 未初始化";
-            }
-        });
+        GameObject flagButtons = CreateRow(content.transform, 36f);
+        CreateButton(flagButtons.transform, "Set True", 100f, BtnGreen, () => ApplyFlag(true));
+        CreateButton(flagButtons.transform, "Set False", 100f, BtnRed, () => ApplyFlag(false));
+
+        queueText = CreateLabel(content.transform, string.Empty, 13f, TextWhite, 150f);
+        historyText = CreateLabel(content.transform, string.Empty, 13f, TextWhite, 260f);
+        queueText.enableWordWrapping = true;
+        historyText.enableWordWrapping = true;
     }
 
     public void Refresh()
     {
-        if (statusText == null) return;
+        RefreshStatus();
+        RefreshQueue();
+        RefreshHistory();
+    }
 
-        if (EventScheduler.Instance != null)
+    private void ForceTriggerEvent()
+    {
+        string eventId = eventIdInput != null ? eventIdInput.text.Trim() : string.Empty;
+        if (string.IsNullOrEmpty(eventId))
         {
-            bool hasPending = EventScheduler.Instance.HasPendingEvents();
-            statusText.text = hasPending ? "事件队列中有待处理事件" : "事件系统就绪";
+            statusText.text = "Enter an event id";
+            return;
+        }
+
+        if (EventScheduler.Instance == null)
+        {
+            statusText.text = "EventScheduler not ready";
+            return;
+        }
+
+        EventScheduler.Instance.EnqueueEvent(eventId);
+        statusText.text = $"Queued trigger: {eventId}";
+        DebugConsoleManager.Log("Event", $"Force trigger {eventId}");
+        Refresh();
+    }
+
+    private void SkipEvent()
+    {
+        string eventId = eventIdInput != null ? eventIdInput.text.Trim() : string.Empty;
+        if (string.IsNullOrEmpty(eventId))
+        {
+            statusText.text = "Enter an event id";
+            return;
+        }
+
+        if (EventHistory.Instance == null)
+        {
+            statusText.text = "EventHistory not ready";
+            return;
+        }
+
+        EventHistory.Instance.RecordEvent(eventId, -1);
+        statusText.text = $"Marked skipped: {eventId}";
+        DebugConsoleManager.Log("Event", $"Skip event {eventId}");
+        Refresh();
+    }
+
+    private void ApplyFlag(bool value)
+    {
+        string flag = flagInput != null ? flagInput.text.Trim() : string.Empty;
+        if (string.IsNullOrEmpty(flag))
+        {
+            statusText.text = "Enter a flag name";
+            return;
+        }
+
+        if (EventHistory.Instance == null)
+        {
+            statusText.text = "EventHistory not ready";
+            return;
+        }
+
+        EventHistory.Instance.SetFlag(flag, value);
+        statusText.text = $"Flag {flag} = {value}";
+        DebugConsoleManager.Log("Event", $"Flag {flag} -> {value}");
+        Refresh();
+    }
+
+    private void RefreshStatus()
+    {
+        int loaded = EventScheduler.Instance != null ? EventScheduler.Instance.GetLoadedEventCount() : 0;
+        int queued = EventScheduler.Instance != null ? EventScheduler.Instance.GetPendingEventCount() : 0;
+        int historyCount = EventHistory.Instance != null ? EventHistory.Instance.GetAllRecords().Count : 0;
+        int flagCount = EventHistory.Instance != null ? EventHistory.Instance.GetAllFlagsSnapshot().Count : 0;
+        int darkness = EventHistory.Instance != null ? EventHistory.Instance.DarknessValue : 0;
+
+        statusText.text =
+            $"Loaded {loaded}   Queue {queued}   History {historyCount}   Flags {flagCount}\n" +
+            $"Darkness {darkness}";
+    }
+
+    private void RefreshQueue()
+    {
+        if (EventScheduler.Instance == null)
+        {
+            queueText.text = "Queue: EventScheduler not ready";
+            return;
+        }
+
+        List<EventDefinition> pending = EventScheduler.Instance.GetPendingEventsSnapshot();
+        if (pending.Count == 0)
+        {
+            queueText.text = "Queue: empty";
+            return;
+        }
+
+        StringBuilder builder = new StringBuilder();
+        builder.AppendLine("Queue");
+        for (int i = 0; i < pending.Count; i++)
+        {
+            EventDefinition evt = pending[i];
+            builder.AppendLine($"{i + 1}. {evt.id} | {evt.title}");
+        }
+        queueText.text = builder.ToString().TrimEnd();
+    }
+
+    private void RefreshHistory()
+    {
+        if (EventHistory.Instance == null)
+        {
+            historyText.text = "History: EventHistory not ready";
+            return;
+        }
+
+        List<EventHistory.EventRecord> records = EventHistory.Instance.GetAllRecords();
+        Dictionary<string, bool> flags = EventHistory.Instance.GetAllFlagsSnapshot();
+        StringBuilder builder = new StringBuilder();
+        builder.AppendLine("Recent Events");
+
+        if (records.Count == 0)
+        {
+            builder.AppendLine("- none");
         }
         else
         {
-            statusText.text = "EventScheduler 未初始化";
+            int start = Mathf.Max(0, records.Count - 6);
+            for (int i = start; i < records.Count; i++)
+            {
+                EventHistory.EventRecord record = records[i];
+                builder.AppendLine($"- {record.eventId} @ Y{record.triggerYear} S{record.triggerSemester} R{record.triggerRound} choice {record.choiceIndex}");
+            }
         }
+
+        builder.AppendLine();
+        builder.AppendLine("Flags");
+
+        if (flags.Count == 0)
+        {
+            builder.Append("- none");
+        }
+        else
+        {
+            int shown = 0;
+            foreach (KeyValuePair<string, bool> pair in flags)
+            {
+                builder.AppendLine($"- {pair.Key} = {pair.Value}");
+                shown++;
+                if (shown >= 8)
+                    break;
+            }
+        }
+
+        historyText.text = builder.ToString().TrimEnd();
     }
 
-    // ========== 工具方法 ==========
-
-    private void CreateButton(Transform parent, string label, float width, UnityEngine.Events.UnityAction onClick)
+    private GameObject CreateRow(Transform parent, float height)
     {
-        GameObject btnObj = CreateUIElement("Btn_" + label, parent);
-        RectTransform rt = btnObj.GetComponent<RectTransform>();
-        rt.sizeDelta = new Vector2(width, 40f);
+        GameObject row = CreateUIElement("Row", parent);
+        RectTransform rt = row.GetComponent<RectTransform>();
+        rt.sizeDelta = new Vector2(0f, height);
 
-        LayoutElement le = btnObj.AddComponent<LayoutElement>();
-        le.preferredWidth = width;
+        HorizontalLayoutGroup layout = row.AddComponent<HorizontalLayoutGroup>();
+        layout.spacing = 8f;
+        layout.childAlignment = TextAnchor.MiddleLeft;
+        layout.childControlWidth = false;
+        layout.childControlHeight = true;
+        layout.childForceExpandWidth = false;
+        layout.childForceExpandHeight = true;
+        return row;
+    }
 
-        Image bg = btnObj.AddComponent<Image>();
-        bg.color = BtnColor;
+    private void CreateButton(Transform parent, string label, float width, Color bgColor, UnityEngine.Events.UnityAction onClick)
+    {
+        GameObject buttonObj = CreateUIElement($"Btn_{label}", parent);
+        RectTransform rt = buttonObj.GetComponent<RectTransform>();
+        rt.sizeDelta = new Vector2(width, 32f);
 
-        Button btn = btnObj.AddComponent<Button>();
-        btn.targetGraphic = bg;
-        ColorBlock cb = btn.colors;
-        cb.normalColor = Color.white;
-        cb.highlightedColor = new Color(1.15f, 1.15f, 1.15f);
-        cb.pressedColor = new Color(0.85f, 0.85f, 0.85f);
-        btn.colors = cb;
-        btn.onClick.AddListener(onClick);
+        LayoutElement layout = buttonObj.AddComponent<LayoutElement>();
+        layout.preferredWidth = width;
 
-        TextMeshProUGUI txt = CreateLabel(btnObj.transform, label, 14f, TextWhite, 40f);
-        txt.alignment = TextAlignmentOptions.Center;
-        StretchFull(txt.GetComponent<RectTransform>());
+        Image bg = buttonObj.AddComponent<Image>();
+        bg.color = bgColor;
+
+        Button button = buttonObj.AddComponent<Button>();
+        button.targetGraphic = bg;
+        button.onClick.AddListener(onClick);
+
+        TextMeshProUGUI text = CreateLabel(buttonObj.transform, label, 13f, TextWhite, 32f);
+        text.alignment = TextAlignmentOptions.Center;
+        StretchFull(text.GetComponent<RectTransform>());
     }
 
     private TMP_InputField CreateInputField(Transform parent, string placeholder, float width, float height)
@@ -157,8 +277,8 @@ public class EventModule : MonoBehaviour, IDebugModule
         RectTransform rt = inputObj.GetComponent<RectTransform>();
         rt.sizeDelta = new Vector2(width, height);
 
-        LayoutElement le = inputObj.AddComponent<LayoutElement>();
-        le.preferredWidth = width;
+        LayoutElement layout = inputObj.AddComponent<LayoutElement>();
+        layout.preferredWidth = width;
 
         Image bg = inputObj.AddComponent<Image>();
         bg.color = new Color(0.12f, 0.12f, 0.18f, 0.90f);
@@ -174,42 +294,38 @@ public class EventModule : MonoBehaviour, IDebugModule
         GameObject textObj = CreateUIElement("Text", textArea.transform);
         StretchFull(textObj.GetComponent<RectTransform>());
         TextMeshProUGUI text = textObj.AddComponent<TextMeshProUGUI>();
-        text.fontSize = 14f;
+        text.fontSize = 13f;
         text.color = TextWhite;
         text.alignment = TextAlignmentOptions.Left;
-        if (FontManager.Instance != null && FontManager.Instance.ChineseFont != null)
-            text.font = FontManager.Instance.ChineseFont;
+        ApplyChineseFont(text);
 
-        GameObject phObj = CreateUIElement("Placeholder", textArea.transform);
-        StretchFull(phObj.GetComponent<RectTransform>());
-        TextMeshProUGUI phText = phObj.AddComponent<TextMeshProUGUI>();
-        phText.text = placeholder;
-        phText.fontSize = 14f;
-        phText.fontStyle = FontStyles.Italic;
-        phText.color = new Color(0.5f, 0.5f, 0.5f, 0.6f);
-        if (FontManager.Instance != null && FontManager.Instance.ChineseFont != null)
-            phText.font = FontManager.Instance.ChineseFont;
+        GameObject placeholderObj = CreateUIElement("Placeholder", textArea.transform);
+        StretchFull(placeholderObj.GetComponent<RectTransform>());
+        TextMeshProUGUI placeholderText = placeholderObj.AddComponent<TextMeshProUGUI>();
+        placeholderText.text = placeholder;
+        placeholderText.fontSize = 13f;
+        placeholderText.fontStyle = FontStyles.Italic;
+        placeholderText.color = new Color(0.5f, 0.5f, 0.5f, 0.6f);
+        ApplyChineseFont(placeholderText);
 
-        TMP_InputField inputField = inputObj.AddComponent<TMP_InputField>();
-        inputField.textViewport = textAreaRT;
-        inputField.textComponent = text;
-        inputField.placeholder = phText;
-        inputField.fontAsset = FontManager.Instance != null ? FontManager.Instance.ChineseFont : null;
-
-        return inputField;
+        TMP_InputField input = inputObj.AddComponent<TMP_InputField>();
+        input.textViewport = textAreaRT;
+        input.textComponent = text;
+        input.placeholder = placeholderText;
+        input.fontAsset = FontManager.Instance != null ? FontManager.Instance.ChineseFont : null;
+        return input;
     }
 
-    private TextMeshProUGUI CreateLabel(Transform parent, string text, float fontSize, Color color,
-        float height, float width = 0f)
+    private TextMeshProUGUI CreateLabel(Transform parent, string text, float fontSize, Color color, float height, float width = 0f)
     {
-        GameObject obj = CreateUIElement("Label_" + text, parent);
+        GameObject obj = CreateUIElement("Label", parent);
         RectTransform rt = obj.GetComponent<RectTransform>();
         rt.sizeDelta = new Vector2(width, height);
 
         if (width > 0f)
         {
-            LayoutElement le = obj.AddComponent<LayoutElement>();
-            le.preferredWidth = width;
+            LayoutElement layout = obj.AddComponent<LayoutElement>();
+            layout.preferredWidth = width;
         }
 
         TextMeshProUGUI tmp = obj.AddComponent<TextMeshProUGUI>();
@@ -218,10 +334,8 @@ public class EventModule : MonoBehaviour, IDebugModule
         tmp.color = color;
         tmp.alignment = TextAlignmentOptions.Left;
         tmp.enableWordWrapping = false;
-
-        if (FontManager.Instance != null && FontManager.Instance.ChineseFont != null)
-            tmp.font = FontManager.Instance.ChineseFont;
-
+        tmp.overflowMode = TextOverflowModes.Overflow;
+        ApplyChineseFont(tmp);
         return tmp;
     }
 
@@ -232,6 +346,12 @@ public class EventModule : MonoBehaviour, IDebugModule
         if (go.GetComponent<RectTransform>() == null)
             go.AddComponent<RectTransform>();
         return go;
+    }
+
+    private void ApplyChineseFont(TextMeshProUGUI text)
+    {
+        if (FontManager.Instance != null && FontManager.Instance.ChineseFont != null)
+            text.font = FontManager.Instance.ChineseFont;
     }
 
     private void StretchFull(RectTransform rt)

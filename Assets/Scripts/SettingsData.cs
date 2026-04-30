@@ -2,69 +2,113 @@ using System;
 using UnityEngine;
 
 /// <summary>
-/// 设置数据模型 - 可序列化到 PlayerPrefs
-/// 包含音频、显示、游戏性等所有配置项
+/// 设置数据模型，序列化到 PlayerPrefs。
 /// </summary>
 [Serializable]
 public class SettingsData
 {
-    // ========== 音频设置 ==========
-    public float masterVolume = 1.0f;    // 主音量 (0-1)
-    public float musicVolume = 0.7f;     // 音乐音量 (0-1)
-    public float sfxVolume = 0.8f;       // 音效音量 (0-1)
-    public bool isMuted = false;         // 静音状态
+    // 音频
+    public float masterVolume = 1.0f;
+    public float musicVolume = 0.7f;
+    public float sfxVolume = 0.8f;
+    public bool isMuted = false;
 
-    // ========== 显示设置 ==========
-    public bool fullscreen = true;       // 全屏模式
-    public int resolutionWidth = 1920;   // 分辨率宽度
-    public int resolutionHeight = 1080;  // 分辨率高度
-    public float uiScale = 1.0f;         // UI缩放 (0.8-1.2)
+    // 图像
+    public bool fullscreen = true;
+    public int resolutionWidth = 1920;
+    public int resolutionHeight = 1080;
+    public float uiScale = 1.0f;
 
-    // ========== 游戏性设置 ==========
-    public int textSpeed = 1;            // 文本速度 (0=慢/1=中/2=快)
-    public int language = 0;             // 语言 (0=中文/1=英文，预留)
+    // 游戏
+    public int textSpeed = 1;          // 0=慢, 1=正常, 2=快
+    public int language = 0;           // 0=简体中文, 1=English(预留)
+    public int autoPlayInterval = 1;   // 0=短, 1=正常, 2=长
+    public int skipMode = 0;           // 0=快进所有对话, 1=仅快进已读
+    public int fastForwardSpeed = 2;   // 0=x4, 1=x10, 2=x20, 3=x30
 
-    // ========== 工具方法 ==========
+    public float GetEffectiveMasterVolume()
+    {
+        return isMuted ? 0f : masterVolume;
+    }
 
-    /// <summary>
-    /// 获取实际音乐音量（考虑主音量和静音）
-    /// </summary>
     public float GetEffectiveMusicVolume()
     {
         return isMuted ? 0f : masterVolume * musicVolume;
     }
 
-    /// <summary>
-    /// 获取实际音效音量（考虑主音量和静音）
-    /// </summary>
     public float GetEffectiveSFXVolume()
     {
         return isMuted ? 0f : masterVolume * sfxVolume;
     }
 
-    /// <summary>
-    /// 恢复默认值
-    /// </summary>
     public void ResetToDefaults()
     {
         masterVolume = 1.0f;
         musicVolume = 0.7f;
         sfxVolume = 0.8f;
         isMuted = false;
+
         fullscreen = true;
         Resolution currentRes = Screen.currentResolution;
         resolutionWidth = currentRes.width;
         resolutionHeight = currentRes.height;
         uiScale = 1.0f;
+
         textSpeed = 1;
         language = 0;
+        autoPlayInterval = 1;
+        skipMode = 0;
+        fastForwardSpeed = 2;
     }
 
-    /// <summary>
-    /// 克隆当前设置
-    /// </summary>
     public SettingsData Clone()
     {
         return (SettingsData)MemberwiseClone();
+    }
+
+    public string GetResolutionLabel()
+    {
+        return resolutionWidth + "x" + resolutionHeight;
+    }
+
+    public string GetTextSpeedLabel()
+    {
+        switch (textSpeed)
+        {
+            case 0: return "慢";
+            case 2: return "快";
+            default: return "正常";
+        }
+    }
+
+    public string GetLanguageLabel()
+    {
+        return language == 1 ? "English (开发中)" : "简体中文";
+    }
+
+    public string GetAutoPlayIntervalLabel()
+    {
+        switch (autoPlayInterval)
+        {
+            case 0: return "较短";
+            case 2: return "较长";
+            default: return "正常";
+        }
+    }
+
+    public string GetSkipModeLabel()
+    {
+        return skipMode == 1 ? "仅快进已读" : "快进所有对话";
+    }
+
+    public string GetFastForwardSpeedLabel()
+    {
+        switch (fastForwardSpeed)
+        {
+            case 0: return "x4";
+            case 1: return "x10";
+            case 3: return "x30";
+            default: return "x20";
+        }
     }
 }

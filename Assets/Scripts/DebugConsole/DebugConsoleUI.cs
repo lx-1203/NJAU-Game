@@ -1,53 +1,78 @@
 #if DEVELOPMENT_BUILD || UNITY_EDITOR
-using UnityEngine;
-using UnityEngine.UI;
-using UnityEngine.EventSystems;
-using TMPro;
 using System.Collections.Generic;
+using TMPro;
+using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.UI;
 
-/// <summary>
-/// 钟山台 —— 调试控制台 UI 层
-/// 纯代码构建全部界面元素，包含标签页切换和预设按钮栏
-/// </summary>
 public class DebugConsoleUI : MonoBehaviour
 {
-    // ========== 静态引用 ==========
+    private sealed class QuickAdjustItem
+    {
+        public string key;
+        public TextMeshProUGUI valueText;
+    }
+
     private static DebugConsoleUI instance;
 
-    // ========== 布局常量 ==========
-    private const float TopBarHeight = 48f;
-    private const float BottomBarHeight = 120f;  // 两行: 步长选择 + 增减按钮
-    private const float SidebarWidth = 140f;
-    private const float Padding = 6f;
+    private const float TopBarHeight = 76f;
+    private const float BottomBarHeight = 132f;
+    private const float SidebarWidth = 156f;
 
-    // ========== 颜色方案 ==========
-    private static readonly Color BgColor         = new Color(0.05f, 0.05f, 0.08f, 0.85f);
-    private static readonly Color PanelBgColor    = new Color(0.08f, 0.08f, 0.12f, 0.90f);
-    private static readonly Color TopBarColor     = new Color(0.10f, 0.10f, 0.16f, 0.95f);
-    private static readonly Color SidebarColor    = new Color(0.07f, 0.07f, 0.11f, 0.92f);
-    private static readonly Color ContentBgColor  = new Color(0.06f, 0.06f, 0.10f, 0.88f);
-    private static readonly Color BottomBarColor  = new Color(0.10f, 0.10f, 0.16f, 0.95f);
-    private static readonly Color TextWhite       = new Color(0.92f, 0.92f, 0.92f);
-    private static readonly Color TextGold        = new Color(1.0f, 0.85f, 0.30f);
-    private static readonly Color TabNormal       = new Color(0.15f, 0.15f, 0.22f, 0.80f);
-    private static readonly Color TabSelected     = new Color(0.25f, 0.35f, 0.55f, 1.0f);
-    private static readonly Color BtnNormal       = new Color(0.20f, 0.35f, 0.60f, 1.0f);
-    private static readonly Color BtnHover        = new Color(0.30f, 0.45f, 0.70f, 1.0f);
-    private static readonly Color BtnPressed      = new Color(0.15f, 0.25f, 0.50f, 1.0f);
+    private static readonly Color BackgroundColor = new Color(0.04f, 0.04f, 0.07f, 0.9f);
+    private static readonly Color PanelColor = new Color(0.08f, 0.08f, 0.12f, 0.95f);
+    private static readonly Color HeaderColor = new Color(0.1f, 0.1f, 0.16f, 0.98f);
+    private static readonly Color SidebarColor = new Color(0.07f, 0.07f, 0.11f, 0.96f);
+    private static readonly Color ContentColor = new Color(0.06f, 0.06f, 0.1f, 0.92f);
+    private static readonly Color ButtonColor = new Color(0.22f, 0.42f, 0.72f, 1f);
+    private static readonly Color TabNormalColor = new Color(0.16f, 0.16f, 0.24f, 1f);
+    private static readonly Color TabSelectedColor = new Color(0.28f, 0.46f, 0.76f, 1f);
+    private static readonly Color AccentColor = new Color(1f, 0.85f, 0.3f, 1f);
+    private static readonly Color PositiveColor = new Color(0.22f, 0.58f, 0.34f, 1f);
+    private static readonly Color NegativeColor = new Color(0.68f, 0.28f, 0.28f, 1f);
+    private static readonly Color ToggleOffColor = new Color(0.26f, 0.26f, 0.32f, 1f);
+    private static readonly Color ToggleOnColor = new Color(0.24f, 0.54f, 0.76f, 1f);
+    private static readonly Color TextColor = new Color(0.92f, 0.92f, 0.92f);
 
-    // ========== UI 引用 ==========
-    private Canvas canvas;
+    private static readonly string[] TabNames =
+    {
+        "Attributes",
+        "Time",
+        "Ending",
+        "Events",
+        "NPC",
+        "Economy",
+        "Formula",
+        "Snapshot",
+        "Logs"
+    };
+
+    private static readonly (string Label, string Key)[] QuickAdjustKeys =
+    {
+        ("Study", "Study"),
+        ("Charm", "Charm"),
+        ("Physique", "Physique"),
+        ("Leadership", "Leadership"),
+        ("Stress", "Stress"),
+        ("Mood", "Mood"),
+        ("Darkness", "Darkness"),
+        ("Guilt", "Guilt"),
+        ("Luck", "Luck"),
+        ("Money", "Money")
+    };
+
     private CanvasGroup rootCanvasGroup;
     private RectTransform contentArea;
-
-    // 标签页系统
-    private readonly string[] tabNames = { "属性", "时间", "结局", "事件", "NPC", "经济", "公式", "快照", "日志" };
-    private readonly List<Button> tabButtons = new List<Button>();
-    private readonly List<Image> tabBgImages = new List<Image>();
+    private readonly List<Image> tabImages = new List<Image>();
     private readonly List<GameObject> modulePanels = new List<GameObject>();
-    private int activeTabIndex = -1;
+    private readonly List<QuickAdjustItem> quickAdjustItems = new List<QuickAdjustItem>();
+    private readonly List<Image> stepButtonImages = new List<Image>();
 
-    // 模块引用
+    private Toggle skipSplashToggle;
+    private Toggle skipCreateToggle;
+    private Toggle skipIntroToggle;
+    private Button prevDialogueButton;
+
     private AttributeModule attributeModule;
     private TimeModule timeModule;
     private EndingSimModule endingSimModule;
@@ -58,509 +83,348 @@ public class DebugConsoleUI : MonoBehaviour
     private SnapshotModule snapshotModule;
     private LogModule logModule;
 
-    // ========== 生命周期 ==========
+    private int activeTabIndex = -1;
 
     private void Awake()
     {
         instance = this;
         BuildUI();
         SwitchTab(0);
+        Hide();
     }
 
     private void OnDestroy()
     {
         if (instance == this)
+        {
             instance = null;
+        }
     }
-
-    // ========== 静态方法 ==========
 
     public static void Show()
     {
-        if (instance == null) return;
-        instance.gameObject.SetActive(true);
-        if (instance.rootCanvasGroup != null)
+        if (instance == null)
         {
-            instance.rootCanvasGroup.alpha = 1f;
-            instance.rootCanvasGroup.interactable = true;
-            instance.rootCanvasGroup.blocksRaycasts = true;
+            return;
         }
-        // 刷新当前活跃模块 + 底栏数值
+
+        instance.gameObject.SetActive(true);
+        instance.rootCanvasGroup.alpha = 1f;
+        instance.rootCanvasGroup.interactable = true;
+        instance.rootCanvasGroup.blocksRaycasts = true;
+        instance.SyncTopControls();
+        instance.RefreshQuickAdjustValues();
         instance.RefreshActiveModule();
-        instance.RefreshAdjustValues();
     }
 
     public static void Hide()
     {
-        if (instance == null) return;
-        if (instance.rootCanvasGroup != null)
+        if (instance == null)
         {
-            instance.rootCanvasGroup.alpha = 0f;
-            instance.rootCanvasGroup.interactable = false;
-            instance.rootCanvasGroup.blocksRaycasts = false;
+            return;
         }
-    }
 
-    // ========== UI 构建 ==========
+        instance.rootCanvasGroup.alpha = 0f;
+        instance.rootCanvasGroup.interactable = false;
+        instance.rootCanvasGroup.blocksRaycasts = false;
+    }
 
     private void BuildUI()
     {
-        CreateCanvas();
-        CreateBackground();
-        CreateTopBar();
-        CreateSidebar();
-        CreateContentArea();
-        CreateBottomBar();
-        CreateModulePanels();
-    }
+        EnsureEventSystem();
 
-    private void CreateCanvas()
-    {
-        // 确保 EventSystem 存在
-        if (FindFirstObjectByType<EventSystem>() == null)
-        {
-            GameObject esObj = new GameObject("EventSystem");
-            esObj.AddComponent<EventSystem>();
-            esObj.AddComponent<StandaloneInputModule>();
-        }
+        GameObject canvasObject = new GameObject("DebugCanvas");
+        canvasObject.transform.SetParent(transform, false);
 
-        GameObject canvasObj = new GameObject("DebugCanvas");
-        canvasObj.transform.SetParent(transform, false);
-
-        canvas = canvasObj.AddComponent<Canvas>();
+        Canvas canvas = canvasObject.AddComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
         canvas.sortingOrder = 200;
 
-        CanvasScaler scaler = canvasObj.AddComponent<CanvasScaler>();
+        CanvasScaler scaler = canvasObject.AddComponent<CanvasScaler>();
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        scaler.referenceResolution = new Vector2(1920, 1080);
+        scaler.referenceResolution = new Vector2(1920f, 1080f);
         scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
         scaler.matchWidthOrHeight = 0.5f;
 
-        canvasObj.AddComponent<GraphicRaycaster>();
-        rootCanvasGroup = canvasObj.AddComponent<CanvasGroup>();
+        canvasObject.AddComponent<GraphicRaycaster>();
+        rootCanvasGroup = canvasObject.AddComponent<CanvasGroup>();
+
+        GameObject background = CreatePanel("Background", canvasObject.transform, BackgroundColor);
+        StretchFull(background.GetComponent<RectTransform>());
+
+        CreateTopBar(canvasObject.transform);
+        CreateSidebar(canvasObject.transform);
+        CreateContentArea(canvasObject.transform);
+        CreateBottomBar(canvasObject.transform);
+        CreateModulePanels();
     }
 
-    private void CreateBackground()
+    private void CreateTopBar(Transform parent)
     {
-        GameObject bg = CreateUIElement("Background", canvas.transform);
-        StretchFull(bg.GetComponent<RectTransform>());
-        Image bgImg = bg.AddComponent<Image>();
-        bgImg.color = BgColor;
-        bgImg.raycastTarget = true; // 阻挡下层交互
-    }
+        GameObject topBar = CreatePanel("TopBar", parent, HeaderColor);
+        RectTransform topRect = topBar.GetComponent<RectTransform>();
+        topRect.anchorMin = new Vector2(0f, 1f);
+        topRect.anchorMax = new Vector2(1f, 1f);
+        topRect.pivot = new Vector2(0.5f, 1f);
+        topRect.anchoredPosition = Vector2.zero;
+        topRect.sizeDelta = new Vector2(0f, TopBarHeight);
 
-    private void CreateTopBar()
-    {
-        GameObject topBar = CreatePanel("TopBar", canvas.transform, TopBarColor);
-        RectTransform topRT = topBar.GetComponent<RectTransform>();
-        topRT.anchorMin = new Vector2(0, 1);
-        topRT.anchorMax = new Vector2(1, 1);
-        topRT.pivot = new Vector2(0.5f, 1);
-        topRT.anchoredPosition = Vector2.zero;
-        topRT.sizeDelta = new Vector2(0, TopBarHeight);
+        TextMeshProUGUI title = CreateText("Title", topBar.transform, "Zhongshan Deck", 24f, AccentColor, TextAlignmentOptions.MidlineLeft);
+        RectTransform titleRect = title.rectTransform;
+        titleRect.anchorMin = new Vector2(0f, 0.5f);
+        titleRect.anchorMax = new Vector2(0f, 0.5f);
+        titleRect.pivot = new Vector2(0f, 0.5f);
+        titleRect.sizeDelta = new Vector2(240f, 34f);
+        titleRect.anchoredPosition = new Vector2(18f, 16f);
 
-        // 标题
-        TextMeshProUGUI titleText = CreateTMPText("Title", topBar.transform,
-            "钟山台 · 开发者控制台", 20f, TextGold, TextAlignmentOptions.Left,
-            new Vector2(400, TopBarHeight));
-        RectTransform titleRT = titleText.GetComponent<RectTransform>();
-        titleRT.anchorMin = new Vector2(0, 0.5f);
-        titleRT.anchorMax = new Vector2(0, 0.5f);
-        titleRT.pivot = new Vector2(0, 0.5f);
-        titleRT.anchoredPosition = new Vector2(16, 0);
+        TextMeshProUGUI subtitle = CreateText("Subtitle", topBar.transform, "Fast testing, clean switches, no more mystery buttons.", 13f, TextColor, TextAlignmentOptions.MidlineLeft);
+        RectTransform subtitleRect = subtitle.rectTransform;
+        subtitleRect.anchorMin = new Vector2(0f, 0.5f);
+        subtitleRect.anchorMax = new Vector2(0f, 0.5f);
+        subtitleRect.pivot = new Vector2(0f, 0.5f);
+        subtitleRect.sizeDelta = new Vector2(520f, 24f);
+        subtitleRect.anchoredPosition = new Vector2(18f, -14f);
 
-        // 关闭按钮 (X)
-        GameObject closeBtnObj = CreateUIElement("CloseBtn", topBar.transform);
-        RectTransform closeRT = closeBtnObj.GetComponent<RectTransform>();
-        closeRT.anchorMin = new Vector2(1, 0.5f);
-        closeRT.anchorMax = new Vector2(1, 0.5f);
-        closeRT.pivot = new Vector2(1, 0.5f);
-        closeRT.sizeDelta = new Vector2(40, 40);
-        closeRT.anchoredPosition = new Vector2(-10, 0);
+        Transform actionRow = CreateHorizontalRow("ActionRow", topBar.transform, 8f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleRight);
+        RectTransform actionRect = actionRow.GetComponent<RectTransform>();
+        actionRect.anchorMin = new Vector2(1f, 0.5f);
+        actionRect.anchorMax = new Vector2(1f, 0.5f);
+        actionRect.pivot = new Vector2(1f, 0.5f);
+        actionRect.sizeDelta = new Vector2(1180f, 56f);
+        actionRect.anchoredPosition = new Vector2(-12f, 0f);
 
-        Image closeBg = closeBtnObj.AddComponent<Image>();
-        closeBg.color = new Color(0.8f, 0.2f, 0.2f, 0.8f);
-
-        Button closeBtn = closeBtnObj.AddComponent<Button>();
-        closeBtn.targetGraphic = closeBg;
-        ColorBlock closeCb = closeBtn.colors;
-        closeCb.normalColor = new Color(0.8f, 0.2f, 0.2f, 0.8f);
-        closeCb.highlightedColor = new Color(1f, 0.3f, 0.3f, 1f);
-        closeCb.pressedColor = new Color(0.6f, 0.15f, 0.15f, 1f);
-        closeBtn.colors = closeCb;
-        closeBtn.onClick.AddListener(() => DebugConsoleManager.Instance?.Close());
-
-        TextMeshProUGUI closeText = CreateTMPText("X", closeBtnObj.transform,
-            "✕", 22f, TextWhite, TextAlignmentOptions.Center, new Vector2(40, 40));
-        StretchFull(closeText.GetComponent<RectTransform>());
-    }
-
-    private void CreateSidebar()
-    {
-        GameObject sidebar = CreatePanel("Sidebar", canvas.transform, SidebarColor);
-        RectTransform sideRT = sidebar.GetComponent<RectTransform>();
-        sideRT.anchorMin = new Vector2(0, 0);
-        sideRT.anchorMax = new Vector2(0, 1);
-        sideRT.pivot = new Vector2(0, 0.5f);
-        sideRT.anchoredPosition = new Vector2(0, (BottomBarHeight - TopBarHeight) / 2f);
-        sideRT.sizeDelta = new Vector2(SidebarWidth, -(TopBarHeight + BottomBarHeight));
-
-        // 垂直布局
-        VerticalLayoutGroup vlg = sidebar.AddComponent<VerticalLayoutGroup>();
-        vlg.spacing = 4f;
-        vlg.padding = new RectOffset(6, 6, 8, 8);
-        vlg.childAlignment = TextAnchor.UpperCenter;
-        vlg.childControlWidth = true;
-        vlg.childControlHeight = false;
-        vlg.childForceExpandWidth = true;
-        vlg.childForceExpandHeight = false;
-
-        // 创建标签按钮
-        for (int i = 0; i < tabNames.Length; i++)
+        prevDialogueButton = CreateButton(actionRow, "Prev Line", ButtonColor, () =>
         {
-            int tabIndex = i;
-            CreateTabButton(sidebar.transform, tabNames[i], tabIndex);
+            DialogueSystem.Instance?.DebugStepBackOneLine();
+            RefreshTopActionButtons();
+        });
+        SetLayoutSize(prevDialogueButton.gameObject, 110f, 34f);
+
+        Button quickStartButton = CreateButton(actionRow, "Quick Start", ButtonColor, () =>
+        {
+            StartupFlowSettings.ApplyQuickStartPreset();
+            SyncTopControls();
+            DebugConsoleManager.Log("Startup", "Applied quick-start preset");
+        });
+        SetLayoutSize(quickStartButton.gameObject, 110f, 34f);
+
+        skipSplashToggle = CreateLabeledToggle(actionRow, "Skip Splash", StartupFlowSettings.SkipSplashLogo, value =>
+        {
+            StartupFlowSettings.SkipSplashLogo = value;
+        });
+
+        skipCreateToggle = CreateLabeledToggle(actionRow, "Skip Create", StartupFlowSettings.SkipCharacterCreation, value =>
+        {
+            StartupFlowSettings.SkipCharacterCreation = value;
+        });
+
+        skipIntroToggle = CreateLabeledToggle(actionRow, "Skip Intro", StartupFlowSettings.SkipOpeningStory, value =>
+        {
+            StartupFlowSettings.SkipOpeningStory = value;
+        });
+
+        Button closeButton = CreateButton(actionRow, "Close", NegativeColor, () => DebugConsoleManager.Instance?.Close());
+        SetLayoutSize(closeButton.gameObject, 88f, 34f);
+    }
+
+    private void CreateSidebar(Transform parent)
+    {
+        GameObject sidebar = CreatePanel("Sidebar", parent, SidebarColor);
+        RectTransform sidebarRect = sidebar.GetComponent<RectTransform>();
+        sidebarRect.anchorMin = new Vector2(0f, 0f);
+        sidebarRect.anchorMax = new Vector2(0f, 1f);
+        sidebarRect.pivot = new Vector2(0f, 0.5f);
+        sidebarRect.anchoredPosition = new Vector2(0f, (BottomBarHeight - TopBarHeight) * 0.5f);
+        sidebarRect.sizeDelta = new Vector2(SidebarWidth, -(TopBarHeight + BottomBarHeight));
+
+        VerticalLayoutGroup layout = sidebar.AddComponent<VerticalLayoutGroup>();
+        layout.spacing = 6f;
+        layout.padding = new RectOffset(8, 8, 10, 10);
+        layout.childAlignment = TextAnchor.UpperCenter;
+        layout.childControlWidth = true;
+        layout.childControlHeight = false;
+        layout.childForceExpandWidth = true;
+        layout.childForceExpandHeight = false;
+
+        for (int i = 0; i < TabNames.Length; i++)
+        {
+            int capturedIndex = i;
+            GameObject tabObject = CreateRect($"Tab_{TabNames[i]}", sidebar.transform).gameObject;
+            RectTransform tabRect = tabObject.GetComponent<RectTransform>();
+            tabRect.sizeDelta = new Vector2(SidebarWidth - 16f, 40f);
+
+            Image background = tabObject.AddComponent<Image>();
+            background.color = TabNormalColor;
+            tabImages.Add(background);
+
+            Button button = tabObject.AddComponent<Button>();
+            button.onClick.AddListener(() => SwitchTab(capturedIndex));
+
+            TextMeshProUGUI label = CreateText("Label", tabObject.transform, TabNames[i], 15f, TextColor, TextAlignmentOptions.Center);
+            StretchFull(label.rectTransform);
         }
     }
 
-    private void CreateTabButton(Transform parent, string label, int tabIndex)
+    private void CreateContentArea(Transform parent)
     {
-        GameObject btnObj = CreateUIElement("Tab_" + label, parent);
-        RectTransform rt = btnObj.GetComponent<RectTransform>();
-        rt.sizeDelta = new Vector2(SidebarWidth - 12, 42);
-
-        Image btnBg = btnObj.AddComponent<Image>();
-        btnBg.color = TabNormal;
-        tabBgImages.Add(btnBg);
-
-        Button btn = btnObj.AddComponent<Button>();
-        btn.targetGraphic = btnBg;
-        ColorBlock cb = btn.colors;
-        cb.normalColor = Color.white;
-        cb.highlightedColor = new Color(1.15f, 1.15f, 1.15f, 1f);
-        cb.pressedColor = new Color(0.85f, 0.85f, 0.85f, 1f);
-        cb.selectedColor = Color.white;
-        btn.colors = cb;
-        btn.onClick.AddListener(() => SwitchTab(tabIndex));
-        tabButtons.Add(btn);
-
-        TextMeshProUGUI txt = CreateTMPText("Label", btnObj.transform,
-            label, 16f, TextWhite, TextAlignmentOptions.Center,
-            new Vector2(SidebarWidth - 12, 42));
-        StretchFull(txt.GetComponent<RectTransform>());
-    }
-
-    private void CreateContentArea()
-    {
-        GameObject content = CreatePanel("ContentArea", canvas.transform, ContentBgColor);
+        GameObject content = CreatePanel("ContentArea", parent, ContentColor);
         contentArea = content.GetComponent<RectTransform>();
-        contentArea.anchorMin = new Vector2(0, 0);
-        contentArea.anchorMax = new Vector2(1, 1);
+        contentArea.anchorMin = new Vector2(0f, 0f);
+        contentArea.anchorMax = new Vector2(1f, 1f);
         contentArea.offsetMin = new Vector2(SidebarWidth, BottomBarHeight);
-        contentArea.offsetMax = new Vector2(0, -TopBarHeight);
+        contentArea.offsetMax = new Vector2(0f, -TopBarHeight);
     }
 
-    // ========== 增减按钮底栏 ==========
-
-    // 属性增减 UI 引用
-    private readonly string[] adjustAttrNames = { "学力", "魅力", "体魄", "领导力", "压力", "心情", "黑暗值", "负罪感", "幸运", "金钱" };
-    private readonly List<TextMeshProUGUI> adjustValueTexts = new List<TextMeshProUGUI>();
-    private readonly List<Image> stepBtnImages = new List<Image>();
-    private static readonly Color StepNormal   = new Color(0.18f, 0.18f, 0.26f, 0.90f);
-    private static readonly Color StepSelected = new Color(0.30f, 0.50f, 0.75f, 1.0f);
-    private static readonly Color MinusBtnColor = new Color(0.65f, 0.25f, 0.25f, 1.0f);
-    private static readonly Color PlusBtnColor  = new Color(0.25f, 0.55f, 0.30f, 1.0f);
-
-    private void CreateBottomBar()
+    private void CreateBottomBar(Transform parent)
     {
-        GameObject bottomBar = CreatePanel("BottomBar", canvas.transform, BottomBarColor);
-        RectTransform botRT = bottomBar.GetComponent<RectTransform>();
-        botRT.anchorMin = new Vector2(0, 0);
-        botRT.anchorMax = new Vector2(1, 0);
-        botRT.pivot = new Vector2(0.5f, 0);
-        botRT.anchoredPosition = Vector2.zero;
-        botRT.sizeDelta = new Vector2(0, BottomBarHeight);
+        GameObject bottomBar = CreatePanel("BottomBar", parent, HeaderColor);
+        RectTransform bottomRect = bottomBar.GetComponent<RectTransform>();
+        bottomRect.anchorMin = new Vector2(0f, 0f);
+        bottomRect.anchorMax = new Vector2(1f, 0f);
+        bottomRect.pivot = new Vector2(0.5f, 0f);
+        bottomRect.anchoredPosition = Vector2.zero;
+        bottomRect.sizeDelta = new Vector2(0f, BottomBarHeight);
 
-        // 纵向布局：第一行步长选择，第二行属性增减
-        VerticalLayoutGroup vlg = bottomBar.AddComponent<VerticalLayoutGroup>();
-        vlg.spacing = 4f;
-        vlg.padding = new RectOffset(10, 10, 4, 4);
-        vlg.childAlignment = TextAnchor.UpperCenter;
-        vlg.childControlWidth = true;
-        vlg.childControlHeight = false;
-        vlg.childForceExpandWidth = true;
-        vlg.childForceExpandHeight = false;
+        VerticalLayoutGroup layout = bottomBar.AddComponent<VerticalLayoutGroup>();
+        layout.spacing = 6f;
+        layout.padding = new RectOffset(12, 12, 8, 8);
+        layout.childAlignment = TextAnchor.UpperLeft;
+        layout.childControlWidth = true;
+        layout.childControlHeight = false;
+        layout.childForceExpandWidth = true;
+        layout.childForceExpandHeight = false;
 
-        // ---- 第一行: 步长选择 ----
-        CreateStepRow(bottomBar.transform);
+        Transform stepRow = CreateHorizontalRow("StepRow", bottomBar.transform, 8f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleLeft);
+        stepRow.gameObject.AddComponent<LayoutElement>().preferredHeight = 32f;
+        TextMeshProUGUI stepLabel = CreateText("StepLabel", stepRow, "Step", 14f, AccentColor, TextAlignmentOptions.MidlineLeft);
+        SetLayoutSize(stepLabel.gameObject, 44f, 28f);
 
-        // ---- 第二行: 属性增减按钮 ----
-        CreateAdjustRow(bottomBar.transform);
-    }
-
-    private void CreateStepRow(Transform parent)
-    {
-        GameObject row = CreateUIElement("StepRow", parent);
-        RectTransform rowRT = row.GetComponent<RectTransform>();
-        rowRT.sizeDelta = new Vector2(0, 32f);
-
-        HorizontalLayoutGroup hlg = row.AddComponent<HorizontalLayoutGroup>();
-        hlg.spacing = 6f;
-        hlg.padding = new RectOffset(4, 4, 2, 2);
-        hlg.childAlignment = TextAnchor.MiddleCenter;
-        hlg.childControlWidth = false;
-        hlg.childControlHeight = true;
-        hlg.childForceExpandWidth = false;
-        hlg.childForceExpandHeight = false;
-
-        // 标签
-        TextMeshProUGUI label = CreateTMPText("StepLabel", row.transform,
-            "步长:", 14f, TextGold, TextAlignmentOptions.Right, new Vector2(50, 28));
-        LayoutElement labelLE = label.gameObject.AddComponent<LayoutElement>();
-        labelLE.preferredWidth = 50f;
-
-        // 4 个步长按钮
         int[] steps = DebugPresets.GetStepOptions();
         for (int i = 0; i < steps.Length; i++)
         {
-            int idx = i;
-            CreateStepButton(row.transform, steps[i].ToString(), idx);
+            int capturedIndex = i;
+            Button stepButton = CreateButton(stepRow, steps[i].ToString(), DebugPresets.CurrentStepIndex == i ? TabSelectedColor : TabNormalColor, () =>
+            {
+                DebugPresets.SetStepIndex(capturedIndex);
+                RefreshStepButtons();
+            });
+            stepButtonImages.Add(stepButton.GetComponent<Image>());
+            SetLayoutSize(stepButton.gameObject, 58f, 28f);
         }
 
-        // 初始高亮当前步长
-        RefreshStepHighlight();
-    }
-
-    private void CreateStepButton(Transform parent, string label, int stepIndex)
-    {
-        GameObject btnObj = CreateUIElement("Step_" + label, parent);
-        RectTransform rt = btnObj.GetComponent<RectTransform>();
-        rt.sizeDelta = new Vector2(56, 28);
-
-        Image btnBg = btnObj.AddComponent<Image>();
-        bool isActive = stepIndex == DebugPresets.CurrentStepIndex;
-        btnBg.color = isActive ? StepSelected : StepNormal;
-        stepBtnImages.Add(btnBg);
-
-        Button btn = btnObj.AddComponent<Button>();
-        btn.targetGraphic = btnBg;
-        ColorBlock cb = btn.colors;
-        cb.normalColor = Color.white;
-        cb.highlightedColor = new Color(1.15f, 1.15f, 1.15f, 1f);
-        cb.pressedColor = new Color(0.85f, 0.85f, 0.85f, 1f);
-        btn.colors = cb;
-        btn.onClick.AddListener(() =>
-        {
-            DebugPresets.SetStepIndex(stepIndex);
-            RefreshStepHighlight();
-        });
-
-        TextMeshProUGUI txt = CreateTMPText("Label", btnObj.transform,
-            label, 14f, TextWhite, TextAlignmentOptions.Center, new Vector2(56, 28));
-        StretchFull(txt.GetComponent<RectTransform>());
-    }
-
-    private void RefreshStepHighlight()
-    {
-        for (int i = 0; i < stepBtnImages.Count; i++)
-        {
-            stepBtnImages[i].color = (i == DebugPresets.CurrentStepIndex) ? StepSelected : StepNormal;
-        }
-    }
-
-    private void CreateAdjustRow(Transform parent)
-    {
-        GameObject row = CreateUIElement("AdjustRow", parent);
-        RectTransform rowRT = row.GetComponent<RectTransform>();
-        rowRT.sizeDelta = new Vector2(0, 70f);
-
-        // 使用 GridLayoutGroup 实现 5×2 布局
-        GridLayoutGroup grid = row.AddComponent<GridLayoutGroup>();
-        grid.cellSize = new Vector2(160f, 30f);
-        grid.spacing = new Vector2(6f, 4f);
-        grid.padding = new RectOffset(4, 4, 2, 2);
-        grid.startCorner = GridLayoutGroup.Corner.UpperLeft;
-        grid.startAxis = GridLayoutGroup.Axis.Horizontal;
+        Transform gridRoot = CreateRect("AdjustGridRoot", bottomBar.transform);
+        gridRoot.gameObject.AddComponent<LayoutElement>().preferredHeight = 76f;
+        GridLayoutGroup grid = gridRoot.gameObject.AddComponent<GridLayoutGroup>();
+        grid.cellSize = new Vector2(168f, 34f);
+        grid.spacing = new Vector2(8f, 8f);
         grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
         grid.constraintCount = 5;
-        grid.childAlignment = TextAnchor.UpperCenter;
 
-        // 10 个属性: 每个 = [-] 名称 数值 [+]
-        for (int i = 0; i < adjustAttrNames.Length; i++)
+        foreach ((string label, string key) in QuickAdjustKeys)
         {
-            int idx = i;
-            CreateAdjustCell(row.transform, adjustAttrNames[i], idx);
-        }
-
-        // 初始刷新数值
-        RefreshAdjustValues();
-    }
-
-    private void CreateAdjustCell(Transform parent, string attrName, int index)
-    {
-        GameObject cell = CreateUIElement("Cell_" + attrName, parent);
-
-        HorizontalLayoutGroup hlg = cell.AddComponent<HorizontalLayoutGroup>();
-        hlg.spacing = 2f;
-        hlg.padding = new RectOffset(0, 0, 0, 0);
-        hlg.childAlignment = TextAnchor.MiddleCenter;
-        hlg.childControlWidth = false;
-        hlg.childControlHeight = true;
-        hlg.childForceExpandWidth = false;
-        hlg.childForceExpandHeight = true;
-
-        // [-] 按钮
-        CreateSmallButton(cell.transform, "-", MinusBtnColor, 24f, () =>
-        {
-            DebugPresets.AdjustAttribute(attrName, false);
-            RefreshAdjustValues();
-            RefreshActiveModule();
-        });
-
-        // 属性名
-        string shortName = attrName.Length > 3 ? attrName.Substring(0, 3) : attrName;
-        TextMeshProUGUI nameText = CreateTMPText("Name", cell.transform,
-            shortName, 12f, TextWhite, TextAlignmentOptions.Center, new Vector2(42, 26));
-        LayoutElement nameLE = nameText.gameObject.AddComponent<LayoutElement>();
-        nameLE.preferredWidth = 42f;
-
-        // 数值
-        TextMeshProUGUI valText = CreateTMPText("Value", cell.transform,
-            "0", 13f, TextGold, TextAlignmentOptions.Center, new Vector2(50, 26));
-        LayoutElement valLE = valText.gameObject.AddComponent<LayoutElement>();
-        valLE.preferredWidth = 50f;
-        adjustValueTexts.Add(valText);
-
-        // [+] 按钮
-        CreateSmallButton(cell.transform, "+", PlusBtnColor, 24f, () =>
-        {
-            DebugPresets.AdjustAttribute(attrName, true);
-            RefreshAdjustValues();
-            RefreshActiveModule();
-        });
-    }
-
-    private void CreateSmallButton(Transform parent, string label, Color bgColor, float size,
-        UnityEngine.Events.UnityAction onClick)
-    {
-        GameObject btnObj = CreateUIElement("Btn_" + label, parent);
-        RectTransform rt = btnObj.GetComponent<RectTransform>();
-        rt.sizeDelta = new Vector2(size, size);
-
-        LayoutElement le = btnObj.AddComponent<LayoutElement>();
-        le.preferredWidth = size;
-        le.preferredHeight = size;
-
-        Image btnBg = btnObj.AddComponent<Image>();
-        btnBg.color = bgColor;
-
-        Button btn = btnObj.AddComponent<Button>();
-        btn.targetGraphic = btnBg;
-        ColorBlock cb = btn.colors;
-        cb.normalColor = Color.white;
-        cb.highlightedColor = new Color(1.2f, 1.2f, 1.2f, 1f);
-        cb.pressedColor = new Color(0.75f, 0.75f, 0.75f, 1f);
-        btn.colors = cb;
-        btn.onClick.AddListener(onClick);
-
-        TextMeshProUGUI txt = CreateTMPText("Label", btnObj.transform,
-            label, 16f, TextWhite, TextAlignmentOptions.Center, new Vector2(size, size));
-        txt.fontStyle = FontStyles.Bold;
-        StretchFull(txt.GetComponent<RectTransform>());
-    }
-
-    /// <summary>刷新底栏所有属性数值显示</summary>
-    private void RefreshAdjustValues()
-    {
-        for (int i = 0; i < adjustAttrNames.Length && i < adjustValueTexts.Count; i++)
-        {
-            int val = DebugPresets.GetAttributeValue(adjustAttrNames[i]);
-            adjustValueTexts[i].text = adjustAttrNames[i] == "金钱" ? $"¥{val}" : val.ToString();
+            CreateQuickAdjustCell(gridRoot, label, key);
         }
     }
 
-    // ========== 模块面板创建 ==========
+    private void CreateQuickAdjustCell(Transform parent, string label, string key)
+    {
+        Transform row = CreateHorizontalRow($"Adjust_{key}", parent, 4f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleCenter);
+
+        Button minusButton = CreateButton(row, "-", NegativeColor, () =>
+        {
+            DebugPresets.AdjustAttribute(key, false);
+            RefreshQuickAdjustValues();
+            RefreshActiveModule();
+        });
+        SetLayoutSize(minusButton.gameObject, 28f, 28f);
+
+        TextMeshProUGUI labelText = CreateText("Name", row, label, 12f, TextColor, TextAlignmentOptions.Center);
+        SetLayoutSize(labelText.gameObject, 56f, 28f);
+
+        TextMeshProUGUI valueText = CreateText("Value", row, "0", 13f, AccentColor, TextAlignmentOptions.Center);
+        SetLayoutSize(valueText.gameObject, 52f, 28f);
+        quickAdjustItems.Add(new QuickAdjustItem
+        {
+            key = key,
+            valueText = valueText
+        });
+
+        Button plusButton = CreateButton(row, "+", PositiveColor, () =>
+        {
+            DebugPresets.AdjustAttribute(key, true);
+            RefreshQuickAdjustValues();
+            RefreshActiveModule();
+        });
+        SetLayoutSize(plusButton.gameObject, 28f, 28f);
+    }
 
     private void CreateModulePanels()
     {
-        // 0: 属性
         attributeModule = CreateModulePanel<AttributeModule>("AttributePanel");
-        // 1: 时间
         timeModule = CreateModulePanel<TimeModule>("TimePanel");
-        // 2: 结局
-        endingSimModule = CreateModulePanel<EndingSimModule>("EndingSimPanel");
-        // 3: 事件
+        endingSimModule = CreateModulePanel<EndingSimModule>("EndingPanel");
         eventModule = CreateModulePanel<EventModule>("EventPanel");
-        // 4: NPC
         npcModule = CreateModulePanel<NPCModule>("NPCPanel");
-        // 5: 经济
         economyModule = CreateModulePanel<EconomyModule>("EconomyPanel");
-        // 6: 公式
         formulaModule = CreateModulePanel<FormulaModule>("FormulaPanel");
-        // 7: 快照
         snapshotModule = CreateModulePanel<SnapshotModule>("SnapshotPanel");
-        // 8: 日志
         logModule = CreateModulePanel<LogModule>("LogPanel");
     }
 
-    private T CreateModulePanel<T>(string panelName) where T : MonoBehaviour, IDebugModule
+    private T CreateModulePanel<T>(string name) where T : MonoBehaviour, IDebugModule
     {
-        GameObject panelObj = CreateUIElement(panelName, contentArea);
-        StretchFull(panelObj.GetComponent<RectTransform>());
+        GameObject panel = CreateRect(name, contentArea).gameObject;
+        StretchFull(panel.GetComponent<RectTransform>());
 
-        CanvasGroup cg = panelObj.AddComponent<CanvasGroup>();
-        cg.alpha = 0f;
-        cg.interactable = false;
-        cg.blocksRaycasts = false;
+        CanvasGroup group = panel.AddComponent<CanvasGroup>();
+        group.alpha = 0f;
+        group.interactable = false;
+        group.blocksRaycasts = false;
 
-        T module = panelObj.AddComponent<T>();
-        module.Init(panelObj.GetComponent<RectTransform>());
-
-        modulePanels.Add(panelObj);
-        panelObj.SetActive(false);
+        T module = panel.AddComponent<T>();
+        module.Init(panel.GetComponent<RectTransform>());
+        modulePanels.Add(panel);
+        panel.SetActive(false);
         return module;
     }
 
-    // ========== 标签页切换 ==========
-
     private void SwitchTab(int index)
     {
-        if (index == activeTabIndex) return;
+        if (index == activeTabIndex)
+        {
+            return;
+        }
 
-        // 隐藏旧面板
         if (activeTabIndex >= 0 && activeTabIndex < modulePanels.Count)
         {
-            SetPanelActive(modulePanels[activeTabIndex], false);
-            tabBgImages[activeTabIndex].color = TabNormal;
+            SetPanelVisible(modulePanels[activeTabIndex], false);
+            tabImages[activeTabIndex].color = TabNormalColor;
         }
 
         activeTabIndex = index;
-
-        // 显示新面板
         if (activeTabIndex >= 0 && activeTabIndex < modulePanels.Count)
         {
-            SetPanelActive(modulePanels[activeTabIndex], true);
-            tabBgImages[activeTabIndex].color = TabSelected;
+            SetPanelVisible(modulePanels[activeTabIndex], true);
+            tabImages[activeTabIndex].color = TabSelectedColor;
             RefreshActiveModule();
         }
     }
 
-    private void SetPanelActive(GameObject panel, bool active)
+    private void SetPanelVisible(GameObject panel, bool visible)
     {
-        panel.SetActive(active);
-        CanvasGroup cg = panel.GetComponent<CanvasGroup>();
-        if (cg != null)
+        panel.SetActive(visible);
+        CanvasGroup group = panel.GetComponent<CanvasGroup>();
+        if (group != null)
         {
-            cg.alpha = active ? 1f : 0f;
-            cg.interactable = active;
-            cg.blocksRaycasts = active;
+            group.alpha = visible ? 1f : 0f;
+            group.interactable = visible;
+            group.blocksRaycasts = visible;
         }
     }
 
     private void RefreshActiveModule()
     {
-        if (activeTabIndex < 0) return;
+        RefreshTopActionButtons();
 
         switch (activeTabIndex)
         {
@@ -576,59 +440,192 @@ public class DebugConsoleUI : MonoBehaviour
         }
     }
 
-    // ========== 工具方法 ==========
-
-    private GameObject CreateUIElement(string name, Transform parent)
+    private void RefreshQuickAdjustValues()
     {
-        GameObject go = new GameObject(name);
-        go.transform.SetParent(parent, false);
-        RectTransform rt = go.GetComponent<RectTransform>();
-        if (rt == null)
-            rt = go.AddComponent<RectTransform>();
-        return go;
+        foreach (QuickAdjustItem item in quickAdjustItems)
+        {
+            int value = DebugPresets.GetAttributeValue(item.key);
+            item.valueText.text = item.key == "Money" ? $"${value}" : value.ToString();
+        }
     }
 
-    private GameObject CreatePanel(string name, Transform parent, Color bgColor)
+    private void RefreshStepButtons()
     {
-        GameObject panel = CreateUIElement(name, parent);
-        Image bg = panel.AddComponent<Image>();
-        bg.color = bgColor;
+        for (int i = 0; i < stepButtonImages.Count; i++)
+        {
+            stepButtonImages[i].color = i == DebugPresets.CurrentStepIndex ? TabSelectedColor : TabNormalColor;
+        }
+    }
+
+    private void SyncTopControls()
+    {
+        SetToggleValue(skipSplashToggle, StartupFlowSettings.SkipSplashLogo);
+        SetToggleValue(skipCreateToggle, StartupFlowSettings.SkipCharacterCreation);
+        SetToggleValue(skipIntroToggle, StartupFlowSettings.SkipOpeningStory);
+        RefreshTopActionButtons();
+        RefreshStepButtons();
+    }
+
+    private void RefreshTopActionButtons()
+    {
+        if (prevDialogueButton != null)
+        {
+            bool canStepBack = DialogueSystem.Instance != null && DialogueSystem.Instance.CanStepBack;
+            prevDialogueButton.interactable = canStepBack;
+            prevDialogueButton.GetComponent<Image>().color = canStepBack ? ButtonColor : ToggleOffColor;
+        }
+    }
+
+    private void SetToggleValue(Toggle toggle, bool value)
+    {
+        if (toggle == null)
+        {
+            return;
+        }
+
+        toggle.SetIsOnWithoutNotify(value);
+        Image bg = toggle.targetGraphic as Image;
+        if (bg != null)
+        {
+            bg.color = value ? ToggleOnColor : ToggleOffColor;
+        }
+    }
+
+    private Toggle CreateLabeledToggle(Transform parent, string label, bool initialValue, UnityEngine.Events.UnityAction<bool> onChanged)
+    {
+        GameObject toggleObject = CreateRect($"Toggle_{label}", parent).gameObject;
+        HorizontalLayoutGroup layout = toggleObject.AddComponent<HorizontalLayoutGroup>();
+        layout.spacing = 6f;
+        layout.childAlignment = TextAnchor.MiddleCenter;
+        layout.childControlWidth = false;
+        layout.childControlHeight = true;
+        layout.childForceExpandWidth = false;
+        layout.childForceExpandHeight = false;
+        SetLayoutSize(toggleObject, 150f, 34f);
+
+        GameObject backgroundObject = CreateRect("Background", toggleObject.transform).gameObject;
+        SetLayoutSize(backgroundObject, 56f, 24f);
+        Image background = backgroundObject.AddComponent<Image>();
+        background.color = initialValue ? ToggleOnColor : ToggleOffColor;
+
+        Toggle toggle = backgroundObject.AddComponent<Toggle>();
+        toggle.targetGraphic = background;
+
+        GameObject checkmarkObject = CreateRect("Checkmark", backgroundObject.transform).gameObject;
+        RectTransform checkmarkRect = checkmarkObject.GetComponent<RectTransform>();
+        checkmarkRect.anchorMin = new Vector2(0f, 0f);
+        checkmarkRect.anchorMax = new Vector2(0f, 1f);
+        checkmarkRect.pivot = new Vector2(0f, 0.5f);
+        checkmarkRect.sizeDelta = new Vector2(24f, 0f);
+        Image checkmark = checkmarkObject.AddComponent<Image>();
+        checkmark.color = Color.white;
+        toggle.graphic = checkmark;
+        toggle.isOn = initialValue;
+        toggle.onValueChanged.AddListener(value =>
+        {
+            background.color = value ? ToggleOnColor : ToggleOffColor;
+            onChanged?.Invoke(value);
+        });
+
+        TextMeshProUGUI labelText = CreateText("Label", toggleObject.transform, label, 13f, TextColor, TextAlignmentOptions.MidlineLeft);
+        SetLayoutSize(labelText.gameObject, 88f, 28f);
+
+        return toggle;
+    }
+
+    private Button CreateButton(Transform parent, string label, Color color, UnityEngine.Events.UnityAction onClick)
+    {
+        GameObject buttonObject = CreateRect($"Button_{label}", parent).gameObject;
+        Image background = buttonObject.AddComponent<Image>();
+        background.color = color;
+
+        Button button = buttonObject.AddComponent<Button>();
+        ColorBlock colors = button.colors;
+        colors.normalColor = color;
+        colors.highlightedColor = color * 1.1f;
+        colors.pressedColor = color * 0.85f;
+        button.colors = colors;
+        button.onClick.AddListener(onClick);
+
+        TextMeshProUGUI text = CreateText("Label", buttonObject.transform, label, 14f, Color.white, TextAlignmentOptions.Center);
+        StretchFull(text.rectTransform);
+        return button;
+    }
+
+    private Transform CreateHorizontalRow(string name, Transform parent, float spacing, RectOffset padding, TextAnchor alignment)
+    {
+        Transform row = CreateRect(name, parent);
+        HorizontalLayoutGroup layout = row.gameObject.AddComponent<HorizontalLayoutGroup>();
+        layout.spacing = spacing;
+        layout.padding = padding;
+        layout.childAlignment = alignment;
+        layout.childControlWidth = false;
+        layout.childControlHeight = true;
+        layout.childForceExpandWidth = false;
+        layout.childForceExpandHeight = false;
+        return row;
+    }
+
+    private GameObject CreatePanel(string name, Transform parent, Color color)
+    {
+        GameObject panel = CreateRect(name, parent).gameObject;
+        Image background = panel.AddComponent<Image>();
+        background.color = color;
         return panel;
     }
 
-    private TextMeshProUGUI CreateTMPText(string name, Transform parent, string text,
-        float fontSize, Color color, TextAlignmentOptions alignment, Vector2 size)
+    private TextMeshProUGUI CreateText(string name, Transform parent, string value, float size, Color color, TextAlignmentOptions alignment)
     {
-        GameObject obj = CreateUIElement(name, parent);
-        RectTransform rt = obj.GetComponent<RectTransform>();
-        rt.sizeDelta = size;
-
-        TextMeshProUGUI tmp = obj.AddComponent<TextMeshProUGUI>();
-        tmp.text = text;
-        tmp.fontSize = fontSize;
-        tmp.color = color;
-        tmp.alignment = alignment;
-        tmp.enableWordWrapping = true;
-        tmp.overflowMode = TextOverflowModes.Ellipsis;
+        GameObject textObject = CreateRect(name, parent).gameObject;
+        TextMeshProUGUI text = textObject.AddComponent<TextMeshProUGUI>();
+        text.text = value;
+        text.fontSize = size;
+        text.color = color;
+        text.alignment = alignment;
+        text.enableWordWrapping = true;
+        text.overflowMode = TextOverflowModes.Ellipsis;
 
         if (FontManager.Instance != null && FontManager.Instance.ChineseFont != null)
         {
-            tmp.font = FontManager.Instance.ChineseFont;
+            text.font = FontManager.Instance.ChineseFont;
         }
 
-        return tmp;
+        return text;
     }
 
-    private void StretchFull(RectTransform rt)
+    private RectTransform CreateRect(string name, Transform parent)
     {
-        rt.anchorMin = Vector2.zero;
-        rt.anchorMax = Vector2.one;
-        rt.offsetMin = Vector2.zero;
-        rt.offsetMax = Vector2.zero;
+        GameObject objectRef = new GameObject(name, typeof(RectTransform));
+        objectRef.transform.SetParent(parent, false);
+        return objectRef.GetComponent<RectTransform>();
+    }
+
+    private void StretchFull(RectTransform rect)
+    {
+        rect.anchorMin = Vector2.zero;
+        rect.anchorMax = Vector2.one;
+        rect.offsetMin = Vector2.zero;
+        rect.offsetMax = Vector2.zero;
+    }
+
+    private void SetLayoutSize(GameObject objectRef, float width, float height)
+    {
+        LayoutElement layout = objectRef.AddComponent<LayoutElement>();
+        layout.preferredWidth = width;
+        layout.preferredHeight = height;
+    }
+
+    private void EnsureEventSystem()
+    {
+        if (FindFirstObjectByType<EventSystem>() == null)
+        {
+            GameObject eventSystemObject = new GameObject("EventSystem");
+            eventSystemObject.AddComponent<EventSystem>();
+            eventSystemObject.AddComponent<StandaloneInputModule>();
+        }
     }
 }
 
-/// <summary>调试模块接口</summary>
 public interface IDebugModule
 {
     void Init(RectTransform parent);

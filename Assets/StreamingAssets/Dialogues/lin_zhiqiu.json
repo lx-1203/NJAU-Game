@@ -1,0 +1,57 @@
+{
+  "id": "lin_zhiqiu",
+  "nodes": [
+    {
+      "id": "L001",
+      "speaker": "林知秋",
+      "portrait": "",
+      "content": "你回宿舍的时候，她正靠在桌前记笔记，笔尖在纸上划得很轻。",
+      "next": "L002",
+      "choices": null
+    },
+    {
+      "id": "L002",
+      "speaker": "林知秋",
+      "portrait": "",
+      "content": "你找我？如果是借课堂笔记的话，可以。",
+      "next": null,
+      "choices": [
+        {
+          "text": "想和你一起去图书馆",
+          "next": "L003",
+          "condition": "",
+          "conditionHint": "",
+          "effects": [
+            { "type": "attribute", "target": "学力", "amount": 3 },
+            { "type": "attribute", "target": "心情", "amount": 2 }
+          ]
+        },
+        {
+          "text": "那我就借一会儿笔记",
+          "next": "L004",
+          "condition": "",
+          "conditionHint": "",
+          "effects": [
+            { "type": "attribute", "target": "学力", "amount": 2 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "L003",
+      "speaker": "林知秋",
+      "portrait": "",
+      "content": "……也行。你别半路摸鱼，我就陪你去。",
+      "next": null,
+      "choices": null
+    },
+    {
+      "id": "L004",
+      "speaker": "林知秋",
+      "portrait": "",
+      "content": "记得还我。我在页边做了标注，别弄丢了。",
+      "next": null,
+      "choices": null
+    }
+  ]
+}

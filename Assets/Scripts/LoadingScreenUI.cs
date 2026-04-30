@@ -204,6 +204,22 @@ public class LoadingScreenUI : MonoBehaviour
         }
     }
 
+    public void HideSkipButton()
+    {
+        if (skipButtonCanvasGroup != null)
+        {
+            skipButtonCanvasGroup.alpha = 0f;
+            skipButtonCanvasGroup.interactable = false;
+            skipButtonCanvasGroup.blocksRaycasts = false;
+        }
+
+        if (skipButton != null)
+        {
+            skipButton.interactable = false;
+            skipButton.gameObject.SetActive(false);
+        }
+    }
+
     /// <summary>
     /// 获取跳过按钮组件
     /// </summary>
@@ -275,7 +291,7 @@ public class LoadingScreenUI : MonoBehaviour
         UpdateProgress(0f);
 
         // 初始设置跳过按钮为不可交互
-        SetSkipButtonInteractable(false);
+        HideSkipButton();
 
         // 立即显示 UI（不再初始透明，避免黑屏）
         if (rootCanvasGroup != null)

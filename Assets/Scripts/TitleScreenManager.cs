@@ -2112,15 +2112,7 @@ public class TitleScreenManager : MonoBehaviour
 
     public void OpenSettings()
     {
-        if (mainMenuPanel != null)
-        {
-            mainMenuPanel.SetActive(false);
-        }
-
-        if (settingsPanel != null)
-        {
-            settingsPanel.SetActive(true);
-        }
+        SettingsUIBuilder.ShowSettings(true);
     }
 
     public void BackToMainMenu()
@@ -2170,6 +2162,13 @@ public class TitleScreenManager : MonoBehaviour
         }
 
         // 显示角色创建UI
+        if (StartupFlowSettings.SkipCharacterCreation)
+        {
+            CharacterCreationUI.ApplyDefaultPendingCharacter();
+            HandleCharacterCreationComplete();
+            return;
+        }
+
         if (CharacterCreationUI.Instance == null)
         {
             GameObject obj = new GameObject("CharacterCreationUI");
@@ -2193,7 +2192,7 @@ public class TitleScreenManager : MonoBehaviour
             CharacterCreationUI.Instance.OnCreationComplete -= HandleCharacterCreationComplete;
         }
 
-        BeginGameTransition(playOpeningStoryOnNewGame);
+        BeginGameTransition(playOpeningStoryOnNewGame && !StartupFlowSettings.SkipOpeningStory);
     }
 
     private void BeginGameTransition(bool playOpeningStory)
@@ -2248,7 +2247,7 @@ public class TitleScreenManager : MonoBehaviour
         }
         else
         {
-            SceneLoader.LoadScene(gameSceneName);
+            SceneLoader.LoadSceneAfterOpening(gameSceneName);
         }
     }
 

@@ -1,224 +1,205 @@
 #if DEVELOPMENT_BUILD || UNITY_EDITOR
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
-using TMPro;
 
-/// <summary>
-/// 经济调试模块 —— 金钱查看/设置/快捷增减
-/// </summary>
 public class EconomyModule : MonoBehaviour, IDebugModule
 {
-    private static readonly Color TextWhite = new Color(0.92f, 0.92f, 0.92f);
-    private static readonly Color TextGold  = new Color(1.0f, 0.85f, 0.30f);
-    private static readonly Color BtnColor  = new Color(0.20f, 0.35f, 0.60f, 1.0f);
-    private static readonly Color BtnGreen  = new Color(0.20f, 0.55f, 0.30f, 1.0f);
-    private static readonly Color BtnRed    = new Color(0.60f, 0.20f, 0.20f, 1.0f);
+    private static readonly Color TextColor = new Color(0.92f, 0.92f, 0.92f);
+    private static readonly Color AccentColor = new Color(1f, 0.85f, 0.3f);
+    private static readonly Color ButtonColor = new Color(0.22f, 0.42f, 0.72f, 1f);
+    private static readonly Color PositiveColor = new Color(0.2f, 0.58f, 0.34f, 1f);
+    private static readonly Color NegativeColor = new Color(0.68f, 0.28f, 0.28f, 1f);
+    private static readonly Color FieldColor = new Color(0.16f, 0.16f, 0.22f, 0.95f);
 
     private TextMeshProUGUI moneyDisplay;
     private TMP_InputField amountInput;
 
     public void Init(RectTransform parent)
     {
-        GameObject content = CreateUIElement("Content", parent);
-        StretchFull(content.GetComponent<RectTransform>());
+        Transform content = CreateRoot(parent);
 
-        VerticalLayoutGroup vlg = content.AddComponent<VerticalLayoutGroup>();
-        vlg.spacing = 10f;
-        vlg.padding = new RectOffset(20, 20, 16, 16);
-        vlg.childAlignment = TextAnchor.UpperCenter;
-        vlg.childControlWidth = true;
-        vlg.childControlHeight = false;
-        vlg.childForceExpandWidth = true;
-        vlg.childForceExpandHeight = false;
+        CreateLabel(content, "Economy", 20f, AccentColor, 34f);
+        moneyDisplay = CreateLabel(content, "Money: --", 18f, AccentColor, 30f);
 
-        // 标题
-        CreateLabel(content.transform, "— 经济管理 —", 18f, TextGold, 30f);
+        GameObject row = CreateRect("SetRow", content).gameObject;
+        row.AddComponent<LayoutElement>().preferredHeight = 40f;
+        HorizontalLayoutGroup layout = row.AddComponent<HorizontalLayoutGroup>();
+        layout.spacing = 10f;
+        layout.childAlignment = TextAnchor.MiddleLeft;
+        layout.childControlWidth = false;
+        layout.childControlHeight = true;
+        layout.childForceExpandWidth = false;
+        layout.childForceExpandHeight = true;
 
-        // 当前金钱
-        moneyDisplay = CreateLabel(content.transform, "当前金钱: ¥--", 20f, TextGold, 36f);
+        TextMeshProUGUI label = CreateLabel(row.transform, "Set To", 15f, TextColor, 36f);
+        label.gameObject.AddComponent<LayoutElement>().preferredWidth = 80f;
 
-        // 金额输入行
-        GameObject inputRow = CreateUIElement("AmountRow", content.transform);
-        RectTransform rowRT = inputRow.GetComponent<RectTransform>();
-        rowRT.sizeDelta = new Vector2(0, 40f);
+        amountInput = CreateInputField(row.transform, 180f);
+        amountInput.SetTextWithoutNotify("8000");
 
-        HorizontalLayoutGroup hlg = inputRow.AddComponent<HorizontalLayoutGroup>();
-        hlg.spacing = 10f;
-        hlg.padding = new RectOffset(4, 4, 2, 2);
-        hlg.childAlignment = TextAnchor.MiddleLeft;
-        hlg.childControlWidth = false;
-        hlg.childControlHeight = true;
-        hlg.childForceExpandWidth = false;
-        hlg.childForceExpandHeight = true;
-
-        CreateLabel(inputRow.transform, "金额", 15f, TextWhite, 36f, 60f);
-        amountInput = CreateInputField(inputRow.transform, "输入金额", 200f, 32f);
-        amountInput.contentType = TMP_InputField.ContentType.IntegerNumber;
-
-        CreateButton(inputRow.transform, "设置", 80f, BtnColor, () =>
+        CreateButton(row.transform, "Apply", ButtonColor, () =>
         {
-            if (GameState.Instance == null || amountInput == null) return;
+            if (GameState.Instance == null || amountInput == null)
+            {
+                return;
+            }
+
             if (int.TryParse(amountInput.text, out int amount))
             {
                 GameState.Instance.Money = amount;
-                DebugConsoleManager.Log("经济", $"金钱设置为: ¥{amount}");
+                DebugConsoleManager.Log("Economy", $"Money -> {amount}");
                 Refresh();
             }
         });
 
-        // 快捷按钮行
-        GameObject quickRow = CreateUIElement("QuickRow", content.transform);
-        RectTransform quickRT = quickRow.GetComponent<RectTransform>();
-        quickRT.sizeDelta = new Vector2(0, 44f);
+        CreateSpacer(content, 8f);
+        Transform quickRow = CreateRect("QuickRow", content);
+        quickRow.gameObject.AddComponent<LayoutElement>().preferredHeight = 40f;
+        HorizontalLayoutGroup quickLayout = quickRow.gameObject.AddComponent<HorizontalLayoutGroup>();
+        quickLayout.spacing = 10f;
+        quickLayout.childAlignment = TextAnchor.MiddleLeft;
+        quickLayout.childControlWidth = false;
+        quickLayout.childControlHeight = true;
+        quickLayout.childForceExpandWidth = false;
+        quickLayout.childForceExpandHeight = true;
 
-        HorizontalLayoutGroup qhlg = quickRow.AddComponent<HorizontalLayoutGroup>();
-        qhlg.spacing = 10f;
-        qhlg.padding = new RectOffset(4, 4, 2, 2);
-        qhlg.childAlignment = TextAnchor.MiddleCenter;
-        qhlg.childControlWidth = false;
-        qhlg.childControlHeight = true;
-        qhlg.childForceExpandWidth = false;
-        qhlg.childForceExpandHeight = true;
-
-        CreateButton(quickRow.transform, "+1000", 100f, BtnGreen, () => AddMoney(1000));
-        CreateButton(quickRow.transform, "-1000", 100f, BtnRed, () => AddMoney(-1000));
-        CreateButton(quickRow.transform, "+10000", 110f, BtnGreen, () => AddMoney(10000));
+        CreateButton(quickRow, "+1000", PositiveColor, () => AddMoney(1000));
+        CreateButton(quickRow, "-1000", NegativeColor, () => AddMoney(-1000));
+        CreateButton(quickRow, "+10000", PositiveColor, () => AddMoney(10000));
+        CreateButton(quickRow, "-10000", NegativeColor, () => AddMoney(-10000));
     }
 
     public void Refresh()
     {
-        if (moneyDisplay != null && GameState.Instance != null)
+        if (GameState.Instance == null)
         {
-            moneyDisplay.text = $"当前金钱: ¥{GameState.Instance.Money}";
+            return;
         }
+
+        moneyDisplay.text = $"Money: {GameState.Instance.Money}";
+        amountInput.SetTextWithoutNotify(GameState.Instance.Money.ToString());
     }
 
     private void AddMoney(int amount)
     {
-        if (GameState.Instance == null) return;
+        if (GameState.Instance == null)
+        {
+            return;
+        }
+
         GameState.Instance.AddMoney(amount);
-        DebugConsoleManager.Log("经济", $"金钱{(amount >= 0 ? "+" : "")}{amount} → ¥{GameState.Instance.Money}");
+        DebugConsoleManager.Log("Economy", $"Money {(amount >= 0 ? "+" : string.Empty)}{amount} -> {GameState.Instance.Money}");
         Refresh();
     }
 
-    // ========== 工具方法 ==========
-
-    private void CreateButton(Transform parent, string label, float width, Color color,
-        UnityEngine.Events.UnityAction onClick)
+    private Transform CreateRoot(RectTransform parent)
     {
-        GameObject btnObj = CreateUIElement("Btn_" + label, parent);
-        RectTransform rt = btnObj.GetComponent<RectTransform>();
-        rt.sizeDelta = new Vector2(width, 40f);
+        Transform content = CreateRect("Content", parent);
+        StretchFull(content.GetComponent<RectTransform>());
 
-        LayoutElement le = btnObj.AddComponent<LayoutElement>();
-        le.preferredWidth = width;
-
-        Image bg = btnObj.AddComponent<Image>();
-        bg.color = color;
-
-        Button btn = btnObj.AddComponent<Button>();
-        btn.targetGraphic = bg;
-        ColorBlock cb = btn.colors;
-        cb.normalColor = Color.white;
-        cb.highlightedColor = new Color(1.15f, 1.15f, 1.15f);
-        cb.pressedColor = new Color(0.85f, 0.85f, 0.85f);
-        btn.colors = cb;
-        btn.onClick.AddListener(onClick);
-
-        TextMeshProUGUI txt = CreateLabel(btnObj.transform, label, 14f, TextWhite, 40f);
-        txt.alignment = TextAlignmentOptions.Center;
-        StretchFull(txt.GetComponent<RectTransform>());
+        VerticalLayoutGroup layout = content.gameObject.AddComponent<VerticalLayoutGroup>();
+        layout.spacing = 10f;
+        layout.padding = new RectOffset(20, 20, 18, 18);
+        layout.childAlignment = TextAnchor.UpperCenter;
+        layout.childControlWidth = true;
+        layout.childControlHeight = false;
+        layout.childForceExpandWidth = true;
+        layout.childForceExpandHeight = false;
+        return content;
     }
 
-    private TMP_InputField CreateInputField(Transform parent, string placeholder, float width, float height)
+    private TMP_InputField CreateInputField(Transform parent, float width)
     {
-        GameObject inputObj = CreateUIElement("InputField", parent);
-        RectTransform rt = inputObj.GetComponent<RectTransform>();
-        rt.sizeDelta = new Vector2(width, height);
+        GameObject inputObject = CreateRect("Input", parent).gameObject;
+        LayoutElement layout = inputObject.AddComponent<LayoutElement>();
+        layout.preferredWidth = width;
+        layout.preferredHeight = 34f;
 
-        LayoutElement le = inputObj.AddComponent<LayoutElement>();
-        le.preferredWidth = width;
+        Image background = inputObject.AddComponent<Image>();
+        background.color = FieldColor;
 
-        Image bg = inputObj.AddComponent<Image>();
-        bg.color = new Color(0.12f, 0.12f, 0.18f, 0.90f);
+        TMP_InputField input = inputObject.AddComponent<TMP_InputField>();
 
-        GameObject textArea = CreateUIElement("TextArea", inputObj.transform);
-        RectTransform textAreaRT = textArea.GetComponent<RectTransform>();
-        textAreaRT.anchorMin = Vector2.zero;
-        textAreaRT.anchorMax = Vector2.one;
-        textAreaRT.offsetMin = new Vector2(8, 2);
-        textAreaRT.offsetMax = new Vector2(-8, -2);
-        textArea.AddComponent<RectMask2D>();
+        GameObject viewport = CreateRect("Viewport", inputObject.transform).gameObject;
+        RectTransform viewportRect = viewport.GetComponent<RectTransform>();
+        viewportRect.anchorMin = Vector2.zero;
+        viewportRect.anchorMax = Vector2.one;
+        viewportRect.offsetMin = new Vector2(10f, 2f);
+        viewportRect.offsetMax = new Vector2(-10f, -2f);
+        viewport.AddComponent<RectMask2D>();
 
-        GameObject textObj = CreateUIElement("Text", textArea.transform);
-        StretchFull(textObj.GetComponent<RectTransform>());
-        TextMeshProUGUI text = textObj.AddComponent<TextMeshProUGUI>();
-        text.fontSize = 14f;
-        text.color = TextWhite;
-        text.alignment = TextAlignmentOptions.Left;
-        if (FontManager.Instance != null && FontManager.Instance.ChineseFont != null)
-            text.font = FontManager.Instance.ChineseFont;
+        TextMeshProUGUI text = CreateLabel(viewport.transform, string.Empty, 15f, TextColor, 28f);
+        StretchFull(text.rectTransform);
+        text.alignment = TextAlignmentOptions.Center;
 
-        GameObject phObj = CreateUIElement("Placeholder", textArea.transform);
-        StretchFull(phObj.GetComponent<RectTransform>());
-        TextMeshProUGUI phText = phObj.AddComponent<TextMeshProUGUI>();
-        phText.text = placeholder;
-        phText.fontSize = 14f;
-        phText.fontStyle = FontStyles.Italic;
-        phText.color = new Color(0.5f, 0.5f, 0.5f, 0.6f);
-        if (FontManager.Instance != null && FontManager.Instance.ChineseFont != null)
-            phText.font = FontManager.Instance.ChineseFont;
+        TextMeshProUGUI placeholder = CreateLabel(viewport.transform, "0", 15f, new Color(0.55f, 0.55f, 0.6f), 28f);
+        StretchFull(placeholder.rectTransform);
+        placeholder.alignment = TextAlignmentOptions.Center;
 
-        TMP_InputField inputField = inputObj.AddComponent<TMP_InputField>();
-        inputField.textViewport = textAreaRT;
-        inputField.textComponent = text;
-        inputField.placeholder = phText;
-        inputField.fontAsset = FontManager.Instance != null ? FontManager.Instance.ChineseFont : null;
-
-        return inputField;
+        input.textViewport = viewportRect;
+        input.textComponent = text;
+        input.placeholder = placeholder;
+        return input;
     }
 
-    private TextMeshProUGUI CreateLabel(Transform parent, string text, float fontSize, Color color,
-        float height, float width = 0f)
+    private Button CreateButton(Transform parent, string label, Color color, UnityEngine.Events.UnityAction onClick)
     {
-        GameObject obj = CreateUIElement("Label_" + text, parent);
-        RectTransform rt = obj.GetComponent<RectTransform>();
-        rt.sizeDelta = new Vector2(width, height);
+        GameObject buttonObject = CreateRect($"Button_{label}", parent).gameObject;
+        LayoutElement layout = buttonObject.AddComponent<LayoutElement>();
+        layout.preferredWidth = 92f;
+        layout.preferredHeight = 36f;
 
-        if (width > 0f)
+        Image background = buttonObject.AddComponent<Image>();
+        background.color = color;
+
+        Button button = buttonObject.AddComponent<Button>();
+        button.onClick.AddListener(onClick);
+
+        TextMeshProUGUI text = CreateLabel(buttonObject.transform, label, 14f, Color.white, 36f);
+        StretchFull(text.rectTransform);
+        text.alignment = TextAlignmentOptions.Center;
+        return button;
+    }
+
+    private TextMeshProUGUI CreateLabel(Transform parent, string textValue, float fontSize, Color color, float height)
+    {
+        GameObject textObject = CreateRect("Label", parent).gameObject;
+        textObject.AddComponent<LayoutElement>().preferredHeight = height;
+
+        TextMeshProUGUI text = textObject.AddComponent<TextMeshProUGUI>();
+        text.text = textValue;
+        text.fontSize = fontSize;
+        text.color = color;
+        text.alignment = TextAlignmentOptions.MidlineLeft;
+
+        if (FontManager.Instance != null && FontManager.Instance.ChineseFont != null)
         {
-            LayoutElement le = obj.AddComponent<LayoutElement>();
-            le.preferredWidth = width;
+            text.font = FontManager.Instance.ChineseFont;
         }
 
-        TextMeshProUGUI tmp = obj.AddComponent<TextMeshProUGUI>();
-        tmp.text = text;
-        tmp.fontSize = fontSize;
-        tmp.color = color;
-        tmp.alignment = TextAlignmentOptions.Left;
-        tmp.enableWordWrapping = false;
-
-        if (FontManager.Instance != null && FontManager.Instance.ChineseFont != null)
-            tmp.font = FontManager.Instance.ChineseFont;
-
-        return tmp;
+        return text;
     }
 
-    private GameObject CreateUIElement(string name, Transform parent)
+    private void CreateSpacer(Transform parent, float height)
     {
-        GameObject go = new GameObject(name);
-        go.transform.SetParent(parent, false);
-        if (go.GetComponent<RectTransform>() == null)
-            go.AddComponent<RectTransform>();
-        return go;
+        GameObject spacer = CreateRect("Spacer", parent).gameObject;
+        spacer.AddComponent<LayoutElement>().preferredHeight = height;
     }
 
-    private void StretchFull(RectTransform rt)
+    private RectTransform CreateRect(string name, Transform parent)
     {
-        rt.anchorMin = Vector2.zero;
-        rt.anchorMax = Vector2.one;
-        rt.offsetMin = Vector2.zero;
-        rt.offsetMax = Vector2.zero;
+        GameObject objectRef = new GameObject(name, typeof(RectTransform));
+        objectRef.transform.SetParent(parent, false);
+        return objectRef.GetComponent<RectTransform>();
+    }
+
+    private void StretchFull(RectTransform rect)
+    {
+        rect.anchorMin = Vector2.zero;
+        rect.anchorMax = Vector2.one;
+        rect.offsetMin = Vector2.zero;
+        rect.offsetMax = Vector2.zero;
     }
 }
 #endif

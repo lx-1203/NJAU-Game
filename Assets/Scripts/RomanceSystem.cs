@@ -96,6 +96,71 @@ public class RomanceSystem : MonoBehaviour, IRomanceProvider
         return records.ContainsKey(npcId) ? records[npcId].healthScore : 70;
     }
 
+    /// <summary>
+    /// Debug helper: returns the mutable record for inspection.
+    /// </summary>
+    public RomanceRecord DebugGetRecord(string npcId)
+    {
+        return GetOrCreateRecord(npcId);
+    }
+
+    /// <summary>
+    /// Debug helper: forces a romance state while keeping related runtime fields coherent.
+    /// </summary>
+    public void DebugSetRomanceState(string npcId, RomanceState newState, int? health = null, int? cooldownRounds = null)
+    {
+        RomanceRecord record = GetOrCreateRecord(npcId);
+        RomanceState oldState = record.state;
+
+        TransitionState(npcId, newState);
+
+        if (newState == RomanceState.Dating)
+        {
+            if (record.datingStartRound < 0)
+            {
+                record.datingStartRound = GetCurrentGlobalRound();
+            }
+
+            record.healthScore = Mathf.Clamp(health ?? Mathf.Max(record.healthScore, 70), 0, 100);
+            record.cooldownRoundsLeft = 0;
+            record.interactedThisRound = true;
+            record.consecutiveNoInteract = 0;
+            record.nextAnniversaryRound = Mathf.Max(record.nextAnniversaryRound, GetCurrentGlobalRound() + 8);
+        }
+        else
+        {
+            if (health.HasValue)
+            {
+                record.healthScore = Mathf.Clamp(health.Value, 0, 100);
+            }
+
+            if (cooldownRounds.HasValue)
+            {
+                record.cooldownRoundsLeft = Mathf.Max(0, cooldownRounds.Value);
+            }
+            else if (newState == RomanceState.Cooldown || newState == RomanceState.BrokenUp)
+            {
+                record.cooldownRoundsLeft = Mathf.Max(record.cooldownRoundsLeft, 4);
+            }
+
+            if (newState == RomanceState.None)
+            {
+                record.cooldownRoundsLeft = Mathf.Max(0, cooldownRounds ?? 0);
+                record.isCheating = false;
+                record.cheatingRounds = 0;
+            }
+        }
+
+        if (newState != RomanceState.Dating)
+        {
+            record.interactedThisRound = false;
+            record.consecutiveNoInteract = 0;
+        }
+
+        OnRomanceHealthChanged?.Invoke(npcId);
+        Debug.Log($"[RomanceSystem] Debug set romance state: {npcId} {oldState} -> {newState}");
+    }
+
     // ========== 公共方法：好感度缓存 ==========
 
     /// <summary>

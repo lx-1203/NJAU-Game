@@ -1,0 +1,57 @@
+{
+  "id": "xie_lingyun",
+  "nodes": [
+    {
+      "id": "X001",
+      "speaker": "谢凌云",
+      "portrait": "",
+      "content": "你在图书馆拐角碰见了他。他合上手里的资料，像是早就注意到了你。",
+      "next": "X002",
+      "choices": null
+    },
+    {
+      "id": "X002",
+      "speaker": "谢凌云",
+      "portrait": "",
+      "content": "又见面了。你是想问问题，还是只是刚好路过？",
+      "next": null,
+      "choices": [
+        {
+          "text": "想请教学业上的事",
+          "next": "X003",
+          "condition": "",
+          "conditionHint": "",
+          "effects": [
+            { "type": "attribute", "target": "学力", "amount": 4 }
+          ]
+        },
+        {
+          "text": "只是想和你聊两句",
+          "next": "X004",
+          "condition": "",
+          "conditionHint": "",
+          "effects": [
+            { "type": "attribute", "target": "魅力", "amount": 2 },
+            { "type": "attribute", "target": "心情", "amount": 3 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "X003",
+      "speaker": "谢凌云",
+      "portrait": "",
+      "content": "可以。我只讲一次重点，你记得跟上。",
+      "next": null,
+      "choices": null
+    },
+    {
+      "id": "X004",
+      "speaker": "谢凌云",
+      "portrait": "",
+      "content": "那你比大多数人坦率。这样的人，我通常愿意多听两句。",
+      "next": null,
+      "choices": null
+    }
+  ]
+}

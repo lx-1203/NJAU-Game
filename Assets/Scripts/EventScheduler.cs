@@ -376,6 +376,21 @@ public class EventScheduler : MonoBehaviour
         return eventQueue.Count > 0;
     }
 
+    public int GetPendingEventCount()
+    {
+        return eventQueue.Count;
+    }
+
+    public List<EventDefinition> GetPendingEventsSnapshot()
+    {
+        return new List<EventDefinition>(eventQueue.ToArray());
+    }
+
+    public int GetLoadedEventCount()
+    {
+        return allEvents.Count;
+    }
+
     // ========== 行为通知 ==========
 
     /// <summary>

@@ -1,0 +1,58 @@
+{
+  "id": "su_xiaoting",
+  "nodes": [
+    {
+      "id": "S001",
+      "speaker": "苏小晴",
+      "portrait": "",
+      "content": "你刚一出现，她就朝你招了招手，像是已经攒了半天话。",
+      "next": "S002",
+      "choices": null
+    },
+    {
+      "id": "S002",
+      "speaker": "苏小晴",
+      "portrait": "",
+      "content": "来得正好。我刚听到一个八卦，你要不要第一个知道？",
+      "next": null,
+      "choices": [
+        {
+          "text": "说来听听",
+          "next": "S003",
+          "condition": "",
+          "conditionHint": "",
+          "effects": [
+            { "type": "attribute", "target": "魅力", "amount": 2 },
+            { "type": "attribute", "target": "心情", "amount": 4 }
+          ]
+        },
+        {
+          "text": "先去吃饭吧，边走边说",
+          "next": "S004",
+          "condition": "金钱>=30",
+          "conditionHint": "需要30元以上",
+          "effects": [
+            { "type": "money", "target": "", "amount": -30 },
+            { "type": "attribute", "target": "心情", "amount": 6 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "S003",
+      "speaker": "苏小晴",
+      "portrait": "",
+      "content": "我就知道你会感兴趣。放心，我这消息保真，而且超劲爆。",
+      "next": null,
+      "choices": null
+    },
+    {
+      "id": "S004",
+      "speaker": "苏小晴",
+      "portrait": "",
+      "content": "好耶，那我请你负责听，我负责讲，保证不让你白花这顿饭钱。",
+      "next": null,
+      "choices": null
+    }
+  ]
+}

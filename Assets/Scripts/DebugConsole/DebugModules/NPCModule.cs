@@ -1,42 +1,44 @@
 #if DEVELOPMENT_BUILD || UNITY_EDITOR
+using System.Collections.Generic;
+using System.Text;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
-using TMPro;
-using System.Collections.Generic;
 
-/// <summary>
-/// NPC 调试模块 —— NPC 关系管理器
-/// 显示所有 NPC 好感度、等级、恋爱状态，支持滑块实时调节好感度
-/// </summary>
 public class NPCModule : MonoBehaviour, IDebugModule
 {
-    private static readonly Color TextGold  = new Color(1.0f, 0.85f, 0.30f);
+    private static readonly Color TextGold = new Color(1.0f, 0.85f, 0.30f);
     private static readonly Color TextWhite = new Color(0.92f, 0.92f, 0.92f);
-    private static readonly Color TextGray  = new Color(0.6f, 0.6f, 0.65f);
-    private static readonly Color PanelBg   = new Color(0.18f, 0.18f, 0.22f, 0.6f);
-    private static readonly Color SliderBg  = new Color(0.25f, 0.25f, 0.30f);
-    private static readonly Color SliderFill = new Color(0.4f, 0.75f, 0.95f);
+    private static readonly Color TextGray = new Color(0.6f, 0.6f, 0.65f);
+    private static readonly Color PanelBg = new Color(0.18f, 0.18f, 0.22f, 0.6f);
+    private static readonly Color ButtonBlue = new Color(0.20f, 0.35f, 0.60f, 1.0f);
+    private static readonly Color ButtonGreen = new Color(0.20f, 0.55f, 0.30f, 1.0f);
+    private static readonly Color ButtonRed = new Color(0.60f, 0.20f, 0.20f, 1.0f);
+    private static readonly Color ButtonPurple = new Color(0.48f, 0.28f, 0.62f, 1.0f);
+    private static readonly Color ButtonPink = new Color(0.72f, 0.32f, 0.48f, 1.0f);
 
-    // 每个 NPC 对应的 UI 控件缓存
+    private readonly List<NPCUIEntry> npcEntries = new List<NPCUIEntry>();
+    private Transform contentRoot;
+
     private class NPCUIEntry
     {
         public string npcId;
         public Slider affinitySlider;
-        public TextMeshProUGUI affinityValueLabel;
-        public TextMeshProUGUI levelLabel;
-        public TextMeshProUGUI romanceLabel;
-        public bool isSuppressingCallback; // 防止 Refresh 时触发 onValueChanged
+        public Slider healthSlider;
+        public TMP_InputField cooldownInput;
+        public TextMeshProUGUI affinityValueText;
+        public TextMeshProUGUI levelText;
+        public TextMeshProUGUI romanceText;
+        public TextMeshProUGUI healthValueText;
+        public TextMeshProUGUI metaText;
+        public TextMeshProUGUI memoryText;
+        public bool suppressCallbacks;
     }
-
-    private List<NPCUIEntry> npcEntries = new List<NPCUIEntry>();
-    private Transform contentRoot;
 
     public void Init(RectTransform parent)
     {
-        // ========== ScrollRect 容器 ==========
         GameObject scrollObj = CreateUIElement("NPCScroll", parent);
-        RectTransform scrollRT = scrollObj.GetComponent<RectTransform>();
-        StretchFull(scrollRT);
+        StretchFull(scrollObj.GetComponent<RectTransform>());
 
         ScrollRect scrollRect = scrollObj.AddComponent<ScrollRect>();
         scrollRect.horizontal = false;
@@ -44,317 +46,225 @@ public class NPCModule : MonoBehaviour, IDebugModule
         scrollRect.movementType = ScrollRect.MovementType.Clamped;
         scrollRect.scrollSensitivity = 30f;
 
-        // Viewport (带 Mask)
         GameObject viewport = CreateUIElement("Viewport", scrollObj.transform);
-        RectTransform vpRT = viewport.GetComponent<RectTransform>();
-        StretchFull(vpRT);
+        StretchFull(viewport.GetComponent<RectTransform>());
         viewport.AddComponent<RectMask2D>();
-        scrollRect.viewport = vpRT;
+        scrollRect.viewport = viewport.GetComponent<RectTransform>();
 
-        // Content (纵向布局)
         GameObject content = CreateUIElement("Content", viewport.transform);
         RectTransform contentRT = content.GetComponent<RectTransform>();
         contentRT.anchorMin = new Vector2(0, 1);
         contentRT.anchorMax = new Vector2(1, 1);
         contentRT.pivot = new Vector2(0.5f, 1);
-        contentRT.sizeDelta = new Vector2(0, 0);
 
-        ContentSizeFitter csf = content.AddComponent<ContentSizeFitter>();
-        csf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        ContentSizeFitter fitter = content.AddComponent<ContentSizeFitter>();
+        fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
-        VerticalLayoutGroup vlg = content.AddComponent<VerticalLayoutGroup>();
-        vlg.spacing = 16f;
-        vlg.padding = new RectOffset(16, 16, 16, 16);
-        vlg.childAlignment = TextAnchor.UpperCenter;
-        vlg.childControlWidth = true;
-        vlg.childControlHeight = false;
-        vlg.childForceExpandWidth = true;
-        vlg.childForceExpandHeight = false;
+        VerticalLayoutGroup layout = content.AddComponent<VerticalLayoutGroup>();
+        layout.spacing = 14f;
+        layout.padding = new RectOffset(16, 16, 16, 16);
+        layout.childAlignment = TextAnchor.UpperCenter;
+        layout.childControlWidth = true;
+        layout.childControlHeight = false;
+        layout.childForceExpandWidth = true;
+        layout.childForceExpandHeight = false;
 
         scrollRect.content = contentRT;
         contentRoot = content.transform;
 
-        // ========== 标题 ==========
-        CreateLabel(contentRoot, "— NPC 管理 —", 18f, TextGold, 30f);
-
-        // ========== 构建 NPC 区块 ==========
+        CreateLabel(contentRoot, "NPC Debug", 18f, TextGold, 30f);
         BuildNPCBlocks();
     }
 
-    /// <summary>
-    /// 构建所有 NPC 的 UI 区块
-    /// </summary>
     private void BuildNPCBlocks()
     {
         npcEntries.Clear();
 
         if (NPCDatabase.Instance == null)
         {
-            CreateLabel(contentRoot, "NPC数据库未初始化", 14f, TextGray, 30f);
+            CreateLabel(contentRoot, "NPCDatabase not ready", 14f, TextGray, 30f);
             return;
         }
 
         NPCData[] allNPCs = NPCDatabase.Instance.GetAllNPCs();
         if (allNPCs == null || allNPCs.Length == 0)
         {
-            CreateLabel(contentRoot, "未找到任何NPC数据", 14f, TextGray, 30f);
+            CreateLabel(contentRoot, "No NPC data", 14f, TextGray, 30f);
             return;
         }
 
         for (int i = 0; i < allNPCs.Length; i++)
-        {
-            BuildSingleNPCBlock(allNPCs[i]);
-        }
+            BuildNPCBlock(allNPCs[i]);
     }
 
-    /// <summary>
-    /// 构建单个 NPC 的调试 UI 区块
-    /// </summary>
-    private void BuildSingleNPCBlock(NPCData npc)
+    private void BuildNPCBlock(NPCData npc)
     {
-        NPCUIEntry entry = new NPCUIEntry();
-        entry.npcId = npc.id;
+        NPCUIEntry entry = new NPCUIEntry { npcId = npc.id };
 
-        // NPC 区块容器 (带半透明背景)
-        GameObject block = CreateUIElement($"NPC_{npc.id}", contentRoot);
-        RectTransform blockRT = block.GetComponent<RectTransform>();
-        blockRT.sizeDelta = new Vector2(0, 140f);
+        GameObject block = CreatePanel($"NPC_{npc.id}", contentRoot, PanelBg);
+        LayoutElement blockLayout = block.AddComponent<LayoutElement>();
+        blockLayout.preferredHeight = 294f;
 
-        Image blockBg = block.AddComponent<Image>();
-        blockBg.color = PanelBg;
+        VerticalLayoutGroup vlg = block.AddComponent<VerticalLayoutGroup>();
+        vlg.spacing = 6f;
+        vlg.padding = new RectOffset(12, 12, 10, 10);
+        vlg.childAlignment = TextAnchor.UpperLeft;
+        vlg.childControlWidth = true;
+        vlg.childControlHeight = false;
+        vlg.childForceExpandWidth = true;
+        vlg.childForceExpandHeight = false;
 
-        VerticalLayoutGroup blockVLG = block.AddComponent<VerticalLayoutGroup>();
-        blockVLG.spacing = 4f;
-        blockVLG.padding = new RectOffset(12, 12, 8, 8);
-        blockVLG.childAlignment = TextAnchor.UpperLeft;
-        blockVLG.childControlWidth = true;
-        blockVLG.childControlHeight = false;
-        blockVLG.childForceExpandWidth = true;
-        blockVLG.childForceExpandHeight = false;
+        CreateLabel(block.transform, $"{npc.displayName} [{npc.id}]", 16f, TextGold, 24f);
+        entry.metaText = CreateLabel(block.transform, string.Empty, 12f, TextGray, 38f);
 
-        // --- 行1: NPC 名称 ---
-        CreateLabel(block.transform, npc.displayName, 16f, TextGold, 24f);
-
-        // --- 行2: 好感度 数值 + Slider ---
-        GameObject affinityRow = CreateUIElement("AffinityRow", block.transform);
-        RectTransform affinityRowRT = affinityRow.GetComponent<RectTransform>();
-        affinityRowRT.sizeDelta = new Vector2(0, 30f);
-
-        HorizontalLayoutGroup affinityHLG = affinityRow.AddComponent<HorizontalLayoutGroup>();
-        affinityHLG.spacing = 8f;
-        affinityHLG.childAlignment = TextAnchor.MiddleLeft;
-        affinityHLG.childControlWidth = false;
-        affinityHLG.childControlHeight = true;
-        affinityHLG.childForceExpandWidth = false;
-        affinityHLG.childForceExpandHeight = true;
-
-        // "好感度:" 标签
-        TextMeshProUGUI affinityLabel = CreateLabel(affinityRow.transform, "好感度:", 13f, TextWhite, 26f);
-        LayoutElement labelLE = affinityLabel.gameObject.AddComponent<LayoutElement>();
-        labelLE.preferredWidth = 60f;
-
-        // 数值 Label
-        entry.affinityValueLabel = CreateLabel(affinityRow.transform, "0", 13f, TextWhite, 26f);
-        LayoutElement valueLE = entry.affinityValueLabel.gameObject.AddComponent<LayoutElement>();
-        valueLE.preferredWidth = 30f;
-        entry.affinityValueLabel.alignment = TextAlignmentOptions.Center;
-
-        // Slider
-        Slider slider = CreateAffinitySlider(affinityRow.transform, npc.id, entry);
-        entry.affinitySlider = slider;
-        LayoutElement sliderLE = slider.gameObject.AddComponent<LayoutElement>();
-        sliderLE.flexibleWidth = 1f;
-        sliderLE.preferredHeight = 20f;
-
-        // --- 行3: 好感等级 ---
-        GameObject levelRow = CreateUIElement("LevelRow", block.transform);
-        RectTransform levelRowRT = levelRow.GetComponent<RectTransform>();
-        levelRowRT.sizeDelta = new Vector2(0, 22f);
-
-        HorizontalLayoutGroup levelHLG = levelRow.AddComponent<HorizontalLayoutGroup>();
-        levelHLG.spacing = 8f;
-        levelHLG.childAlignment = TextAnchor.MiddleLeft;
-        levelHLG.childControlWidth = false;
-        levelHLG.childControlHeight = true;
-        levelHLG.childForceExpandWidth = false;
-        levelHLG.childForceExpandHeight = true;
-
-        TextMeshProUGUI levelTitle = CreateLabel(levelRow.transform, "等级:", 13f, TextWhite, 22f);
-        LayoutElement levelTitleLE = levelTitle.gameObject.AddComponent<LayoutElement>();
-        levelTitleLE.preferredWidth = 60f;
-
-        entry.levelLabel = CreateLabel(levelRow.transform, "Stranger", 13f, TextGold, 22f);
-        LayoutElement levelValueLE = entry.levelLabel.gameObject.AddComponent<LayoutElement>();
-        levelValueLE.preferredWidth = 200f;
-
-        // --- 行4: 恋爱状态 ---
-        GameObject romanceRow = CreateUIElement("RomanceRow", block.transform);
-        RectTransform romanceRowRT = romanceRow.GetComponent<RectTransform>();
-        romanceRowRT.sizeDelta = new Vector2(0, 22f);
-
-        HorizontalLayoutGroup romanceHLG = romanceRow.AddComponent<HorizontalLayoutGroup>();
-        romanceHLG.spacing = 8f;
-        romanceHLG.childAlignment = TextAnchor.MiddleLeft;
-        romanceHLG.childControlWidth = false;
-        romanceHLG.childControlHeight = true;
-        romanceHLG.childForceExpandWidth = false;
-        romanceHLG.childForceExpandHeight = true;
-
-        TextMeshProUGUI romanceTitle = CreateLabel(romanceRow.transform, "恋爱:", 13f, TextWhite, 22f);
-        LayoutElement romanceTitleLE = romanceTitle.gameObject.AddComponent<LayoutElement>();
-        romanceTitleLE.preferredWidth = 60f;
-
-        entry.romanceLabel = CreateLabel(romanceRow.transform, "None", 13f, TextGray, 22f);
-        LayoutElement romanceValueLE = entry.romanceLabel.gameObject.AddComponent<LayoutElement>();
-        romanceValueLE.preferredWidth = 200f;
-
-        npcEntries.Add(entry);
-    }
-
-    /// <summary>
-    /// 创建好感度 Slider (0~100)
-    /// </summary>
-    private Slider CreateAffinitySlider(Transform parent, string npcId, NPCUIEntry entry)
-    {
-        GameObject sliderObj = CreateUIElement($"Slider_{npcId}", parent);
-        RectTransform sliderRT = sliderObj.GetComponent<RectTransform>();
-        sliderRT.sizeDelta = new Vector2(0, 20f);
-
-        Slider slider = sliderObj.AddComponent<Slider>();
-        slider.minValue = 0;
-        slider.maxValue = 100;
-        slider.wholeNumbers = true;
-
-        // Background
-        GameObject bg = CreateUIElement("Background", sliderObj.transform);
-        Image bgImg = bg.AddComponent<Image>();
-        bgImg.color = SliderBg;
-        RectTransform bgRT = bg.GetComponent<RectTransform>();
-        StretchFull(bgRT);
-
-        // Fill Area
-        GameObject fillArea = CreateUIElement("FillArea", sliderObj.transform);
-        RectTransform fillAreaRT = fillArea.GetComponent<RectTransform>();
-        StretchFull(fillAreaRT);
-        fillAreaRT.offsetMin = new Vector2(0, 0);
-        fillAreaRT.offsetMax = new Vector2(0, 0);
-
-        // Fill
-        GameObject fill = CreateUIElement("Fill", fillArea.transform);
-        Image fillImg = fill.AddComponent<Image>();
-        fillImg.color = SliderFill;
-        RectTransform fillRT = fill.GetComponent<RectTransform>();
-        fillRT.anchorMin = Vector2.zero;
-        fillRT.anchorMax = Vector2.one;
-        fillRT.offsetMin = Vector2.zero;
-        fillRT.offsetMax = Vector2.zero;
-
-        slider.fillRect = fillRT;
-
-        // Handle (小方块)
-        GameObject handleArea = CreateUIElement("HandleSlideArea", sliderObj.transform);
-        RectTransform handleAreaRT = handleArea.GetComponent<RectTransform>();
-        StretchFull(handleAreaRT);
-
-        GameObject handle = CreateUIElement("Handle", handleArea.transform);
-        Image handleImg = handle.AddComponent<Image>();
-        handleImg.color = Color.white;
-        RectTransform handleRT = handle.GetComponent<RectTransform>();
-        handleRT.sizeDelta = new Vector2(10f, 20f);
-
-        slider.handleRect = handleRT;
-        slider.targetGraphic = handleImg;
-
-        // Slider onValueChanged 直接修改 AffinitySystem
-        string capturedNpcId = npcId;
-        NPCUIEntry capturedEntry = entry;
-        slider.onValueChanged.AddListener((float val) =>
+        entry.affinityValueText = CreateLabel(block.transform, "Affinity 0", 13f, TextWhite, 22f);
+        entry.affinitySlider = CreateSliderRow(block.transform, "Affinity", 0, 100, value =>
         {
-            if (capturedEntry.isSuppressingCallback) return;
+            if (entry.suppressCallbacks || AffinitySystem.Instance == null)
+                return;
 
-            if (AffinitySystem.Instance != null)
-            {
-                NPCRelationshipData rel = AffinitySystem.Instance.GetRelationship(capturedNpcId);
-                rel.affinity = Mathf.RoundToInt(val);
-            }
-
-            // 刷新数值显示
-            if (capturedEntry.affinityValueLabel != null)
-                capturedEntry.affinityValueLabel.text = Mathf.RoundToInt(val).ToString();
-
-            // 刷新等级和恋爱状态
-            RefreshEntry(capturedEntry);
+            AffinitySystem.Instance.DebugSetAffinity(entry.npcId, Mathf.RoundToInt(value));
+            RefreshEntry(entry);
+            DebugConsoleManager.Log("NPC", $"{entry.npcId} affinity -> {Mathf.RoundToInt(value)}");
         });
 
-        return slider;
+        entry.levelText = CreateLabel(block.transform, "Level: -", 13f, TextWhite, 20f);
+        entry.romanceText = CreateLabel(block.transform, "Romance: -", 13f, TextWhite, 20f);
+        entry.healthValueText = CreateLabel(block.transform, "Health 70", 13f, TextWhite, 22f);
+        entry.healthSlider = CreateSliderRow(block.transform, "Health", 0, 100, value =>
+        {
+            if (entry.suppressCallbacks || RomanceSystem.Instance == null)
+                return;
+
+            RomanceState state = RomanceSystem.Instance.GetRomanceState(entry.npcId);
+            int cooldown = ParseIntOrDefault(entry.cooldownInput != null ? entry.cooldownInput.text : string.Empty, 0);
+            RomanceSystem.Instance.DebugSetRomanceState(entry.npcId, state, Mathf.RoundToInt(value), cooldown);
+            RefreshEntry(entry);
+            DebugConsoleManager.Log("NPC", $"{entry.npcId} romance health -> {Mathf.RoundToInt(value)}");
+        });
+
+        GameObject cooldownRow = CreateRow(block.transform, 30f);
+        CreateLabel(cooldownRow.transform, "CD", 13f, TextWhite, 28f, 44f);
+        entry.cooldownInput = CreateInputField(cooldownRow.transform, "0", 80f, 28f);
+        entry.cooldownInput.contentType = TMP_InputField.ContentType.IntegerNumber;
+        CreateButton(cooldownRow.transform, "Apply", 72f, ButtonBlue, () =>
+        {
+            if (RomanceSystem.Instance == null)
+                return;
+
+            RomanceState state = RomanceSystem.Instance.GetRomanceState(entry.npcId);
+            int health = RomanceSystem.Instance.GetRomanceHealth(entry.npcId);
+            RomanceSystem.Instance.DebugSetRomanceState(entry.npcId, state, health, ParseIntOrDefault(entry.cooldownInput.text, 0));
+            RefreshEntry(entry);
+            DebugConsoleManager.Log("NPC", $"{entry.npcId} cooldown updated");
+        });
+
+        GameObject affinityButtons = CreateRow(block.transform, 34f);
+        CreateButton(affinityButtons.transform, "0", 50f, ButtonRed, () => SetAffinity(entry, 0));
+        CreateButton(affinityButtons.transform, "40", 50f, ButtonBlue, () => SetAffinity(entry, 40));
+        CreateButton(affinityButtons.transform, "60", 50f, ButtonBlue, () => SetAffinity(entry, 60));
+        CreateButton(affinityButtons.transform, "80", 50f, ButtonGreen, () => SetAffinity(entry, 80));
+        CreateButton(affinityButtons.transform, "100", 56f, ButtonGreen, () => SetAffinity(entry, 100));
+
+        GameObject romanceButtons = CreateRow(block.transform, 34f);
+        CreateButton(romanceButtons.transform, "None", 56f, ButtonBlue, () => SetRomanceState(entry, RomanceState.None));
+        CreateButton(romanceButtons.transform, "Crush", 56f, ButtonPurple, () => SetRomanceState(entry, RomanceState.Crushing));
+        CreateButton(romanceButtons.transform, "CD", 56f, ButtonBlue, () => SetRomanceState(entry, RomanceState.Cooldown));
+        CreateButton(romanceButtons.transform, "Date", 56f, ButtonPink, () => SetRomanceState(entry, RomanceState.Dating));
+        CreateButton(romanceButtons.transform, "Break", 56f, ButtonRed, () => SetRomanceState(entry, RomanceState.BrokenUp));
+        CreateButton(romanceButtons.transform, "Hostile", 56f, ButtonRed, () => SetRomanceState(entry, RomanceState.Hostile));
+
+        entry.memoryText = CreateLabel(block.transform, string.Empty, 12f, TextGray, 72f);
+        entry.memoryText.enableWordWrapping = true;
+        entry.memoryText.overflowMode = TextOverflowModes.Ellipsis;
+
+        npcEntries.Add(entry);
+        RefreshEntry(entry);
     }
 
     public void Refresh()
     {
-        if (AffinitySystem.Instance == null) return;
-
         for (int i = 0; i < npcEntries.Count; i++)
-        {
-            NPCUIEntry entry = npcEntries[i];
-            NPCRelationshipData rel = AffinitySystem.Instance.GetRelationship(entry.npcId);
-
-            // 更新 Slider（抑制回调）
-            if (entry.affinitySlider != null)
-            {
-                entry.isSuppressingCallback = true;
-                entry.affinitySlider.value = rel.affinity;
-                entry.isSuppressingCallback = false;
-            }
-
-            // 更新数值 Label
-            if (entry.affinityValueLabel != null)
-                entry.affinityValueLabel.text = rel.affinity.ToString();
-
-            // 更新等级和恋爱状态
-            RefreshEntry(entry);
-        }
+            RefreshEntry(npcEntries[i]);
     }
 
-    /// <summary>
-    /// 刷新单个 NPC 条目的等级和恋爱状态显示
-    /// </summary>
     private void RefreshEntry(NPCUIEntry entry)
     {
-        if (AffinitySystem.Instance == null) return;
+        if (AffinitySystem.Instance == null || RomanceSystem.Instance == null)
+            return;
 
         NPCRelationshipData rel = AffinitySystem.Instance.GetRelationship(entry.npcId);
+        RomanceRecord record = RomanceSystem.Instance.DebugGetRecord(entry.npcId);
+        NPCData npc = NPCDatabase.Instance != null ? NPCDatabase.Instance.GetNPC(entry.npcId) : null;
 
-        // 等级显示
-        if (entry.levelLabel != null)
-        {
-            entry.levelLabel.text = GetAffinityLevelChinese(rel.level);
-            entry.levelLabel.color = GetAffinityLevelColor(rel.level);
-        }
+        entry.suppressCallbacks = true;
+        entry.affinitySlider.SetValueWithoutNotify(rel.affinity);
+        entry.healthSlider.SetValueWithoutNotify(record.healthScore);
+        if (entry.cooldownInput != null)
+            entry.cooldownInput.SetTextWithoutNotify(record.cooldownRoundsLeft.ToString());
+        entry.suppressCallbacks = false;
 
-        // 恋爱状态显示
-        if (entry.romanceLabel != null)
-        {
-            RomanceState romanceState = RomanceState.None;
-            if (RomanceSystem.Instance != null)
-                romanceState = RomanceSystem.Instance.GetRomanceState(entry.npcId);
+        entry.affinityValueText.text = $"Affinity {rel.affinity}";
+        entry.levelText.text = $"Level: {GetAffinityLevelText(rel.level)}";
+        entry.levelText.color = GetAffinityLevelColor(rel.level);
+        entry.romanceText.text = $"Romance: {GetRomanceStateText(record.state)}";
+        entry.romanceText.color = GetRomanceStateColor(record.state);
+        entry.healthValueText.text = $"Health {record.healthScore}";
 
-            entry.romanceLabel.text = GetRomanceStateChinese(romanceState);
-            entry.romanceLabel.color = GetRomanceStateColor(romanceState);
-        }
+        string personality = npc != null ? npc.GetPersonality().ToString() : "-";
+        string lastAction = string.IsNullOrEmpty(rel.lastInteractionActionId) ? "-" : rel.lastInteractionActionId;
+        entry.metaText.text =
+            $"Personality {personality}   NoInteract {rel.consecutiveNoInteractionTurns}   Repeat {rel.repeatedActionCount}\n" +
+            $"LastAction {lastAction}   Cooldown {record.cooldownRoundsLeft}   DateRounds {record.durationRounds}";
+
+        entry.memoryText.text = BuildMemorySummary(rel.memories);
     }
 
-    // ========== 显示辅助 ==========
+    private void SetAffinity(NPCUIEntry entry, int value)
+    {
+        if (AffinitySystem.Instance == null)
+            return;
 
-    private string GetAffinityLevelChinese(AffinityLevel level)
+        AffinitySystem.Instance.DebugSetAffinity(entry.npcId, value);
+        RefreshEntry(entry);
+        DebugConsoleManager.Log("NPC", $"{entry.npcId} affinity preset -> {value}");
+    }
+
+    private void SetRomanceState(NPCUIEntry entry, RomanceState state)
+    {
+        if (RomanceSystem.Instance == null)
+            return;
+
+        int health = state == RomanceState.Dating ? 70 : RomanceSystem.Instance.GetRomanceHealth(entry.npcId);
+        int cooldown = (state == RomanceState.Cooldown || state == RomanceState.BrokenUp) ? 4 : 0;
+        RomanceSystem.Instance.DebugSetRomanceState(entry.npcId, state, health, cooldown);
+        RefreshEntry(entry);
+        DebugConsoleManager.Log("NPC", $"{entry.npcId} romance state -> {state}");
+    }
+
+    private string BuildMemorySummary(List<string> memories)
+    {
+        if (memories == null || memories.Count == 0)
+            return "Recent: none";
+
+        int start = Mathf.Max(0, memories.Count - 3);
+        StringBuilder builder = new StringBuilder("Recent:");
+        for (int i = start; i < memories.Count; i++)
+            builder.Append('\n').Append("- ").Append(memories[i]);
+
+        return builder.ToString();
+    }
+
+    private string GetAffinityLevelText(AffinityLevel level)
     {
         switch (level)
         {
-            case AffinityLevel.Stranger:     return "陌生人";
-            case AffinityLevel.Acquaintance: return "认识";
-            case AffinityLevel.Friend:       return "朋友";
-            case AffinityLevel.CloseFriend:  return "密友";
-            case AffinityLevel.BestFriend:   return "挚友";
-            case AffinityLevel.Lover:        return "恋人";
+            case AffinityLevel.Stranger: return "Stranger";
+            case AffinityLevel.Acquaintance: return "Acquaintance";
+            case AffinityLevel.Friend: return "Friend";
+            case AffinityLevel.CloseFriend: return "CloseFriend";
+            case AffinityLevel.BestFriend: return "BestFriend";
+            case AffinityLevel.Lover: return "Lover";
             default: return level.ToString();
         }
     }
@@ -363,26 +273,26 @@ public class NPCModule : MonoBehaviour, IDebugModule
     {
         switch (level)
         {
-            case AffinityLevel.Stranger:     return TextGray;
+            case AffinityLevel.Stranger: return TextGray;
             case AffinityLevel.Acquaintance: return TextWhite;
-            case AffinityLevel.Friend:       return new Color(0.5f, 0.85f, 0.5f);
-            case AffinityLevel.CloseFriend:  return new Color(0.3f, 0.7f, 1.0f);
-            case AffinityLevel.BestFriend:   return TextGold;
-            case AffinityLevel.Lover:        return new Color(1.0f, 0.5f, 0.7f);
+            case AffinityLevel.Friend: return new Color(0.5f, 0.85f, 0.5f);
+            case AffinityLevel.CloseFriend: return new Color(0.3f, 0.7f, 1.0f);
+            case AffinityLevel.BestFriend: return TextGold;
+            case AffinityLevel.Lover: return new Color(1.0f, 0.5f, 0.7f);
             default: return TextWhite;
         }
     }
 
-    private string GetRomanceStateChinese(RomanceState state)
+    private string GetRomanceStateText(RomanceState state)
     {
         switch (state)
         {
-            case RomanceState.None:      return "无";
-            case RomanceState.Crushing:  return "暗恋中";
-            case RomanceState.Cooldown:  return "冷却中";
-            case RomanceState.Dating:    return "恋爱中";
-            case RomanceState.BrokenUp:  return "已分手";
-            case RomanceState.Hostile:   return "敌对";
+            case RomanceState.None: return "None";
+            case RomanceState.Crushing: return "Crushing";
+            case RomanceState.Cooldown: return "Cooldown";
+            case RomanceState.Dating: return "Dating";
+            case RomanceState.BrokenUp: return "BrokenUp";
+            case RomanceState.Hostile: return "Hostile";
             default: return state.ToString();
         }
     }
@@ -391,35 +301,173 @@ public class NPCModule : MonoBehaviour, IDebugModule
     {
         switch (state)
         {
-            case RomanceState.None:      return TextGray;
-            case RomanceState.Crushing:  return new Color(1.0f, 0.7f, 0.8f);
-            case RomanceState.Cooldown:  return new Color(0.6f, 0.6f, 0.8f);
-            case RomanceState.Dating:    return new Color(1.0f, 0.4f, 0.6f);
-            case RomanceState.BrokenUp:  return new Color(0.7f, 0.4f, 0.4f);
-            case RomanceState.Hostile:   return new Color(0.9f, 0.2f, 0.2f);
+            case RomanceState.None: return TextGray;
+            case RomanceState.Crushing: return new Color(1.0f, 0.7f, 0.8f);
+            case RomanceState.Cooldown: return new Color(0.6f, 0.6f, 0.8f);
+            case RomanceState.Dating: return new Color(1.0f, 0.4f, 0.6f);
+            case RomanceState.BrokenUp: return new Color(0.7f, 0.4f, 0.4f);
+            case RomanceState.Hostile: return new Color(0.9f, 0.2f, 0.2f);
             default: return TextWhite;
         }
     }
 
-    // ========== 工具方法 ==========
+    private Slider CreateSliderRow(Transform parent, string label, int min, int max, UnityEngine.Events.UnityAction<float> onChanged)
+    {
+        GameObject row = CreateRow(parent, 30f);
+        CreateLabel(row.transform, label, 13f, TextWhite, 28f, 56f);
 
-    private TextMeshProUGUI CreateLabel(Transform parent, string text, float fontSize, Color color, float height)
+        GameObject sliderObj = CreateUIElement($"{label}Slider", row.transform);
+        LayoutElement sliderLayout = sliderObj.AddComponent<LayoutElement>();
+        sliderLayout.preferredHeight = 20f;
+        sliderLayout.flexibleWidth = 1f;
+
+        Image bg = sliderObj.AddComponent<Image>();
+        bg.color = new Color(0.15f, 0.15f, 0.22f, 0.85f);
+
+        Slider slider = sliderObj.AddComponent<Slider>();
+        slider.minValue = min;
+        slider.maxValue = max;
+        slider.wholeNumbers = true;
+
+        GameObject fillArea = CreateUIElement("FillArea", sliderObj.transform);
+        RectTransform fillAreaRT = fillArea.GetComponent<RectTransform>();
+        fillAreaRT.anchorMin = Vector2.zero;
+        fillAreaRT.anchorMax = Vector2.one;
+        fillAreaRT.offsetMin = new Vector2(4f, 4f);
+        fillAreaRT.offsetMax = new Vector2(-4f, -4f);
+
+        GameObject fill = CreateUIElement("Fill", fillArea.transform);
+        StretchFull(fill.GetComponent<RectTransform>());
+        Image fillImage = fill.AddComponent<Image>();
+        fillImage.color = new Color(0.25f, 0.50f, 0.80f, 1.0f);
+
+        GameObject handleArea = CreateUIElement("HandleArea", sliderObj.transform);
+        StretchFull(handleArea.GetComponent<RectTransform>());
+
+        GameObject handle = CreateUIElement("Handle", handleArea.transform);
+        RectTransform handleRT = handle.GetComponent<RectTransform>();
+        handleRT.sizeDelta = new Vector2(16f, 16f);
+        Image handleImage = handle.AddComponent<Image>();
+        handleImage.color = Color.white;
+
+        slider.fillRect = fill.GetComponent<RectTransform>();
+        slider.handleRect = handleRT;
+        slider.targetGraphic = handleImage;
+        slider.onValueChanged.AddListener(onChanged);
+        return slider;
+    }
+
+    private GameObject CreateRow(Transform parent, float height)
+    {
+        GameObject row = CreateUIElement("Row", parent);
+        RectTransform rt = row.GetComponent<RectTransform>();
+        rt.sizeDelta = new Vector2(0f, height);
+
+        HorizontalLayoutGroup layout = row.AddComponent<HorizontalLayoutGroup>();
+        layout.spacing = 6f;
+        layout.childAlignment = TextAnchor.MiddleLeft;
+        layout.childControlWidth = false;
+        layout.childControlHeight = true;
+        layout.childForceExpandWidth = false;
+        layout.childForceExpandHeight = true;
+        return row;
+    }
+
+    private void CreateButton(Transform parent, string label, float width, Color bgColor, UnityEngine.Events.UnityAction onClick)
+    {
+        GameObject btnObj = CreateUIElement($"Btn_{label}", parent);
+        RectTransform rt = btnObj.GetComponent<RectTransform>();
+        rt.sizeDelta = new Vector2(width, 30f);
+
+        LayoutElement layout = btnObj.AddComponent<LayoutElement>();
+        layout.preferredWidth = width;
+
+        Image bg = btnObj.AddComponent<Image>();
+        bg.color = bgColor;
+
+        Button button = btnObj.AddComponent<Button>();
+        button.targetGraphic = bg;
+        button.onClick.AddListener(onClick);
+
+        TextMeshProUGUI text = CreateLabel(btnObj.transform, label, 12f, TextWhite, 30f);
+        text.alignment = TextAlignmentOptions.Center;
+        StretchFull(text.GetComponent<RectTransform>());
+    }
+
+    private TMP_InputField CreateInputField(Transform parent, string placeholder, float width, float height)
+    {
+        GameObject inputObj = CreateUIElement("InputField", parent);
+        RectTransform rt = inputObj.GetComponent<RectTransform>();
+        rt.sizeDelta = new Vector2(width, height);
+
+        LayoutElement layout = inputObj.AddComponent<LayoutElement>();
+        layout.preferredWidth = width;
+
+        Image bg = inputObj.AddComponent<Image>();
+        bg.color = new Color(0.12f, 0.12f, 0.18f, 0.90f);
+
+        GameObject textArea = CreateUIElement("TextArea", inputObj.transform);
+        RectTransform textAreaRT = textArea.GetComponent<RectTransform>();
+        textAreaRT.anchorMin = Vector2.zero;
+        textAreaRT.anchorMax = Vector2.one;
+        textAreaRT.offsetMin = new Vector2(8, 2);
+        textAreaRT.offsetMax = new Vector2(-8, -2);
+        textArea.AddComponent<RectMask2D>();
+
+        GameObject textObj = CreateUIElement("Text", textArea.transform);
+        StretchFull(textObj.GetComponent<RectTransform>());
+        TextMeshProUGUI text = textObj.AddComponent<TextMeshProUGUI>();
+        text.fontSize = 13f;
+        text.color = TextWhite;
+        text.alignment = TextAlignmentOptions.Left;
+        ApplyChineseFont(text);
+
+        GameObject placeholderObj = CreateUIElement("Placeholder", textArea.transform);
+        StretchFull(placeholderObj.GetComponent<RectTransform>());
+        TextMeshProUGUI placeholderText = placeholderObj.AddComponent<TextMeshProUGUI>();
+        placeholderText.text = placeholder;
+        placeholderText.fontSize = 13f;
+        placeholderText.fontStyle = FontStyles.Italic;
+        placeholderText.color = new Color(0.5f, 0.5f, 0.5f, 0.6f);
+        ApplyChineseFont(placeholderText);
+
+        TMP_InputField input = inputObj.AddComponent<TMP_InputField>();
+        input.textViewport = textAreaRT;
+        input.textComponent = text;
+        input.placeholder = placeholderText;
+        input.fontAsset = FontManager.Instance != null ? FontManager.Instance.ChineseFont : null;
+        return input;
+    }
+
+    private TextMeshProUGUI CreateLabel(Transform parent, string text, float fontSize, Color color, float height, float width = 0f)
     {
         GameObject obj = CreateUIElement("Label", parent);
         RectTransform rt = obj.GetComponent<RectTransform>();
-        rt.sizeDelta = new Vector2(0, height);
+        rt.sizeDelta = new Vector2(width, height);
+
+        if (width > 0f)
+        {
+            LayoutElement layout = obj.AddComponent<LayoutElement>();
+            layout.preferredWidth = width;
+        }
 
         TextMeshProUGUI tmp = obj.AddComponent<TextMeshProUGUI>();
         tmp.text = text;
         tmp.fontSize = fontSize;
         tmp.color = color;
         tmp.alignment = TextAlignmentOptions.Left;
-        tmp.enableWordWrapping = true;
-
-        if (FontManager.Instance != null && FontManager.Instance.ChineseFont != null)
-            tmp.font = FontManager.Instance.ChineseFont;
-
+        tmp.enableWordWrapping = false;
+        tmp.overflowMode = TextOverflowModes.Ellipsis;
+        ApplyChineseFont(tmp);
         return tmp;
+    }
+
+    private GameObject CreatePanel(string name, Transform parent, Color bgColor)
+    {
+        GameObject panel = CreateUIElement(name, parent);
+        Image bg = panel.AddComponent<Image>();
+        bg.color = bgColor;
+        return panel;
     }
 
     private GameObject CreateUIElement(string name, Transform parent)
@@ -429,6 +477,17 @@ public class NPCModule : MonoBehaviour, IDebugModule
         if (go.GetComponent<RectTransform>() == null)
             go.AddComponent<RectTransform>();
         return go;
+    }
+
+    private void ApplyChineseFont(TextMeshProUGUI text)
+    {
+        if (FontManager.Instance != null && FontManager.Instance.ChineseFont != null)
+            text.font = FontManager.Instance.ChineseFont;
+    }
+
+    private int ParseIntOrDefault(string raw, int fallback)
+    {
+        return int.TryParse(raw, out int value) ? value : fallback;
     }
 
     private void StretchFull(RectTransform rt)

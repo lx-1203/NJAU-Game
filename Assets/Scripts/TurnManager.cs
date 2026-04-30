@@ -81,7 +81,7 @@ public class TurnManager : MonoBehaviour
         if (remaining == 0)
         {
             Debug.Log("[TurnManager] 行动点耗尽，准备推进回合...");
-            StartCoroutine(DelayedAdvanceRound());
+            RequestAdvanceRound();
         }
     }
 
@@ -89,6 +89,7 @@ public class TurnManager : MonoBehaviour
 
     /// <summary>是否正在等待考试完成</summary>
     private bool waitingForExam = false;
+    private bool isAdvanceQueued = false;
 
     /// <summary>暂存的回合推进结果（考试完成后继续处理）</summary>
     private GameState.RoundAdvanceResult pendingAdvanceResult;
@@ -98,9 +99,22 @@ public class TurnManager : MonoBehaviour
     /// <summary>
     /// 延迟推进回合，给 UI 一个反应时间
     /// </summary>
+    public bool RequestAdvanceRound()
+    {
+        if (GameState.Instance == null || waitingForExam || isAdvanceQueued)
+        {
+            return false;
+        }
+
+        isAdvanceQueued = true;
+        StartCoroutine(DelayedAdvanceRound());
+        return true;
+    }
+
     private IEnumerator DelayedAdvanceRound()
     {
         yield return new WaitForSeconds(0.5f);
+        isAdvanceQueued = false;
         DoAdvanceRound();
     }
 

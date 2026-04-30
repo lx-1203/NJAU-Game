@@ -1,0 +1,58 @@
+{
+  "id": "zhou_ran",
+  "nodes": [
+    {
+      "id": "Z001",
+      "speaker": "周然",
+      "portrait": "",
+      "content": "他窝在椅子里打了个哈欠，给你腾出半张桌子。",
+      "next": "Z002",
+      "choices": null
+    },
+    {
+      "id": "Z002",
+      "speaker": "周然",
+      "portrait": "",
+      "content": "怎么，来找我放松还是来找我挨骂学习？先说好，后者我不专业。",
+      "next": null,
+      "choices": [
+        {
+          "text": "陪我去操场走走",
+          "next": "Z003",
+          "condition": "",
+          "conditionHint": "",
+          "effects": [
+            { "type": "attribute", "target": "心情", "amount": 5 },
+            { "type": "attribute", "target": "压力", "amount": -3 }
+          ]
+        },
+        {
+          "text": "那你还是陪我复习吧",
+          "next": "Z004",
+          "condition": "学力>=20",
+          "conditionHint": "需要学力>=20",
+          "effects": [
+            { "type": "attribute", "target": "学力", "amount": 2 },
+            { "type": "attribute", "target": "压力", "amount": 2 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "Z003",
+      "speaker": "周然",
+      "portrait": "",
+      "content": "这我擅长。走吧，反正风吹一吹，人总会清醒一点。",
+      "next": null,
+      "choices": null
+    },
+    {
+      "id": "Z004",
+      "speaker": "周然",
+      "portrait": "",
+      "content": "行，既然你都开口了，我今天就勉强当一次上进青年。",
+      "next": null,
+      "choices": null
+    }
+  ]
+}

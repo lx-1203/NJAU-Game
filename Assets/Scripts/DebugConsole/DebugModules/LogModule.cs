@@ -1,144 +1,113 @@
 #if DEVELOPMENT_BUILD || UNITY_EDITOR
+using System.Collections.Generic;
+using System.Text;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
-using TMPro;
-using System.Collections.Generic;
 
-/// <summary>
-/// 日志调试模块 —— 可滚动日志列表 + 分类过滤
-/// </summary>
 public class LogModule : MonoBehaviour, IDebugModule
 {
-    private static readonly Color TextWhite = new Color(0.92f, 0.92f, 0.92f);
-    private static readonly Color TextGold  = new Color(1.0f, 0.85f, 0.30f);
-    private static readonly Color TextGray  = new Color(0.6f, 0.6f, 0.65f);
-    private static readonly Color BtnColor  = new Color(0.20f, 0.35f, 0.60f, 1.0f);
-    private static readonly Color BtnActive = new Color(0.30f, 0.50f, 0.75f, 1.0f);
+    private static readonly Color TextColor = new Color(0.92f, 0.92f, 0.92f);
+    private static readonly Color AccentColor = new Color(1f, 0.85f, 0.3f);
+    private static readonly Color ButtonColor = new Color(0.22f, 0.42f, 0.72f, 1f);
+    private static readonly Color ActiveColor = new Color(0.28f, 0.5f, 0.78f, 1f);
+    private static readonly Color DangerColor = new Color(0.68f, 0.28f, 0.28f, 1f);
 
+    private readonly string[] filters = { "All", "Attributes", "Time", "Economy", "Events" };
+    private readonly List<Image> filterBackgrounds = new List<Image>();
+
+    private string currentFilter = string.Empty;
+    private int activeFilterIndex;
     private TextMeshProUGUI logText;
     private ScrollRect scrollRect;
-    private string currentFilter = "";  // 空字符串 = 全部
-
-    private readonly string[] filterLabels = { "全部", "属性", "状态", "行动", "回合" };
-    private readonly List<Image> filterBtnBgs = new List<Image>();
-    private int activeFilterIndex = 0;
 
     public void Init(RectTransform parent)
     {
-        // 主容器
-        GameObject mainContent = CreateUIElement("MainContent", parent);
-        StretchFull(mainContent.GetComponent<RectTransform>());
+        GameObject root = CreateRect("Root", parent).gameObject;
+        StretchFull(root.GetComponent<RectTransform>());
 
-        // 过滤按钮行（顶部）
-        GameObject filterRow = CreateUIElement("FilterRow", mainContent.transform);
-        RectTransform filterRT = filterRow.GetComponent<RectTransform>();
-        filterRT.anchorMin = new Vector2(0, 1);
-        filterRT.anchorMax = new Vector2(1, 1);
-        filterRT.pivot = new Vector2(0.5f, 1);
-        filterRT.anchoredPosition = Vector2.zero;
-        filterRT.sizeDelta = new Vector2(0, 40f);
+        Transform filterRow = CreateHorizontalRow("FilterRow", root.transform, 6f);
+        RectTransform filterRect = filterRow.GetComponent<RectTransform>();
+        filterRect.anchorMin = new Vector2(0f, 1f);
+        filterRect.anchorMax = new Vector2(1f, 1f);
+        filterRect.pivot = new Vector2(0.5f, 1f);
+        filterRect.sizeDelta = new Vector2(0f, 42f);
 
-        HorizontalLayoutGroup hlg = filterRow.AddComponent<HorizontalLayoutGroup>();
-        hlg.spacing = 6f;
-        hlg.padding = new RectOffset(12, 12, 4, 4);
-        hlg.childAlignment = TextAnchor.MiddleLeft;
-        hlg.childControlWidth = false;
-        hlg.childControlHeight = true;
-        hlg.childForceExpandWidth = false;
-        hlg.childForceExpandHeight = true;
-
-        // 过滤按钮
-        for (int i = 0; i < filterLabels.Length; i++)
+        for (int i = 0; i < filters.Length; i++)
         {
-            int idx = i;
-            string filterCategory = i == 0 ? "" : filterLabels[i];
-            CreateFilterButton(filterRow.transform, filterLabels[i], idx, () =>
+            int capturedIndex = i;
+            string filter = filters[i] == "All" ? string.Empty : filters[i];
+            Button button = CreateButton(filterRow, filters[i], ButtonColor, () =>
             {
-                currentFilter = filterCategory;
-                activeFilterIndex = idx;
-                UpdateFilterHighlights();
+                currentFilter = filter;
+                activeFilterIndex = capturedIndex;
+                RefreshHighlights();
                 RefreshLogDisplay();
-            });
+            }, 82f, 30f);
+            filterBackgrounds.Add(button.GetComponent<Image>());
         }
 
-        // 清空按钮
-        CreateActionButton(filterRow.transform, "清空", () =>
+        CreateButton(filterRow, "Clear", DangerColor, () =>
         {
             DebugConsoleManager.ClearLogs();
             RefreshLogDisplay();
-        });
+        }, 64f, 30f);
 
-        // 日志滚动区域
-        GameObject scrollObj = CreateUIElement("LogScrollView", mainContent.transform);
-        RectTransform scrollObjRT = scrollObj.GetComponent<RectTransform>();
-        scrollObjRT.anchorMin = Vector2.zero;
-        scrollObjRT.anchorMax = Vector2.one;
-        scrollObjRT.offsetMin = new Vector2(0, 0);
-        scrollObjRT.offsetMax = new Vector2(0, -44f);
+        GameObject scrollObject = CreateRect("ScrollView", root.transform).gameObject;
+        RectTransform scrollRectTransform = scrollObject.GetComponent<RectTransform>();
+        scrollRectTransform.anchorMin = Vector2.zero;
+        scrollRectTransform.anchorMax = Vector2.one;
+        scrollRectTransform.offsetMin = Vector2.zero;
+        scrollRectTransform.offsetMax = new Vector2(0f, -44f);
 
-        scrollRect = scrollObj.AddComponent<ScrollRect>();
+        scrollRect = scrollObject.AddComponent<ScrollRect>();
         scrollRect.horizontal = false;
         scrollRect.vertical = true;
         scrollRect.scrollSensitivity = 30f;
 
-        // Viewport
-        GameObject viewport = CreateUIElement("Viewport", scrollObj.transform);
+        GameObject viewport = CreateRect("Viewport", scrollObject.transform).gameObject;
         StretchFull(viewport.GetComponent<RectTransform>());
         viewport.AddComponent<RectMask2D>();
         scrollRect.viewport = viewport.GetComponent<RectTransform>();
 
-        // Log Content
-        GameObject logContent = CreateUIElement("LogContent", viewport.transform);
-        RectTransform logContentRT = logContent.GetComponent<RectTransform>();
-        logContentRT.anchorMin = new Vector2(0, 1);
-        logContentRT.anchorMax = new Vector2(1, 1);
-        logContentRT.pivot = new Vector2(0, 1);
-        logContentRT.anchoredPosition = Vector2.zero;
-        logContentRT.sizeDelta = new Vector2(0, 100);
+        GameObject content = CreateRect("Content", viewport.transform).gameObject;
+        RectTransform contentRect = content.GetComponent<RectTransform>();
+        contentRect.anchorMin = new Vector2(0f, 1f);
+        contentRect.anchorMax = new Vector2(1f, 1f);
+        contentRect.pivot = new Vector2(0f, 1f);
+        contentRect.anchoredPosition = Vector2.zero;
+        content.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        scrollRect.content = contentRect;
 
-        ContentSizeFitter csf = logContent.AddComponent<ContentSizeFitter>();
-        csf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        GameObject textObject = CreateRect("LogText", content.transform).gameObject;
+        RectTransform textRect = textObject.GetComponent<RectTransform>();
+        textRect.anchorMin = new Vector2(0f, 1f);
+        textRect.anchorMax = new Vector2(1f, 1f);
+        textRect.pivot = new Vector2(0f, 1f);
+        textRect.anchoredPosition = Vector2.zero;
 
-        scrollRect.content = logContentRT;
-
-        // 日志文本
-        GameObject textObj = CreateUIElement("LogText", logContent.transform);
-        RectTransform textRT = textObj.GetComponent<RectTransform>();
-        textRT.anchorMin = new Vector2(0, 1);
-        textRT.anchorMax = new Vector2(1, 1);
-        textRT.pivot = new Vector2(0, 1);
-        textRT.anchoredPosition = Vector2.zero;
-        textRT.sizeDelta = new Vector2(0, 100);
-
-        logText = textObj.AddComponent<TextMeshProUGUI>();
+        logText = textObject.AddComponent<TextMeshProUGUI>();
         logText.fontSize = 13f;
-        logText.color = TextGray;
+        logText.color = TextColor;
         logText.alignment = TextAlignmentOptions.TopLeft;
         logText.enableWordWrapping = true;
         logText.overflowMode = TextOverflowModes.Overflow;
         logText.richText = true;
-
         if (FontManager.Instance != null && FontManager.Instance.ChineseFont != null)
+        {
             logText.font = FontManager.Instance.ChineseFont;
+        }
 
-        // 使文本自适应高度
-        ContentSizeFitter textCsf = textObj.AddComponent<ContentSizeFitter>();
-        textCsf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        textObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
-        LayoutElement textLE = textObj.AddComponent<LayoutElement>();
-        textLE.flexibleWidth = 1f;
-
-        // 初始高亮
-        UpdateFilterHighlights();
+        RefreshHighlights();
     }
 
     public void Refresh()
     {
-        RefreshLogDisplay();
-
-        // 订阅新日志事件
         DebugConsoleManager.OnLogAdded -= OnNewLogEntry;
         DebugConsoleManager.OnLogAdded += OnNewLogEntry;
+        RefreshLogDisplay();
     }
 
     private void OnDestroy()
@@ -148,7 +117,6 @@ public class LogModule : MonoBehaviour, IDebugModule
 
     private void OnNewLogEntry(DebugLogEntry entry)
     {
-        // 如果当前面板激活，立即刷新
         if (gameObject.activeInHierarchy)
         {
             RefreshLogDisplay();
@@ -157,140 +125,139 @@ public class LogModule : MonoBehaviour, IDebugModule
 
     private void RefreshLogDisplay()
     {
-        if (logText == null) return;
-
-        var entries = DebugConsoleManager.GetLogEntries();
-        var sb = new System.Text.StringBuilder();
-
-        int displayCount = 0;
-        for (int i = entries.Count - 1; i >= 0 && displayCount < 200; i--)
+        if (logText == null)
         {
-            var entry = entries[i];
+            return;
+        }
 
-            // 过滤
-            if (!string.IsNullOrEmpty(currentFilter) && entry.category != currentFilter)
+        List<DebugLogEntry> entries = DebugConsoleManager.GetLogEntries();
+        StringBuilder builder = new StringBuilder();
+        int shown = 0;
+
+        for (int i = entries.Count - 1; i >= 0 && shown < 200; i--)
+        {
+            DebugLogEntry entry = entries[i];
+            if (!MatchesFilter(entry))
+            {
                 continue;
+            }
 
-            // 格式化
-            sb.Append($"<color=#666666>[{entry.timestamp}]</color> ");
-            sb.Append($"<color=#4488CC>[{entry.category}]</color> ");
-            sb.Append($"<color=#DDDDDD>{entry.message}</color>\n");
-            displayCount++;
+            builder.Append("<color=#6C6C75>[");
+            builder.Append(entry.timestamp);
+            builder.Append("]</color> ");
+            builder.Append("<color=#6AB0FF>[");
+            builder.Append(entry.category);
+            builder.Append("]</color> ");
+            builder.Append(entry.message);
+            builder.Append('\n');
+            shown++;
         }
 
-        if (displayCount == 0)
+        if (shown == 0)
         {
-            sb.Append("<color=#555555>暂无日志记录</color>");
+            builder.Append("<color=#73737D>No logs for this filter.</color>");
         }
 
-        logText.text = sb.ToString();
+        logText.text = builder.ToString();
 
-        // 自动滚动到底部（最新的在顶部，所以滚动到顶部）
         if (scrollRect != null)
         {
             Canvas.ForceUpdateCanvases();
-            scrollRect.normalizedPosition = new Vector2(0, 1);
+            scrollRect.normalizedPosition = new Vector2(0f, 1f);
         }
     }
 
-    private void CreateFilterButton(Transform parent, string label, int index,
-        UnityEngine.Events.UnityAction onClick)
+    private bool MatchesFilter(DebugLogEntry entry)
     {
-        GameObject btnObj = CreateUIElement("Filter_" + label, parent);
-        RectTransform rt = btnObj.GetComponent<RectTransform>();
-        rt.sizeDelta = new Vector2(60f, 30f);
-
-        LayoutElement le = btnObj.AddComponent<LayoutElement>();
-        le.preferredWidth = 60f;
-
-        Image bg = btnObj.AddComponent<Image>();
-        bg.color = BtnColor;
-        filterBtnBgs.Add(bg);
-
-        Button btn = btnObj.AddComponent<Button>();
-        btn.targetGraphic = bg;
-        ColorBlock cb = btn.colors;
-        cb.normalColor = Color.white;
-        cb.highlightedColor = new Color(1.15f, 1.15f, 1.15f);
-        cb.pressedColor = new Color(0.85f, 0.85f, 0.85f);
-        btn.colors = cb;
-        btn.onClick.AddListener(onClick);
-
-        TextMeshProUGUI txt = CreateLabel(btnObj.transform, label, 13f, TextWhite, 30f);
-        txt.alignment = TextAlignmentOptions.Center;
-        StretchFull(txt.GetComponent<RectTransform>());
-    }
-
-    private void CreateActionButton(Transform parent, string label, UnityEngine.Events.UnityAction onClick)
-    {
-        GameObject btnObj = CreateUIElement("Btn_" + label, parent);
-        RectTransform rt = btnObj.GetComponent<RectTransform>();
-        rt.sizeDelta = new Vector2(50f, 30f);
-
-        LayoutElement le = btnObj.AddComponent<LayoutElement>();
-        le.preferredWidth = 50f;
-
-        Image bg = btnObj.AddComponent<Image>();
-        bg.color = new Color(0.60f, 0.20f, 0.20f, 1.0f);
-
-        Button btn = btnObj.AddComponent<Button>();
-        btn.targetGraphic = bg;
-        ColorBlock cb = btn.colors;
-        cb.normalColor = Color.white;
-        cb.highlightedColor = new Color(1.15f, 1.15f, 1.15f);
-        cb.pressedColor = new Color(0.85f, 0.85f, 0.85f);
-        btn.colors = cb;
-        btn.onClick.AddListener(onClick);
-
-        TextMeshProUGUI txt = CreateLabel(btnObj.transform, label, 12f, TextWhite, 30f);
-        txt.alignment = TextAlignmentOptions.Center;
-        StretchFull(txt.GetComponent<RectTransform>());
-    }
-
-    private void UpdateFilterHighlights()
-    {
-        for (int i = 0; i < filterBtnBgs.Count; i++)
+        if (string.IsNullOrEmpty(currentFilter))
         {
-            filterBtnBgs[i].color = (i == activeFilterIndex) ? BtnActive : BtnColor;
+            return true;
+        }
+
+        switch (currentFilter)
+        {
+            case "Attributes":
+                return entry.category == "Attributes" || entry.category == "Adjust";
+            case "Time":
+                return entry.category == "Time";
+            case "Economy":
+                return entry.category == "Economy";
+            case "Events":
+                return entry.category == "Event" || entry.category == "Events";
+            default:
+                return entry.category == currentFilter;
         }
     }
 
-    // ========== 工具方法 ==========
-
-    private TextMeshProUGUI CreateLabel(Transform parent, string text, float fontSize, Color color, float height)
+    private void RefreshHighlights()
     {
-        GameObject obj = CreateUIElement("Label", parent);
-        RectTransform rt = obj.GetComponent<RectTransform>();
-        rt.sizeDelta = new Vector2(0, height);
+        for (int i = 0; i < filterBackgrounds.Count; i++)
+        {
+            filterBackgrounds[i].color = i == activeFilterIndex ? ActiveColor : ButtonColor;
+        }
+    }
 
-        TextMeshProUGUI tmp = obj.AddComponent<TextMeshProUGUI>();
-        tmp.text = text;
-        tmp.fontSize = fontSize;
-        tmp.color = color;
-        tmp.alignment = TextAlignmentOptions.Left;
-        tmp.enableWordWrapping = false;
+    private Transform CreateHorizontalRow(string name, Transform parent, float spacing)
+    {
+        Transform row = CreateRect(name, parent);
+        HorizontalLayoutGroup layout = row.gameObject.AddComponent<HorizontalLayoutGroup>();
+        layout.spacing = spacing;
+        layout.padding = new RectOffset(12, 12, 6, 6);
+        layout.childAlignment = TextAnchor.MiddleLeft;
+        layout.childControlWidth = false;
+        layout.childControlHeight = true;
+        layout.childForceExpandWidth = false;
+        layout.childForceExpandHeight = false;
+        return row;
+    }
 
+    private Button CreateButton(Transform parent, string label, Color color, UnityEngine.Events.UnityAction onClick, float width, float height)
+    {
+        GameObject buttonObject = CreateRect($"Button_{label}", parent).gameObject;
+        LayoutElement layout = buttonObject.AddComponent<LayoutElement>();
+        layout.preferredWidth = width;
+        layout.preferredHeight = height;
+
+        Image background = buttonObject.AddComponent<Image>();
+        background.color = color;
+
+        Button button = buttonObject.AddComponent<Button>();
+        button.onClick.AddListener(onClick);
+
+        TextMeshProUGUI text = CreateText(buttonObject.transform, label, 13f, Color.white, TextAlignmentOptions.Center);
+        StretchFull(text.rectTransform);
+        return button;
+    }
+
+    private TextMeshProUGUI CreateText(Transform parent, string value, float fontSize, Color color, TextAlignmentOptions alignment)
+    {
+        GameObject textObject = CreateRect("Text", parent).gameObject;
+        TextMeshProUGUI text = textObject.AddComponent<TextMeshProUGUI>();
+        text.text = value;
+        text.fontSize = fontSize;
+        text.color = color;
+        text.alignment = alignment;
         if (FontManager.Instance != null && FontManager.Instance.ChineseFont != null)
-            tmp.font = FontManager.Instance.ChineseFont;
+        {
+            text.font = FontManager.Instance.ChineseFont;
+        }
 
-        return tmp;
+        return text;
     }
 
-    private GameObject CreateUIElement(string name, Transform parent)
+    private RectTransform CreateRect(string name, Transform parent)
     {
-        GameObject go = new GameObject(name);
-        go.transform.SetParent(parent, false);
-        if (go.GetComponent<RectTransform>() == null)
-            go.AddComponent<RectTransform>();
-        return go;
+        GameObject objectRef = new GameObject(name, typeof(RectTransform));
+        objectRef.transform.SetParent(parent, false);
+        return objectRef.GetComponent<RectTransform>();
     }
 
-    private void StretchFull(RectTransform rt)
+    private void StretchFull(RectTransform rect)
     {
-        rt.anchorMin = Vector2.zero;
-        rt.anchorMax = Vector2.one;
-        rt.offsetMin = Vector2.zero;
-        rt.offsetMax = Vector2.zero;
+        rect.anchorMin = Vector2.zero;
+        rect.anchorMax = Vector2.one;
+        rect.offsetMin = Vector2.zero;
+        rect.offsetMax = Vector2.zero;
     }
 }
 #endif

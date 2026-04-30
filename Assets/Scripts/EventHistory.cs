@@ -128,6 +128,11 @@ public class EventHistory : MonoBehaviour, ISaveable
         return new List<EventRecord>(records);
     }
 
+    public Dictionary<string, bool> GetAllFlagsSnapshot()
+    {
+        return new Dictionary<string, bool>(flags);
+    }
+
     // ========== 标记系统 ==========
 
     /// <summary>

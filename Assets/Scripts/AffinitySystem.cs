@@ -60,6 +60,33 @@ public class AffinitySystem : MonoBehaviour
         return relationships;
     }
 
+    /// <summary>
+    /// Debug helper: directly sets affinity while still propagating level and event updates.
+    /// </summary>
+    public void DebugSetAffinity(string npcId, int targetAffinity)
+    {
+        NPCRelationshipData rel = GetRelationship(npcId);
+        int clampedAffinity = Mathf.Clamp(targetAffinity, 0, 100);
+
+        int oldAffinity = rel.affinity;
+        AffinityLevel oldLevel = rel.level;
+
+        rel.affinity = clampedAffinity;
+        rel.level = CalculateLevel(rel.affinity, rel);
+        rel.consecutiveNoInteractionTurns = 0;
+
+        if (oldAffinity != rel.affinity)
+        {
+            OnAffinityChanged?.Invoke(npcId, oldAffinity, rel.affinity, rel.affinity - oldAffinity);
+        }
+
+        if (oldLevel != rel.level)
+        {
+            OnAffinityLevelChanged?.Invoke(npcId, oldLevel, rel.level);
+            relationshipExtension?.OnAffinityLevelChanged(npcId, oldLevel, rel.level);
+        }
+    }
+
     /// <summary>统计好感度等级 >= Friend 的NPC数量</summary>
     public int GetFriendOrAboveCount()
     {

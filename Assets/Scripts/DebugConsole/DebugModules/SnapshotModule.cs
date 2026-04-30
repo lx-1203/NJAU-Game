@@ -1,138 +1,92 @@
 #if DEVELOPMENT_BUILD || UNITY_EDITOR
+using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
-using TMPro;
-using System.Collections.Generic;
 
-/// <summary>
-/// 快照调试模块 —— 内存中的游戏状态快照管理
-/// </summary>
 public class SnapshotModule : MonoBehaviour, IDebugModule
 {
-    private static readonly Color TextWhite = new Color(0.92f, 0.92f, 0.92f);
-    private static readonly Color TextGold  = new Color(1.0f, 0.85f, 0.30f);
-    private static readonly Color BtnColor  = new Color(0.20f, 0.35f, 0.60f, 1.0f);
-    private static readonly Color BtnGreen  = new Color(0.20f, 0.55f, 0.30f, 1.0f);
-    private static readonly Color BtnRed    = new Color(0.60f, 0.20f, 0.20f, 1.0f);
+    private static readonly Color TextColor = new Color(0.92f, 0.92f, 0.92f);
+    private static readonly Color AccentColor = new Color(1f, 0.85f, 0.3f);
+    private static readonly Color ButtonColor = new Color(0.22f, 0.42f, 0.72f, 1f);
+    private static readonly Color PositiveColor = new Color(0.2f, 0.58f, 0.34f, 1f);
+    private static readonly Color NegativeColor = new Color(0.68f, 0.28f, 0.28f, 1f);
+    private static readonly Color FieldColor = new Color(0.16f, 0.16f, 0.22f, 0.95f);
 
     private TMP_InputField nameInput;
-    private Transform snapshotListContainer;
+    private Transform listRoot;
     private TextMeshProUGUI emptyHint;
 
     public void Init(RectTransform parent)
     {
-        // 滚动容器
-        GameObject scrollObj = CreateUIElement("ScrollView", parent);
-        StretchFull(scrollObj.GetComponent<RectTransform>());
+        Transform content = CreateScrollableContent(parent);
 
-        ScrollRect scrollRect = scrollObj.AddComponent<ScrollRect>();
-        scrollRect.horizontal = false;
-        scrollRect.vertical = true;
-        scrollRect.scrollSensitivity = 30f;
+        CreateLabel(content, "Snapshots", 20f, AccentColor, 34f);
 
-        GameObject viewport = CreateUIElement("Viewport", scrollObj.transform);
-        StretchFull(viewport.GetComponent<RectTransform>());
-        viewport.AddComponent<RectMask2D>();
-        scrollRect.viewport = viewport.GetComponent<RectTransform>();
+        GameObject row = CreateRect("SaveRow", content).gameObject;
+        row.AddComponent<LayoutElement>().preferredHeight = 40f;
+        HorizontalLayoutGroup layout = row.AddComponent<HorizontalLayoutGroup>();
+        layout.spacing = 10f;
+        layout.childAlignment = TextAnchor.MiddleLeft;
+        layout.childControlWidth = false;
+        layout.childControlHeight = true;
+        layout.childForceExpandWidth = false;
+        layout.childForceExpandHeight = true;
 
-        GameObject content = CreateUIElement("Content", viewport.transform);
-        RectTransform contentRT = content.GetComponent<RectTransform>();
-        contentRT.anchorMin = new Vector2(0, 1);
-        contentRT.anchorMax = new Vector2(1, 1);
-        contentRT.pivot = new Vector2(0.5f, 1);
-        contentRT.anchoredPosition = Vector2.zero;
+        TextMeshProUGUI label = CreateLabel(row.transform, "Name", 15f, TextColor, 36f);
+        label.gameObject.AddComponent<LayoutElement>().preferredWidth = 70f;
 
-        VerticalLayoutGroup vlg = content.AddComponent<VerticalLayoutGroup>();
-        vlg.spacing = 8f;
-        vlg.padding = new RectOffset(20, 20, 16, 16);
-        vlg.childAlignment = TextAnchor.UpperCenter;
-        vlg.childControlWidth = true;
-        vlg.childControlHeight = false;
-        vlg.childForceExpandWidth = true;
-        vlg.childForceExpandHeight = false;
+        nameInput = CreateInputField(row.transform, 220f);
 
-        ContentSizeFitter csf = content.AddComponent<ContentSizeFitter>();
-        csf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-        scrollRect.content = contentRT;
-
-        // 标题
-        CreateLabel(content.transform, "— 状态快照 —", 18f, TextGold, 30f);
-
-        // 输入行
-        GameObject inputRow = CreateUIElement("InputRow", content.transform);
-        RectTransform rowRT = inputRow.GetComponent<RectTransform>();
-        rowRT.sizeDelta = new Vector2(0, 40f);
-
-        HorizontalLayoutGroup hlg = inputRow.AddComponent<HorizontalLayoutGroup>();
-        hlg.spacing = 10f;
-        hlg.padding = new RectOffset(4, 4, 2, 2);
-        hlg.childAlignment = TextAnchor.MiddleLeft;
-        hlg.childControlWidth = false;
-        hlg.childControlHeight = true;
-        hlg.childForceExpandWidth = false;
-        hlg.childForceExpandHeight = true;
-
-        CreateLabel(inputRow.transform, "名称", 15f, TextWhite, 36f, 50f);
-        nameInput = CreateInputField(inputRow.transform, "输入快照名称", 240f, 32f);
-
-        CreateButton(inputRow.transform, "保存快照", 100f, BtnGreen, () =>
+        CreateButton(row.transform, "Save", PositiveColor, () =>
         {
-            if (DebugConsoleManager.Instance == null || nameInput == null) return;
-            string name = nameInput.text.Trim();
-            if (string.IsNullOrEmpty(name))
+            if (DebugConsoleManager.Instance == null || nameInput == null)
             {
-                DebugConsoleManager.Log("快照", "快照名称不能为空");
                 return;
             }
-            DebugConsoleManager.Instance.SaveSnapshot(name);
-            nameInput.text = "";
+
+            string snapshotName = nameInput.text.Trim();
+            if (string.IsNullOrEmpty(snapshotName))
+            {
+                DebugConsoleManager.Log("Snapshot", "Snapshot name is empty");
+                return;
+            }
+
+            DebugConsoleManager.Instance.SaveSnapshot(snapshotName);
+            nameInput.SetTextWithoutNotify(string.Empty);
             Refresh();
         });
 
-        // 分割线
-        CreateSeparator(content.transform);
+        CreateSpacer(content, 8f);
+        CreateLabel(content, "Saved Snapshots", 15f, TextColor, 24f);
+        emptyHint = CreateLabel(content, "No snapshots yet.", 14f, new Color(0.58f, 0.58f, 0.62f), 24f);
 
-        // 快照列表标题
-        CreateLabel(content.transform, "已保存的快照:", 15f, TextWhite, 24f);
-
-        // 空提示
-        emptyHint = CreateLabel(content.transform, "暂无快照", 14f, new Color(0.5f, 0.5f, 0.55f), 24f);
-
-        // 快照列表容器
-        GameObject listObj = CreateUIElement("SnapshotList", content.transform);
-        RectTransform listRT = listObj.GetComponent<RectTransform>();
-        listRT.sizeDelta = new Vector2(0, 0);
-
-        VerticalLayoutGroup listVlg = listObj.AddComponent<VerticalLayoutGroup>();
-        listVlg.spacing = 6f;
-        listVlg.childAlignment = TextAnchor.UpperCenter;
-        listVlg.childControlWidth = true;
-        listVlg.childControlHeight = false;
-        listVlg.childForceExpandWidth = true;
-        listVlg.childForceExpandHeight = false;
-
-        ContentSizeFitter listCsf = listObj.AddComponent<ContentSizeFitter>();
-        listCsf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-
-        snapshotListContainer = listObj.transform;
+        GameObject listObject = CreateRect("ListRoot", content).gameObject;
+        VerticalLayoutGroup listLayout = listObject.AddComponent<VerticalLayoutGroup>();
+        listLayout.spacing = 8f;
+        listLayout.childAlignment = TextAnchor.UpperCenter;
+        listLayout.childControlWidth = true;
+        listLayout.childControlHeight = false;
+        listLayout.childForceExpandWidth = true;
+        listLayout.childForceExpandHeight = false;
+        listObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        listRoot = listObject.transform;
     }
 
     public void Refresh()
     {
-        if (DebugConsoleManager.Instance == null || snapshotListContainer == null) return;
-
-        // 清空旧列表
-        for (int i = snapshotListContainer.childCount - 1; i >= 0; i--)
+        if (DebugConsoleManager.Instance == null || listRoot == null)
         {
-            Destroy(snapshotListContainer.GetChild(i).gameObject);
+            return;
+        }
+
+        for (int i = listRoot.childCount - 1; i >= 0; i--)
+        {
+            Destroy(listRoot.GetChild(i).gameObject);
         }
 
         List<string> names = DebugConsoleManager.Instance.GetSnapshotNames();
-
-        if (emptyHint != null)
-        {
-            emptyHint.gameObject.SetActive(names.Count == 0);
-        }
+        emptyHint.gameObject.SetActive(names.Count == 0);
 
         foreach (string name in names)
         {
@@ -140,177 +94,165 @@ public class SnapshotModule : MonoBehaviour, IDebugModule
         }
     }
 
-    private void CreateSnapshotEntry(string snapshotName)
+    private void CreateSnapshotEntry(string name)
     {
-        GameObject row = CreateUIElement("Snapshot_" + snapshotName, snapshotListContainer);
-        RectTransform rowRT = row.GetComponent<RectTransform>();
-        rowRT.sizeDelta = new Vector2(0, 36f);
+        GameObject row = CreateRect($"Snapshot_{name}", listRoot).gameObject;
+        row.AddComponent<LayoutElement>().preferredHeight = 38f;
+        row.AddComponent<Image>().color = new Color(0.1f, 0.1f, 0.16f, 0.65f);
 
-        Image rowBg = row.AddComponent<Image>();
-        rowBg.color = new Color(0.10f, 0.10f, 0.16f, 0.60f);
+        HorizontalLayoutGroup layout = row.AddComponent<HorizontalLayoutGroup>();
+        layout.spacing = 8f;
+        layout.padding = new RectOffset(8, 8, 2, 2);
+        layout.childAlignment = TextAnchor.MiddleLeft;
+        layout.childControlWidth = false;
+        layout.childControlHeight = true;
+        layout.childForceExpandWidth = false;
+        layout.childForceExpandHeight = true;
 
-        HorizontalLayoutGroup hlg = row.AddComponent<HorizontalLayoutGroup>();
-        hlg.spacing = 8f;
-        hlg.padding = new RectOffset(8, 8, 2, 2);
-        hlg.childAlignment = TextAnchor.MiddleLeft;
-        hlg.childControlWidth = false;
-        hlg.childControlHeight = true;
-        hlg.childForceExpandWidth = false;
-        hlg.childForceExpandHeight = true;
+        TextMeshProUGUI nameLabel = CreateLabel(row.transform, name, 14f, TextColor, 34f);
+        LayoutElement nameLayout = nameLabel.gameObject.AddComponent<LayoutElement>();
+        nameLayout.preferredWidth = 240f;
+        nameLayout.flexibleWidth = 1f;
 
-        // 名称文本
-        TextMeshProUGUI nameLabel = CreateLabel(row.transform, snapshotName, 14f, TextWhite, 32f, 200f);
-        LayoutElement nameLe = nameLabel.GetComponent<LayoutElement>();
-        if (nameLe == null) nameLe = nameLabel.gameObject.AddComponent<LayoutElement>();
-        nameLe.flexibleWidth = 1f;
-
-        // 加载按钮
-        string capturedName = snapshotName;
-        CreateButton(row.transform, "加载", 70f, BtnColor, () =>
+        CreateButton(row.transform, "Load", ButtonColor, () =>
         {
-            if (DebugConsoleManager.Instance == null) return;
-            DebugConsoleManager.Instance.LoadSnapshot(capturedName);
-        });
+            DebugConsoleManager.Instance?.LoadSnapshot(name);
+        }, 76f, 32f);
 
-        // 删除按钮
-        CreateButton(row.transform, "删除", 70f, BtnRed, () =>
+        CreateButton(row.transform, "Delete", NegativeColor, () =>
         {
-            if (DebugConsoleManager.Instance == null) return;
-            DebugConsoleManager.Instance.DeleteSnapshot(capturedName);
+            DebugConsoleManager.Instance?.DeleteSnapshot(name);
             Refresh();
-        });
+        }, 76f, 32f);
     }
 
-    // ========== 工具方法 ==========
-
-    private void CreateButton(Transform parent, string label, float width, Color color,
-        UnityEngine.Events.UnityAction onClick)
+    private Transform CreateScrollableContent(RectTransform parent)
     {
-        GameObject btnObj = CreateUIElement("Btn_" + label, parent);
-        RectTransform rt = btnObj.GetComponent<RectTransform>();
-        rt.sizeDelta = new Vector2(width, 32f);
+        GameObject scrollObject = CreateRect("ScrollView", parent).gameObject;
+        StretchFull(scrollObject.GetComponent<RectTransform>());
 
-        LayoutElement le = btnObj.AddComponent<LayoutElement>();
-        le.preferredWidth = width;
+        ScrollRect scrollRect = scrollObject.AddComponent<ScrollRect>();
+        scrollRect.horizontal = false;
+        scrollRect.vertical = true;
+        scrollRect.scrollSensitivity = 30f;
 
-        Image bg = btnObj.AddComponent<Image>();
-        bg.color = color;
+        GameObject viewport = CreateRect("Viewport", scrollObject.transform).gameObject;
+        StretchFull(viewport.GetComponent<RectTransform>());
+        viewport.AddComponent<RectMask2D>();
+        scrollRect.viewport = viewport.GetComponent<RectTransform>();
 
-        Button btn = btnObj.AddComponent<Button>();
-        btn.targetGraphic = bg;
-        ColorBlock cb = btn.colors;
-        cb.normalColor = Color.white;
-        cb.highlightedColor = new Color(1.15f, 1.15f, 1.15f);
-        cb.pressedColor = new Color(0.85f, 0.85f, 0.85f);
-        btn.colors = cb;
-        btn.onClick.AddListener(onClick);
+        GameObject contentObject = CreateRect("Content", viewport.transform).gameObject;
+        RectTransform contentRect = contentObject.GetComponent<RectTransform>();
+        contentRect.anchorMin = new Vector2(0f, 1f);
+        contentRect.anchorMax = new Vector2(1f, 1f);
+        contentRect.pivot = new Vector2(0.5f, 1f);
 
-        TextMeshProUGUI txt = CreateLabel(btnObj.transform, label, 13f, TextWhite, 32f);
-        txt.alignment = TextAlignmentOptions.Center;
-        StretchFull(txt.GetComponent<RectTransform>());
+        VerticalLayoutGroup layout = contentObject.AddComponent<VerticalLayoutGroup>();
+        layout.spacing = 8f;
+        layout.padding = new RectOffset(20, 20, 18, 18);
+        layout.childAlignment = TextAnchor.UpperCenter;
+        layout.childControlWidth = true;
+        layout.childControlHeight = false;
+        layout.childForceExpandWidth = true;
+        layout.childForceExpandHeight = false;
+
+        contentObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        scrollRect.content = contentRect;
+        return contentObject.transform;
     }
 
-    private TMP_InputField CreateInputField(Transform parent, string placeholder, float width, float height)
+    private TMP_InputField CreateInputField(Transform parent, float width)
     {
-        GameObject inputObj = CreateUIElement("InputField", parent);
-        RectTransform rt = inputObj.GetComponent<RectTransform>();
-        rt.sizeDelta = new Vector2(width, height);
+        GameObject inputObject = CreateRect("Input", parent).gameObject;
+        LayoutElement layout = inputObject.AddComponent<LayoutElement>();
+        layout.preferredWidth = width;
+        layout.preferredHeight = 34f;
 
-        LayoutElement le = inputObj.AddComponent<LayoutElement>();
-        le.preferredWidth = width;
+        Image background = inputObject.AddComponent<Image>();
+        background.color = FieldColor;
 
-        Image bg = inputObj.AddComponent<Image>();
-        bg.color = new Color(0.12f, 0.12f, 0.18f, 0.90f);
+        TMP_InputField input = inputObject.AddComponent<TMP_InputField>();
 
-        GameObject textArea = CreateUIElement("TextArea", inputObj.transform);
-        RectTransform textAreaRT = textArea.GetComponent<RectTransform>();
-        textAreaRT.anchorMin = Vector2.zero;
-        textAreaRT.anchorMax = Vector2.one;
-        textAreaRT.offsetMin = new Vector2(8, 2);
-        textAreaRT.offsetMax = new Vector2(-8, -2);
-        textArea.AddComponent<RectMask2D>();
+        GameObject viewport = CreateRect("Viewport", inputObject.transform).gameObject;
+        RectTransform viewportRect = viewport.GetComponent<RectTransform>();
+        viewportRect.anchorMin = Vector2.zero;
+        viewportRect.anchorMax = Vector2.one;
+        viewportRect.offsetMin = new Vector2(10f, 2f);
+        viewportRect.offsetMax = new Vector2(-10f, -2f);
+        viewport.AddComponent<RectMask2D>();
 
-        GameObject textObj = CreateUIElement("Text", textArea.transform);
-        StretchFull(textObj.GetComponent<RectTransform>());
-        TextMeshProUGUI text = textObj.AddComponent<TextMeshProUGUI>();
-        text.fontSize = 14f;
-        text.color = TextWhite;
-        text.alignment = TextAlignmentOptions.Left;
+        TextMeshProUGUI text = CreateLabel(viewport.transform, string.Empty, 15f, TextColor, 28f);
+        StretchFull(text.rectTransform);
+        text.alignment = TextAlignmentOptions.Center;
+
+        TextMeshProUGUI placeholder = CreateLabel(viewport.transform, "snapshot_name", 13f, new Color(0.55f, 0.55f, 0.6f), 28f);
+        StretchFull(placeholder.rectTransform);
+        placeholder.alignment = TextAlignmentOptions.Center;
+
+        input.textViewport = viewportRect;
+        input.textComponent = text;
+        input.placeholder = placeholder;
+        return input;
+    }
+
+    private Button CreateButton(Transform parent, string label, Color color, UnityEngine.Events.UnityAction onClick, float width = 92f, float height = 36f)
+    {
+        GameObject buttonObject = CreateRect($"Button_{label}", parent).gameObject;
+        LayoutElement layout = buttonObject.AddComponent<LayoutElement>();
+        layout.preferredWidth = width;
+        layout.preferredHeight = height;
+
+        Image background = buttonObject.AddComponent<Image>();
+        background.color = color;
+
+        Button button = buttonObject.AddComponent<Button>();
+        button.onClick.AddListener(onClick);
+
+        TextMeshProUGUI text = CreateLabel(buttonObject.transform, label, 14f, Color.white, height);
+        StretchFull(text.rectTransform);
+        text.alignment = TextAlignmentOptions.Center;
+        return button;
+    }
+
+    private TextMeshProUGUI CreateLabel(Transform parent, string textValue, float fontSize, Color color, float height)
+    {
+        GameObject textObject = CreateRect("Label", parent).gameObject;
+        textObject.AddComponent<LayoutElement>().preferredHeight = height;
+
+        TextMeshProUGUI text = textObject.AddComponent<TextMeshProUGUI>();
+        text.text = textValue;
+        text.fontSize = fontSize;
+        text.color = color;
+        text.alignment = TextAlignmentOptions.MidlineLeft;
+        text.enableWordWrapping = false;
+
         if (FontManager.Instance != null && FontManager.Instance.ChineseFont != null)
-            text.font = FontManager.Instance.ChineseFont;
-
-        GameObject phObj = CreateUIElement("Placeholder", textArea.transform);
-        StretchFull(phObj.GetComponent<RectTransform>());
-        TextMeshProUGUI phText = phObj.AddComponent<TextMeshProUGUI>();
-        phText.text = placeholder;
-        phText.fontSize = 14f;
-        phText.fontStyle = FontStyles.Italic;
-        phText.color = new Color(0.5f, 0.5f, 0.5f, 0.6f);
-        if (FontManager.Instance != null && FontManager.Instance.ChineseFont != null)
-            phText.font = FontManager.Instance.ChineseFont;
-
-        TMP_InputField inputField = inputObj.AddComponent<TMP_InputField>();
-        inputField.textViewport = textAreaRT;
-        inputField.textComponent = text;
-        inputField.placeholder = phText;
-        inputField.fontAsset = FontManager.Instance != null ? FontManager.Instance.ChineseFont : null;
-
-        return inputField;
-    }
-
-    private TextMeshProUGUI CreateLabel(Transform parent, string text, float fontSize, Color color,
-        float height, float width = 0f)
-    {
-        GameObject obj = CreateUIElement("Label_" + text, parent);
-        RectTransform rt = obj.GetComponent<RectTransform>();
-        rt.sizeDelta = new Vector2(width, height);
-
-        if (width > 0f)
         {
-            LayoutElement le = obj.AddComponent<LayoutElement>();
-            le.preferredWidth = width;
+            text.font = FontManager.Instance.ChineseFont;
         }
 
-        TextMeshProUGUI tmp = obj.AddComponent<TextMeshProUGUI>();
-        tmp.text = text;
-        tmp.fontSize = fontSize;
-        tmp.color = color;
-        tmp.alignment = TextAlignmentOptions.Left;
-        tmp.enableWordWrapping = false;
-
-        if (FontManager.Instance != null && FontManager.Instance.ChineseFont != null)
-            tmp.font = FontManager.Instance.ChineseFont;
-
-        return tmp;
+        return text;
     }
 
-    private void CreateSeparator(Transform parent)
+    private void CreateSpacer(Transform parent, float height)
     {
-        GameObject sep = CreateUIElement("Separator", parent);
-        RectTransform rt = sep.GetComponent<RectTransform>();
-        rt.sizeDelta = new Vector2(0, 2f);
-        Image img = sep.AddComponent<Image>();
-        img.color = new Color(0.3f, 0.3f, 0.4f, 0.5f);
-        LayoutElement le = sep.AddComponent<LayoutElement>();
-        le.preferredHeight = 2f;
-        le.flexibleWidth = 1f;
+        GameObject spacer = CreateRect("Spacer", parent).gameObject;
+        spacer.AddComponent<LayoutElement>().preferredHeight = height;
     }
 
-    private GameObject CreateUIElement(string name, Transform parent)
+    private RectTransform CreateRect(string name, Transform parent)
     {
-        GameObject go = new GameObject(name);
-        go.transform.SetParent(parent, false);
-        if (go.GetComponent<RectTransform>() == null)
-            go.AddComponent<RectTransform>();
-        return go;
+        GameObject objectRef = new GameObject(name, typeof(RectTransform));
+        objectRef.transform.SetParent(parent, false);
+        return objectRef.GetComponent<RectTransform>();
     }
 
-    private void StretchFull(RectTransform rt)
+    private void StretchFull(RectTransform rect)
     {
-        rt.anchorMin = Vector2.zero;
-        rt.anchorMax = Vector2.one;
-        rt.offsetMin = Vector2.zero;
-        rt.offsetMax = Vector2.zero;
+        rect.anchorMin = Vector2.zero;
+        rect.anchorMax = Vector2.one;
+        rect.offsetMin = Vector2.zero;
+        rect.offsetMax = Vector2.zero;
     }
 }
 #endif

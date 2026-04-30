@@ -103,6 +103,85 @@ public class EndingDeterminer : MonoBehaviour
         return CreateFallbackResult();
     }
 
+    public List<EndingDefinition> GetMatchingEndings(int maxCount = 5)
+    {
+        if (maxCount <= 0)
+            return new List<EndingDefinition>();
+
+        return endingDefinitions
+            .OrderBy(e => e.layer)
+            .ThenByDescending(e => e.stars)
+            .Where(CheckAllConditions)
+            .Take(maxCount)
+            .ToList();
+    }
+
+    public string DescribeCondition(EndingCondition condition)
+    {
+        EndingConditionType condType = condition.GetConditionType();
+        float target = condition.value;
+        float study = GetPlayerAttribute("study");
+        float charm = GetPlayerAttribute("charm");
+        float physique = GetPlayerAttribute("physique");
+        float leadership = GetPlayerAttribute("leadership");
+        float stress = GetPlayerAttribute("stress");
+        float mood = GetPlayerAttribute("mood");
+        bool hasScholarship = EventHistory.Instance != null && EventHistory.Instance.GetFlag("HasNationalScholarship");
+        int cheatingCount = CheatingSystem.Instance != null ? CheatingSystem.Instance.CaughtCount : 0;
+
+        switch (condType)
+        {
+            case EndingConditionType.GPA_GreaterOrEqual:
+                return $"GPA {GetCurrentGPA():F2} >= {target:F2}";
+            case EndingConditionType.GPA_Less:
+                return $"GPA {GetCurrentGPA():F2} < {target:F2}";
+            case EndingConditionType.Study_GreaterOrEqual:
+                return $"Study {study:F0} >= {target:F0}";
+            case EndingConditionType.Charm_GreaterOrEqual:
+                return $"Charm {charm:F0} >= {target:F0}";
+            case EndingConditionType.Physique_GreaterOrEqual:
+                return $"Physique {physique:F0} >= {target:F0}";
+            case EndingConditionType.Leadership_GreaterOrEqual:
+                return $"Leadership {leadership:F0} >= {target:F0}";
+            case EndingConditionType.Stress_GreaterOrEqual:
+                return $"Stress {stress:F0} >= {target:F0}";
+            case EndingConditionType.Mood_Equals:
+                return $"Mood {mood:F0} == {target:F0}";
+            case EndingConditionType.Mood_Less:
+                return $"Mood {mood:F0} < {target:F0}";
+            case EndingConditionType.Money_Less:
+                return $"Money {GetMoney():F0} < {target:F0}";
+            case EndingConditionType.Money_GreaterOrEqual:
+                return $"Money {GetMoney():F0} >= {target:F0}";
+            case EndingConditionType.HasPartner:
+                return $"HasPartner = {CheckHasPartner()}";
+            case EndingConditionType.RomanceLevel_GreaterOrEqual:
+                return $"RomanceHealth {GetMaxRomanceHealth():F0} >= {target:F0}";
+            case EndingConditionType.IsStudentCouncilPresident:
+                return $"StudentCouncilPresident = {CheckIsStudentCouncilPresident()}";
+            case EndingConditionType.IsPartyMember:
+                return $"PartyMember = {CheckIsPartyMember()}";
+            case EndingConditionType.HasNationalScholarship:
+                return $"HasNationalScholarship = {hasScholarship}";
+            case EndingConditionType.CheatingCount_GreaterOrEqual:
+                return $"CheatingCount {cheatingCount} >= {target:F0}";
+            case EndingConditionType.SlackingValue_GreaterOrEqual:
+                return $"SlackingValue {GetSlackingValue():F0} >= {target:F0}";
+            case EndingConditionType.MentalHealth_Equals:
+                return $"MentalHealth {GetMentalHealth():F0} == {target:F0}";
+            case EndingConditionType.TotalStudyCount_GreaterOrEqual:
+                return $"StudyCount {GetStudyCount():F0} >= {target:F0}";
+            case EndingConditionType.TotalSocialCount_GreaterOrEqual:
+                return $"SocialCount {GetSocialCount():F0} >= {target:F0}";
+            case EndingConditionType.GraduationScore_GreaterOrEqual:
+                return $"GraduationScore {GetGraduationScore():F1} >= {target:F1}";
+            case EndingConditionType.AlwaysTrue:
+                return "AlwaysTrue";
+            default:
+                return condType.ToString();
+        }
+    }
+
     /// <summary>
     /// 检查一个结局定义的所有条件 (AND 关系)
     /// </summary>

@@ -117,6 +117,12 @@ public class OpeningStoryManager : MonoBehaviour, IPointerClickHandler
             return false;
         }
 
+        if (StartupFlowSettings.SkipOpeningStory)
+        {
+            hasPendingNewGameCharacter = false;
+            return false;
+        }
+
         if (!hasPendingNewGameCharacter || hasPlayedPendingOpening || isOpeningPlaying)
         {
             return false;

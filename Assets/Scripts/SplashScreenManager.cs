@@ -71,6 +71,12 @@ public class SplashScreenManager : MonoBehaviour
 
     private void Start()
     {
+        if (StartupFlowSettings.SkipSplashLogo)
+        {
+            SkipToEnd();
+            return;
+        }
+
         StartCoroutine(AnimationSequence());
     }
 

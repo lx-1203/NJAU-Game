@@ -345,6 +345,16 @@ public class InfoPanelManager : MonoBehaviour
 
     private void CreateNPCListItem(NPCRelationshipData rel, NPCData npcData)
     {
+        if (builder == null || builder.npcListContent == null || rel == null || npcData == null)
+        {
+            return;
+        }
+
+        if (TryCreateNPCListItemSafe(rel, npcData))
+        {
+            return;
+        }
+
         GameObject item = new GameObject($"NPCItem_{rel.npcId}");
         item.transform.SetParent(builder.npcListContent, false);
 
@@ -376,11 +386,70 @@ public class InfoPanelManager : MonoBehaviour
         txt.enableWordWrapping = false;
         txt.overflowMode = TextOverflowModes.Ellipsis;
 
-        RectTransform txtRT = txt.GetComponent<RectTransform>();
-        txtRT.anchorMin = Vector2.zero;
-        txtRT.anchorMax = Vector2.one;
-        txtRT.offsetMin = new Vector2(10, 0);
-        txtRT.offsetMax = new Vector2(-10, 0);
+        RectTransform txtRT = txt.rectTransform;
+        if (txtRT != null)
+        {
+            txtRT.anchorMin = Vector2.zero;
+            txtRT.anchorMax = Vector2.one;
+            txtRT.offsetMin = new Vector2(10, 0);
+            txtRT.offsetMax = new Vector2(-10, 0);
+        }
+    }
+
+    private bool TryCreateNPCListItemSafe(NPCRelationshipData rel, NPCData npcData)
+    {
+        if (builder == null || builder.npcListContent == null || rel == null || npcData == null)
+        {
+            return false;
+        }
+
+        GameObject item = new GameObject($"NPCItem_{rel.npcId}");
+        item.transform.SetParent(builder.npcListContent, false);
+
+        RectTransform itemRT = item.AddComponent<RectTransform>();
+        itemRT.sizeDelta = new Vector2(280, 50);
+
+        Image bg = item.AddComponent<Image>();
+        bg.color = new Color(0.15f, 0.15f, 0.20f, 1.0f);
+
+        Button btn = item.AddComponent<Button>();
+        btn.targetGraphic = bg;
+        ColorBlock cb = btn.colors;
+        cb.normalColor = new Color(0.15f, 0.15f, 0.20f, 1.0f);
+        cb.highlightedColor = new Color(0.20f, 0.20f, 0.25f, 1.0f);
+        cb.pressedColor = new Color(0.10f, 0.10f, 0.15f, 1.0f);
+        cb.selectedColor = cb.highlightedColor;
+        btn.colors = cb;
+
+        string npcId = rel.npcId;
+        btn.onClick.AddListener(() => SelectNPC(npcId));
+
+        int stars = GetStarRating(rel.affinity);
+        string starText = new string('\u2605', stars);
+
+        GameObject labelObj = new GameObject("Label");
+        labelObj.transform.SetParent(item.transform, false);
+
+        RectTransform labelRT = labelObj.AddComponent<RectTransform>();
+        labelRT.anchorMin = Vector2.zero;
+        labelRT.anchorMax = Vector2.one;
+        labelRT.offsetMin = new Vector2(10, 0);
+        labelRT.offsetMax = new Vector2(-10, 0);
+
+        TextMeshProUGUI txt = labelObj.AddComponent<TextMeshProUGUI>();
+        txt.text = $"{npcData.displayName}  {starText}";
+        txt.fontSize = 16f;
+        txt.color = new Color(0.92f, 0.92f, 0.92f);
+        txt.alignment = TextAlignmentOptions.Center;
+        txt.enableWordWrapping = false;
+        txt.overflowMode = TextOverflowModes.Ellipsis;
+
+        if (FontManager.Instance != null)
+        {
+            FontManager.Instance.ApplyChineseFont(txt);
+        }
+
+        return true;
     }
 
     private int GetStarRating(int affinity)

@@ -1,396 +1,422 @@
 #if DEVELOPMENT_BUILD || UNITY_EDITOR
+using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
-using TMPro;
-using System.Collections.Generic;
 
-/// <summary>
-/// 属性调试模块 —— 9 个属性滑块 + 金钱输入 + 行动点显示
-/// </summary>
 public class AttributeModule : MonoBehaviour, IDebugModule
 {
-    // ========== 颜色 ==========
-    private static readonly Color TextWhite = new Color(0.92f, 0.92f, 0.92f);
-    private static readonly Color TextGold  = new Color(1.0f, 0.85f, 0.30f);
-    private static readonly Color SliderBg  = new Color(0.15f, 0.15f, 0.22f, 0.80f);
-    private static readonly Color SliderFill = new Color(0.25f, 0.50f, 0.80f, 1.0f);
-
-    // ========== 属性定义 ==========
-    private struct AttrDef
+    private struct AttributeDefinition
     {
         public string label;
-        public string propertyName;
-        public int maxValue;
+        public string key;
+        public int min;
+        public int max;
 
-        public AttrDef(string label, string propertyName, int maxValue = 100)
+        public AttributeDefinition(string label, string key, int min, int max)
         {
             this.label = label;
-            this.propertyName = propertyName;
-            this.maxValue = maxValue;
+            this.key = key;
+            this.min = min;
+            this.max = max;
         }
     }
 
-    private static readonly AttrDef[] attrDefs =
+    private sealed class AttributeRow
     {
-        new AttrDef("学力", "Study"),
-        new AttrDef("魅力", "Charm"),
-        new AttrDef("体魄", "Physique"),
-        new AttrDef("领导力", "Leadership"),
-        new AttrDef("压力", "Stress"),
-        new AttrDef("心情", "Mood"),
-        new AttrDef("黑暗值", "Darkness"),
-        new AttrDef("负罪感", "Guilt"),
-        new AttrDef("幸运", "Luck"),
+        public AttributeDefinition definition;
+        public Slider slider;
+        public TMP_InputField input;
+    }
+
+    private static readonly Color TextColor = new Color(0.92f, 0.92f, 0.92f);
+    private static readonly Color AccentColor = new Color(1f, 0.85f, 0.3f);
+    private static readonly Color FieldColor = new Color(0.16f, 0.16f, 0.22f, 0.95f);
+    private static readonly Color SliderBackgroundColor = new Color(0.14f, 0.14f, 0.2f, 0.95f);
+    private static readonly Color SliderFillColor = new Color(0.28f, 0.55f, 0.86f, 1f);
+    private static readonly Color ButtonColor = new Color(0.22f, 0.42f, 0.72f, 1f);
+
+    private static readonly AttributeDefinition[] Definitions =
+    {
+        new AttributeDefinition("Study", "Study", 0, 999),
+        new AttributeDefinition("Charm", "Charm", 0, 999),
+        new AttributeDefinition("Physique", "Physique", 0, 999),
+        new AttributeDefinition("Leadership", "Leadership", 0, 999),
+        new AttributeDefinition("Stress", "Stress", 0, PlayerAttributes.MaxStatusValue),
+        new AttributeDefinition("Mood", "Mood", 0, PlayerAttributes.MaxStatusValue),
+        new AttributeDefinition("Darkness", "Darkness", 0, 999),
+        new AttributeDefinition("Guilt", "Guilt", 0, PlayerAttributes.MaxStatusValue),
+        new AttributeDefinition("Luck", "Luck", 0, PlayerAttributes.MaxStatusValue),
+        new AttributeDefinition("Money", "Money", -999999, 999999),
     };
 
-    // ========== UI 引用 ==========
-    private readonly List<Slider> attrSliders = new List<Slider>();
-    private readonly List<TextMeshProUGUI> valueTexts = new List<TextMeshProUGUI>();
-    private TMP_InputField moneyInput;
+    private readonly List<AttributeRow> rows = new List<AttributeRow>();
     private TextMeshProUGUI apText;
     private bool isRefreshing;
 
-    // ========== IDebugModule ==========
-
     public void Init(RectTransform parent)
     {
-        // 创建可滚动的内容区域
-        GameObject scrollObj = CreateUIElement("ScrollView", parent);
-        StretchFull(scrollObj.GetComponent<RectTransform>());
+        GameObject scrollObject = CreateRect("ScrollView", parent).gameObject;
+        StretchFull(scrollObject.GetComponent<RectTransform>());
 
-        ScrollRect scrollRect = scrollObj.AddComponent<ScrollRect>();
+        ScrollRect scrollRect = scrollObject.AddComponent<ScrollRect>();
         scrollRect.horizontal = false;
         scrollRect.vertical = true;
-        scrollRect.scrollSensitivity = 30f;
+        scrollRect.scrollSensitivity = 35f;
 
-        // Viewport
-        GameObject viewport = CreateUIElement("Viewport", scrollObj.transform);
+        GameObject viewport = CreateRect("Viewport", scrollObject.transform).gameObject;
         StretchFull(viewport.GetComponent<RectTransform>());
         viewport.AddComponent<RectMask2D>();
         scrollRect.viewport = viewport.GetComponent<RectTransform>();
 
-        // Content
-        GameObject content = CreateUIElement("Content", viewport.transform);
-        RectTransform contentRT = content.GetComponent<RectTransform>();
-        contentRT.anchorMin = new Vector2(0, 1);
-        contentRT.anchorMax = new Vector2(1, 1);
-        contentRT.pivot = new Vector2(0.5f, 1);
-        contentRT.anchoredPosition = Vector2.zero;
+        GameObject content = CreateRect("Content", viewport.transform).gameObject;
+        RectTransform contentRect = content.GetComponent<RectTransform>();
+        contentRect.anchorMin = new Vector2(0f, 1f);
+        contentRect.anchorMax = new Vector2(1f, 1f);
+        contentRect.pivot = new Vector2(0.5f, 1f);
 
-        VerticalLayoutGroup vlg = content.AddComponent<VerticalLayoutGroup>();
-        vlg.spacing = 6f;
-        vlg.padding = new RectOffset(20, 20, 16, 16);
-        vlg.childAlignment = TextAnchor.UpperCenter;
-        vlg.childControlWidth = true;
-        vlg.childControlHeight = false;
-        vlg.childForceExpandWidth = true;
-        vlg.childForceExpandHeight = false;
+        VerticalLayoutGroup layout = content.AddComponent<VerticalLayoutGroup>();
+        layout.spacing = 8f;
+        layout.padding = new RectOffset(20, 20, 18, 18);
+        layout.childAlignment = TextAnchor.UpperCenter;
+        layout.childControlWidth = true;
+        layout.childControlHeight = false;
+        layout.childForceExpandWidth = true;
+        layout.childForceExpandHeight = false;
 
-        ContentSizeFitter csf = content.AddComponent<ContentSizeFitter>();
-        csf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        ContentSizeFitter fitter = content.AddComponent<ContentSizeFitter>();
+        fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        scrollRect.content = contentRect;
 
-        scrollRect.content = contentRT;
+        CreateLabel(content.transform, "Attributes", 20f, AccentColor, 34f);
+        CreateLabel(content.transform, "Edit exact values directly, or drag the slider for quick tuning.", 14f, TextColor, 26f);
 
-        // 标题
-        CreateLabel(content.transform, "— 属性调节器 —", 18f, TextGold, 30f);
-
-        // 9 个属性滑块
-        for (int i = 0; i < attrDefs.Length; i++)
+        foreach (AttributeDefinition definition in Definitions)
         {
-            int idx = i;
-            CreateAttributeSlider(content.transform, attrDefs[i], idx);
+            rows.Add(CreateAttributeRow(content.transform, definition));
         }
 
-        // 分割线
-        CreateSeparator(content.transform);
+        CreateSpacer(content.transform, 8f);
+        apText = CreateLabel(content.transform, "AP: - / -", 15f, TextColor, 28f);
 
-        // 金钱输入
-        CreateMoneyRow(content.transform);
-
-        // 行动点显示
-        CreateAPRow(content.transform);
+        CreateButtonRow(content.transform);
     }
 
     public void Refresh()
     {
-        if (PlayerAttributes.Instance == null) return;
-
         isRefreshing = true;
 
-        var pa = PlayerAttributes.Instance;
-        int[] values = { pa.Study, pa.Charm, pa.Physique, pa.Leadership,
-                         pa.Stress, pa.Mood, pa.Darkness, pa.Guilt, pa.Luck };
-
-        for (int i = 0; i < attrSliders.Count && i < values.Length; i++)
+        foreach (AttributeRow row in rows)
         {
-            attrSliders[i].SetValueWithoutNotify(values[i]);
-            valueTexts[i].text = values[i].ToString();
-        }
-
-        if (moneyInput != null && GameState.Instance != null)
-        {
-            moneyInput.SetTextWithoutNotify(GameState.Instance.Money.ToString());
+            int value = DebugPresets.GetAttributeValue(row.definition.key);
+            row.slider.minValue = row.definition.min;
+            row.slider.maxValue = row.definition.max;
+            row.slider.SetValueWithoutNotify(Mathf.Clamp(value, row.definition.min, row.definition.max));
+            row.input.SetTextWithoutNotify(value.ToString());
         }
 
         if (apText != null && GameState.Instance != null)
         {
-            apText.text = $"行动点: {GameState.Instance.ActionPoints} / {GameState.Instance.EffectiveMaxActionPoints}";
+            apText.text = $"AP: {GameState.Instance.ActionPoints} / {GameState.Instance.EffectiveMaxActionPoints}";
         }
 
         isRefreshing = false;
     }
 
-    // ========== 滑块创建 ==========
-
-    private void CreateAttributeSlider(Transform parent, AttrDef def, int index)
+    private AttributeRow CreateAttributeRow(Transform parent, AttributeDefinition definition)
     {
-        GameObject row = CreateUIElement(def.label + "Row", parent);
-        RectTransform rowRT = row.GetComponent<RectTransform>();
-        rowRT.sizeDelta = new Vector2(0, 36f);
+        GameObject rowObject = CreateRect($"{definition.key}Row", parent).gameObject;
+        LayoutElement rowLayout = rowObject.AddComponent<LayoutElement>();
+        rowLayout.preferredHeight = 42f;
 
-        HorizontalLayoutGroup hlg = row.AddComponent<HorizontalLayoutGroup>();
-        hlg.spacing = 8f;
-        hlg.padding = new RectOffset(4, 4, 2, 2);
-        hlg.childAlignment = TextAnchor.MiddleLeft;
-        hlg.childControlWidth = false;
-        hlg.childControlHeight = true;
-        hlg.childForceExpandWidth = false;
-        hlg.childForceExpandHeight = true;
+        HorizontalLayoutGroup layout = rowObject.AddComponent<HorizontalLayoutGroup>();
+        layout.spacing = 8f;
+        layout.childAlignment = TextAnchor.MiddleLeft;
+        layout.childControlWidth = false;
+        layout.childControlHeight = true;
+        layout.childForceExpandWidth = false;
+        layout.childForceExpandHeight = true;
 
-        // 属性名标签
-        CreateLabel(row.transform, def.label, 15f, TextWhite, 36f, 70f);
+        TextMeshProUGUI nameText = CreateLabel(rowObject.transform, definition.label, 15f, TextColor, 42f);
+        LayoutElement nameLayout = nameText.gameObject.AddComponent<LayoutElement>();
+        nameLayout.preferredWidth = 120f;
 
-        // 滑块
-        Slider slider = CreateSlider(row.transform, 0, def.maxValue);
-        LayoutElement sliderLE = slider.gameObject.AddComponent<LayoutElement>();
-        sliderLE.flexibleWidth = 1f;
-        sliderLE.preferredHeight = 24f;
+        Button minusButton = CreateTinyButton(rowObject.transform, "-", () => NudgeValue(definition, -DebugPresets.CurrentStep));
+        SetFixedSize(minusButton.gameObject, 34f, 34f);
 
-        // 数值文本
-        TextMeshProUGUI valText = CreateLabel(row.transform, "0", 14f, TextGold, 36f, 50f);
-        valText.alignment = TextAlignmentOptions.Right;
+        TMP_InputField input = CreateInputField(rowObject.transform, 90f);
+        input.contentType = TMP_InputField.ContentType.IntegerNumber;
+        input.onEndEdit.AddListener(value => ApplyTypedValue(definition, value));
 
-        attrSliders.Add(slider);
-        valueTexts.Add(valText);
+        Button plusButton = CreateTinyButton(rowObject.transform, "+", () => NudgeValue(definition, DebugPresets.CurrentStep));
+        SetFixedSize(plusButton.gameObject, 34f, 34f);
 
-        // 值变化回调
-        slider.onValueChanged.AddListener((val) =>
+        Slider slider = CreateSlider(rowObject.transform, definition.min, definition.max);
+        LayoutElement sliderLayout = slider.gameObject.AddComponent<LayoutElement>();
+        sliderLayout.flexibleWidth = 1f;
+        sliderLayout.preferredHeight = 24f;
+        slider.onValueChanged.AddListener(value =>
         {
-            if (isRefreshing) return;
-
-            int intVal = Mathf.RoundToInt(val);
-            valText.text = intVal.ToString();
-
-            if (PlayerAttributes.Instance == null) return;
-
-            switch (index)
+            if (isRefreshing)
             {
-                case 0: PlayerAttributes.Instance.Study = intVal; break;
-                case 1: PlayerAttributes.Instance.Charm = intVal; break;
-                case 2: PlayerAttributes.Instance.Physique = intVal; break;
-                case 3: PlayerAttributes.Instance.Leadership = intVal; break;
-                case 4: PlayerAttributes.Instance.Stress = intVal; break;
-                case 5: PlayerAttributes.Instance.Mood = intVal; break;
-                case 6: PlayerAttributes.Instance.Darkness = intVal; break;
-                case 7: PlayerAttributes.Instance.Guilt = intVal; break;
-                case 8: PlayerAttributes.Instance.Luck = intVal; break;
+                return;
             }
 
-            DebugConsoleManager.Log("属性", $"{def.label} → {intVal}");
+            int targetValue = Mathf.RoundToInt(value);
+            DebugPresets.SetAttributeValue(definition.key, targetValue);
+            input.SetTextWithoutNotify(DebugPresets.GetAttributeValue(definition.key).ToString());
+            DebugConsoleManager.Log("Attributes", $"{definition.key} -> {DebugPresets.GetAttributeValue(definition.key)}");
+            Refresh();
+        });
+
+        return new AttributeRow
+        {
+            definition = definition,
+            slider = slider,
+            input = input
+        };
+    }
+
+    private void ApplyTypedValue(AttributeDefinition definition, string value)
+    {
+        if (isRefreshing)
+        {
+            return;
+        }
+
+        if (!int.TryParse(value, out int parsed))
+        {
+            Refresh();
+            return;
+        }
+
+        parsed = Mathf.Clamp(parsed, definition.min, definition.max);
+        DebugPresets.SetAttributeValue(definition.key, parsed);
+        DebugConsoleManager.Log("Attributes", $"{definition.key} -> {parsed}");
+        Refresh();
+    }
+
+    private void NudgeValue(AttributeDefinition definition, int delta)
+    {
+        int current = DebugPresets.GetAttributeValue(definition.key);
+        int scaledDelta = definition.key == "Money" ? delta * 100 : delta;
+        int target = Mathf.Clamp(current + scaledDelta, definition.min, definition.max);
+        DebugPresets.SetAttributeValue(definition.key, target);
+        DebugConsoleManager.Log("Attributes", $"{definition.key} -> {target}");
+        Refresh();
+    }
+
+    private void CreateButtonRow(Transform parent)
+    {
+        GameObject rowObject = CreateRect("ButtonRow", parent).gameObject;
+        LayoutElement rowLayout = rowObject.AddComponent<LayoutElement>();
+        rowLayout.preferredHeight = 40f;
+
+        HorizontalLayoutGroup layout = rowObject.AddComponent<HorizontalLayoutGroup>();
+        layout.spacing = 10f;
+        layout.childAlignment = TextAnchor.MiddleLeft;
+        layout.childControlWidth = false;
+        layout.childControlHeight = true;
+        layout.childForceExpandWidth = false;
+        layout.childForceExpandHeight = false;
+
+        CreateWideButton(rowObject.transform, "Preset: Freshman", () =>
+        {
+            if (PlayerAttributes.Instance == null)
+            {
+                return;
+            }
+
+            PlayerAttributes.Instance.SetAll(12, 8, 10, 6, 15, 80, 0, 0, 55);
+            if (GameState.Instance != null)
+            {
+                GameState.Instance.Money = 8000;
+            }
+
+            DebugConsoleManager.Log("Attributes", "Applied freshman preset");
+            Refresh();
+        });
+
+        CreateWideButton(rowObject.transform, "Preset: Max", () =>
+        {
+            if (PlayerAttributes.Instance == null)
+            {
+                return;
+            }
+
+            PlayerAttributes.Instance.SetAll(100, 100, 100, 100, 0, 100, 100, 0, 100);
+            if (GameState.Instance != null)
+            {
+                GameState.Instance.Money = 999999;
+            }
+
+            DebugConsoleManager.Log("Attributes", "Applied max preset");
+            Refresh();
+        });
+
+        CreateWideButton(rowObject.transform, "Clamp Status", () =>
+        {
+            if (PlayerAttributes.Instance == null)
+            {
+                return;
+            }
+
+            PlayerAttributes.Instance.Stress = Mathf.Clamp(PlayerAttributes.Instance.Stress, 0, PlayerAttributes.MaxStatusValue);
+            PlayerAttributes.Instance.Mood = Mathf.Clamp(PlayerAttributes.Instance.Mood, 0, PlayerAttributes.MaxStatusValue);
+            PlayerAttributes.Instance.Guilt = Mathf.Clamp(PlayerAttributes.Instance.Guilt, 0, PlayerAttributes.MaxStatusValue);
+            PlayerAttributes.Instance.Luck = Mathf.Clamp(PlayerAttributes.Instance.Luck, 0, PlayerAttributes.MaxStatusValue);
+            Refresh();
         });
     }
 
-    private void CreateMoneyRow(Transform parent)
+    private Slider CreateSlider(Transform parent, int min, int max)
     {
-        GameObject row = CreateUIElement("MoneyRow", parent);
-        RectTransform rowRT = row.GetComponent<RectTransform>();
-        rowRT.sizeDelta = new Vector2(0, 40f);
+        GameObject sliderObject = CreateRect("Slider", parent).gameObject;
+        Image background = sliderObject.AddComponent<Image>();
+        background.color = SliderBackgroundColor;
 
-        HorizontalLayoutGroup hlg = row.AddComponent<HorizontalLayoutGroup>();
-        hlg.spacing = 8f;
-        hlg.padding = new RectOffset(4, 4, 2, 2);
-        hlg.childAlignment = TextAnchor.MiddleLeft;
-        hlg.childControlWidth = false;
-        hlg.childControlHeight = true;
-        hlg.childForceExpandWidth = false;
-        hlg.childForceExpandHeight = true;
-
-        CreateLabel(row.transform, "金钱", 15f, TextGold, 40f, 70f);
-
-        // InputField
-        moneyInput = CreateInputField(row.transform, "0", 300f, 36f);
-        moneyInput.contentType = TMP_InputField.ContentType.IntegerNumber;
-        moneyInput.onEndEdit.AddListener((val) =>
-        {
-            if (isRefreshing || GameState.Instance == null) return;
-            if (int.TryParse(val, out int money))
-            {
-                GameState.Instance.Money = money;
-                DebugConsoleManager.Log("属性", $"金钱 → {money}");
-            }
-        });
-    }
-
-    private void CreateAPRow(Transform parent)
-    {
-        GameObject row = CreateUIElement("APRow", parent);
-        RectTransform rowRT = row.GetComponent<RectTransform>();
-        rowRT.sizeDelta = new Vector2(0, 36f);
-
-        apText = CreateLabel(row.transform, "行动点: - / -", 15f, TextWhite, 36f, 300f);
-    }
-
-    // ========== 工具方法 ==========
-
-    private Slider CreateSlider(Transform parent, float min, float max)
-    {
-        GameObject sliderObj = CreateUIElement("Slider", parent);
-        RectTransform sliderRT = sliderObj.GetComponent<RectTransform>();
-        sliderRT.sizeDelta = new Vector2(300f, 24f);
-
-        Image bg = sliderObj.AddComponent<Image>();
-        bg.color = SliderBg;
-
-        Slider slider = sliderObj.AddComponent<Slider>();
+        Slider slider = sliderObject.AddComponent<Slider>();
         slider.minValue = min;
         slider.maxValue = max;
         slider.wholeNumbers = true;
-        slider.direction = Slider.Direction.LeftToRight;
 
-        // Fill Area
-        GameObject fillArea = CreateUIElement("FillArea", sliderObj.transform);
-        RectTransform fillAreaRT = fillArea.GetComponent<RectTransform>();
-        fillAreaRT.anchorMin = Vector2.zero;
-        fillAreaRT.anchorMax = Vector2.one;
-        fillAreaRT.offsetMin = new Vector2(4f, 4f);
-        fillAreaRT.offsetMax = new Vector2(-4f, -4f);
+        GameObject fillArea = CreateRect("FillArea", sliderObject.transform).gameObject;
+        RectTransform fillAreaRect = fillArea.GetComponent<RectTransform>();
+        fillAreaRect.anchorMin = Vector2.zero;
+        fillAreaRect.anchorMax = Vector2.one;
+        fillAreaRect.offsetMin = new Vector2(5f, 5f);
+        fillAreaRect.offsetMax = new Vector2(-5f, -5f);
 
-        GameObject fill = CreateUIElement("Fill", fillArea.transform);
-        StretchFull(fill.GetComponent<RectTransform>());
-        Image fillImg = fill.AddComponent<Image>();
-        fillImg.color = SliderFill;
+        GameObject fill = CreateRect("Fill", fillArea.transform).gameObject;
+        Image fillImage = fill.AddComponent<Image>();
+        fillImage.color = SliderFillColor;
+        slider.fillRect = fill.GetComponent<RectTransform>();
 
-        // Handle Area
-        GameObject handleArea = CreateUIElement("HandleArea", sliderObj.transform);
+        GameObject handleArea = CreateRect("HandleArea", sliderObject.transform).gameObject;
         StretchFull(handleArea.GetComponent<RectTransform>());
 
-        GameObject handle = CreateUIElement("Handle", handleArea.transform);
-        RectTransform handleRT = handle.GetComponent<RectTransform>();
-        handleRT.sizeDelta = new Vector2(16f, 16f);
-        Image handleImg = handle.AddComponent<Image>();
-        handleImg.color = Color.white;
-
-        slider.fillRect = fill.GetComponent<RectTransform>();
-        slider.handleRect = handleRT;
-        slider.targetGraphic = handleImg;
+        GameObject handle = CreateRect("Handle", handleArea.transform).gameObject;
+        RectTransform handleRect = handle.GetComponent<RectTransform>();
+        handleRect.sizeDelta = new Vector2(18f, 28f);
+        Image handleImage = handle.AddComponent<Image>();
+        handleImage.color = Color.white;
+        slider.handleRect = handleRect;
+        slider.targetGraphic = handleImage;
 
         return slider;
     }
 
-    private TMP_InputField CreateInputField(Transform parent, string placeholder, float width, float height)
+    private TMP_InputField CreateInputField(Transform parent, float width)
     {
-        GameObject inputObj = CreateUIElement("InputField", parent);
-        RectTransform rt = inputObj.GetComponent<RectTransform>();
-        rt.sizeDelta = new Vector2(width, height);
+        GameObject inputObject = CreateRect("Input", parent).gameObject;
+        SetFixedSize(inputObject, width, 34f);
+        Image background = inputObject.AddComponent<Image>();
+        background.color = FieldColor;
 
-        Image bg = inputObj.AddComponent<Image>();
-        bg.color = new Color(0.12f, 0.12f, 0.18f, 0.90f);
+        TMP_InputField input = inputObject.AddComponent<TMP_InputField>();
 
-        // Text Area
-        GameObject textArea = CreateUIElement("TextArea", inputObj.transform);
-        RectTransform textAreaRT = textArea.GetComponent<RectTransform>();
-        textAreaRT.anchorMin = Vector2.zero;
-        textAreaRT.anchorMax = Vector2.one;
-        textAreaRT.offsetMin = new Vector2(8, 2);
-        textAreaRT.offsetMax = new Vector2(-8, -2);
-        textArea.AddComponent<RectMask2D>();
+        GameObject viewport = CreateRect("Viewport", inputObject.transform).gameObject;
+        RectTransform viewportRect = viewport.GetComponent<RectTransform>();
+        viewportRect.anchorMin = Vector2.zero;
+        viewportRect.anchorMax = Vector2.one;
+        viewportRect.offsetMin = new Vector2(10f, 2f);
+        viewportRect.offsetMax = new Vector2(-10f, -2f);
+        viewport.AddComponent<RectMask2D>();
 
-        // Text
-        GameObject textObj = CreateUIElement("Text", textArea.transform);
-        StretchFull(textObj.GetComponent<RectTransform>());
-        TextMeshProUGUI text = textObj.AddComponent<TextMeshProUGUI>();
-        text.fontSize = 14f;
-        text.color = TextWhite;
-        text.alignment = TextAlignmentOptions.Left;
-        if (FontManager.Instance != null && FontManager.Instance.ChineseFont != null)
-            text.font = FontManager.Instance.ChineseFont;
+        TextMeshProUGUI text = CreateLabel(viewport.transform, string.Empty, 15f, TextColor, 28f);
+        StretchFull(text.rectTransform);
+        text.alignment = TextAlignmentOptions.Center;
 
-        // Placeholder
-        GameObject phObj = CreateUIElement("Placeholder", textArea.transform);
-        StretchFull(phObj.GetComponent<RectTransform>());
-        TextMeshProUGUI phText = phObj.AddComponent<TextMeshProUGUI>();
-        phText.text = placeholder;
-        phText.fontSize = 14f;
-        phText.fontStyle = FontStyles.Italic;
-        phText.color = new Color(0.5f, 0.5f, 0.5f, 0.6f);
-        if (FontManager.Instance != null && FontManager.Instance.ChineseFont != null)
-            phText.font = FontManager.Instance.ChineseFont;
+        TextMeshProUGUI placeholder = CreateLabel(viewport.transform, "0", 15f, new Color(0.55f, 0.55f, 0.6f), 28f);
+        StretchFull(placeholder.rectTransform);
+        placeholder.alignment = TextAlignmentOptions.Center;
 
-        TMP_InputField inputField = inputObj.AddComponent<TMP_InputField>();
-        inputField.textViewport = textAreaRT;
-        inputField.textComponent = text;
-        inputField.placeholder = phText;
-        inputField.fontAsset = FontManager.Instance != null ? FontManager.Instance.ChineseFont : null;
-
-        return inputField;
+        input.textViewport = viewportRect;
+        input.textComponent = text;
+        input.placeholder = placeholder;
+        return input;
     }
 
-    private TextMeshProUGUI CreateLabel(Transform parent, string text, float fontSize, Color color,
-        float height, float width = 0f)
+    private Button CreateTinyButton(Transform parent, string label, UnityEngine.Events.UnityAction onClick)
     {
-        GameObject obj = CreateUIElement("Label_" + text, parent);
-        RectTransform rt = obj.GetComponent<RectTransform>();
-        rt.sizeDelta = new Vector2(width, height);
+        GameObject buttonObject = CreateRect($"Button_{label}", parent).gameObject;
+        Image background = buttonObject.AddComponent<Image>();
+        background.color = ButtonColor;
 
-        if (width > 0f)
+        Button button = buttonObject.AddComponent<Button>();
+        ColorBlock colors = button.colors;
+        colors.normalColor = ButtonColor;
+        colors.highlightedColor = ButtonColor * 1.1f;
+        colors.pressedColor = ButtonColor * 0.85f;
+        button.colors = colors;
+        button.onClick.AddListener(onClick);
+
+        TextMeshProUGUI text = CreateLabel(buttonObject.transform, label, 18f, Color.white, 30f);
+        StretchFull(text.rectTransform);
+        text.alignment = TextAlignmentOptions.Center;
+        text.fontStyle = FontStyles.Bold;
+        return button;
+    }
+
+    private Button CreateWideButton(Transform parent, string label, UnityEngine.Events.UnityAction onClick)
+    {
+        Button button = CreateTinyButton(parent, label, onClick);
+        LayoutElement layout = button.gameObject.AddComponent<LayoutElement>();
+        layout.preferredWidth = 170f;
+        layout.preferredHeight = 36f;
+        button.GetComponentInChildren<TextMeshProUGUI>().fontSize = 14f;
+        return button;
+    }
+
+    private TextMeshProUGUI CreateLabel(Transform parent, string text, float fontSize, Color color, float height)
+    {
+        GameObject labelObject = CreateRect("Label", parent).gameObject;
+        LayoutElement layout = labelObject.AddComponent<LayoutElement>();
+        layout.preferredHeight = height;
+
+        TextMeshProUGUI label = labelObject.AddComponent<TextMeshProUGUI>();
+        label.text = text;
+        label.fontSize = fontSize;
+        label.color = color;
+        label.alignment = TextAlignmentOptions.MidlineLeft;
+        label.enableWordWrapping = false;
+        label.overflowMode = TextOverflowModes.Ellipsis;
+
+        if (FontManager.Instance != null && FontManager.Instance.ChineseFont != null)
         {
-            LayoutElement le = obj.AddComponent<LayoutElement>();
-            le.preferredWidth = width;
+            label.font = FontManager.Instance.ChineseFont;
         }
 
-        TextMeshProUGUI tmp = obj.AddComponent<TextMeshProUGUI>();
-        tmp.text = text;
-        tmp.fontSize = fontSize;
-        tmp.color = color;
-        tmp.alignment = TextAlignmentOptions.Left;
-        tmp.enableWordWrapping = false;
-        tmp.overflowMode = TextOverflowModes.Ellipsis;
-
-        if (FontManager.Instance != null && FontManager.Instance.ChineseFont != null)
-            tmp.font = FontManager.Instance.ChineseFont;
-
-        return tmp;
+        return label;
     }
 
-    private void CreateSeparator(Transform parent)
+    private void CreateSpacer(Transform parent, float height)
     {
-        GameObject sep = CreateUIElement("Separator", parent);
-        RectTransform rt = sep.GetComponent<RectTransform>();
-        rt.sizeDelta = new Vector2(0, 2f);
-
-        Image img = sep.AddComponent<Image>();
-        img.color = new Color(0.3f, 0.3f, 0.4f, 0.5f);
-
-        LayoutElement le = sep.AddComponent<LayoutElement>();
-        le.preferredHeight = 2f;
-        le.flexibleWidth = 1f;
+        GameObject spacer = CreateRect("Spacer", parent).gameObject;
+        LayoutElement layout = spacer.AddComponent<LayoutElement>();
+        layout.preferredHeight = height;
     }
 
-    private GameObject CreateUIElement(string name, Transform parent)
+    private RectTransform CreateRect(string name, Transform parent)
     {
-        GameObject go = new GameObject(name);
-        go.transform.SetParent(parent, false);
-        if (go.GetComponent<RectTransform>() == null)
-            go.AddComponent<RectTransform>();
-        return go;
+        GameObject objectRef = new GameObject(name, typeof(RectTransform));
+        objectRef.transform.SetParent(parent, false);
+        return objectRef.GetComponent<RectTransform>();
     }
 
-    private void StretchFull(RectTransform rt)
+    private void StretchFull(RectTransform rect)
     {
-        rt.anchorMin = Vector2.zero;
-        rt.anchorMax = Vector2.one;
-        rt.offsetMin = Vector2.zero;
-        rt.offsetMax = Vector2.zero;
+        rect.anchorMin = Vector2.zero;
+        rect.anchorMax = Vector2.one;
+        rect.offsetMin = Vector2.zero;
+        rect.offsetMax = Vector2.zero;
+    }
+
+    private void SetFixedSize(GameObject gameObject, float width, float height)
+    {
+        LayoutElement layout = gameObject.AddComponent<LayoutElement>();
+        layout.preferredWidth = width;
+        layout.preferredHeight = height;
     }
 }
 #endif

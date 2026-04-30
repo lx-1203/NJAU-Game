@@ -1,13 +1,9 @@
+using System;
+using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
-using TMPro;
-using System.Collections.Generic;
-using System;
 
-/// <summary>
-/// 角色创建UI —— 纯代码构建
-/// 开始游戏后显示，用于选择性别、姓名和专业
-/// </summary>
 public class CharacterCreationUI : MonoBehaviour
 {
     private const string MalePreviewResource = "MalePlayerIdleFrames/IdleFrame_00";
@@ -16,7 +12,7 @@ public class CharacterCreationUI : MonoBehaviour
     public static CharacterCreationUI Instance { get; private set; }
     public static bool HasPendingCharacter { get; private set; }
     public static string PendingPlayerName { get; private set; } = "";
-    public static int PendingPlayerGender { get; private set; } = 0;
+    public static int PendingPlayerGender { get; private set; }
     public static string PendingPlayerMajor { get; private set; } = "";
 
     public event Action OnCreationComplete;
@@ -34,6 +30,29 @@ public class CharacterCreationUI : MonoBehaviour
     private static readonly Color InputBgColor = new Color(0.2f, 0.2f, 0.25f, 1f);
     private static readonly Color ButtonColor = new Color(0.2f, 0.6f, 0.3f, 1f);
 
+    public static void ApplyPendingCharacter(string playerName, int playerGender, string playerMajor)
+    {
+        PendingPlayerName = string.IsNullOrWhiteSpace(playerName) ? StartupFlowSettings.DefaultPlayerName : playerName.Trim();
+        PendingPlayerGender = Mathf.Clamp(playerGender, 0, 1);
+        PendingPlayerMajor = string.IsNullOrWhiteSpace(playerMajor) ? StartupFlowSettings.DefaultPlayerMajor : playerMajor.Trim();
+        HasPendingCharacter = true;
+
+        if (GameState.Instance != null)
+        {
+            GameState.Instance.PlayerName = PendingPlayerName;
+            GameState.Instance.PlayerGender = PendingPlayerGender;
+            GameState.Instance.PlayerMajor = PendingPlayerMajor;
+        }
+    }
+
+    public static void ApplyDefaultPendingCharacter()
+    {
+        ApplyPendingCharacter(
+            StartupFlowSettings.DefaultPlayerName,
+            StartupFlowSettings.DefaultPlayerGender,
+            StartupFlowSettings.DefaultPlayerMajor);
+    }
+
     private void Awake()
     {
         if (Instance != null && Instance != this)
@@ -41,6 +60,7 @@ public class CharacterCreationUI : MonoBehaviour
             Destroy(gameObject);
             return;
         }
+
         Instance = this;
         DontDestroyOnLoad(gameObject);
     }
@@ -48,8 +68,9 @@ public class CharacterCreationUI : MonoBehaviour
     public void Show()
     {
         UIFlowGuard.EnsureEventSystem();
+        if (canvasObj != null)
+            return;
 
-        if (canvasObj != null) return;
         BuildUI();
     }
 
@@ -58,13 +79,13 @@ public class CharacterCreationUI : MonoBehaviour
         canvasObj = new GameObject("CharacterCreationCanvas");
         Canvas canvas = canvasObj.AddComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        canvas.sortingOrder = 300; // 最顶层
+        canvas.sortingOrder = 300;
+
         CanvasScaler scaler = canvasObj.AddComponent<CanvasScaler>();
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
         scaler.referenceResolution = new Vector2(1920, 1080);
         canvasObj.AddComponent<GraphicRaycaster>();
 
-        // 背景
         GameObject panelObj = new GameObject("Panel", typeof(RectTransform));
         panelObj.transform.SetParent(canvasObj.transform, false);
         RectTransform panelRt = panelObj.GetComponent<RectTransform>();
@@ -74,7 +95,6 @@ public class CharacterCreationUI : MonoBehaviour
         Image panelImg = panelObj.AddComponent<Image>();
         panelImg.color = BgColor;
 
-        // 居中容器
         GameObject containerObj = new GameObject("Container", typeof(RectTransform));
         containerObj.transform.SetParent(panelObj.transform, false);
         RectTransform containerRt = containerObj.GetComponent<RectTransform>();
@@ -85,7 +105,6 @@ public class CharacterCreationUI : MonoBehaviour
         Image containerImg = containerObj.AddComponent<Image>();
         containerImg.color = new Color(0.1f, 0.1f, 0.15f, 1f);
 
-        // 垂直布局
         VerticalLayoutGroup vlg = containerObj.AddComponent<VerticalLayoutGroup>();
         vlg.padding = new RectOffset(40, 40, 40, 40);
         vlg.spacing = 30;
@@ -93,7 +112,6 @@ public class CharacterCreationUI : MonoBehaviour
         vlg.childControlWidth = true;
         vlg.childControlHeight = false;
 
-        // 标题
         TextMeshProUGUI title = CreateTMP(containerObj.transform, "Title", "新生入学登记");
         title.fontSize = 36;
         title.fontStyle = FontStyles.Bold;
@@ -101,7 +119,6 @@ public class CharacterCreationUI : MonoBehaviour
         title.color = new Color(1f, 0.85f, 0.3f);
         title.GetComponent<RectTransform>().sizeDelta = new Vector2(0, 50);
 
-        // 姓名输入组
         GameObject nameGroup = new GameObject("NameGroup", typeof(RectTransform));
         nameGroup.transform.SetParent(containerObj.transform, false);
         nameGroup.GetComponent<RectTransform>().sizeDelta = new Vector2(0, 50);
@@ -120,7 +137,6 @@ public class CharacterCreationUI : MonoBehaviour
         inputBg.color = InputBgColor;
         nameInput = inputObj.AddComponent<TMP_InputField>();
 
-        // Text Viewport (带 RectMask2D，TMP_InputField 必需)
         GameObject inputVpObj = new GameObject("TextViewport", typeof(RectTransform));
         inputVpObj.transform.SetParent(inputObj.transform, false);
         RectTransform inputVpRt = inputVpObj.GetComponent<RectTransform>();
@@ -134,29 +150,21 @@ public class CharacterCreationUI : MonoBehaviour
         textArea.fontSize = 24;
         textArea.alignment = TextAlignmentOptions.MidlineLeft;
         textArea.color = Color.white;
-        RectTransform textRt = textArea.GetComponent<RectTransform>();
-        textRt.anchorMin = Vector2.zero;
-        textRt.anchorMax = Vector2.one;
-        textRt.offsetMin = Vector2.zero;
-        textRt.offsetMax = Vector2.zero;
+        StretchFull(textArea.GetComponent<RectTransform>());
 
         TextMeshProUGUI placeholder = CreateTMP(inputVpObj.transform, "Placeholder", "请输入姓名...");
         placeholder.fontSize = 24;
         placeholder.alignment = TextAlignmentOptions.MidlineLeft;
         placeholder.color = new Color(0.5f, 0.5f, 0.5f);
-        RectTransform phRt = placeholder.GetComponent<RectTransform>();
-        phRt.anchorMin = Vector2.zero;
-        phRt.anchorMax = Vector2.one;
-        phRt.offsetMin = Vector2.zero;
-        phRt.offsetMax = Vector2.zero;
+        StretchFull(placeholder.GetComponent<RectTransform>());
 
         nameInput.textViewport = inputVpRt;
         nameInput.textComponent = textArea;
         nameInput.placeholder = placeholder;
         nameInput.characterLimit = 6;
         nameInput.onValueChanged.AddListener(OnInputChanged);
+        nameInput.text = StartupFlowSettings.DefaultPlayerName;
 
-        // 性别选择组
         GameObject genderGroup = new GameObject("GenderGroup", typeof(RectTransform));
         genderGroup.transform.SetParent(containerObj.transform, false);
         genderGroup.GetComponent<RectTransform>().sizeDelta = new Vector2(0, 330);
@@ -167,16 +175,14 @@ public class CharacterCreationUI : MonoBehaviour
         hlgGender.childControlHeight = false;
 
         ToggleGroup tg = genderGroup.AddComponent<ToggleGroup>();
-
-        maleToggle = CreateGenderCard(genderGroup.transform, "男", MalePreviewResource, tg, true, new Color(0.72f, 0.9f, 1f, 1f));
-        femaleToggle = CreateGenderCard(genderGroup.transform, "女", FemalePreviewResource, tg, false, new Color(1f, 0.76f, 0.86f, 1f));
+        maleToggle = CreateGenderCard(genderGroup.transform, "男", MalePreviewResource, tg, StartupFlowSettings.DefaultPlayerGender != 1, new Color(0.72f, 0.9f, 1f, 1f));
+        femaleToggle = CreateGenderCard(genderGroup.transform, "女", FemalePreviewResource, tg, StartupFlowSettings.DefaultPlayerGender == 1, new Color(1f, 0.76f, 0.86f, 1f));
         maleCardBg = maleToggle.targetGraphic as Image;
         femaleCardBg = femaleToggle.targetGraphic as Image;
         maleToggle.onValueChanged.AddListener(_ => RefreshGenderCards());
         femaleToggle.onValueChanged.AddListener(_ => RefreshGenderCards());
         RefreshGenderCards();
 
-        // 专业选择组
         GameObject majorGroup = new GameObject("MajorGroup", typeof(RectTransform));
         majorGroup.transform.SetParent(containerObj.transform, false);
         majorGroup.GetComponent<RectTransform>().sizeDelta = new Vector2(0, 50);
@@ -195,7 +201,7 @@ public class CharacterCreationUI : MonoBehaviour
         dropdownBg.color = InputBgColor;
         majorDropdown = dropdownObj.AddComponent<TMP_Dropdown>();
 
-        TextMeshProUGUI dpLabel = CreateTMP(dropdownObj.transform, "Label", "生物科学专业");
+        TextMeshProUGUI dpLabel = CreateTMP(dropdownObj.transform, "Label", StartupFlowSettings.DefaultPlayerMajor);
         dpLabel.fontSize = 24;
         dpLabel.alignment = TextAlignmentOptions.MidlineLeft;
         RectTransform dpLabelRt = dpLabel.GetComponent<RectTransform>();
@@ -204,7 +210,6 @@ public class CharacterCreationUI : MonoBehaviour
         dpLabelRt.offsetMin = new Vector2(10, 0);
         dpLabelRt.offsetMax = new Vector2(-30, 0);
 
-        // Arrow indicator
         TextMeshProUGUI arrowTxt = CreateTMP(dropdownObj.transform, "Arrow", "▼");
         arrowTxt.fontSize = 16;
         arrowTxt.alignment = TextAlignmentOptions.Center;
@@ -215,7 +220,6 @@ public class CharacterCreationUI : MonoBehaviour
         arrowRt.sizeDelta = new Vector2(24, 24);
         arrowRt.anchoredPosition = new Vector2(-6, 0);
 
-        // Dropdown template
         GameObject templateObj = new GameObject("Template", typeof(RectTransform));
         templateObj.transform.SetParent(dropdownObj.transform, false);
         RectTransform templateRt = templateObj.GetComponent<RectTransform>();
@@ -283,10 +287,10 @@ public class CharacterCreationUI : MonoBehaviour
         majorDropdown.targetGraphic = dropdownBg;
         majorDropdown.options = new List<TMP_Dropdown.OptionData>
         {
-            new TMP_Dropdown.OptionData("生物科学专业")
+            new TMP_Dropdown.OptionData(StartupFlowSettings.DefaultPlayerMajor)
         };
+        majorDropdown.value = 0;
 
-        // 确认按钮
         GameObject btnObj = new GameObject("ConfirmBtn", typeof(RectTransform));
         btnObj.transform.SetParent(containerObj.transform, false);
         btnObj.GetComponent<RectTransform>().sizeDelta = new Vector2(200, 60);
@@ -294,17 +298,13 @@ public class CharacterCreationUI : MonoBehaviour
         btnImg.color = ButtonColor;
         confirmBtn = btnObj.AddComponent<Button>();
         confirmBtn.onClick.AddListener(OnConfirmClicked);
-        confirmBtn.interactable = false;
+        confirmBtn.interactable = !string.IsNullOrWhiteSpace(nameInput.text);
 
         TextMeshProUGUI btnText = CreateTMP(btnObj.transform, "Text", "开启大学生活");
         btnText.fontSize = 24;
         btnText.fontStyle = FontStyles.Bold;
         btnText.alignment = TextAlignmentOptions.Center;
-        RectTransform btnTextRt = btnText.GetComponent<RectTransform>();
-        btnTextRt.anchorMin = Vector2.zero;
-        btnTextRt.anchorMax = Vector2.one;
-        btnTextRt.offsetMin = Vector2.zero;
-        btnTextRt.offsetMax = Vector2.zero;
+        StretchFull(btnText.GetComponent<RectTransform>());
 
         UIInputHelper.FocusSelectable(confirmBtn);
     }
@@ -361,6 +361,7 @@ public class CharacterCreationUI : MonoBehaviour
         checkText.fontStyle = FontStyles.Bold;
         checkText.alignment = TextAlignmentOptions.Center;
         checkText.color = new Color(1f, 0.85f, 0.3f);
+        ApplyChineseFont(checkText);
         toggle.graphic = checkText;
 
         TextMeshProUGUI text = CreateTMP(cardObj.transform, "Label", label);
@@ -395,51 +396,6 @@ public class CharacterCreationUI : MonoBehaviour
         }
     }
 
-    private Toggle CreateToggle(Transform parent, string label, ToggleGroup group, bool isOn)
-    {
-        GameObject toggleObj = new GameObject($"Toggle_{label}", typeof(RectTransform));
-        toggleObj.transform.SetParent(parent, false);
-        toggleObj.GetComponent<RectTransform>().sizeDelta = new Vector2(100, 50);
-
-        Toggle toggle = toggleObj.AddComponent<Toggle>();
-        toggle.group = group;
-        toggle.isOn = isOn;
-
-        GameObject bgObj = new GameObject("Background", typeof(RectTransform));
-        bgObj.transform.SetParent(toggleObj.transform, false);
-        RectTransform bgRt = bgObj.GetComponent<RectTransform>();
-        bgRt.anchorMin = new Vector2(0, 0.5f);
-        bgRt.anchorMax = new Vector2(0, 0.5f);
-        bgRt.sizeDelta = new Vector2(30, 30);
-        bgRt.anchoredPosition = new Vector2(15, 0);
-        Image bgImg = bgObj.AddComponent<Image>();
-        bgImg.color = InputBgColor;
-
-        GameObject checkObj = new GameObject("Checkmark", typeof(RectTransform));
-        checkObj.transform.SetParent(bgObj.transform, false);
-        RectTransform checkRt = checkObj.GetComponent<RectTransform>();
-        checkRt.anchorMin = Vector2.zero;
-        checkRt.anchorMax = Vector2.one;
-        checkRt.sizeDelta = new Vector2(-10, -10);
-        checkRt.anchoredPosition = Vector2.zero;
-        Image checkImg = checkObj.AddComponent<Image>();
-        checkImg.color = new Color(1f, 0.85f, 0.3f);
-
-        toggle.targetGraphic = bgImg;
-        toggle.graphic = checkImg;
-
-        TextMeshProUGUI text = CreateTMP(toggleObj.transform, "Label", label);
-        text.fontSize = 24;
-        text.alignment = TextAlignmentOptions.MidlineLeft;
-        RectTransform textRt = text.GetComponent<RectTransform>();
-        textRt.anchorMin = new Vector2(0, 0);
-        textRt.anchorMax = new Vector2(1, 1);
-        textRt.offsetMin = new Vector2(40, 0);
-        textRt.offsetMax = Vector2.zero;
-
-        return toggle;
-    }
-
     private TextMeshProUGUI CreateTMP(Transform parent, string name, string text)
     {
         GameObject obj = new GameObject(name, typeof(RectTransform));
@@ -447,46 +403,48 @@ public class CharacterCreationUI : MonoBehaviour
         TextMeshProUGUI tmp = obj.AddComponent<TextMeshProUGUI>();
         tmp.text = text;
         tmp.color = Color.white;
+        ApplyChineseFont(tmp);
         return tmp;
     }
 
     private void OnInputChanged(string text)
     {
-        confirmBtn.interactable = !string.IsNullOrWhiteSpace(text);
+        if (confirmBtn != null)
+            confirmBtn.interactable = !string.IsNullOrWhiteSpace(text);
     }
 
     private void Update()
     {
         if (canvasObj == null || !UIInputHelper.IsConfirmPressed())
-        {
             return;
-        }
 
         if (confirmBtn != null && confirmBtn.interactable)
-        {
             OnConfirmClicked();
-        }
     }
 
     private void OnConfirmClicked()
     {
-        PendingPlayerName = nameInput.text.Trim();
-        PendingPlayerGender = femaleToggle.isOn ? 1 : 0;
-        PendingPlayerMajor = majorDropdown.options[majorDropdown.value].text;
-        HasPendingCharacter = true;
-
-        if (GameState.Instance != null)
-        {
-            GameState.Instance.PlayerName = PendingPlayerName;
-            GameState.Instance.PlayerGender = PendingPlayerGender;
-            GameState.Instance.PlayerMajor = PendingPlayerMajor;
-
-            Debug.Log($"[CharacterCreation] 角色创建完成: {GameState.Instance.PlayerName}, {(GameState.Instance.PlayerGender == 0 ? "男" : "女")}, {GameState.Instance.PlayerMajor}");
-        }
+        ApplyPendingCharacter(
+            nameInput.text.Trim(),
+            femaleToggle != null && femaleToggle.isOn ? 1 : 0,
+            majorDropdown.options[majorDropdown.value].text);
 
         Destroy(canvasObj);
         canvasObj = null;
-
         OnCreationComplete?.Invoke();
+    }
+
+    private void ApplyChineseFont(TMP_Text text)
+    {
+        if (FontManager.Instance != null && FontManager.Instance.ChineseFont != null)
+            text.font = FontManager.Instance.ChineseFont;
+    }
+
+    private void StretchFull(RectTransform rect)
+    {
+        rect.anchorMin = Vector2.zero;
+        rect.anchorMax = Vector2.one;
+        rect.offsetMin = Vector2.zero;
+        rect.offsetMax = Vector2.zero;
     }
 }

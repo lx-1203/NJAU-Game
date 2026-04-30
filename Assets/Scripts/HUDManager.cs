@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
 using TMPro;
 using System.Collections;
 using System.Collections.Generic;
@@ -19,6 +20,11 @@ public class HUDManager : MonoBehaviour
     private CampusMapUI campusMapUI;
     private LocationDetailPanel detailPanel;
     private List<Button> dynamicActionButtons = new List<Button>();
+    private GameObject actionMenuOverlay;
+    private GameObject actionMenuPanel;
+    private RectTransform actionMenuContent;
+    private Button actionMenuCloseButton;
+    private TextMeshProUGUI actionMenuTitleText;
 
     // ========== 社团面板 ==========
     private ClubPanelManager clubPanelManager;
@@ -28,6 +34,10 @@ public class HUDManager : MonoBehaviour
 
     // ========== 属性条缓存 ==========
     private List<AttributeBar> attrBars = new List<AttributeBar>();
+    private GameObject questDetailTooltip;
+    private TextMeshProUGUI questDetailTitleText;
+    private TextMeshProUGUI questDetailBodyText;
+    private bool isQuestHovered = false;
 
     // ========== 行动按钮图标映射 ==========
     private static readonly Dictionary<string, string> ActionIcons = new Dictionary<string, string>
@@ -74,9 +84,12 @@ public class HUDManager : MonoBehaviour
 
         builder = gameObject.AddComponent<HUDBuilder>();
         builder.BuildHUD();
+        CreateActionMenuUI();
 
         InitMapUI();
         CreateAttributeBars();
+        CreateQuestDetailTooltip();
+        SetupQuestPanelHoverEvents();
         RefreshBottomBar();
 
         // 绑定系统按钮
@@ -90,6 +103,7 @@ public class HUDManager : MonoBehaviour
         clubPanelManager = builder.clubPanelManager;
 
         RefreshAll();
+        RefreshQuestPanel();
         StartCoroutine(PlayEntryAnimation());
         StartCoroutine(ShowInitialNews());
     }
@@ -113,6 +127,15 @@ public class HUDManager : MonoBehaviour
 
     private void Update()
     {
+        if (IsActionMenuOpen)
+        {
+            if (Input.GetKeyDown(KeyCode.Alpha1) || Input.GetKeyDown(KeyCode.Escape))
+            {
+                CloseActionMenu();
+            }
+            return;
+        }
+
         if (!CanProcessHotkeys())
         {
             return;
@@ -124,7 +147,7 @@ public class HUDManager : MonoBehaviour
         }
         else if (Input.GetKeyDown(KeyCode.Alpha1))
         {
-            OpenSocialPanel();
+            ToggleActionMenu();
         }
         else if (Input.GetKeyDown(KeyCode.Alpha2))
         {
@@ -134,6 +157,21 @@ public class HUDManager : MonoBehaviour
 
     private void BindSystemButtons()
     {
+        if (builder.btnCharacterCard != null)
+        {
+            builder.btnCharacterCard.onClick.AddListener(() =>
+            {
+                if (!CanProcessHotkeys())
+                {
+                    return;
+                }
+
+                if (builder.hudAnimator != null)
+                    builder.hudAnimator.ButtonPressEffect(builder.btnCharacterCard);
+
+                ToggleInfoPanel();
+            });
+        }
         // 商店按钮
         if (builder.btnShop != null && builder.shopUIBuilder != null)
         {
@@ -197,13 +235,19 @@ public class HUDManager : MonoBehaviour
         }
 
         // 右下角功能按钮（社交互动）
-        if (builder.btnFeature != null && builder.npcInteractionMenu != null)
+        if (builder.btnFeature != null)
         {
             builder.btnFeature.onClick.AddListener(() =>
             {
+                if (!CanProcessHotkeys())
+                {
+                    return;
+                }
+
                 if (builder.hudAnimator != null)
                     builder.hudAnimator.ButtonPressEffect(builder.btnFeature);
-                builder.npcInteractionMenu.ShowForNPC(null);
+
+                ToggleActionMenu();
             });
         }
     }
@@ -240,6 +284,21 @@ public class HUDManager : MonoBehaviour
             EventScheduler.Instance.OnEventTriggered += OnGameEventTriggered;
             EventScheduler.Instance.OnEventCompleted += OnGameEventCompleted;
         }
+
+        if (MissionSystem.Instance != null)
+        {
+            MissionSystem.Instance.OnMissionAccepted += OnMissionStateChanged;
+            MissionSystem.Instance.OnObjectiveUpdated += OnMissionObjectiveUpdated;
+            MissionSystem.Instance.OnMissionCompleted += OnMissionStateChanged;
+            MissionSystem.Instance.OnMissionFailed += OnMissionStateChanged;
+        }
+
+        if (SaveManager.Instance != null)
+        {
+            SaveManager.Instance.OnLoadCompleted += OnSaveLoaded;
+        }
+
+        RefreshQuestPanel();
     }
 
     private void OnDestroy()
@@ -263,6 +322,14 @@ public class HUDManager : MonoBehaviour
             RomanceSystem.Instance.OnRomanceHealthChanged -= OnRomanceHealthChanged;
         }
         if (ConfessionSystem.Instance != null) ConfessionSystem.Instance.OnConfessionResult -= OnConfessionResult;
+        if (MissionSystem.Instance != null)
+        {
+            MissionSystem.Instance.OnMissionAccepted -= OnMissionStateChanged;
+            MissionSystem.Instance.OnObjectiveUpdated -= OnMissionObjectiveUpdated;
+            MissionSystem.Instance.OnMissionCompleted -= OnMissionStateChanged;
+            MissionSystem.Instance.OnMissionFailed -= OnMissionStateChanged;
+        }
+        if (SaveManager.Instance != null) SaveManager.Instance.OnLoadCompleted -= OnSaveLoaded;
         if (campusMapUI != null) campusMapUI.Destroy();
     }
 
@@ -308,19 +375,41 @@ public class HUDManager : MonoBehaviour
         }
     }
 
-    private void OpenSocialPanel()
+    private bool IsActionMenuOpen => actionMenuPanel != null && actionMenuPanel.activeSelf;
+
+    private void ToggleActionMenu()
     {
-        if (builder == null || builder.npcInteractionMenu == null)
+        if (IsActionMenuOpen)
+        {
+            CloseActionMenu();
+        }
+        else
+        {
+            OpenActionMenu();
+        }
+    }
+
+    private void OpenActionMenu()
+    {
+        if (builder == null || actionMenuPanel == null || actionMenuOverlay == null)
         {
             return;
         }
 
-        if (builder.hudAnimator != null && builder.btnFeature != null)
+        RefreshBottomBar();
+        actionMenuOverlay.SetActive(true);
+        actionMenuPanel.SetActive(true);
+    }
+
+    private void CloseActionMenu()
+    {
+        if (actionMenuPanel == null || actionMenuOverlay == null)
         {
-            builder.hudAnimator.ButtonPressEffect(builder.btnFeature);
+            return;
         }
 
-        builder.npcInteractionMenu.ShowForNPC(null);
+        actionMenuPanel.SetActive(false);
+        actionMenuOverlay.SetActive(false);
     }
 
     private void ToggleTalentPanel()
@@ -343,6 +432,195 @@ public class HUDManager : MonoBehaviour
         {
             TalentUI.Instance.ShowPanel();
         }
+    }
+
+    private void CreateActionMenuUI()
+    {
+        if (builder == null || builder.hudCanvas == null)
+        {
+            return;
+        }
+
+        actionMenuOverlay = new GameObject("ActionMenuOverlay");
+        actionMenuOverlay.transform.SetParent(builder.hudCanvas.transform, false);
+        RectTransform overlayRT = actionMenuOverlay.AddComponent<RectTransform>();
+        overlayRT.anchorMin = Vector2.zero;
+        overlayRT.anchorMax = Vector2.one;
+        overlayRT.offsetMin = Vector2.zero;
+        overlayRT.offsetMax = Vector2.zero;
+
+        Image overlayImage = actionMenuOverlay.AddComponent<Image>();
+        overlayImage.color = new Color(0f, 0f, 0f, 0.18f);
+
+        Button overlayButton = actionMenuOverlay.AddComponent<Button>();
+        overlayButton.transition = Selectable.Transition.None;
+        overlayButton.onClick.AddListener(CloseActionMenu);
+
+        actionMenuPanel = new GameObject("ActionMenuPanel");
+        actionMenuPanel.transform.SetParent(builder.hudCanvas.transform, false);
+        RectTransform panelRT = actionMenuPanel.AddComponent<RectTransform>();
+        panelRT.anchorMin = new Vector2(0.5f, 0f);
+        panelRT.anchorMax = new Vector2(0.5f, 0f);
+        panelRT.pivot = new Vector2(0.5f, 0f);
+        panelRT.anchoredPosition = new Vector2(0f, 120f);
+        panelRT.sizeDelta = new Vector2(520f, 500f);
+
+        Image panelBg = actionMenuPanel.AddComponent<Image>();
+        panelBg.color = new Color(0.97f, 0.95f, 0.90f, 0.98f);
+
+        VerticalLayoutGroup panelLayout = actionMenuPanel.AddComponent<VerticalLayoutGroup>();
+        panelLayout.padding = new RectOffset(18, 18, 18, 18);
+        panelLayout.spacing = 12f;
+        panelLayout.childAlignment = TextAnchor.UpperCenter;
+        panelLayout.childControlWidth = true;
+        panelLayout.childControlHeight = false;
+        panelLayout.childForceExpandWidth = true;
+        panelLayout.childForceExpandHeight = false;
+
+        GameObject header = new GameObject("Header");
+        header.transform.SetParent(actionMenuPanel.transform, false);
+        RectTransform headerRT = header.AddComponent<RectTransform>();
+        headerRT.sizeDelta = new Vector2(0f, 56f);
+
+        Image headerBg = header.AddComponent<Image>();
+        headerBg.color = new Color(0.93f, 0.89f, 0.76f, 1f);
+
+        actionMenuTitleText = CreateMenuText("ActionMenuTitle", header.transform, "\u884C\u52A8", 24f,
+            new Color(0.35f, 0.23f, 0.12f), TextAlignmentOptions.Center);
+        StretchRect(actionMenuTitleText.rectTransform, new Vector2(16f, 0f), new Vector2(-64f, 0f));
+
+        actionMenuCloseButton = CreateMenuButton("ActionMenuClose", header.transform, "\u5173\u95ED", new Vector2(72f, 38f),
+            new Color(0.85f, 0.78f, 0.60f, 1f), 16f);
+        RectTransform closeRT = actionMenuCloseButton.GetComponent<RectTransform>();
+        closeRT.anchorMin = new Vector2(1f, 0.5f);
+        closeRT.anchorMax = new Vector2(1f, 0.5f);
+        closeRT.pivot = new Vector2(1f, 0.5f);
+        closeRT.anchoredPosition = new Vector2(-8f, 0f);
+        actionMenuCloseButton.onClick.AddListener(CloseActionMenu);
+
+        GameObject body = new GameObject("Body");
+        body.transform.SetParent(actionMenuPanel.transform, false);
+        RectTransform bodyRT = body.AddComponent<RectTransform>();
+        bodyRT.sizeDelta = new Vector2(0f, 396f);
+
+        Image bodyBg = body.AddComponent<Image>();
+        bodyBg.color = new Color(0.99f, 0.98f, 0.96f, 0.98f);
+
+        ScrollRect scrollRect = body.AddComponent<ScrollRect>();
+        scrollRect.horizontal = false;
+        scrollRect.vertical = true;
+        scrollRect.movementType = ScrollRect.MovementType.Clamped;
+        scrollRect.scrollSensitivity = 24f;
+
+        GameObject viewport = new GameObject("Viewport");
+        viewport.transform.SetParent(body.transform, false);
+        RectTransform viewportRT = viewport.AddComponent<RectTransform>();
+        viewportRT.anchorMin = Vector2.zero;
+        viewportRT.anchorMax = Vector2.one;
+        viewportRT.offsetMin = new Vector2(8f, 8f);
+        viewportRT.offsetMax = new Vector2(-8f, -8f);
+        viewport.AddComponent<Image>().color = Color.white;
+        Mask viewportMask = viewport.AddComponent<Mask>();
+        viewportMask.showMaskGraphic = false;
+        scrollRect.viewport = viewportRT;
+
+        GameObject content = new GameObject("Content");
+        content.transform.SetParent(viewport.transform, false);
+        actionMenuContent = content.AddComponent<RectTransform>();
+        actionMenuContent.anchorMin = new Vector2(0f, 1f);
+        actionMenuContent.anchorMax = new Vector2(1f, 1f);
+        actionMenuContent.pivot = new Vector2(0.5f, 1f);
+        actionMenuContent.anchoredPosition = Vector2.zero;
+        actionMenuContent.sizeDelta = new Vector2(0f, 0f);
+
+        VerticalLayoutGroup contentLayout = content.AddComponent<VerticalLayoutGroup>();
+        contentLayout.spacing = 10f;
+        contentLayout.padding = new RectOffset(4, 4, 4, 4);
+        contentLayout.childAlignment = TextAnchor.UpperCenter;
+        contentLayout.childControlWidth = true;
+        contentLayout.childControlHeight = false;
+        contentLayout.childForceExpandWidth = true;
+        contentLayout.childForceExpandHeight = false;
+
+        ContentSizeFitter fitter = content.AddComponent<ContentSizeFitter>();
+        fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        scrollRect.content = actionMenuContent;
+
+        actionMenuOverlay.SetActive(false);
+        actionMenuPanel.SetActive(false);
+    }
+
+    private TextMeshProUGUI CreateMenuText(
+        string name,
+        Transform parent,
+        string text,
+        float fontSize,
+        Color color,
+        TextAlignmentOptions alignment)
+    {
+        GameObject obj = new GameObject(name);
+        obj.transform.SetParent(parent, false);
+
+        RectTransform rt = obj.AddComponent<RectTransform>();
+        rt.sizeDelta = new Vector2(160f, 30f);
+
+        TextMeshProUGUI tmp = obj.AddComponent<TextMeshProUGUI>();
+        tmp.text = text;
+        tmp.fontSize = fontSize;
+        tmp.color = color;
+        tmp.alignment = alignment;
+        tmp.enableWordWrapping = true;
+        tmp.overflowMode = TextOverflowModes.Ellipsis;
+
+        if (FontManager.Instance != null)
+        {
+            FontManager.Instance.ApplyChineseFont(tmp);
+        }
+
+        return tmp;
+    }
+
+    private Button CreateMenuButton(string name, Transform parent, string label, Vector2 size, Color normalColor, float fontSize)
+    {
+        GameObject btnObj = new GameObject(name);
+        btnObj.transform.SetParent(parent, false);
+
+        RectTransform rt = btnObj.AddComponent<RectTransform>();
+        rt.sizeDelta = size;
+
+        Image bg = btnObj.AddComponent<Image>();
+        bg.color = normalColor;
+
+        Button btn = btnObj.AddComponent<Button>();
+        btn.targetGraphic = bg;
+        ColorBlock cb = btn.colors;
+        cb.normalColor = normalColor;
+        cb.highlightedColor = new Color(
+            Mathf.Min(normalColor.r + 0.08f, 1f),
+            Mathf.Min(normalColor.g + 0.08f, 1f),
+            Mathf.Min(normalColor.b + 0.08f, 1f),
+            normalColor.a);
+        cb.pressedColor = new Color(
+            Mathf.Max(normalColor.r - 0.06f, 0f),
+            Mathf.Max(normalColor.g - 0.06f, 0f),
+            Mathf.Max(normalColor.b - 0.06f, 0f),
+            normalColor.a);
+        cb.fadeDuration = 0.08f;
+        btn.colors = cb;
+
+        TextMeshProUGUI text = CreateMenuText(name + "_Text", btnObj.transform, label, fontSize,
+            new Color(0.35f, 0.23f, 0.12f), TextAlignmentOptions.Center);
+        StretchRect(text.rectTransform, Vector2.zero, Vector2.zero);
+
+        return btn;
+    }
+
+    private void StretchRect(RectTransform rectTransform, Vector2 offsetMin, Vector2 offsetMax)
+    {
+        rectTransform.anchorMin = Vector2.zero;
+        rectTransform.anchorMax = Vector2.one;
+        rectTransform.offsetMin = offsetMin;
+        rectTransform.offsetMax = offsetMax;
     }
 
     private void EnsureDataInstances()
@@ -387,6 +665,7 @@ public class HUDManager : MonoBehaviour
     {
         RefreshTopBar();
         RefreshAttributes();
+        RefreshQuestPanel();
     }
 
     public void RefreshTopBar()
@@ -524,6 +803,305 @@ public class HUDManager : MonoBehaviour
 
         if (builder.playerGradeText != null)
             builder.playerGradeText.text = gameState.GetYearName();
+    }
+
+    private void CreateQuestDetailTooltip()
+    {
+        if (builder == null || builder.hudCanvas == null)
+        {
+            return;
+        }
+
+        questDetailTooltip = new GameObject("QuestDetailTooltip");
+        questDetailTooltip.transform.SetParent(builder.hudCanvas.transform, false);
+
+        RectTransform tooltipRect = questDetailTooltip.AddComponent<RectTransform>();
+        tooltipRect.anchorMin = new Vector2(0, 1);
+        tooltipRect.anchorMax = new Vector2(0, 1);
+        tooltipRect.pivot = new Vector2(0, 1);
+        tooltipRect.sizeDelta = new Vector2(360, 240);
+        tooltipRect.anchoredPosition = new Vector2(305, -100);
+
+        Image tooltipBg = questDetailTooltip.AddComponent<Image>();
+        tooltipBg.color = new Color(0.98f, 0.95f, 0.88f, 0.98f);
+        tooltipBg.raycastTarget = false;
+
+        VerticalLayoutGroup layout = questDetailTooltip.AddComponent<VerticalLayoutGroup>();
+        layout.padding = new RectOffset(18, 18, 18, 18);
+        layout.spacing = 14f;
+        layout.childAlignment = TextAnchor.UpperLeft;
+        layout.childControlWidth = true;
+        layout.childControlHeight = false;
+        layout.childForceExpandWidth = true;
+        layout.childForceExpandHeight = false;
+
+        ContentSizeFitter fitter = questDetailTooltip.AddComponent<ContentSizeFitter>();
+        fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+        questDetailTitleText = CreateTooltipText("QuestDetailTitle", questDetailTooltip.transform, 28f, FontStyles.Bold, new Color(0.45f, 0.30f, 0.15f));
+        questDetailBodyText = CreateTooltipText("QuestDetailBody", questDetailTooltip.transform, 18f, FontStyles.Normal, new Color(0.34f, 0.26f, 0.20f));
+        questDetailBodyText.enableWordWrapping = true;
+        questDetailBodyText.lineSpacing = 4f;
+
+        questDetailTooltip.SetActive(false);
+    }
+
+    private TextMeshProUGUI CreateTooltipText(string name, Transform parent, float fontSize, FontStyles style, Color color)
+    {
+        GameObject textObj = new GameObject(name);
+        textObj.transform.SetParent(parent, false);
+
+        RectTransform rect = textObj.AddComponent<RectTransform>();
+        rect.sizeDelta = new Vector2(0, 0);
+
+        TextMeshProUGUI text = textObj.AddComponent<TextMeshProUGUI>();
+        text.fontSize = fontSize;
+        text.fontStyle = style;
+        text.color = color;
+        text.alignment = TextAlignmentOptions.TopLeft;
+        text.raycastTarget = false;
+
+        if (FontManager.Instance != null)
+        {
+            text.font = FontManager.Instance.ChineseFont;
+        }
+
+        return text;
+    }
+
+    private void SetupQuestPanelHoverEvents()
+    {
+        if (builder == null || builder.questPanel == null)
+        {
+            return;
+        }
+
+        EventTrigger trigger = builder.questPanel.GetComponent<EventTrigger>();
+        if (trigger == null)
+        {
+            trigger = builder.questPanel.AddComponent<EventTrigger>();
+        }
+
+        trigger.triggers ??= new List<EventTrigger.Entry>();
+        trigger.triggers.Clear();
+
+        EventTrigger.Entry enterEntry = new EventTrigger.Entry { eventID = EventTriggerType.PointerEnter };
+        enterEntry.callback.AddListener(_ => ShowQuestDetailTooltip());
+        trigger.triggers.Add(enterEntry);
+
+        EventTrigger.Entry exitEntry = new EventTrigger.Entry { eventID = EventTriggerType.PointerExit };
+        exitEntry.callback.AddListener(_ => HideQuestDetailTooltip());
+        trigger.triggers.Add(exitEntry);
+    }
+
+    private void RefreshQuestPanel()
+    {
+        if (builder == null || builder.questPanel == null || builder.questTitleText == null || builder.questProgressText == null)
+        {
+            return;
+        }
+
+        MissionDefinition mission = GetTrackedMission();
+        if (mission == null || MissionSystem.Instance == null)
+        {
+            builder.questPanel.SetActive(false);
+            HideQuestDetailTooltip();
+            return;
+        }
+
+        MissionRuntimeData runtimeData = MissionSystem.Instance.GetMissionRuntimeData(mission.missionId);
+        if (runtimeData == null)
+        {
+            builder.questPanel.SetActive(false);
+            HideQuestDetailTooltip();
+            return;
+        }
+
+        builder.questPanel.SetActive(true);
+        builder.questTitleText.text = mission.missionName;
+        builder.questTitleText.enableWordWrapping = false;
+        builder.questTitleText.overflowMode = TextOverflowModes.Ellipsis;
+        builder.questProgressText.text = BuildQuestSummary(runtimeData);
+        builder.questProgressText.enableWordWrapping = false;
+        builder.questProgressText.overflowMode = TextOverflowModes.Ellipsis;
+        UpdateQuestDetailTooltip(mission, runtimeData);
+    }
+
+    private MissionDefinition GetTrackedMission()
+    {
+        if (MissionSystem.Instance == null)
+        {
+            return null;
+        }
+
+        List<MissionDefinition> activeMissions = MissionSystem.Instance.GetActiveMissions();
+        if (activeMissions == null || activeMissions.Count == 0)
+        {
+            return null;
+        }
+
+        MissionDefinition selectedMission = null;
+        foreach (MissionDefinition mission in activeMissions)
+        {
+            if (mission == null)
+            {
+                continue;
+            }
+
+            if (selectedMission == null || mission.priority < selectedMission.priority)
+            {
+                selectedMission = mission;
+            }
+        }
+
+        return selectedMission;
+    }
+
+    private string BuildQuestSummary(MissionRuntimeData runtimeData)
+    {
+        if (runtimeData == null || runtimeData.objectives == null || runtimeData.objectives.Count == 0)
+        {
+            return "\u6682\u65E0\u76EE\u6807";
+        }
+
+        MissionObjective objectiveToDisplay = runtimeData.objectives.Find(obj => obj != null && !obj.isCompleted);
+        if (objectiveToDisplay == null)
+        {
+            objectiveToDisplay = runtimeData.objectives[0];
+        }
+
+        if (objectiveToDisplay == null)
+        {
+            return "\u6682\u65E0\u76EE\u6807";
+        }
+
+        string checkmark = objectiveToDisplay.isCompleted ? "[OK]" : "[ ]";
+        return $"{checkmark} ({objectiveToDisplay.currentValue}/{objectiveToDisplay.targetValue}) {objectiveToDisplay.description}";
+    }
+
+    private void UpdateQuestDetailTooltip(MissionDefinition mission, MissionRuntimeData runtimeData)
+    {
+        if (questDetailTitleText == null || questDetailBodyText == null)
+        {
+            return;
+        }
+
+        questDetailTitleText.text = mission.missionName;
+
+        System.Text.StringBuilder sb = new System.Text.StringBuilder();
+
+        if (!string.IsNullOrEmpty(mission.description))
+        {
+            sb.Append("\u8BF4\u660E\uFF1A").Append(mission.description).Append("\n\n");
+        }
+
+        sb.Append("\u76EE\u6807\uFF1A\n");
+        if (runtimeData.objectives != null)
+        {
+            foreach (MissionObjective objective in runtimeData.objectives)
+            {
+                if (objective == null)
+                {
+                    continue;
+                }
+
+                string state = objective.isCompleted ? "\u5DF2\u5B8C\u6210" : "\u8FDB\u884C\u4E2D";
+                sb.Append("- ")
+                    .Append(objective.description)
+                    .Append(" (")
+                    .Append(objective.currentValue)
+                    .Append("/")
+                    .Append(objective.targetValue)
+                    .Append("\uFF0C")
+                    .Append(state)
+                    .Append(")\n");
+            }
+        }
+
+        if (mission.rewards != null && mission.rewards.Count > 0)
+        {
+            sb.Append("\n\u5956\u52B1\uFF1A\n");
+            foreach (MissionReward reward in mission.rewards)
+            {
+                if (reward == null)
+                {
+                    continue;
+                }
+
+                string rewardText = string.IsNullOrEmpty(reward.description)
+                    ? $"{reward.type} +{reward.value}"
+                    : reward.description;
+                sb.Append("- ").Append(rewardText).Append("\n");
+            }
+        }
+
+        if (mission.timeLimit > 0)
+        {
+            sb.Append("\n\u65F6\u9650\uFF1A").Append(mission.timeLimit).Append(" \u56DE\u5408");
+        }
+
+        questDetailBodyText.text = sb.ToString().TrimEnd();
+        LayoutRebuilder.ForceRebuildLayoutImmediate(questDetailTooltip.GetComponent<RectTransform>());
+
+        if (isQuestHovered && !questDetailTooltip.activeSelf)
+        {
+            questDetailTooltip.SetActive(true);
+        }
+    }
+
+    private void ShowQuestDetailTooltip()
+    {
+        if (questDetailTooltip == null || builder == null || !builder.questPanel.activeSelf)
+        {
+            return;
+        }
+
+        isQuestHovered = true;
+        questDetailTooltip.SetActive(true);
+        UpdateQuestTooltipPosition();
+    }
+
+    private void HideQuestDetailTooltip()
+    {
+        isQuestHovered = false;
+        if (questDetailTooltip != null)
+        {
+            questDetailTooltip.SetActive(false);
+        }
+    }
+
+    private void UpdateQuestTooltipPosition()
+    {
+        if (questDetailTooltip == null || builder == null || builder.questPanel == null)
+        {
+            return;
+        }
+
+        RectTransform questRect = builder.questPanel.GetComponent<RectTransform>();
+        RectTransform tooltipRect = questDetailTooltip.GetComponent<RectTransform>();
+        if (questRect == null || tooltipRect == null)
+        {
+            return;
+        }
+
+        tooltipRect.anchoredPosition = new Vector2(
+            questRect.anchoredPosition.x + questRect.sizeDelta.x + 18f,
+            questRect.anchoredPosition.y);
+    }
+
+    private void OnMissionStateChanged(MissionDefinition mission)
+    {
+        RefreshQuestPanel();
+    }
+
+    private void OnMissionObjectiveUpdated(MissionDefinition mission, MissionObjective objective)
+    {
+        RefreshQuestPanel();
+    }
+
+    private void OnSaveLoaded(int slot)
+    {
+        RefreshQuestPanel();
     }
 
     public void RefreshGPA()
@@ -674,9 +1252,24 @@ public class HUDManager : MonoBehaviour
     {
         ClearDynamicButtons();
         HideStaticButtons();
+        if (builder != null && builder.actionButtonRow != null)
+        {
+            builder.actionButtonRow.SetActive(false);
+        }
 
-        LocationId currentLoc = GameState.Instance != null ?
-            GameState.Instance.CurrentLocation : LocationId.Dormitory;
+        RefreshActionMenuContent();
+    }
+
+    private void RefreshActionMenuContent()
+    {
+        if (actionMenuContent == null)
+        {
+            return;
+        }
+
+        LocationId currentLoc = GameState.Instance != null
+            ? GameState.Instance.CurrentLocation
+            : LocationId.Dormitory;
 
         ActionDefinition[] actions;
         if (LocationManager.Instance != null)
@@ -686,14 +1279,47 @@ public class HUDManager : MonoBehaviour
         else
             return;
 
-        Transform actionRow = builder.actionButtonRow != null ?
-            builder.actionButtonRow.transform : null;
-        if (actionRow == null) return;
-
-        foreach (var action in actions)
+        if (actionMenuTitleText != null)
         {
-            Button btn = CreateDynamicActionButton(actionRow, action);
+            string locationName = currentLoc.ToString();
+            if (LocationManager.Instance != null)
+            {
+                LocationDefinition locationDefinition = LocationManager.Instance.GetLocation(currentLoc);
+                if (locationDefinition != null && !string.IsNullOrEmpty(locationDefinition.displayName))
+                {
+                    locationName = locationDefinition.displayName;
+                }
+            }
+
+            actionMenuTitleText.text = $"\u884C\u52A8 - {locationName}";
+        }
+
+        if (actions == null || actions.Length == 0)
+        {
+            CreateActionMenuInfoRow("\u5F53\u524D\u5730\u70B9\u6682\u65E0\u53EF\u6267\u884C\u884C\u52A8");
+            return;
+        }
+
+        foreach (ActionDefinition action in actions)
+        {
+            Button btn = CreateActionMenuEntry(actionMenuContent, action);
             dynamicActionButtons.Add(btn);
+        }
+
+        if (builder != null && builder.npcInteractionMenu != null)
+        {
+            Button socialButton = CreateActionMenuCommandEntry(
+                actionMenuContent,
+                "NPC",
+                "\u793E\u4EA4\u4E92\u52A8",
+                "\u6253\u5F00\u89D2\u8272\u793E\u4EA4\u4E92\u52A8\u5217\u8868",
+                "\u8FDB\u5165",
+                () =>
+                {
+                    CloseActionMenu();
+                    builder.npcInteractionMenu.ShowForNPC(null);
+                });
+            dynamicActionButtons.Add(socialButton);
         }
     }
 
@@ -704,6 +1330,14 @@ public class HUDManager : MonoBehaviour
             if (btn != null) Destroy(btn.gameObject);
         }
         dynamicActionButtons.Clear();
+
+        if (actionMenuContent != null)
+        {
+            for (int i = actionMenuContent.childCount - 1; i >= 0; i--)
+            {
+                Destroy(actionMenuContent.GetChild(i).gameObject);
+            }
+        }
     }
 
     private Button CreateDynamicActionButton(Transform parent, ActionDefinition action)
@@ -743,6 +1377,186 @@ public class HUDManager : MonoBehaviour
         return btn;
     }
 
+    private Button CreateActionMenuEntry(Transform parent, ActionDefinition action)
+    {
+        string icon = ActionIcons.ContainsKey(action.id) ? ActionIcons[action.id] : "ACT";
+        string detail = BuildActionDetailText(action);
+        string cost = BuildActionCostText(action);
+
+        Button btn = CreateActionMenuCommandEntry(parent, icon, action.displayName, detail, cost, null);
+        string actionId = action.id;
+        btn.onClick.AddListener(() => OnDynamicActionButtonClicked(actionId, btn));
+        return btn;
+    }
+
+    private Button CreateActionMenuCommandEntry(
+        Transform parent,
+        string iconText,
+        string title,
+        string description,
+        string rightText,
+        UnityEngine.Events.UnityAction onClick)
+    {
+        GameObject row = new GameObject("ActionMenuRow_" + title);
+        row.transform.SetParent(parent, false);
+
+        RectTransform rowRT = row.AddComponent<RectTransform>();
+        rowRT.sizeDelta = new Vector2(0f, 84f);
+
+        Image rowBg = row.AddComponent<Image>();
+        rowBg.color = new Color(0.96f, 0.94f, 0.89f, 1f);
+
+        Button button = row.AddComponent<Button>();
+        button.targetGraphic = rowBg;
+        ColorBlock cb = button.colors;
+        cb.normalColor = rowBg.color;
+        cb.highlightedColor = new Color(1f, 0.98f, 0.92f, 1f);
+        cb.pressedColor = new Color(0.90f, 0.86f, 0.78f, 1f);
+        cb.selectedColor = cb.highlightedColor;
+        cb.fadeDuration = 0.08f;
+        button.colors = cb;
+        if (onClick != null)
+        {
+            button.onClick.AddListener(onClick);
+        }
+
+        HorizontalLayoutGroup layout = row.AddComponent<HorizontalLayoutGroup>();
+        layout.spacing = 14f;
+        layout.padding = new RectOffset(14, 14, 10, 10);
+        layout.childAlignment = TextAnchor.MiddleLeft;
+        layout.childControlWidth = false;
+        layout.childControlHeight = false;
+        layout.childForceExpandWidth = false;
+        layout.childForceExpandHeight = false;
+
+        GameObject iconRoot = new GameObject("Icon");
+        iconRoot.transform.SetParent(row.transform, false);
+        RectTransform iconRT = iconRoot.AddComponent<RectTransform>();
+        iconRT.sizeDelta = new Vector2(58f, 58f);
+        Image iconBg = iconRoot.AddComponent<Image>();
+        iconBg.color = new Color(0.92f, 0.82f, 0.45f, 1f);
+        TextMeshProUGUI iconLabel = CreateMenuText("IconText", iconRoot.transform, iconText, 18f,
+            new Color(0.35f, 0.23f, 0.12f), TextAlignmentOptions.Center);
+        StretchRect(iconLabel.rectTransform, Vector2.zero, Vector2.zero);
+
+        GameObject textRoot = new GameObject("TextRoot");
+        textRoot.transform.SetParent(row.transform, false);
+        RectTransform textRT = textRoot.AddComponent<RectTransform>();
+        textRT.sizeDelta = new Vector2(260f, 58f);
+
+        VerticalLayoutGroup textLayout = textRoot.AddComponent<VerticalLayoutGroup>();
+        textLayout.spacing = 2f;
+        textLayout.childAlignment = TextAnchor.MiddleLeft;
+        textLayout.childControlWidth = true;
+        textLayout.childControlHeight = false;
+        textLayout.childForceExpandWidth = true;
+        textLayout.childForceExpandHeight = false;
+
+        TextMeshProUGUI titleText = CreateMenuText("Title", textRoot.transform, title, 20f,
+            new Color(0.35f, 0.23f, 0.12f), TextAlignmentOptions.Left);
+        titleText.rectTransform.sizeDelta = new Vector2(260f, 30f);
+        titleText.enableWordWrapping = false;
+
+        TextMeshProUGUI detailText = CreateMenuText("Detail", textRoot.transform, description, 13f,
+            new Color(0.48f, 0.40f, 0.30f), TextAlignmentOptions.Left);
+        detailText.rectTransform.sizeDelta = new Vector2(260f, 22f);
+        detailText.enableWordWrapping = false;
+
+        GameObject tagObj = new GameObject("Tag");
+        tagObj.transform.SetParent(row.transform, false);
+        RectTransform tagRT = tagObj.AddComponent<RectTransform>();
+        tagRT.sizeDelta = new Vector2(110f, 44f);
+        Image tagBg = tagObj.AddComponent<Image>();
+        tagBg.color = new Color(0.98f, 0.89f, 0.56f, 1f);
+        TextMeshProUGUI tagText = CreateMenuText("TagText", tagObj.transform, rightText, 18f,
+            new Color(0.45f, 0.28f, 0.10f), TextAlignmentOptions.Center);
+        StretchRect(tagText.rectTransform, new Vector2(8f, 0f), new Vector2(-8f, 0f));
+
+        return button;
+    }
+
+    private void CreateActionMenuInfoRow(string text)
+    {
+        GameObject row = new GameObject("ActionMenuInfo");
+        row.transform.SetParent(actionMenuContent, false);
+
+        RectTransform rowRT = row.AddComponent<RectTransform>();
+        rowRT.sizeDelta = new Vector2(0f, 72f);
+
+        Image bg = row.AddComponent<Image>();
+        bg.color = new Color(0.96f, 0.94f, 0.89f, 1f);
+
+        TextMeshProUGUI label = CreateMenuText("InfoText", row.transform, text, 18f,
+            new Color(0.48f, 0.40f, 0.30f), TextAlignmentOptions.Center);
+        StretchRect(label.rectTransform, new Vector2(12f, 0f), new Vector2(-12f, 0f));
+    }
+
+    private string BuildActionCostText(ActionDefinition action)
+    {
+        if (action == null)
+        {
+            return string.Empty;
+        }
+
+        System.Text.StringBuilder sb = new System.Text.StringBuilder();
+        sb.Append(action.actionPointCost).Append("AP");
+        if (action.moneyCost > 0)
+        {
+            sb.Append(" / ").Append("\u00A5").Append(action.moneyCost);
+        }
+
+        if (action.endsRound)
+        {
+            sb.Append(" / ").Append("\u7ED3\u675F");
+        }
+
+        return sb.ToString();
+    }
+
+    private string BuildActionDetailText(ActionDefinition action)
+    {
+        if (action == null)
+        {
+            return string.Empty;
+        }
+
+        bool canExecute = ActionSystem.Instance != null && ActionSystem.Instance.CanExecuteAction(action.id);
+        System.Text.StringBuilder sb = new System.Text.StringBuilder();
+
+        if (action.effects != null && action.effects.Length > 0)
+        {
+            int maxEffects = Mathf.Min(2, action.effects.Length);
+            for (int i = 0; i < maxEffects; i++)
+            {
+                AttributeEffect effect = action.effects[i];
+                if (effect == null)
+                {
+                    continue;
+                }
+
+                if (sb.Length > 0)
+                {
+                    sb.Append("  ");
+                }
+
+                string sign = effect.amount > 0 ? "+" : string.Empty;
+                sb.Append(effect.attributeName).Append(sign).Append(effect.amount);
+            }
+        }
+
+        if (sb.Length == 0)
+        {
+            sb.Append("\u5F53\u524D\u5730\u70B9\u53EF\u6267\u884C");
+        }
+
+        if (!canExecute)
+        {
+            sb.Append("  [\u6682\u4E0D\u53EF\u6267\u884C]");
+        }
+
+        return sb.ToString();
+    }
+
     private void OnDynamicActionButtonClicked(string actionId, Button button)
     {
         if (ActionSystem.Instance == null || !ActionSystem.Instance.CanExecuteAction(actionId))
@@ -756,6 +1570,7 @@ public class HUDManager : MonoBehaviour
             builder.hudAnimator.ButtonPressEffect(button);
 
         ActionSystem.Instance.ExecuteAction(actionId);
+        CloseActionMenu();
     }
 
     private static readonly Dictionary<string, string> ActionIdMap = new Dictionary<string, string>

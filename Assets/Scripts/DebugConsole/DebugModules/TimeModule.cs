@@ -1,17 +1,15 @@
 #if DEVELOPMENT_BUILD || UNITY_EDITOR
+using System.Collections;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
-using TMPro;
-using System.Collections;
 
-/// <summary>
-/// 时间调试模块 —— 学年/学期/回合跳转 + 快进功能
-/// </summary>
 public class TimeModule : MonoBehaviour, IDebugModule
 {
-    private static readonly Color TextWhite = new Color(0.92f, 0.92f, 0.92f);
-    private static readonly Color TextGold  = new Color(1.0f, 0.85f, 0.30f);
-    private static readonly Color BtnColor  = new Color(0.20f, 0.35f, 0.60f, 1.0f);
+    private static readonly Color TextColor = new Color(0.92f, 0.92f, 0.92f);
+    private static readonly Color AccentColor = new Color(1f, 0.85f, 0.3f);
+    private static readonly Color ButtonColor = new Color(0.22f, 0.42f, 0.72f, 1f);
+    private static readonly Color FieldColor = new Color(0.16f, 0.16f, 0.22f, 0.95f);
 
     private TMP_InputField yearInput;
     private TMP_InputField semesterInput;
@@ -20,320 +18,265 @@ public class TimeModule : MonoBehaviour, IDebugModule
 
     public void Init(RectTransform parent)
     {
-        // 滚动容器
-        GameObject scrollObj = CreateUIElement("ScrollView", parent);
-        StretchFull(scrollObj.GetComponent<RectTransform>());
+        Transform content = CreateScrollableContent(parent);
 
-        ScrollRect scrollRect = scrollObj.AddComponent<ScrollRect>();
-        scrollRect.horizontal = false;
-        scrollRect.vertical = true;
+        CreateLabel(content, "Time Control", 20f, AccentColor, 34f);
+        statusText = CreateLabel(content, "Current: --", 15f, TextColor, 28f);
 
-        GameObject viewport = CreateUIElement("Viewport", scrollObj.transform);
-        StretchFull(viewport.GetComponent<RectTransform>());
-        viewport.AddComponent<RectMask2D>();
-        scrollRect.viewport = viewport.GetComponent<RectTransform>();
+        yearInput = CreateInputRow(content, "Year", "1", 1);
+        semesterInput = CreateInputRow(content, "Semester", "1", 1);
+        roundInput = CreateInputRow(content, "Round", "1", 2);
 
-        GameObject content = CreateUIElement("Content", viewport.transform);
-        RectTransform contentRT = content.GetComponent<RectTransform>();
-        contentRT.anchorMin = new Vector2(0, 1);
-        contentRT.anchorMax = new Vector2(1, 1);
-        contentRT.pivot = new Vector2(0.5f, 1);
-        contentRT.anchoredPosition = Vector2.zero;
-
-        VerticalLayoutGroup vlg = content.AddComponent<VerticalLayoutGroup>();
-        vlg.spacing = 10f;
-        vlg.padding = new RectOffset(20, 20, 16, 16);
-        vlg.childAlignment = TextAnchor.UpperCenter;
-        vlg.childControlWidth = true;
-        vlg.childControlHeight = false;
-        vlg.childForceExpandWidth = true;
-        vlg.childForceExpandHeight = false;
-
-        ContentSizeFitter csf = content.AddComponent<ContentSizeFitter>();
-        csf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-        scrollRect.content = contentRT;
-
-        // 标题
-        CreateLabel(content.transform, "— 时间控制 —", 18f, TextGold, 30f);
-
-        // 当前状态
-        statusText = CreateLabel(content.transform, "当前: 加载中...", 16f, TextWhite, 28f);
-
-        // 学年输入 (1-4)
-        yearInput = CreateInputRow(content.transform, "学年 (1-4)", "1");
-        yearInput.contentType = TMP_InputField.ContentType.IntegerNumber;
-        yearInput.characterLimit = 1;
-
-        // 学期输入 (1-2)
-        semesterInput = CreateInputRow(content.transform, "学期 (1-2)", "1");
-        semesterInput.contentType = TMP_InputField.ContentType.IntegerNumber;
-        semesterInput.characterLimit = 1;
-
-        // 回合输入 (1-5)
-        roundInput = CreateInputRow(content.transform, "回合 (1-5)", "1");
-        roundInput.contentType = TMP_InputField.ContentType.IntegerNumber;
-        roundInput.characterLimit = 2;
-
-        // 跳转按钮
-        CreateButton(content.transform, "跳转", () =>
+        CreateButton(content, "Jump To Exact Time", () =>
         {
-            if (GameState.Instance == null) return;
+            if (GameState.Instance == null)
+            {
+                return;
+            }
 
-            int year = 1, semester = 1, round = 1;
-            if (yearInput != null) int.TryParse(yearInput.text, out year);
-            if (semesterInput != null) int.TryParse(semesterInput.text, out semester);
-            if (roundInput != null) int.TryParse(roundInput.text, out round);
+            int year = ParseInput(yearInput, GameState.Instance.CurrentYear, 1, 4);
+            int semester = ParseInput(semesterInput, GameState.Instance.CurrentSemester, 1, 2);
+            int round = ParseInput(roundInput, GameState.Instance.CurrentRound, 1, GameState.MaxRoundsPerSemester);
+            int month = GameState.CalculateMonth(semester, round);
 
-            int month = GameState.CalculateMonth(Mathf.Clamp(semester, 1, 2), Mathf.Clamp(round, 1, GameState.MaxRoundsPerSemester));
-            GameState.Instance.SetState(year, semester, round, month,
-                GameState.Instance.Money, GameState.Instance.ActionPoints);
-
-            DebugConsoleManager.Log("时间", $"已跳转: 大{year}{(semester == 1 ? "上" : "下")} 回合{round}");
+            GameState.Instance.SetState(year, semester, round, month, GameState.Instance.Money, GameState.Instance.ActionPoints);
+            DebugConsoleManager.Log("Time", $"Jumped to Y{year} S{semester} R{round}");
             Refresh();
         });
 
-        // 分割线
-        CreateSeparator(content.transform);
-
-        // 快进区域
-        CreateLabel(content.transform, "— 快进 —", 16f, TextGold, 26f);
-
-        // 普通快进
-        CreateButton(content.transform, "普通快进 (1回合, 0.5s延迟)", () =>
+        CreateSpacer(content, 8f);
+        CreateButton(content, "Advance 1 Round", () =>
         {
-            if (GameState.Instance == null) return;
-            StartCoroutine(AdvanceWithDelay(1, 0.5f));
+            if (GameState.Instance == null)
+            {
+                return;
+            }
+
+            GameState.RoundAdvanceResult result = GameState.Instance.AdvanceRound();
+            DebugConsoleManager.Log("Time", $"Advanced to {GameState.Instance.GetTimeDescription()}");
+            Refresh();
+            if (result == GameState.RoundAdvanceResult.Graduated)
+            {
+                DebugConsoleManager.Log("Time", "Reached graduation");
+            }
         });
 
-        // 加速快进
-        CreateButton(content.transform, "加速快进 (5回合, 瞬时)", () =>
+        CreateButton(content, "Advance 5 Rounds", () =>
         {
-            if (GameState.Instance == null) return;
+            if (GameState.Instance == null)
+            {
+                return;
+            }
+
             for (int i = 0; i < 5; i++)
             {
-                var result = GameState.Instance.AdvanceRound();
+                GameState.RoundAdvanceResult result = GameState.Instance.AdvanceRound();
                 if (result == GameState.RoundAdvanceResult.Graduated)
                 {
-                    DebugConsoleManager.Log("时间", "已毕业，无法继续快进");
                     break;
                 }
             }
-            DebugConsoleManager.Log("时间", "已加速快进5回合");
+
+            DebugConsoleManager.Log("Time", $"Fast-forwarded to {GameState.Instance.GetTimeDescription()}");
             Refresh();
         });
 
-        // 瞬移
-        CreateButton(content.transform, "瞬移到指定时间", () =>
+        CreateButton(content, "Advance 1 Round After 0.5s", () =>
         {
-            if (GameState.Instance == null) return;
-
-            int targetYear = 1, targetSemester = 1, targetRound = 1;
-            if (yearInput != null) int.TryParse(yearInput.text, out targetYear);
-            if (semesterInput != null) int.TryParse(semesterInput.text, out targetSemester);
-            if (roundInput != null) int.TryParse(roundInput.text, out targetRound);
-
-            targetYear = Mathf.Clamp(targetYear, 1, 4);
-            targetSemester = Mathf.Clamp(targetSemester, 1, 2);
-            targetRound = Mathf.Clamp(targetRound, 1, GameState.MaxRoundsPerSemester);
-
-            // 循环推进到目标时间
-            int safetyCount = 0;
-            while (safetyCount < 50)
+            if (GameState.Instance != null)
             {
-                if (GameState.Instance.CurrentYear == targetYear &&
-                    GameState.Instance.CurrentSemester == targetSemester &&
-                    GameState.Instance.CurrentRound == targetRound)
-                    break;
-
-                var result = GameState.Instance.AdvanceRound();
-                if (result == GameState.RoundAdvanceResult.Graduated)
-                {
-                    DebugConsoleManager.Log("时间", "到达毕业，无法继续推进");
-                    break;
-                }
-                safetyCount++;
+                StartCoroutine(AdvanceAfterDelay());
             }
-
-            DebugConsoleManager.Log("时间", $"已瞬移到: {GameState.Instance.GetTimeDescription()}");
-            Refresh();
         });
     }
 
     public void Refresh()
     {
-        if (GameState.Instance == null) return;
-
-        if (statusText != null)
+        if (GameState.Instance == null)
         {
-            statusText.text = $"当前: {GameState.Instance.GetTimeDescription()}";
+            return;
         }
 
-        if (yearInput != null) yearInput.SetTextWithoutNotify(GameState.Instance.CurrentYear.ToString());
-        if (semesterInput != null) semesterInput.SetTextWithoutNotify(GameState.Instance.CurrentSemester.ToString());
-        if (roundInput != null) roundInput.SetTextWithoutNotify(GameState.Instance.CurrentRound.ToString());
+        statusText.text = $"Current: {GameState.Instance.GetTimeDescription()}";
+        yearInput.SetTextWithoutNotify(GameState.Instance.CurrentYear.ToString());
+        semesterInput.SetTextWithoutNotify(GameState.Instance.CurrentSemester.ToString());
+        roundInput.SetTextWithoutNotify(GameState.Instance.CurrentRound.ToString());
     }
 
-    private IEnumerator AdvanceWithDelay(int rounds, float delay)
+    private IEnumerator AdvanceAfterDelay()
     {
-        for (int i = 0; i < rounds; i++)
+        yield return new WaitForSeconds(0.5f);
+
+        if (GameState.Instance == null)
         {
-            yield return new WaitForSeconds(delay);
-            var result = GameState.Instance.AdvanceRound();
-            DebugConsoleManager.Log("时间", $"推进1回合 → {GameState.Instance.GetTimeDescription()}");
-            Refresh();
-            if (result == GameState.RoundAdvanceResult.Graduated)
-            {
-                DebugConsoleManager.Log("时间", "已毕业");
-                break;
-            }
+            yield break;
+        }
+
+        GameState.RoundAdvanceResult result = GameState.Instance.AdvanceRound();
+        DebugConsoleManager.Log("Time", $"Delayed advance -> {GameState.Instance.GetTimeDescription()}");
+        Refresh();
+        if (result == GameState.RoundAdvanceResult.Graduated)
+        {
+            DebugConsoleManager.Log("Time", "Reached graduation");
         }
     }
 
-    // ========== 工具方法 ==========
-
-    private TMP_InputField CreateInputRow(Transform parent, string label, string defaultVal)
+    private int ParseInput(TMP_InputField input, int fallback, int min, int max)
     {
-        GameObject row = CreateUIElement(label + "Row", parent);
-        RectTransform rowRT = row.GetComponent<RectTransform>();
-        rowRT.sizeDelta = new Vector2(0, 40f);
+        if (input == null || !int.TryParse(input.text, out int value))
+        {
+            return fallback;
+        }
 
-        HorizontalLayoutGroup hlg = row.AddComponent<HorizontalLayoutGroup>();
-        hlg.spacing = 10f;
-        hlg.padding = new RectOffset(4, 4, 2, 2);
-        hlg.childAlignment = TextAnchor.MiddleLeft;
-        hlg.childControlWidth = false;
-        hlg.childControlHeight = true;
-        hlg.childForceExpandWidth = false;
-        hlg.childForceExpandHeight = true;
+        return Mathf.Clamp(value, min, max);
+    }
 
-        CreateLabel(row.transform, label, 15f, TextWhite, 36f, 160f);
-        return CreateInputField(row.transform, defaultVal, 120f, 32f);
+    private Transform CreateScrollableContent(RectTransform parent)
+    {
+        GameObject scrollObject = CreateRect("ScrollView", parent).gameObject;
+        StretchFull(scrollObject.GetComponent<RectTransform>());
+
+        ScrollRect scrollRect = scrollObject.AddComponent<ScrollRect>();
+        scrollRect.horizontal = false;
+        scrollRect.vertical = true;
+
+        GameObject viewport = CreateRect("Viewport", scrollObject.transform).gameObject;
+        StretchFull(viewport.GetComponent<RectTransform>());
+        viewport.AddComponent<RectMask2D>();
+        scrollRect.viewport = viewport.GetComponent<RectTransform>();
+
+        GameObject contentObject = CreateRect("Content", viewport.transform).gameObject;
+        RectTransform contentRect = contentObject.GetComponent<RectTransform>();
+        contentRect.anchorMin = new Vector2(0f, 1f);
+        contentRect.anchorMax = new Vector2(1f, 1f);
+        contentRect.pivot = new Vector2(0.5f, 1f);
+
+        VerticalLayoutGroup layout = contentObject.AddComponent<VerticalLayoutGroup>();
+        layout.spacing = 10f;
+        layout.padding = new RectOffset(20, 20, 18, 18);
+        layout.childAlignment = TextAnchor.UpperCenter;
+        layout.childControlWidth = true;
+        layout.childControlHeight = false;
+        layout.childForceExpandWidth = true;
+        layout.childForceExpandHeight = false;
+
+        ContentSizeFitter fitter = contentObject.AddComponent<ContentSizeFitter>();
+        fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        scrollRect.content = contentRect;
+        return contentObject.transform;
+    }
+
+    private TMP_InputField CreateInputRow(Transform parent, string label, string defaultValue, int charLimit)
+    {
+        GameObject rowObject = CreateRect($"{label}Row", parent).gameObject;
+        rowObject.AddComponent<LayoutElement>().preferredHeight = 40f;
+
+        HorizontalLayoutGroup layout = rowObject.AddComponent<HorizontalLayoutGroup>();
+        layout.spacing = 10f;
+        layout.childAlignment = TextAnchor.MiddleLeft;
+        layout.childControlWidth = false;
+        layout.childControlHeight = true;
+        layout.childForceExpandWidth = false;
+        layout.childForceExpandHeight = true;
+
+        TextMeshProUGUI labelText = CreateLabel(rowObject.transform, label, 15f, TextColor, 36f);
+        labelText.gameObject.AddComponent<LayoutElement>().preferredWidth = 130f;
+
+        TMP_InputField input = CreateInputField(rowObject.transform, 120f);
+        input.characterLimit = charLimit;
+        input.contentType = TMP_InputField.ContentType.IntegerNumber;
+        input.SetTextWithoutNotify(defaultValue);
+        return input;
+    }
+
+    private TMP_InputField CreateInputField(Transform parent, float width)
+    {
+        GameObject inputObject = CreateRect("Input", parent).gameObject;
+        LayoutElement layout = inputObject.AddComponent<LayoutElement>();
+        layout.preferredWidth = width;
+        layout.preferredHeight = 34f;
+
+        Image background = inputObject.AddComponent<Image>();
+        background.color = FieldColor;
+
+        TMP_InputField input = inputObject.AddComponent<TMP_InputField>();
+
+        GameObject viewport = CreateRect("Viewport", inputObject.transform).gameObject;
+        RectTransform viewportRect = viewport.GetComponent<RectTransform>();
+        viewportRect.anchorMin = Vector2.zero;
+        viewportRect.anchorMax = Vector2.one;
+        viewportRect.offsetMin = new Vector2(10f, 2f);
+        viewportRect.offsetMax = new Vector2(-10f, -2f);
+        viewport.AddComponent<RectMask2D>();
+
+        TextMeshProUGUI text = CreateLabel(viewport.transform, string.Empty, 15f, TextColor, 28f);
+        StretchFull(text.rectTransform);
+        text.alignment = TextAlignmentOptions.Center;
+
+        TextMeshProUGUI placeholder = CreateLabel(viewport.transform, "0", 15f, new Color(0.55f, 0.55f, 0.6f), 28f);
+        StretchFull(placeholder.rectTransform);
+        placeholder.alignment = TextAlignmentOptions.Center;
+
+        input.textViewport = viewportRect;
+        input.textComponent = text;
+        input.placeholder = placeholder;
+        return input;
     }
 
     private void CreateButton(Transform parent, string label, UnityEngine.Events.UnityAction onClick)
     {
-        GameObject btnObj = CreateUIElement("Btn_" + label, parent);
-        RectTransform rt = btnObj.GetComponent<RectTransform>();
-        rt.sizeDelta = new Vector2(0, 40f);
+        GameObject buttonObject = CreateRect($"Button_{label}", parent).gameObject;
+        buttonObject.AddComponent<LayoutElement>().preferredHeight = 38f;
 
-        Image bg = btnObj.AddComponent<Image>();
-        bg.color = BtnColor;
+        Image background = buttonObject.AddComponent<Image>();
+        background.color = ButtonColor;
 
-        Button btn = btnObj.AddComponent<Button>();
-        btn.targetGraphic = bg;
-        ColorBlock cb = btn.colors;
-        cb.normalColor = Color.white;
-        cb.highlightedColor = new Color(1.15f, 1.15f, 1.15f);
-        cb.pressedColor = new Color(0.85f, 0.85f, 0.85f);
-        btn.colors = cb;
-        btn.onClick.AddListener(onClick);
+        Button button = buttonObject.AddComponent<Button>();
+        button.onClick.AddListener(onClick);
 
-        TextMeshProUGUI txt = CreateLabel(btnObj.transform, label, 15f, TextWhite, 40f);
-        txt.alignment = TextAlignmentOptions.Center;
-        StretchFull(txt.GetComponent<RectTransform>());
+        TextMeshProUGUI text = CreateLabel(buttonObject.transform, label, 14f, Color.white, 38f);
+        StretchFull(text.rectTransform);
+        text.alignment = TextAlignmentOptions.Center;
     }
 
-    private TMP_InputField CreateInputField(Transform parent, string placeholder, float width, float height)
+    private TextMeshProUGUI CreateLabel(Transform parent, string textValue, float fontSize, Color color, float height)
     {
-        GameObject inputObj = CreateUIElement("InputField", parent);
-        RectTransform rt = inputObj.GetComponent<RectTransform>();
-        rt.sizeDelta = new Vector2(width, height);
+        GameObject textObject = CreateRect("Label", parent).gameObject;
+        textObject.AddComponent<LayoutElement>().preferredHeight = height;
 
-        LayoutElement le = inputObj.AddComponent<LayoutElement>();
-        le.preferredWidth = width;
+        TextMeshProUGUI text = textObject.AddComponent<TextMeshProUGUI>();
+        text.text = textValue;
+        text.fontSize = fontSize;
+        text.color = color;
+        text.alignment = TextAlignmentOptions.MidlineLeft;
 
-        Image bg = inputObj.AddComponent<Image>();
-        bg.color = new Color(0.12f, 0.12f, 0.18f, 0.90f);
-
-        GameObject textArea = CreateUIElement("TextArea", inputObj.transform);
-        RectTransform textAreaRT = textArea.GetComponent<RectTransform>();
-        textAreaRT.anchorMin = Vector2.zero;
-        textAreaRT.anchorMax = Vector2.one;
-        textAreaRT.offsetMin = new Vector2(8, 2);
-        textAreaRT.offsetMax = new Vector2(-8, -2);
-        textArea.AddComponent<RectMask2D>();
-
-        GameObject textObj = CreateUIElement("Text", textArea.transform);
-        StretchFull(textObj.GetComponent<RectTransform>());
-        TextMeshProUGUI text = textObj.AddComponent<TextMeshProUGUI>();
-        text.fontSize = 14f;
-        text.color = TextWhite;
-        text.alignment = TextAlignmentOptions.Left;
         if (FontManager.Instance != null && FontManager.Instance.ChineseFont != null)
-            text.font = FontManager.Instance.ChineseFont;
-
-        GameObject phObj = CreateUIElement("Placeholder", textArea.transform);
-        StretchFull(phObj.GetComponent<RectTransform>());
-        TextMeshProUGUI phText = phObj.AddComponent<TextMeshProUGUI>();
-        phText.text = placeholder;
-        phText.fontSize = 14f;
-        phText.fontStyle = FontStyles.Italic;
-        phText.color = new Color(0.5f, 0.5f, 0.5f, 0.6f);
-        if (FontManager.Instance != null && FontManager.Instance.ChineseFont != null)
-            phText.font = FontManager.Instance.ChineseFont;
-
-        TMP_InputField inputField = inputObj.AddComponent<TMP_InputField>();
-        inputField.textViewport = textAreaRT;
-        inputField.textComponent = text;
-        inputField.placeholder = phText;
-        inputField.fontAsset = FontManager.Instance != null ? FontManager.Instance.ChineseFont : null;
-
-        return inputField;
-    }
-
-    private TextMeshProUGUI CreateLabel(Transform parent, string text, float fontSize, Color color,
-        float height, float width = 0f)
-    {
-        GameObject obj = CreateUIElement("Label_" + text, parent);
-        RectTransform rt = obj.GetComponent<RectTransform>();
-        rt.sizeDelta = new Vector2(width, height);
-
-        if (width > 0f)
         {
-            LayoutElement le = obj.AddComponent<LayoutElement>();
-            le.preferredWidth = width;
+            text.font = FontManager.Instance.ChineseFont;
         }
 
-        TextMeshProUGUI tmp = obj.AddComponent<TextMeshProUGUI>();
-        tmp.text = text;
-        tmp.fontSize = fontSize;
-        tmp.color = color;
-        tmp.alignment = TextAlignmentOptions.Left;
-        tmp.enableWordWrapping = false;
-
-        if (FontManager.Instance != null && FontManager.Instance.ChineseFont != null)
-            tmp.font = FontManager.Instance.ChineseFont;
-
-        return tmp;
+        return text;
     }
 
-    private void CreateSeparator(Transform parent)
+    private void CreateSpacer(Transform parent, float height)
     {
-        GameObject sep = CreateUIElement("Separator", parent);
-        RectTransform rt = sep.GetComponent<RectTransform>();
-        rt.sizeDelta = new Vector2(0, 2f);
-        Image img = sep.AddComponent<Image>();
-        img.color = new Color(0.3f, 0.3f, 0.4f, 0.5f);
-        LayoutElement le = sep.AddComponent<LayoutElement>();
-        le.preferredHeight = 2f;
-        le.flexibleWidth = 1f;
+        GameObject spacer = CreateRect("Spacer", parent).gameObject;
+        spacer.AddComponent<LayoutElement>().preferredHeight = height;
     }
 
-    private GameObject CreateUIElement(string name, Transform parent)
+    private RectTransform CreateRect(string name, Transform parent)
     {
-        GameObject go = new GameObject(name);
-        go.transform.SetParent(parent, false);
-        if (go.GetComponent<RectTransform>() == null)
-            go.AddComponent<RectTransform>();
-        return go;
+        GameObject objectRef = new GameObject(name, typeof(RectTransform));
+        objectRef.transform.SetParent(parent, false);
+        return objectRef.GetComponent<RectTransform>();
     }
 
-    private void StretchFull(RectTransform rt)
+    private void StretchFull(RectTransform rect)
     {
-        rt.anchorMin = Vector2.zero;
-        rt.anchorMax = Vector2.one;
-        rt.offsetMin = Vector2.zero;
-        rt.offsetMax = Vector2.zero;
+        rect.anchorMin = Vector2.zero;
+        rect.anchorMax = Vector2.one;
+        rect.offsetMin = Vector2.zero;
+        rect.offsetMax = Vector2.zero;
     }
 }
 #endif
