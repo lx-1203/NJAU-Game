@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 
-public class DialogueSystem : MonoBehaviour, IDialogueTrigger
+public class DialogueSystem : MonoBehaviour, IDialogueTrigger, ISaveable
 {
     public static DialogueSystem Instance { get; private set; }
 
@@ -23,8 +23,16 @@ public class DialogueSystem : MonoBehaviour, IDialogueTrigger
         public int legacyIndex;
     }
 
+    private enum SkipPermission
+    {
+        Blocked,
+        CompleteCurrentLineOnly,
+        AllowAdvance
+    }
+
     [Header("Dialogue Settings")]
     [SerializeField] private float textSpeed = 0.04f;
+    [SerializeField] private float[] skipAdvanceIntervals = { 0.25f, 0.1f, 0.05f, 0.033f };
 
     public event Action<string> OnDialogueStart;
     public event Action<string> OnDialogueEnd;
@@ -51,8 +59,11 @@ public class DialogueSystem : MonoBehaviour, IDialogueTrigger
     private string currentFullText;
     private Coroutine typingCoroutine;
     private bool isTyping;
+    private float nextSkipAdvanceTime;
+    private bool currentLineWasSeenBefore;
 
     private readonly Stack<DialogueHistoryEntry> history = new Stack<DialogueHistoryEntry>();
+    private readonly HashSet<string> seenDialogueEntries = new HashSet<string>();
 
     private Action eventDialogueCompleteCallback;
     private Action<int> eventChoiceCallback;
@@ -102,6 +113,12 @@ public class DialogueSystem : MonoBehaviour, IDialogueTrigger
         if (Input.GetKeyDown(KeyCode.Space) || Input.GetMouseButtonDown(0))
         {
             HandleInput();
+            return;
+        }
+
+        if (IsSkipHeld())
+        {
+            HandleSkipInput();
         }
     }
 
@@ -240,6 +257,123 @@ public class DialogueSystem : MonoBehaviour, IDialogueTrigger
         }
     }
 
+    private void HandleSkipInput()
+    {
+        if (currentState == DialogueState.ShowingChoices)
+        {
+            return;
+        }
+
+        SkipPermission permission = GetSkipPermission();
+        if (permission == SkipPermission.Blocked)
+        {
+            return;
+        }
+
+        if (currentState == DialogueState.ShowingText)
+        {
+            SkipTyping();
+            if (permission == SkipPermission.AllowAdvance)
+            {
+                nextSkipAdvanceTime = Time.unscaledTime + GetSkipAdvanceInterval();
+            }
+            return;
+        }
+
+        if (permission != SkipPermission.AllowAdvance)
+        {
+            return;
+        }
+
+        if (currentState != DialogueState.WaitingForInput || Time.unscaledTime < nextSkipAdvanceTime)
+        {
+            return;
+        }
+
+        HandleInput();
+        nextSkipAdvanceTime = Time.unscaledTime + GetSkipAdvanceInterval();
+    }
+
+    private bool IsSkipHeld()
+    {
+        return Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
+    }
+
+    private float GetSkipAdvanceInterval()
+    {
+        int speedIndex = 2;
+        if (SettingsManager.Instance != null && SettingsManager.Instance.CurrentSettings != null)
+        {
+            speedIndex = SettingsManager.Instance.CurrentSettings.fastForwardSpeed;
+        }
+
+        if (skipAdvanceIntervals == null || skipAdvanceIntervals.Length == 0)
+        {
+            return 0.05f;
+        }
+
+        speedIndex = Mathf.Clamp(speedIndex, 0, skipAdvanceIntervals.Length - 1);
+        return Mathf.Max(0.01f, skipAdvanceIntervals[speedIndex]);
+    }
+
+    private SkipPermission GetSkipPermission()
+    {
+        if (!IsSkipHeld() || currentState == DialogueState.ShowingChoices)
+        {
+            return SkipPermission.Blocked;
+        }
+
+        if (!ShouldRestrictSkipToSeenEntries())
+        {
+            return SkipPermission.AllowAdvance;
+        }
+
+        return currentLineWasSeenBefore
+            ? SkipPermission.AllowAdvance
+            : SkipPermission.CompleteCurrentLineOnly;
+    }
+
+    private bool ShouldRestrictSkipToSeenEntries()
+    {
+        return SettingsManager.Instance != null
+            && SettingsManager.Instance.CurrentSettings != null
+            && SettingsManager.Instance.CurrentSettings.skipMode == 1;
+    }
+
+    private string GetCurrentDialogueEntryKey()
+    {
+        if (isLegacyMode)
+        {
+            return $"legacy:{currentDialogueId}:{legacyLineIndex}";
+        }
+
+        if (currentNode != null && !string.IsNullOrEmpty(currentNode.id))
+        {
+            return $"node:{currentDialogueId}:{currentNode.id}";
+        }
+
+        return null;
+    }
+
+    private void UpdateCurrentLineSeenState()
+    {
+        string entryKey = GetCurrentDialogueEntryKey();
+        currentLineWasSeenBefore = !string.IsNullOrEmpty(entryKey) && seenDialogueEntries.Contains(entryKey);
+    }
+
+    private void MarkCurrentLineAsSeen()
+    {
+        string entryKey = GetCurrentDialogueEntryKey();
+        if (string.IsNullOrEmpty(entryKey))
+        {
+            currentLineWasSeenBefore = false;
+            return;
+        }
+
+        seenDialogueEntries.Add(entryKey);
+        currentLineWasSeenBefore = true;
+    }
+
     private void NavigateToNode(string nodeId, bool recordHistory)
     {
         if (string.IsNullOrEmpty(nodeId))
@@ -287,6 +421,7 @@ public class DialogueSystem : MonoBehaviour, IDialogueTrigger
         isLegacyMode = false;
         currentNode = node;
         currentFullText = node.content ?? string.Empty;
+        UpdateCurrentLineSeenState();
         isTyping = false;
         currentState = DialogueState.WaitingForInput;
 
@@ -313,6 +448,7 @@ public class DialogueSystem : MonoBehaviour, IDialogueTrigger
         isLegacyMode = true;
         legacyLineIndex = lineIndex;
         currentFullText = legacyLines[legacyLineIndex] ?? string.Empty;
+        UpdateCurrentLineSeenState();
         isTyping = false;
         currentState = DialogueState.WaitingForInput;
 
@@ -397,6 +533,7 @@ public class DialogueSystem : MonoBehaviour, IDialogueTrigger
         }
 
         currentFullText = line ?? string.Empty;
+        UpdateCurrentLineSeenState();
         typingCoroutine = StartCoroutine(TypeText(currentFullText));
     }
 
@@ -433,6 +570,7 @@ public class DialogueSystem : MonoBehaviour, IDialogueTrigger
 
     private void OnTextComplete()
     {
+        MarkCurrentLineAsSeen();
         UpdateHintAfterTextComplete();
         RefreshPreviousButton();
     }
@@ -442,8 +580,8 @@ public class DialogueSystem : MonoBehaviour, IDialogueTrigger
         if (isLegacyMode)
         {
             uiBuilder.hintText.text = legacyLineIndex < legacyLines.Length - 1
-                ? "Space / Click to continue"
-                : "Space / Click to finish";
+                ? "Space / Click / Hold Ctrl to continue"
+                : "Space / Click / Hold Ctrl to finish";
             currentState = DialogueState.WaitingForInput;
             return;
         }
@@ -456,8 +594,8 @@ public class DialogueSystem : MonoBehaviour, IDialogueTrigger
         }
 
         uiBuilder.hintText.text = currentNode != null && !string.IsNullOrEmpty(currentNode.next)
-            ? "Space / Click to continue"
-            : "Space / Click to finish";
+            ? "Space / Click / Hold Ctrl to continue"
+            : "Space / Click / Hold Ctrl to finish";
         currentState = DialogueState.WaitingForInput;
     }
 
@@ -701,6 +839,8 @@ public class DialogueSystem : MonoBehaviour, IDialogueTrigger
         currentFullText = null;
         isLegacyMode = false;
         isTyping = false;
+        nextSkipAdvanceTime = 0f;
+        currentLineWasSeenBefore = false;
 
         if (typingCoroutine != null)
         {
@@ -710,6 +850,44 @@ public class DialogueSystem : MonoBehaviour, IDialogueTrigger
 
         uiBuilder.hintText.text = string.Empty;
         RefreshPreviousButton();
+    }
+
+    public int GetSeenDialogueEntryCount()
+    {
+        return seenDialogueEntries.Count;
+    }
+
+    public void ClearSeenDialogueEntries()
+    {
+        seenDialogueEntries.Clear();
+        UpdateCurrentLineSeenState();
+    }
+
+    public void SaveToData(SaveData data)
+    {
+        if (data == null)
+        {
+            return;
+        }
+
+        data.seenDialogueEntries = new List<string>(seenDialogueEntries);
+    }
+
+    public void LoadFromData(SaveData data)
+    {
+        seenDialogueEntries.Clear();
+        if (data != null && data.seenDialogueEntries != null)
+        {
+            foreach (string entry in data.seenDialogueEntries)
+            {
+                if (!string.IsNullOrEmpty(entry))
+                {
+                    seenDialogueEntries.Add(entry);
+                }
+            }
+        }
+
+        UpdateCurrentLineSeenState();
     }
 
     private void RefreshPreviousButton()

@@ -1,30 +1,27 @@
 using System;
 using UnityEngine;
 
-/// <summary>
-/// 设置数据模型，序列化到 PlayerPrefs。
-/// </summary>
 [Serializable]
 public class SettingsData
 {
-    // 音频
+    // Audio
     public float masterVolume = 1.0f;
     public float musicVolume = 0.7f;
     public float sfxVolume = 0.8f;
     public bool isMuted = false;
 
-    // 图像
+    // Display
     public bool fullscreen = true;
     public int resolutionWidth = 1920;
     public int resolutionHeight = 1080;
     public float uiScale = 1.0f;
 
-    // 游戏
-    public int textSpeed = 1;          // 0=慢, 1=正常, 2=快
-    public int language = 0;           // 0=简体中文, 1=English(预留)
-    public int autoPlayInterval = 1;   // 0=短, 1=正常, 2=长
-    public int skipMode = 0;           // 0=快进所有对话, 1=仅快进已读
-    public int fastForwardSpeed = 2;   // 0=x4, 1=x10, 2=x20, 3=x30
+    // Gameplay
+    public int textSpeed = 1;        // 0=slow, 1=normal, 2=fast
+    public int language = 0;         // 0=zh-CN, 1=English (reserved)
+    public int autoPlayInterval = 1; // 0=short, 1=normal, 2=long
+    public int skipMode = 0;         // 0=all dialogue, 1=read-only
+    public int fastForwardSpeed = 2; // 0=x4, 1=x10, 2=x20, 3=x30
 
     public float GetEffectiveMasterVolume()
     {
@@ -98,7 +95,7 @@ public class SettingsData
 
     public string GetSkipModeLabel()
     {
-        return skipMode == 1 ? "仅快进已读" : "快进所有对话";
+        return skipMode == 1 ? "仅快进已读" : "快进全部对话";
     }
 
     public string GetFastForwardSpeedLabel()

@@ -225,6 +225,8 @@ public class SaveData
 
     // ========== 任务系统（MissionSystem 存档） ==========
     public MissionSaveData missionData = new MissionSaveData();
+    public List<InventoryItemSaveData> inventoryItems = new List<InventoryItemSaveData>();
+    public List<string> seenDialogueEntries = new List<string>();
 
     // ========== 游戏时长 ==========
     public float totalPlayTimeSeconds = 0f;
@@ -249,5 +251,7 @@ public class SaveData
         clubExitCooldowns ??= new List<StringIntPair>();
         missionData ??= new MissionSaveData();
         missionData.EnsureInitialized();
+        inventoryItems ??= new List<InventoryItemSaveData>();
+        seenDialogueEntries ??= new List<string>();
     }
 }

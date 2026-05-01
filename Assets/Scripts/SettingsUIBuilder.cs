@@ -5,7 +5,7 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// 纯代码设置界面构建器。
+/// Pure-code settings panel builder.
 /// </summary>
 public class SettingsUIBuilder : MonoBehaviour
 {
@@ -54,6 +54,8 @@ public class SettingsUIBuilder : MonoBehaviour
     private TextMeshProUGUI autoPlayValueText;
     private TextMeshProUGUI skipModeValueText;
     private TextMeshProUGUI fastForwardValueText;
+    private TextMeshProUGUI dialogueSkipHelpText;
+    private TextMeshProUGUI dialogueHistoryValueText;
     private TextMeshProUGUI fullscreenValueText;
     private TextMeshProUGUI resolutionValueText;
     private TextMeshProUGUI uiScaleValueText;
@@ -287,10 +289,10 @@ public class SettingsUIBuilder : MonoBehaviour
 
     private void CreateHeader(RectTransform parent)
     {
-        CreateLabel(parent, "TitleIcon", "设置", 52f, new Color32(0x88, 0x7B, 0xE3, 0xFF),
+        CreateLabel(parent, "TitleIcon", "\u8bbe\u7f6e", 52f, new Color32(0x88, 0x7B, 0xE3, 0xFF),
             new Vector2(0f, 1f), new Vector2(240f, 72f), new Vector2(-54f, 24f), TextAlignmentOptions.Left);
 
-        CreateLabel(parent, "TitleWrench", "🔧", 30f, AccentColor,
+        CreateLabel(parent, "TitleWrench", "\u2699", 30f, AccentColor,
             new Vector2(0f, 1f), new Vector2(52f, 52f), new Vector2(-115f, -6f), TextAlignmentOptions.Center);
     }
 
@@ -311,9 +313,9 @@ public class SettingsUIBuilder : MonoBehaviour
         layout.childForceExpandWidth = false;
         layout.childForceExpandHeight = false;
 
-        CreateTabButton(tabsRoot, "游戏", SettingsTab.Gameplay, out gameplayTabButton, out gameplayTabImage, out gameplayTabText);
-        CreateTabButton(tabsRoot, "图像", SettingsTab.Display, out displayTabButton, out displayTabImage, out displayTabText);
-        CreateTabButton(tabsRoot, "音频", SettingsTab.Audio, out audioTabButton, out audioTabImage, out audioTabText);
+        CreateTabButton(tabsRoot, "\u6e38\u620f", SettingsTab.Gameplay, out gameplayTabButton, out gameplayTabImage, out gameplayTabText);
+        CreateTabButton(tabsRoot, "\u56fe\u50cf", SettingsTab.Display, out displayTabButton, out displayTabImage, out displayTabText);
+        CreateTabButton(tabsRoot, "\u97f3\u9891", SettingsTab.Audio, out audioTabButton, out audioTabImage, out audioTabText);
     }
 
     private void CreateTabButton(RectTransform parent, string label, SettingsTab tab,
@@ -407,38 +409,42 @@ public class SettingsUIBuilder : MonoBehaviour
 
     private void BuildGameplayPage(RectTransform parent)
     {
-        CreateSectionHeader(parent, "语言设置");
-        CreateSelectorRow(parent, "语言", out languageValueText,
+        CreateSectionHeader(parent, "\u8bed\u8a00\u8bbe\u7f6e");
+        CreateSelectorRow(parent, "\u8bed\u8a00", out languageValueText,
             delegate { ChangeLanguage(-1); }, delegate { ChangeLanguage(1); });
 
-        CreateSectionHeader(parent, "剧情播放设置");
-        CreateSelectorRow(parent, "文本播放速度", out textSpeedValueText,
+        CreateSectionHeader(parent, "\u5267\u60c5\u64ad\u653e\u8bbe\u7f6e");
+        CreateSelectorRow(parent, "\u6587\u672c\u64ad\u653e\u901f\u5ea6", out textSpeedValueText,
             delegate { ChangeTextSpeed(-1); }, delegate { ChangeTextSpeed(1); });
-        CreateSelectorRow(parent, "自动播放间隔", out autoPlayValueText,
+        CreateSelectorRow(parent, "\u81ea\u52a8\u64ad\u653e\u95f4\u9694", out autoPlayValueText,
             delegate { ChangeAutoPlayInterval(-1); }, delegate { ChangeAutoPlayInterval(1); });
-        CreateSelectorRow(parent, "快进规则", out skipModeValueText,
+        CreateSelectorRow(parent, "\u5feb\u8fdb\u89c4\u5219", out skipModeValueText,
             delegate { ChangeSkipMode(-1); }, delegate { ChangeSkipMode(1); });
-        CreateSelectorRow(parent, "快进速度", out fastForwardValueText,
+        CreateSelectorRow(parent, "\u5feb\u8fdb\u901f\u5ea6", out fastForwardValueText,
             delegate { ChangeFastForwardSpeed(-1); }, delegate { ChangeFastForwardSpeed(1); });
+        CreateInfoRow(parent, out dialogueSkipHelpText);
+
+        CreateSectionHeader(parent, "\u5df2\u8bfb\u8bb0\u5f55");
+        CreateInfoActionRow(parent, "\u5df2\u8bfb\u5bf9\u8bdd", out dialogueHistoryValueText, "\u6e05\u7a7a\u8bb0\u5f55", OnClearDialogueHistory);
     }
 
     private void BuildDisplayPage(RectTransform parent)
     {
-        CreateSectionHeader(parent, "显示设置");
-        CreateSelectorRow(parent, "全屏模式", out fullscreenValueText,
+        CreateSectionHeader(parent, "\u663e\u793a\u8bbe\u7f6e");
+        CreateSelectorRow(parent, "\u5168\u5c4f\u6a21\u5f0f", out fullscreenValueText,
             delegate { ToggleFullscreen(); }, delegate { ToggleFullscreen(); });
-        CreateSelectorRow(parent, "分辨率", out resolutionValueText,
+        CreateSelectorRow(parent, "\u5206\u8fa8\u7387", out resolutionValueText,
             delegate { ChangeResolution(-1); }, delegate { ChangeResolution(1); });
-        CreateSliderRow(parent, "界面缩放", 0.8f, 1.3f, out uiScaleSlider, out uiScaleValueText, OnUIScaleSliderChanged);
+        CreateSliderRow(parent, "\u754c\u9762\u7f29\u653e", 0.8f, 1.3f, out uiScaleSlider, out uiScaleValueText, OnUIScaleSliderChanged);
     }
 
     private void BuildAudioPage(RectTransform parent)
     {
-        CreateSectionHeader(parent, "音量设置");
-        CreateSliderRow(parent, "主音量", 0f, 1f, out masterVolumeSlider, out masterVolumeValueText, OnMasterVolumeSliderChanged);
-        CreateSliderRow(parent, "音乐音量", 0f, 1f, out musicVolumeSlider, out musicVolumeValueText, OnMusicVolumeSliderChanged);
-        CreateSliderRow(parent, "音效音量", 0f, 1f, out sfxVolumeSlider, out sfxVolumeValueText, OnSFXVolumeSliderChanged);
-        CreateSelectorRow(parent, "静音", out muteValueText,
+        CreateSectionHeader(parent, "\u97f3\u91cf\u8bbe\u7f6e");
+        CreateSliderRow(parent, "\u4e3b\u97f3\u91cf", 0f, 1f, out masterVolumeSlider, out masterVolumeValueText, OnMasterVolumeSliderChanged);
+        CreateSliderRow(parent, "\u97f3\u4e50\u97f3\u91cf", 0f, 1f, out musicVolumeSlider, out musicVolumeValueText, OnMusicVolumeSliderChanged);
+        CreateSliderRow(parent, "\u97f3\u6548\u97f3\u91cf", 0f, 1f, out sfxVolumeSlider, out sfxVolumeValueText, OnSFXVolumeSliderChanged);
+        CreateSelectorRow(parent, "\u9759\u97f3", out muteValueText,
             delegate { ToggleMute(); }, delegate { ToggleMute(); });
     }
 
@@ -453,14 +459,14 @@ public class SettingsUIBuilder : MonoBehaviour
         rt.anchoredPosition = new Vector2(0f, -8f);
         bottom.AddComponent<Image>().color = new Color(1f, 1f, 1f, 0f);
 
-        statusText = CreateLabel(rt, "Status", "未保存修改", 20f, TextSecondary,
+        statusText = CreateLabel(rt, "Status", "\u672a\u4fdd\u5b58\u4fee\u6539", 20f, TextSecondary,
             new Vector2(0f, 0.5f), new Vector2(280f, 40f), new Vector2(34f, 0f), TextAlignmentOptions.Left);
 
-        Button resetButton = CreateActionButton(rt, "恢复默认", new Vector2(220f, 64f), new Vector2(760f, 0f),
+        Button resetButton = CreateActionButton(rt, "\u6062\u590d\u9ed8\u8ba4", new Vector2(220f, 64f), new Vector2(760f, 0f),
             new Color32(0xF5, 0xE6, 0xC6, 0xFF), AccentColor, OnResetToDefaults);
-        Button cancelButton = CreateActionButton(rt, "算了", new Vector2(220f, 64f), new Vector2(1010f, 0f),
+        Button cancelButton = CreateActionButton(rt, "\u53d6\u6d88", new Vector2(220f, 64f), new Vector2(1010f, 0f),
             new Color32(0xFB, 0xF2, 0xDE, 0xFF), AccentColor, TryClose);
-        Button saveButton = CreateActionButton(rt, "保存修改", new Vector2(220f, 64f), new Vector2(1260f, 0f),
+        Button saveButton = CreateActionButton(rt, "\u4fdd\u5b58\u4fee\u6539", new Vector2(220f, 64f), new Vector2(1260f, 0f),
             new Color32(0xFF, 0xE7, 0x84, 0xFF), new Color32(0xD1, 0x87, 0x37, 0xFF), SaveAndClose);
 
         UIInputHelper.FocusSelectable(saveButton);
@@ -513,11 +519,11 @@ public class SettingsUIBuilder : MonoBehaviour
             new Vector2(0f, 0.5f), new Vector2(360f, 50f), new Vector2(46f, 0f), TextAlignmentOptions.Left).fontStyle = FontStyles.Bold;
 
         RectTransform boxRT = CreateValueBox(rowRT, new Vector2(0.76f, 0.5f), new Vector2(820f, 58f), Vector2.zero);
-        CreateArrowButton(boxRT, "Prev", "◀", new Vector2(34f, 34f), new Vector2(-362f, 0f), onPrevious);
+        CreateArrowButton(boxRT, "Prev", "<", new Vector2(34f, 34f), new Vector2(-362f, 0f), onPrevious);
         valueText = CreateLabel(boxRT, "Value", "---", 26f, TextSecondary,
             new Vector2(0.5f, 0.5f), new Vector2(560f, 42f), Vector2.zero, TextAlignmentOptions.Center);
         valueText.fontStyle = FontStyles.Bold;
-        CreateArrowButton(boxRT, "Next", "▶", new Vector2(34f, 34f), new Vector2(362f, 0f), onNext);
+        CreateArrowButton(boxRT, "Next", ">", new Vector2(34f, 34f), new Vector2(362f, 0f), onNext);
     }
 
     private void CreateSliderRow(RectTransform parent, string label, float min, float max,
@@ -535,6 +541,35 @@ public class SettingsUIBuilder : MonoBehaviour
         valueText = CreateLabel(boxRT, "Value", "100%", 24f, TextSecondary,
             new Vector2(1f, 0.5f), new Vector2(160f, 40f), new Vector2(-44f, 0f), TextAlignmentOptions.Right);
         valueText.fontStyle = FontStyles.Bold;
+    }
+
+    private void CreateInfoRow(RectTransform parent, out TextMeshProUGUI infoText)
+    {
+        GameObject row = CreateRow(parent, 104f);
+        RectTransform rowRT = row.GetComponent<RectTransform>();
+
+        RectTransform boxRT = CreateValueBox(rowRT, new Vector2(0.5f, 0.5f), new Vector2(1600f, 74f), Vector2.zero);
+        infoText = CreateLabel(boxRT, "Info", string.Empty, 22f, TextSecondary,
+            new Vector2(0.5f, 0.5f), new Vector2(1480f, 56f), Vector2.zero, TextAlignmentOptions.MidlineLeft);
+        infoText.enableWordWrapping = true;
+        infoText.overflowMode = TextOverflowModes.Overflow;
+    }
+
+    private void CreateInfoActionRow(RectTransform parent, string label, out TextMeshProUGUI valueText, string buttonLabel, Action onClick)
+    {
+        GameObject row = CreateRow(parent, 92f);
+        RectTransform rowRT = row.GetComponent<RectTransform>();
+
+        CreateLabel(rowRT, "Label", label, 28f, TextPrimary,
+            new Vector2(0f, 0.5f), new Vector2(360f, 50f), new Vector2(46f, 0f), TextAlignmentOptions.Left).fontStyle = FontStyles.Bold;
+
+        RectTransform boxRT = CreateValueBox(rowRT, new Vector2(0.62f, 0.5f), new Vector2(700f, 58f), Vector2.zero);
+        valueText = CreateLabel(boxRT, "Value", "---", 24f, TextSecondary,
+            new Vector2(0.5f, 0.5f), new Vector2(640f, 42f), Vector2.zero, TextAlignmentOptions.Center);
+        valueText.fontStyle = FontStyles.Bold;
+
+        CreateActionButton(rowRT, buttonLabel, new Vector2(220f, 56f), new Vector2(1320f, 0f),
+            new Color32(0xFB, 0xF2, 0xDE, 0xFF), AccentColor, onClick);
     }
 
     private GameObject CreateRow(RectTransform parent, float height)
@@ -707,13 +742,15 @@ public class SettingsUIBuilder : MonoBehaviour
         if (autoPlayValueText != null) autoPlayValueText.text = draftSettings.GetAutoPlayIntervalLabel();
         if (skipModeValueText != null) skipModeValueText.text = draftSettings.GetSkipModeLabel();
         if (fastForwardValueText != null) fastForwardValueText.text = draftSettings.GetFastForwardSpeedLabel();
-        if (fullscreenValueText != null) fullscreenValueText.text = draftSettings.fullscreen ? "开启" : "关闭";
+        if (dialogueSkipHelpText != null) dialogueSkipHelpText.text = GetDialogueSkipHelpText();
+        if (dialogueHistoryValueText != null) dialogueHistoryValueText.text = GetDialogueHistoryLabel();
+        if (fullscreenValueText != null) fullscreenValueText.text = draftSettings.fullscreen ? "\u5f00\u542f" : "\u5173\u95ed";
         if (resolutionValueText != null) resolutionValueText.text = draftSettings.GetResolutionLabel();
         if (uiScaleValueText != null) uiScaleValueText.text = Mathf.RoundToInt(draftSettings.uiScale * 100f) + "%";
         if (masterVolumeValueText != null) masterVolumeValueText.text = Mathf.RoundToInt(draftSettings.masterVolume * 100f) + "%";
         if (musicVolumeValueText != null) musicVolumeValueText.text = Mathf.RoundToInt(draftSettings.musicVolume * 100f) + "%";
         if (sfxVolumeValueText != null) sfxVolumeValueText.text = Mathf.RoundToInt(draftSettings.sfxVolume * 100f) + "%";
-        if (muteValueText != null) muteValueText.text = draftSettings.isMuted ? "开启" : "关闭";
+        if (muteValueText != null) muteValueText.text = draftSettings.isMuted ? "\u5f00\u542f" : "\u5173\u95ed";
 
         if (uiScaleSlider != null) uiScaleSlider.SetValueWithoutNotify(draftSettings.uiScale);
         if (masterVolumeSlider != null) masterVolumeSlider.SetValueWithoutNotify(draftSettings.masterVolume);
@@ -722,7 +759,7 @@ public class SettingsUIBuilder : MonoBehaviour
 
         if (statusText != null)
         {
-            statusText.text = HasUnsavedChanges() ? "未保存修改" : "当前设置已同步";
+            statusText.text = HasUnsavedChanges() ? "\u672a\u4fdd\u5b58\u4fee\u6539" : "\u5f53\u524d\u8bbe\u7f6e\u5df2\u540c\u6b65";
             statusText.color = HasUnsavedChanges() ? TextSecondary : AccentColor;
         }
 
@@ -760,7 +797,7 @@ public class SettingsUIBuilder : MonoBehaviour
             return;
         }
 
-        CreateConfirmDialog("有未保存的修改，确定直接关闭吗？", HideSettings);
+        CreateConfirmDialog("\u6709\u672a\u4fdd\u5b58\u7684\u4fee\u6539\uff0c\u786e\u5b9a\u76f4\u63a5\u5173\u95ed\u5417\uff1f", HideSettings);
     }
 
     private void SaveAndClose()
@@ -777,7 +814,7 @@ public class SettingsUIBuilder : MonoBehaviour
 
     private void OnResetToDefaults()
     {
-        CreateConfirmDialog("确定恢复为默认设置吗？", delegate
+        CreateConfirmDialog("\u786e\u5b9a\u6062\u590d\u4e3a\u9ed8\u8ba4\u8bbe\u7f6e\u5417\uff1f", delegate
         {
             if (draftSettings == null)
             {
@@ -891,6 +928,34 @@ public class SettingsUIBuilder : MonoBehaviour
         RefreshAllUI();
     }
 
+    private string GetDialogueSkipHelpText()
+    {
+        string ruleText = draftSettings != null && draftSettings.skipMode == 1
+            ? "\u6309\u4f4f Ctrl \u65f6\uff0c\u65b0\u5bf9\u8bdd\u53ea\u4f1a\u5148\u8865\u5168\u6587\u5b57\uff1b\u5df2\u8bfb\u5bf9\u8bdd\u624d\u4f1a\u8fde\u7eed\u8df3\u8fc7\u3002"
+            : "\u6309\u4f4f Ctrl \u65f6\uff0c\u4f1a\u8fde\u7eed\u5feb\u8fdb\u5f53\u524d\u5bf9\u8bdd\u3002";
+        string speedText = draftSettings != null ? draftSettings.GetFastForwardSpeedLabel() : "x20";
+        return "\u5feb\u6377\u952e\uff1a\u6309\u4f4f Ctrl \u5feb\u8fdb\u3002\u9047\u5230\u9009\u9879\u4f1a\u81ea\u52a8\u505c\u4e0b\uff0c\u4e0d\u4f1a\u66ff\u4f60\u9009\u62e9\u3002\u5f53\u524d\u901f\u5ea6\uff1a" + speedText + "\u3002" + ruleText;
+    }
+
+    private string GetDialogueHistoryLabel()
+    {
+        int count = DialogueSystem.Instance != null ? DialogueSystem.Instance.GetSeenDialogueEntryCount() : 0;
+        return "\u5df2\u8bb0\u5f55 " + count + " \u6761";
+    }
+
+    private void OnClearDialogueHistory()
+    {
+        CreateConfirmDialog("\u786e\u5b9a\u6e05\u7a7a\u5f53\u524d\u5b58\u6863\u7684\u5df2\u8bfb\u5bf9\u8bdd\u8bb0\u5f55\u5417\uff1f", delegate
+        {
+            if (DialogueSystem.Instance != null)
+            {
+                DialogueSystem.Instance.ClearSeenDialogueEntries();
+            }
+
+            RefreshAllUI();
+        });
+    }
+
     private int WrapIndex(int index, int count)
     {
         if (count <= 0)
@@ -987,11 +1052,11 @@ public class SettingsUIBuilder : MonoBehaviour
 
         confirmDialogCancelAction = ClearConfirmDialog;
 
-        confirmDialogConfirmButton = CreateActionButton(panelRT, "确定", new Vector2(170f, 56f), new Vector2(86f, -56f),
+        confirmDialogConfirmButton = CreateActionButton(panelRT, "\u786e\u5b9a", new Vector2(170f, 56f), new Vector2(86f, -56f),
             new Color32(0xFF, 0xE7, 0x84, 0xFF), new Color32(0xB8, 0x6F, 0x2C, 0xFF),
             delegate { confirmDialogConfirmAction?.Invoke(); });
 
-        CreateActionButton(panelRT, "取消", new Vector2(170f, 56f), new Vector2(280f, -56f),
+        CreateActionButton(panelRT, "\u53d6\u6d88", new Vector2(170f, 56f), new Vector2(280f, -56f),
             new Color32(0xF5, 0xE7, 0xC9, 0xFF), AccentColor,
             delegate { confirmDialogCancelAction?.Invoke(); });
 
@@ -1060,3 +1125,4 @@ public class SettingsUIBuilder : MonoBehaviour
         }
     }
 }
+
