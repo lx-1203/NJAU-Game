@@ -91,6 +91,7 @@ public class NPCData
 
     public string[] likedActionIds;     // 喜好行动（+好感修正）
     public string[] dislikedActionIds;  // 厌恶行动（-好感修正）
+    public string[] allowedPlayerGenders; // 允许出现给哪些主角: "Male" / "Female"
 
     public NPCScheduleEntry[] schedule; // 日程
     public string[] greetingLines;      // 默认打招呼台词
@@ -101,6 +102,7 @@ public class NPCData
     [NonSerialized] private NPCPersonality? _parsedPersonality;
     [NonSerialized] private HashSet<string> _likedSet;
     [NonSerialized] private HashSet<string> _dislikedSet;
+    [NonSerialized] private HashSet<string> _allowedGenderSet;
 
     public NPCType GetNPCType()
     {
@@ -128,6 +130,29 @@ public class NPCData
         if (_dislikedSet == null)
             _dislikedSet = dislikedActionIds != null ? new HashSet<string>(dislikedActionIds) : new HashSet<string>();
         return _dislikedSet.Contains(actionId);
+    }
+
+    public bool IsAvailableForPlayerGender(int playerGender)
+    {
+        if (allowedPlayerGenders == null || allowedPlayerGenders.Length == 0)
+        {
+            return true;
+        }
+
+        if (_allowedGenderSet == null)
+        {
+            _allowedGenderSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            for (int i = 0; i < allowedPlayerGenders.Length; i++)
+            {
+                if (!string.IsNullOrWhiteSpace(allowedPlayerGenders[i]))
+                {
+                    _allowedGenderSet.Add(allowedPlayerGenders[i].Trim());
+                }
+            }
+        }
+
+        string genderKey = playerGender == 1 ? "Female" : "Male";
+        return _allowedGenderSet.Contains(genderKey) || _allowedGenderSet.Contains("Any");
     }
 }
 

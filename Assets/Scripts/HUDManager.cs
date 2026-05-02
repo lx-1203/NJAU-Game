@@ -279,6 +279,48 @@ public class HUDManager : MonoBehaviour
                 ToggleActionMenu();
             });
         }
+
+        if (builder.btnInventory != null)
+        {
+            builder.btnInventory.onClick.AddListener(() =>
+            {
+                if (!CanProcessHotkeys())
+                {
+                    return;
+                }
+
+                if (builder.hudAnimator != null)
+                {
+                    builder.hudAnimator.ButtonPressEffect(builder.btnInventory);
+                }
+
+                ToggleInventoryPanel();
+            });
+        }
+
+        if (builder.btnGoOut != null)
+        {
+            builder.btnGoOut.onClick.AddListener(() =>
+            {
+                if (!CanProcessHotkeys())
+                {
+                    return;
+                }
+
+                if (ActionSystem.Instance == null || !ActionSystem.Instance.CanExecuteAction("goout"))
+                {
+                    StartCoroutine(ShakeButtonCoroutine(builder.btnGoOut));
+                    return;
+                }
+
+                if (builder.hudAnimator != null)
+                {
+                    builder.hudAnimator.ButtonPressEffect(builder.btnGoOut);
+                }
+
+                ActionSystem.Instance.ExecuteAction("goout");
+            });
+        }
     }
 
     private IEnumerator DeferredSubscriptions()
@@ -1322,7 +1364,28 @@ public class HUDManager : MonoBehaviour
             builder.actionButtonRow.SetActive(false);
         }
 
+        RefreshQuickAccessButtons();
         RefreshActionMenuContent();
+    }
+
+    private void RefreshQuickAccessButtons()
+    {
+        if (builder == null)
+        {
+            return;
+        }
+
+        if (builder.btnInventory != null)
+        {
+            builder.btnInventory.interactable = InventoryUIManager.Instance != null;
+        }
+
+        if (builder.btnGoOut != null)
+        {
+            builder.btnGoOut.interactable = ActionSystem.Instance != null &&
+                                            ActionSystem.Instance.CanExecuteAction("goout") &&
+                                            !IsModalOpen;
+        }
     }
 
     private void RefreshActionMenuContent()
@@ -1367,6 +1430,11 @@ public class HUDManager : MonoBehaviour
 
         foreach (ActionDefinition action in actions)
         {
+            if (action == null || action.id == "goout")
+            {
+                continue;
+            }
+
             Button btn = CreateActionMenuEntry(actionMenuContent, action);
             dynamicActionButtons.Add(btn);
         }
@@ -1387,21 +1455,6 @@ public class HUDManager : MonoBehaviour
             dynamicActionButtons.Add(socialButton);
         }
 
-        if (InventoryUIManager.Instance != null)
-        {
-            Button inventoryButton = CreateActionMenuCommandEntry(
-                actionMenuContent,
-                "背包",
-                "背包",
-                "查看并使用已购买的道具",
-                "打开",
-                () =>
-                {
-                    CloseActionMenu();
-                    InventoryUIManager.Instance.OpenPanel();
-                });
-            dynamicActionButtons.Add(inventoryButton);
-        }
     }
 
     private void ClearDynamicButtons()
@@ -1933,7 +1986,6 @@ public class HUDManager : MonoBehaviour
         if (builder.btnStudy != null) builder.btnStudy.gameObject.SetActive(false);
         if (builder.btnSocial != null && builder.btnSocial != builder.btnFeature)
             builder.btnSocial.gameObject.SetActive(false);
-        if (builder.btnGoOut != null) builder.btnGoOut.gameObject.SetActive(false);
         if (builder.btnSleep != null) builder.btnSleep.gameObject.SetActive(false);
     }
 
@@ -1971,18 +2023,11 @@ public class HUDManager : MonoBehaviour
     {
         SetModalState(true);
 
-        if (EndingDeterminer.Instance != null)
+        if (GameEndingManager.Instance != null && EndingDeterminer.Instance != null)
         {
             EndingResult result = EndingDeterminer.Instance.DetermineEnding();
             Debug.Log($"[HUD] 毕业结局: {result.ending.name} ({result.ending.stars}★) — {result.ending.description}");
-
-            if (EndingUI.Instance == null)
-            {
-                GameObject uiObj = new GameObject("EndingUI");
-                uiObj.AddComponent<EndingUI>();
-            }
-
-            EndingUI.Instance.Show(result);
+            GameEndingManager.Instance.TriggerEnding(result, "Graduation");
         }
         else
         {

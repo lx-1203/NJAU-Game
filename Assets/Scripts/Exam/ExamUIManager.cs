@@ -107,6 +107,28 @@ public class ExamUIManager : MonoBehaviour
         StartCourseTransition();
     }
 
+    public void ForceTerminateSequence()
+    {
+        StopAllCoroutines();
+
+        if (builder != null)
+        {
+            if (builder.transitionPanel != null) builder.transitionPanel.SetActive(false);
+            if (builder.questionPanel != null) builder.questionPanel.SetActive(false);
+            if (builder.cheatCaughtPanel != null) builder.cheatCaughtPanel.SetActive(false);
+            if (builder.scorecardPanel != null) builder.scorecardPanel.SetActive(false);
+            if (builder.examCanvas != null) builder.examCanvas.SetActive(false);
+        }
+
+        currentQuestionGroup = null;
+        currentQuestionIndex = 0;
+        correctCountThisCourse = 0;
+        cheatedThisCourse = false;
+        currentState = ExamUIState.Done;
+
+        Debug.Log("[ExamUIManager] 已强制终止考试 UI 流程");
+    }
+
     // ========== 科目过渡 ==========
 
     private void StartCourseTransition()

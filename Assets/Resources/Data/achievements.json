@@ -159,6 +159,22 @@
             "conditions": [{ "type": "SemesterGrade_Equals", "value": 3 }],
             "iconId": "icon_grade_a",
             "points": 60
+        },
+        {
+            "id": "ACH_021",
+            "name": "尘埃落定",
+            "description": "达成任意一个结局",
+            "conditions": [],
+            "iconId": "icon_ending_any",
+            "points": 30
+        },
+        {
+            "id": "ACH_022",
+            "name": "红线之外",
+            "description": "达成结局“学术不端开除”",
+            "conditions": [],
+            "iconId": "icon_ending_expelled",
+            "points": 20
         }
     ]
 }

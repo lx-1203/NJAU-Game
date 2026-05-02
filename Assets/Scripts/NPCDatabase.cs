@@ -51,14 +51,32 @@ public class NPCDatabase : MonoBehaviour
     /// <summary>获取所有 NPC 数据</summary>
     public NPCData[] GetAllNPCs()
     {
-        return allNPCs ?? new NPCData[0];
+        NPCData[] source = allNPCs ?? new NPCData[0];
+        int playerGender = ResolveCurrentPlayerGender();
+        List<NPCData> filtered = new List<NPCData>(source.Length);
+
+        for (int i = 0; i < source.Length; i++)
+        {
+            NPCData npc = source[i];
+            if (npc != null && npc.IsAvailableForPlayerGender(playerGender))
+            {
+                filtered.Add(npc);
+            }
+        }
+
+        return filtered.ToArray();
     }
 
     /// <summary>根据 ID 获取 NPC 数据</summary>
     public NPCData GetNPC(string npcId)
     {
         npcMap.TryGetValue(npcId, out NPCData data);
-        return data;
+        if (data == null)
+        {
+            return null;
+        }
+
+        return data.IsAvailableForPlayerGender(ResolveCurrentPlayerGender()) ? data : null;
     }
 
     /// <summary>获取所有社交行动定义</summary>
@@ -128,6 +146,26 @@ public class NPCDatabase : MonoBehaviour
         }
 
         Debug.Log($"[NPCDatabase] 加载完成：{allNPCs.Length} 个NPC，{allSocialActions.Length} 种社交行动");
+    }
+
+    private int ResolveCurrentPlayerGender()
+    {
+        if (GameState.Instance != null)
+        {
+            return Mathf.Clamp(GameState.Instance.PlayerGender, 0, 1);
+        }
+
+        if (SaveManager.PendingLoadData != null)
+        {
+            return Mathf.Clamp(SaveManager.PendingLoadData.playerGender, 0, 1);
+        }
+
+        if (CharacterCreationUI.HasPendingCharacter)
+        {
+            return Mathf.Clamp(CharacterCreationUI.PendingPlayerGender, 0, 1);
+        }
+
+        return Mathf.Clamp(StartupFlowSettings.DefaultPlayerGender, 0, 1);
     }
 
     // ========== 生命周期 ==========

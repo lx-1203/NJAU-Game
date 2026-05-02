@@ -12,6 +12,8 @@ namespace Zhongshan.CreatorToolkit
     {
         private static readonly string DialoguesFolderPath = Path.Combine(Application.streamingAssetsPath, "Dialogues");
         private static readonly string EventsFolderPath = Path.Combine(Application.dataPath, "Resources/Data/Events");
+        private static readonly string MissionsFilePath = Path.Combine(Application.dataPath, "Resources/Data/missions.json");
+        private static readonly string NpcDatabaseFilePath = Path.Combine(Application.dataPath, "Resources/Data/npc_database.json");
 
         // ======= 对话读取与保存 =======
 
@@ -71,6 +73,40 @@ namespace Zhongshan.CreatorToolkit
                 dialogues = dataArray
             };
             SaveDialogue(dialogueId + ".json", newWrapper);
+        }
+
+        // ======= 任务读取与保存 =======
+
+        public static MissionListWrapper LoadMissionList()
+        {
+            if (!File.Exists(MissionsFilePath)) return null;
+
+            string json = File.ReadAllText(MissionsFilePath);
+            return JsonUtility.FromJson<MissionListWrapper>(json);
+        }
+
+        public static void SaveMissionList(MissionListWrapper data)
+        {
+            string json = JsonUtility.ToJson(data, true);
+            File.WriteAllText(MissionsFilePath, json);
+            AssetDatabase.Refresh();
+        }
+
+        // ======= NPC 数据库读取与保存 =======
+
+        public static NPCDatabaseRoot LoadNPCDatabase()
+        {
+            if (!File.Exists(NpcDatabaseFilePath)) return null;
+
+            string json = File.ReadAllText(NpcDatabaseFilePath);
+            return JsonUtility.FromJson<NPCDatabaseRoot>(json);
+        }
+
+        public static void SaveNPCDatabase(NPCDatabaseRoot data)
+        {
+            string json = JsonUtility.ToJson(data, true);
+            File.WriteAllText(NpcDatabaseFilePath, json);
+            AssetDatabase.Refresh();
         }
 
         // ======= 事件读取与保存 =======

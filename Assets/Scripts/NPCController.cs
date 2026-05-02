@@ -4,6 +4,8 @@ using UnityEngine;
 public class NPCController : MonoBehaviour
 {
     private const string DefaultNPCSpriteResourcePath = "NPCSprite";
+    private const int HintSpriteTextureSize = 64;
+    private static Sprite sharedRoundSprite;
 
     [Header("NPC Settings")]
     [SerializeField] private float interactionRange = 2.5f;
@@ -34,8 +36,6 @@ public class NPCController : MonoBehaviour
         LoadNPCSprite();
         ConfigureClickCollider();
         CreateInteractionHint();
-
-        Debug.Log($"[NPCController] Initialized NPC {npcData.displayName} ({npcId})");
     }
 
     private void Start()
@@ -123,7 +123,7 @@ public class NPCController : MonoBehaviour
         GameObject bgObj = new GameObject("HintBG", typeof(SpriteRenderer));
         bgObj.transform.SetParent(interactionHint.transform, false);
         SpriteRenderer bgRenderer = bgObj.GetComponent<SpriteRenderer>();
-        bgRenderer.sprite = CreateRoundSprite();
+        bgRenderer.sprite = GetSharedRoundSprite();
         bgRenderer.color = new Color(0f, 0f, 0f, 0.55f);
         bgRenderer.sortingOrder = 9;
         bgObj.transform.localScale = new Vector3(1.8f, 0.6f, 1f);
@@ -145,7 +145,7 @@ public class NPCController : MonoBehaviour
         keyBgObj.transform.localPosition = new Vector3(-0.28f, 0.02f, 0f);
 
         SpriteRenderer keyBgRenderer = keyBgObj.GetComponent<SpriteRenderer>();
-        keyBgRenderer.sprite = CreateRoundSprite();
+        keyBgRenderer.sprite = GetSharedRoundSprite();
         keyBgRenderer.color = new Color(1f, 0.85f, 0.3f, 0.25f);
         keyBgRenderer.sortingOrder = 10;
         keyBgObj.transform.localScale = new Vector3(0.4f, 0.4f, 1f);
@@ -174,16 +174,20 @@ public class NPCController : MonoBehaviour
         interactionHint.SetActive(false);
     }
 
-    private Sprite CreateRoundSprite()
+    private static Sprite GetSharedRoundSprite()
     {
-        const int size = 64;
-        Texture2D texture = new Texture2D(size, size);
-        float center = size / 2f;
-        float radius = size / 2f;
-
-        for (int x = 0; x < size; x++)
+        if (sharedRoundSprite != null)
         {
-            for (int y = 0; y < size; y++)
+            return sharedRoundSprite;
+        }
+
+        Texture2D texture = new Texture2D(HintSpriteTextureSize, HintSpriteTextureSize, TextureFormat.RGBA32, false);
+        float center = HintSpriteTextureSize / 2f;
+        float radius = HintSpriteTextureSize / 2f;
+
+        for (int x = 0; x < HintSpriteTextureSize; x++)
+        {
+            for (int y = 0; y < HintSpriteTextureSize; y++)
             {
                 float distance = Vector2.Distance(new Vector2(x, y), new Vector2(center, center));
                 if (distance < radius - 1f)
@@ -203,7 +207,12 @@ public class NPCController : MonoBehaviour
 
         texture.Apply();
         texture.filterMode = FilterMode.Bilinear;
-        return Sprite.Create(texture, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 100f);
+        sharedRoundSprite = Sprite.Create(
+            texture,
+            new Rect(0, 0, HintSpriteTextureSize, HintSpriteTextureSize),
+            new Vector2(0.5f, 0.5f),
+            100f);
+        return sharedRoundSprite;
     }
 
     private void Update()

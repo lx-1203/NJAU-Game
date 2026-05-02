@@ -4,6 +4,8 @@ using UnityEngine.UIElements;
 using System.Collections.Generic;
 using Zhongshan.CreatorToolkit.Dialogue;
 using Zhongshan.CreatorToolkit.Event;
+using Zhongshan.CreatorToolkit.Mission;
+using Zhongshan.CreatorToolkit.NPC;
 
 namespace Zhongshan.CreatorToolkit
 {
@@ -23,6 +25,7 @@ namespace Zhongshan.CreatorToolkit
         public void CreateGUI()
         {
             VisualElement root = rootVisualElement;
+            root.Clear();
 
             // Toolbar
             var toolbar = new UnityEditor.UIElements.Toolbar();
@@ -30,9 +33,13 @@ namespace Zhongshan.CreatorToolkit
 
             var dialogueBtn = new UnityEditor.UIElements.ToolbarButton(() => ShowTab("Dialogue")) { text = "对话编辑器" };
             var eventBtn = new UnityEditor.UIElements.ToolbarButton(() => ShowTab("Event")) { text = "事件编辑器" };
+            var missionBtn = new UnityEditor.UIElements.ToolbarButton(() => ShowTab("Mission")) { text = "任务编辑器" };
+            var npcBtn = new UnityEditor.UIElements.ToolbarButton(() => ShowTab("NPC")) { text = "NPC编辑器" };
 
             toolbar.Add(dialogueBtn);
             toolbar.Add(eventBtn);
+            toolbar.Add(missionBtn);
+            toolbar.Add(npcBtn);
 
             contentContainer = new VisualElement();
             contentContainer.style.flexGrow = 1;
@@ -54,6 +61,18 @@ namespace Zhongshan.CreatorToolkit
                 var eventPanel = new EventEditorPanel();
                 eventPanel.StretchToParentSize();
                 contentContainer.Add(eventPanel);
+            }
+            else if (tabName == "Mission")
+            {
+                var missionPanel = new MissionEditorPanel();
+                missionPanel.StretchToParentSize();
+                contentContainer.Add(missionPanel);
+            }
+            else if (tabName == "NPC")
+            {
+                var npcPanel = new NPCDatabaseEditorPanel();
+                npcPanel.StretchToParentSize();
+                contentContainer.Add(npcPanel);
             }
         }
 

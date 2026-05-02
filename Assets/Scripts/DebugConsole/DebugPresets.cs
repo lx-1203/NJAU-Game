@@ -6,8 +6,6 @@ using UnityEngine;
 public static class DebugPresets
 {
     private static readonly int[] StepOptions = { 1, 5, 10, 25 };
-    private static int currentStepIndex = 1;
-
     private static readonly Dictionary<string, Func<int>> Getters = new Dictionary<string, Func<int>>(StringComparer.OrdinalIgnoreCase)
     {
         ["Study"] = () => PlayerAttributes.Instance != null ? PlayerAttributes.Instance.Study : 0,
@@ -36,8 +34,8 @@ public static class DebugPresets
         ["Money"] = value => { if (GameState.Instance != null) GameState.Instance.Money = value; },
     };
 
-    public static int CurrentStep => StepOptions[currentStepIndex];
-    public static int CurrentStepIndex => currentStepIndex;
+    public static int CurrentStep => StepOptions[CurrentStepIndex];
+    public static int CurrentStepIndex => ZhongshanDeckToolStateBridge.GetStepIndex(1);
 
     public static int[] GetStepOptions()
     {
@@ -46,7 +44,7 @@ public static class DebugPresets
 
     public static void SetStepIndex(int index)
     {
-        currentStepIndex = Mathf.Clamp(index, 0, StepOptions.Length - 1);
+        ZhongshanDeckToolStateBridge.SetStepIndex(index);
         DebugConsoleManager.Log("Adjust", $"Step -> {CurrentStep}");
     }
 

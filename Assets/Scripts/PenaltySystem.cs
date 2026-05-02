@@ -219,6 +219,11 @@ public class PenaltySystem : MonoBehaviour
             {
                 EventHistory.Instance.SetFlag("forced_expulsion", true);
             }
+
+            if (GameEndingManager.Instance != null)
+            {
+                GameEndingManager.Instance.TriggerEnding("Slacking expulsion");
+            }
         }
         else if (slackingValue >= 90)
         {
@@ -302,6 +307,11 @@ public class PenaltySystem : MonoBehaviour
             if (EventHistory.Instance != null)
             {
                 EventHistory.Instance.SetFlag("depression_critical", true);
+            }
+
+            if (GameEndingManager.Instance != null)
+            {
+                GameEndingManager.Instance.TriggerEnding("Mental health depleted");
             }
         }
     }

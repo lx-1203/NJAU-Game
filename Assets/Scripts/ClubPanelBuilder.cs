@@ -99,6 +99,10 @@ public class ClubPanelBuilder : MonoBehaviour
 
         // 面板初始隐藏
         panelRoot.SetActive(false);
+        if (overlayObj != null)
+        {
+            overlayObj.SetActive(false);
+        }
     }
 
     /// <summary>创建一个社团列表项（由 Manager 调用）</summary>

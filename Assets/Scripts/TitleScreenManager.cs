@@ -298,6 +298,12 @@ public class TitleScreenManager : MonoBehaviour
     {
         PrepareVideoBackground();
 
+        if (StartupFlowSettings.ShouldAutoSkipTitleScreenThisTime())
+        {
+            StartCoroutine(AutoSkipTitleScreen());
+            return;
+        }
+
         if (hintText != null)
         {
             breathCoroutine = StartCoroutine(BreathingAnimation(hintText));
@@ -2113,6 +2119,23 @@ public class TitleScreenManager : MonoBehaviour
     public void OpenSettings()
     {
         SettingsUIBuilder.ShowSettings(true);
+    }
+
+    private IEnumerator AutoSkipTitleScreen()
+    {
+        hasEnteredMenu = true;
+
+        if (hintText != null)
+        {
+            hintText.gameObject.SetActive(false);
+        }
+
+        yield return null;
+
+        if (!transitionRequested)
+        {
+            StartGame();
+        }
     }
 
     public void BackToMainMenu()

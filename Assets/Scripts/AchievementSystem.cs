@@ -166,6 +166,29 @@ public class AchievementSystem : MonoBehaviour
         }
     }
 
+    public bool UnlockAchievementById(string achievementId)
+    {
+        if (string.IsNullOrWhiteSpace(achievementId))
+        {
+            return false;
+        }
+
+        AchievementDefinition def = allDefinitions.FirstOrDefault(item => item.id == achievementId);
+        if (def == null)
+        {
+            Debug.LogWarning($"[AchievementSystem] 找不到成就定义: {achievementId}");
+            return false;
+        }
+
+        if (IsUnlocked(achievementId))
+        {
+            return false;
+        }
+
+        UnlockAchievement(def);
+        return true;
+    }
+
     /// <summary>
     /// 条件求值：根据条件类型读取对应系统数据并比较
     /// </summary>

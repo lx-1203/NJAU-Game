@@ -12,14 +12,19 @@ public class CameraFollow : MonoBehaviour
 
     [Header("边界限制")]
     [SerializeField] private bool useBounds = true;
+    [SerializeField] private bool useCurrentLocationBounds = true;
     [SerializeField] private float minX = -15f;
     [SerializeField] private float maxX = 220f;
 
     private Transform target;
     private float fixedY;
+    private Camera attachedCamera;
+    private bool hasWarnedMissingPlayer;
 
     private void Start()
     {
+        attachedCamera = GetComponent<Camera>();
+
         // 记录相机初始Y位置，横版游戏Y轴不跟随
         fixedY = transform.position.y;
 
@@ -36,7 +41,11 @@ public class CameraFollow : MonoBehaviour
         }
         else
         {
-            Debug.LogWarning("[CameraFollow] 未找到 Player，将在 Update 中重试");
+            if (!hasWarnedMissingPlayer)
+            {
+                Debug.LogWarning("[CameraFollow] 未找到 Player，将在 Update 中重试");
+                hasWarnedMissingPlayer = true;
+            }
         }
     }
 
@@ -54,7 +63,8 @@ public class CameraFollow : MonoBehaviour
         // 边界限制
         if (useBounds)
         {
-            targetX = Mathf.Clamp(targetX, minX, maxX);
+            ResolveActiveBounds(out float activeMinX, out float activeMaxX);
+            targetX = Mathf.Clamp(targetX, activeMinX, activeMaxX);
         }
 
         Vector3 desiredPosition = new Vector3(targetX, fixedY, offset.z);
@@ -62,5 +72,47 @@ public class CameraFollow : MonoBehaviour
         // 平滑跟随
         Vector3 smoothedPosition = Vector3.Lerp(transform.position, desiredPosition, smoothSpeed * Time.deltaTime);
         transform.position = smoothedPosition;
+    }
+
+    private void ResolveActiveBounds(out float activeMinX, out float activeMaxX)
+    {
+        activeMinX = minX;
+        activeMaxX = maxX;
+
+        if (!useCurrentLocationBounds || LocationManager.Instance == null || GameState.Instance == null)
+        {
+            return;
+        }
+
+        LocationDefinition location = LocationManager.Instance.GetCurrentLocationDef();
+        if (location == null)
+        {
+            return;
+        }
+
+        float cameraHalfWidth = GetCameraHalfWidth();
+        float worldMin = location.worldMinX + cameraHalfWidth;
+        float worldMax = location.worldMaxX - cameraHalfWidth;
+
+        if (worldMin > worldMax)
+        {
+            float center = (location.worldMinX + location.worldMaxX) * 0.5f;
+            worldMin = center;
+            worldMax = center;
+        }
+
+        activeMinX = worldMin;
+        activeMaxX = worldMax;
+    }
+
+    private float GetCameraHalfWidth()
+    {
+        Camera cameraToUse = attachedCamera != null ? attachedCamera : GetComponent<Camera>();
+        if (cameraToUse == null || !cameraToUse.orthographic)
+        {
+            return 0f;
+        }
+
+        return cameraToUse.orthographicSize * cameraToUse.aspect;
     }
 }

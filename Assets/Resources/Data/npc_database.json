@@ -8,6 +8,7 @@
       "description": "你的室友，安静的学霸，总是埋头看书。话不多但很靠谱。",
       "dialogueId": "lin_zhiqiu",
       "portraitId": "NPC_RoommateA",
+      "allowedPlayerGenders": ["Female"],
       "likedActionIds": ["deep_talk", "study_together", "help"],
       "dislikedActionIds": ["go_party", "karaoke"],
       "schedule": [
@@ -29,6 +30,7 @@
       "description": "你的室友，社交达人，活泼外向，认识全校的人。",
       "dialogueId": "su_xiaoting",
       "portraitId": "NPC_RoommateB",
+      "allowedPlayerGenders": ["Female"],
       "likedActionIds": ["chat", "eat_together", "go_party", "karaoke"],
       "dislikedActionIds": ["deep_talk"],
       "schedule": [
@@ -50,6 +52,7 @@
       "description": "你的室友，佛系青年，万事随缘，打游戏睡觉两不误。",
       "dialogueId": "zhou_ran",
       "portraitId": "NPC_RoommateC",
+      "allowedPlayerGenders": ["Female"],
       "likedActionIds": ["eat_together", "hang_out", "chat"],
       "dislikedActionIds": ["study_together"],
       "schedule": [
@@ -64,6 +67,69 @@
       ]
     },
     {
+      "id": "NPC_MaleRoommateA",
+      "displayName": "陈一鸣",
+      "type": "Roommate",
+      "personality": "Serious",
+      "description": "你的室友，作息规律，做事很稳，课表和任务总记得一清二楚。",
+      "portraitId": "",
+      "allowedPlayerGenders": ["Male"],
+      "likedActionIds": ["study_together", "help", "deep_talk"],
+      "dislikedActionIds": ["go_party", "karaoke"],
+      "schedule": [
+        { "timeSlot": "Morning",   "location": "教室" },
+        { "timeSlot": "Afternoon", "location": "图书馆" },
+        { "timeSlot": "Evening",   "location": "宿舍" }
+      ],
+      "greetingLines": [
+        "你来了？我正准备整理今天的课堂笔记。",
+        "要一起去自习吗？我刚好也要出门。",
+        "晚上别熬太晚，明天还有课。"
+      ]
+    },
+    {
+      "id": "NPC_MaleRoommateB",
+      "displayName": "顾泽",
+      "type": "Roommate",
+      "personality": "Cheerful",
+      "description": "你的室友，气氛担当，嘴上停不下来，宿舍里大多数热闹都和他有关。",
+      "portraitId": "",
+      "allowedPlayerGenders": ["Male"],
+      "likedActionIds": ["chat", "eat_together", "hang_out", "go_party"],
+      "dislikedActionIds": ["deep_talk"],
+      "schedule": [
+        { "timeSlot": "Morning",   "location": "食堂" },
+        { "timeSlot": "Afternoon", "location": "操场" },
+        { "timeSlot": "Evening",   "location": "宿舍" }
+      ],
+      "greetingLines": [
+        "刚好，走走走，陪我去吃点东西。",
+        "你回来得正好，宿舍刚有新八卦。",
+        "晚上打不打球？不打也来旁边看我发挥。"
+      ]
+    },
+    {
+      "id": "NPC_MaleRoommateC",
+      "displayName": "宋远",
+      "type": "Roommate",
+      "personality": "Easygoing",
+      "description": "你的室友，慢热但随和，平时最擅长把紧张气氛一句话化开。",
+      "portraitId": "",
+      "allowedPlayerGenders": ["Male"],
+      "likedActionIds": ["chat", "eat_together", "encourage"],
+      "dislikedActionIds": ["study_together"],
+      "schedule": [
+        { "timeSlot": "Morning",   "location": "宿舍" },
+        { "timeSlot": "Afternoon", "location": "教学楼" },
+        { "timeSlot": "Evening",   "location": "宿舍" }
+      ],
+      "greetingLines": [
+        "回来了？先坐会儿，别急着卷。",
+        "今天看你状态一般，要不要出去透口气？",
+        "宿舍这会儿还挺安静，难得。"
+      ]
+    },
+    {
       "id": "NPC_Senior",
       "displayName": "谢凌云",
       "type": "Senior",
@@ -71,6 +137,7 @@
       "description": "传说中的全能学长/学姐，成绩优异、社交广泛，却总是神出鬼没。",
       "dialogueId": "xie_lingyun",
       "portraitId": "NPC_Senior",
+      "allowedPlayerGenders": ["Male", "Female"],
       "likedActionIds": ["deep_talk", "help", "give_gift"],
       "dislikedActionIds": ["greet"],
       "schedule": [

@@ -22,7 +22,7 @@ public class GameSceneInitializer : MonoBehaviour
         SetupGameState();
         SetupPlayerAttributes();
         SetupLocationManager();
-        SetupDormitoryBackground();
+        SetupLocationSceneController();
         SetupActionSystem();
         SetupClubSystem();
         SetupEconomyManager();
@@ -37,6 +37,7 @@ public class GameSceneInitializer : MonoBehaviour
         SetupAchievementUI();
         SetupSemesterSummarySystem();
         SetupEndingDeterminer();
+        SetupGameEndingManager();
         SetupTurnManager();
         SetupExamSystem();
         SetupCheatingSystem();
@@ -77,6 +78,7 @@ public class GameSceneInitializer : MonoBehaviour
         // 游戏内功能 UI / 管理器
         SetupSettingsManager();
         SetupPauseMenuUI();
+        SetupUIEscapeRouter();
         SetupInfoPanelManager();
         SetupInventoryUI();
         SetupMissionUI();
@@ -173,12 +175,12 @@ public class GameSceneInitializer : MonoBehaviour
         }
     }
 
-    private void SetupDormitoryBackground()
+    private void SetupLocationSceneController()
     {
-        if (FindFirstObjectByType<DormitoryBackgroundController>() == null)
+        if (FindFirstObjectByType<LocationSceneController>() == null)
         {
-            GameObject obj = new GameObject("DormitoryBackgroundController");
-            obj.AddComponent<DormitoryBackgroundController>();
+            GameObject obj = new GameObject("LocationSceneController");
+            obj.AddComponent<LocationSceneController>();
         }
     }
 
@@ -376,6 +378,15 @@ public class GameSceneInitializer : MonoBehaviour
         }
     }
 
+    private void SetupGameEndingManager()
+    {
+        if (GameEndingManager.Instance == null)
+        {
+            GameObject obj = new GameObject("GameEndingManager");
+            obj.AddComponent<GameEndingManager>();
+        }
+    }
+
     // ========== 考试系统 ==========
 
     private void SetupExamSystem()
@@ -486,6 +497,15 @@ public class GameSceneInitializer : MonoBehaviour
         {
             GameObject obj = new GameObject("PauseMenuUI");
             obj.AddComponent<PauseMenuUI>();
+        }
+    }
+
+    private void SetupUIEscapeRouter()
+    {
+        if (FindFirstObjectByType<UIEscapeRouter>() == null)
+        {
+            GameObject obj = new GameObject("UIEscapeRouter");
+            obj.AddComponent<UIEscapeRouter>();
         }
     }
 

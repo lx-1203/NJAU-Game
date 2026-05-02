@@ -28,11 +28,15 @@ public class EndingUI : MonoBehaviour
 
     // 内容元素
     private TextMeshProUGUI _titleText;
+    private CanvasGroup _crisisBadgeGroup;
+    private TextMeshProUGUI _crisisBadgeText;
     private TextMeshProUGUI _starsText;
     private CanvasGroup _cgGroup;
     private TextMeshProUGUI _cgLabel;
     private CanvasGroup _descGroup;
     private TextMeshProUGUI _descText;
+    private CanvasGroup _statusGroup;
+    private TextMeshProUGUI _statusText;
     private CanvasGroup _statsGroup;
     private RectTransform _statsContainer;
     private CanvasGroup _talentGroup;
@@ -42,6 +46,8 @@ public class EndingUI : MonoBehaviour
 
     // 动画数据
     private EndingResult _currentResult;
+    private string _triggerReason;
+    private bool _useCollapsePresentation;
     private Coroutine _showCoroutine;
 
     // ========== 颜色常量 ==========
@@ -51,6 +57,9 @@ public class EndingUI : MonoBehaviour
     private static readonly Color COLOR_WHITE = Color.white;
     private static readonly Color COLOR_LIGHT_GRAY = new Color(0.8f, 0.8f, 0.8f, 1f);
     private static readonly Color COLOR_DARK_GRAY = new Color(0.15f, 0.15f, 0.15f, 1f);
+    private static readonly Color COLOR_ALERT_RED = new Color32(0xE8, 0x4A, 0x5F, 0xFF);
+    private static readonly Color COLOR_ALERT_BG = new Color(0.12f, 0.02f, 0.03f, 0.95f);
+    private static readonly Color COLOR_ALERT_PANEL = new Color(0.18f, 0.04f, 0.05f, 0.88f);
 
     // ========== 生命周期 ==========
 
@@ -66,8 +75,26 @@ public class EndingUI : MonoBehaviour
 
     private void OnDestroy()
     {
+        if (_returnButton != null)
+        {
+            _returnButton.onClick.RemoveListener(OnReturnButtonClicked);
+        }
+
         if (Instance == this)
             Instance = null;
+    }
+
+    private void Update()
+    {
+        if (!isShowing || _showCoroutine != null)
+        {
+            return;
+        }
+
+        if (UIInputHelper.IsConfirmPressed() || Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.Escape))
+        {
+            OnReturnButtonClicked();
+        }
     }
 
     // ========== 公开方法 ==========
@@ -76,21 +103,36 @@ public class EndingUI : MonoBehaviour
     /// 显示结局面板
     /// </summary>
     /// <param name="result">结局结算数据</param>
-    public void Show(EndingResult result)
+    public void Show(EndingResult result, string triggerReason = null)
     {
         if (isShowing) return;
 
+        UIFlowGuard.EnsureEventSystem();
+        UIFlowGuard.RestoreInteractiveState();
+
         _currentResult = result;
+        _triggerReason = triggerReason ?? string.Empty;
+        _useCollapsePresentation = IsCollapseEnding(result);
         isShowing = true;
+
+        Debug.Log($"[EndingUI] Show -> {result.ending.name} ({result.ending.id})");
 
         // 构建 UI
         CreateCanvas();
 
         var contentRoot = CreateContentRoot();
+        if (_useCollapsePresentation)
+        {
+            _crisisBadgeGroup = CreateCrisisBadge(contentRoot);
+        }
         _titleText = CreateEndingTitle(contentRoot, result.ending.name);
         _starsText = CreateStarDisplay(contentRoot, result.ending.stars);
         _cgGroup = CreateCGPlaceholder(contentRoot, result.ending.cgId);
         _descGroup = CreateDescriptionText(contentRoot, result.ending.description);
+        if (_useCollapsePresentation)
+        {
+            _statusGroup = CreateCrashStatusPanel(contentRoot, result, _triggerReason);
+        }
         CreateSeparator(contentRoot);
         _statsGroup = CreateStatsSummary(contentRoot, result);
         _talentGroup = CreateTalentPointDisplay(contentRoot, result.talentPoints);
@@ -98,10 +140,12 @@ public class EndingUI : MonoBehaviour
 
         // 初始隐藏所有元素
         SetAlpha(_backgroundGroup, 0f);
+        SetAlpha(_crisisBadgeGroup, 0f);
         _titleText.color = SetAlpha(_titleText.color, 0f);
         _starsText.color = SetAlpha(_starsText.color, 0f);
         SetAlpha(_cgGroup, 0f);
         SetAlpha(_descGroup, 0f);
+        SetAlpha(_statusGroup, 0f);
         SetAlpha(_statsGroup, 0f);
         SetAlpha(_talentGroup, 0f);
         _talentGroup.transform.localScale = Vector3.zero;
@@ -136,7 +180,7 @@ public class EndingUI : MonoBehaviour
     // ========== UI 构建 ==========
 
     /// <summary>
-    /// 创建独立 Canvas (sortingOrder=200, ScreenSpaceOverlay, 1920x1080)
+    /// 创建独立 Canvas (sortingOrder=600, ScreenSpaceOverlay, 1920x1080)
     /// </summary>
     private void CreateCanvas()
     {
@@ -146,7 +190,7 @@ public class EndingUI : MonoBehaviour
 
         _canvas = _canvasRoot.AddComponent<Canvas>();
         _canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        _canvas.sortingOrder = 200;
+        _canvas.sortingOrder = 600;
 
         var scaler = _canvasRoot.AddComponent<CanvasScaler>();
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
@@ -166,7 +210,7 @@ public class EndingUI : MonoBehaviour
         bgRect.offsetMax = Vector2.zero;
 
         _backgroundImage = bgObj.AddComponent<Image>();
-        _backgroundImage.color = Color.black;
+        _backgroundImage.color = _useCollapsePresentation ? COLOR_ALERT_BG : Color.black;
 
         _backgroundGroup = bgObj.AddComponent<CanvasGroup>();
     }
@@ -224,8 +268,10 @@ public class EndingUI : MonoBehaviour
         vlg.childControlHeight = true;
         vlg.childForceExpandWidth = false;
         vlg.childForceExpandHeight = false;
-        vlg.spacing = 30f;
-        vlg.padding = new RectOffset(200, 200, 80, 80);
+        vlg.spacing = _useCollapsePresentation ? 22f : 30f;
+        vlg.padding = _useCollapsePresentation
+            ? new RectOffset(240, 240, 64, 96)
+            : new RectOffset(200, 200, 80, 80);
 
         var csf = contentObj.AddComponent<ContentSizeFitter>();
         csf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
@@ -253,12 +299,50 @@ public class EndingUI : MonoBehaviour
         var tmp = obj.AddComponent<TextMeshProUGUI>();
         tmp.text = ""; // 由 TypeWriter 协程逐字填充
         tmp.fontSize = 60;
-        tmp.color = COLOR_GOLD;
+        tmp.color = _useCollapsePresentation ? COLOR_ALERT_RED : COLOR_GOLD;
         tmp.alignment = TextAlignmentOptions.Center;
         tmp.enableWordWrapping = false;
 
         _titleText = tmp;
         return tmp;
+    }
+
+    private CanvasGroup CreateCrisisBadge(RectTransform parent)
+    {
+        var obj = new GameObject("CrisisBadge");
+        obj.transform.SetParent(parent, false);
+
+        var rect = obj.AddComponent<RectTransform>();
+        rect.sizeDelta = new Vector2(0f, 54f);
+
+        var le = obj.AddComponent<LayoutElement>();
+        le.preferredHeight = 54f;
+        le.flexibleWidth = 1f;
+
+        var image = obj.AddComponent<Image>();
+        image.color = COLOR_ALERT_PANEL;
+
+        var outline = obj.AddComponent<Outline>();
+        outline.effectColor = COLOR_ALERT_RED;
+        outline.effectDistance = new Vector2(2f, 2f);
+
+        var labelObj = new GameObject("BadgeText");
+        labelObj.transform.SetParent(obj.transform, false);
+
+        var labelRect = labelObj.AddComponent<RectTransform>();
+        labelRect.anchorMin = Vector2.zero;
+        labelRect.anchorMax = Vector2.one;
+        labelRect.offsetMin = new Vector2(18f, 0f);
+        labelRect.offsetMax = new Vector2(-18f, 0f);
+
+        _crisisBadgeText = labelObj.AddComponent<TextMeshProUGUI>();
+        _crisisBadgeText.text = "SYSTEM FAILURE  |  本周目已彻底崩溃";
+        _crisisBadgeText.fontSize = 28f;
+        _crisisBadgeText.color = COLOR_ALERT_RED;
+        _crisisBadgeText.alignment = TextAlignmentOptions.Center;
+        _crisisBadgeText.enableWordWrapping = false;
+
+        return obj.AddComponent<CanvasGroup>();
     }
 
     /// <summary>
@@ -321,7 +405,7 @@ public class EndingUI : MonoBehaviour
         le.flexibleWidth = 1f; // 宽度由父 LayoutGroup 的 padding 控制约 80%
 
         var bg = obj.AddComponent<Image>();
-        bg.color = COLOR_DARK_GRAY;
+        bg.color = _useCollapsePresentation ? COLOR_ALERT_PANEL : COLOR_DARK_GRAY;
 
         // 边框效果 — 用 Outline
         var outline = obj.AddComponent<Outline>();
@@ -339,9 +423,9 @@ public class EndingUI : MonoBehaviour
         labelRect.offsetMax = Vector2.zero;
 
         _cgLabel = labelObj.AddComponent<TextMeshProUGUI>();
-        _cgLabel.text = $"CG: {cgId}";
+        _cgLabel.text = _useCollapsePresentation ? $"崩溃记录: {cgId}" : $"CG: {cgId}";
         _cgLabel.fontSize = 36;
-        _cgLabel.color = COLOR_LIGHT_GRAY;
+        _cgLabel.color = _useCollapsePresentation ? COLOR_ALERT_RED : COLOR_LIGHT_GRAY;
         _cgLabel.alignment = TextAlignmentOptions.Center;
 
         var group = obj.AddComponent<CanvasGroup>();
@@ -365,7 +449,7 @@ public class EndingUI : MonoBehaviour
         var tmp = obj.AddComponent<TextMeshProUGUI>();
         tmp.text = description ?? "";
         tmp.fontSize = 24;
-        tmp.color = COLOR_WHITE;
+        tmp.color = _useCollapsePresentation ? new Color(1f, 0.92f, 0.92f, 1f) : COLOR_WHITE;
         tmp.alignment = TextAlignmentOptions.Center;
         tmp.enableWordWrapping = true;
         tmp.lineSpacing = 20f; // TMP lineSpacing 是百分比偏移, 20 ≈ 1.2x 行间距
@@ -375,6 +459,44 @@ public class EndingUI : MonoBehaviour
         var group = obj.AddComponent<CanvasGroup>();
         _descGroup = group;
         return group;
+    }
+
+    private CanvasGroup CreateCrashStatusPanel(RectTransform parent, EndingResult result, string triggerReason)
+    {
+        var obj = new GameObject("CrashStatusPanel");
+        obj.transform.SetParent(parent, false);
+
+        var rect = obj.AddComponent<RectTransform>();
+        rect.sizeDelta = new Vector2(0f, 160f);
+
+        var le = obj.AddComponent<LayoutElement>();
+        le.preferredHeight = 160f;
+        le.flexibleWidth = 1f;
+
+        var bg = obj.AddComponent<Image>();
+        bg.color = COLOR_ALERT_PANEL;
+
+        var outline = obj.AddComponent<Outline>();
+        outline.effectColor = COLOR_ALERT_RED;
+        outline.effectDistance = new Vector2(2f, 2f);
+
+        var labelObj = new GameObject("CrashStatusText");
+        labelObj.transform.SetParent(obj.transform, false);
+
+        var labelRect = labelObj.AddComponent<RectTransform>();
+        labelRect.anchorMin = Vector2.zero;
+        labelRect.anchorMax = Vector2.one;
+        labelRect.offsetMin = new Vector2(32f, 20f);
+        labelRect.offsetMax = new Vector2(-32f, -20f);
+
+        _statusText = labelObj.AddComponent<TextMeshProUGUI>();
+        _statusText.text = BuildCrashStatusText(result, triggerReason);
+        _statusText.fontSize = 22f;
+        _statusText.color = new Color(1f, 0.9f, 0.9f, 1f);
+        _statusText.alignment = TextAlignmentOptions.TopLeft;
+        _statusText.enableWordWrapping = true;
+
+        return obj.AddComponent<CanvasGroup>();
     }
 
     /// <summary>
@@ -429,9 +551,9 @@ public class EndingUI : MonoBehaviour
         titleLE.flexibleWidth = 1f;
 
         var titleTmp = titleObj.AddComponent<TextMeshProUGUI>();
-        titleTmp.text = "你的大学四年";
+        titleTmp.text = _useCollapsePresentation ? "崩溃快照" : "你的大学四年";
         titleTmp.fontSize = 36;
-        titleTmp.color = COLOR_WHITE;
+        titleTmp.color = _useCollapsePresentation ? COLOR_ALERT_RED : COLOR_WHITE;
         titleTmp.alignment = TextAlignmentOptions.Center;
 
         // 第一行: 总学习次 | 总社交次 | 总出校门 | 总睡觉次
@@ -541,9 +663,11 @@ public class EndingUI : MonoBehaviour
         le.flexibleWidth = 1f;
 
         var tmp = obj.AddComponent<TextMeshProUGUI>();
-        tmp.text = $"获得天赋点: {points}";
+        tmp.text = _useCollapsePresentation
+            ? $"本周目未稳定提取天赋点: {points}"
+            : $"获得天赋点: {points}";
         tmp.fontSize = 48;
-        tmp.color = COLOR_GOLD;
+        tmp.color = _useCollapsePresentation ? COLOR_ALERT_RED : COLOR_GOLD;
         tmp.alignment = TextAlignmentOptions.Center;
         tmp.enableWordWrapping = false;
 
@@ -570,20 +694,22 @@ public class EndingUI : MonoBehaviour
 
         // 按钮背景
         var btnImage = wrapperObj.AddComponent<Image>();
-        btnImage.color = new Color(0.2f, 0.2f, 0.2f, 0.9f);
+        btnImage.color = _useCollapsePresentation
+            ? new Color(0.18f, 0.04f, 0.05f, 0.95f)
+            : new Color(0.2f, 0.2f, 0.2f, 0.9f);
 
         // Outline 边框
         var btnOutline = wrapperObj.AddComponent<Outline>();
-        btnOutline.effectColor = COLOR_GOLD;
+        btnOutline.effectColor = _useCollapsePresentation ? COLOR_ALERT_RED : COLOR_GOLD;
         btnOutline.effectDistance = new Vector2(2, 2);
 
         // Button 组件
         _returnButton = wrapperObj.AddComponent<Button>();
         var colors = _returnButton.colors;
-        colors.normalColor = new Color(0.2f, 0.2f, 0.2f, 0.9f);
-        colors.highlightedColor = new Color(0.3f, 0.3f, 0.3f, 1f);
-        colors.pressedColor = new Color(0.15f, 0.15f, 0.15f, 1f);
-        colors.selectedColor = new Color(0.25f, 0.25f, 0.25f, 1f);
+        colors.normalColor = _useCollapsePresentation ? new Color(0.18f, 0.04f, 0.05f, 0.95f) : new Color(0.2f, 0.2f, 0.2f, 0.9f);
+        colors.highlightedColor = _useCollapsePresentation ? new Color(0.28f, 0.06f, 0.08f, 1f) : new Color(0.3f, 0.3f, 0.3f, 1f);
+        colors.pressedColor = _useCollapsePresentation ? new Color(0.12f, 0.02f, 0.03f, 1f) : new Color(0.15f, 0.15f, 0.15f, 1f);
+        colors.selectedColor = _useCollapsePresentation ? new Color(0.22f, 0.05f, 0.07f, 1f) : new Color(0.25f, 0.25f, 0.25f, 1f);
         _returnButton.colors = colors;
         _returnButton.onClick.AddListener(OnReturnButtonClicked);
 
@@ -598,9 +724,9 @@ public class EndingUI : MonoBehaviour
         textRect.offsetMax = Vector2.zero;
 
         var textTmp = textObj.AddComponent<TextMeshProUGUI>();
-        textTmp.text = "返回标题";
+        textTmp.text = _useCollapsePresentation ? "重新回到标题" : "返回标题";
         textTmp.fontSize = 32;
-        textTmp.color = COLOR_GOLD;
+        textTmp.color = _useCollapsePresentation ? COLOR_ALERT_RED : COLOR_GOLD;
         textTmp.alignment = TextAlignmentOptions.Center;
 
         var group = wrapperObj.AddComponent<CanvasGroup>();
@@ -616,6 +742,7 @@ public class EndingUI : MonoBehaviour
     private void OnReturnButtonClicked()
     {
         Hide();
+        StartupFlowSettings.SuspendTitleAutoSkipOnce();
         SceneManager.LoadScene("TitleScreen");
     }
 
@@ -626,8 +753,15 @@ public class EndingUI : MonoBehaviour
     /// </summary>
     private IEnumerator PlayShowSequence()
     {
+        Debug.Log("[EndingUI] 开始播放结局展示序列");
+
         // 1. 黑屏 FadeIn (0.5s)
         yield return StartCoroutine(FadeCanvasGroup(_backgroundGroup, 0f, 1f, 0.5f));
+
+        if (_useCollapsePresentation)
+        {
+            yield return StartCoroutine(FadeCanvasGroup(_crisisBadgeGroup, 0f, 1f, 0.25f));
+        }
 
         // 2. 结局名称 TypeWriter 逐字出现 (每字 0.08s)
         yield return StartCoroutine(TypeWriterCoroutine(_titleText, _currentResult.ending.name, 0.08f));
@@ -641,6 +775,11 @@ public class EndingUI : MonoBehaviour
         // 5. 结局文本 FadeIn (0.5s)
         yield return StartCoroutine(FadeCanvasGroup(_descGroup, 0f, 1f, 0.5f));
 
+        if (_useCollapsePresentation)
+        {
+            yield return StartCoroutine(FadeCanvasGroup(_statusGroup, 0f, 1f, 0.35f));
+        }
+
         // 6. 统计区域 FadeIn (0.5s)
         yield return StartCoroutine(FadeCanvasGroup(_statsGroup, 0f, 1f, 0.5f));
 
@@ -651,6 +790,7 @@ public class EndingUI : MonoBehaviour
         yield return new WaitForSeconds(0.5f);
         yield return StartCoroutine(FadeCanvasGroup(_buttonGroup, 0f, 1f, 0.5f));
 
+        UIInputHelper.FocusSelectable(_returnButton);
         _showCoroutine = null;
     }
 
@@ -779,5 +919,23 @@ public class EndingUI : MonoBehaviour
     {
         color.a = alpha;
         return color;
+    }
+
+    private bool IsCollapseEnding(EndingResult result)
+    {
+        return result != null &&
+               result.ending != null &&
+               result.ending.GetLayer() == EndingLayer.ForcedEnding;
+    }
+
+    private string BuildCrashStatusText(EndingResult result, string triggerReason)
+    {
+        string reasonLine = string.IsNullOrWhiteSpace(triggerReason) ? "Unknown terminal state" : triggerReason;
+        return
+            $"[终止原因] {reasonLine}\n" +
+            $"[结局层级] 强制结局 / Layer 0\n" +
+            $"[周目状态] 学籍、经济或心理系统已不可逆失稳\n" +
+            $"[最终记录] GPA {result.finalGPA:F2}  |  回合 {result.totalRounds}  |  花费 ¥{result.totalMoneySpent}\n" +
+            "[恢复建议] 返回标题后重新开局，或在下一周目重建路线。";
     }
 }

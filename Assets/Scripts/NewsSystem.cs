@@ -1069,22 +1069,6 @@ public class NewsSystem : MonoBehaviour
         btnTextRT.offsetMin = Vector2.zero;
         btnTextRT.offsetMax = Vector2.zero;
 
-        if (autoDismissCoroutine != null)
-        {
-            StopCoroutine(autoDismissCoroutine);
-        }
-        autoDismissCoroutine = StartCoroutine(AutoDismissNewsAfterDelay(0.8f));
-    }
-
-    private IEnumerator AutoDismissNewsAfterDelay(float delay)
-    {
-        yield return new WaitForSeconds(delay);
-        autoDismissCoroutine = null;
-
-        if (isShowing)
-        {
-            DismissNews();
-        }
     }
 
     private string BuildFallbackNewsText(List<NewsItem> news)

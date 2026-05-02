@@ -11,6 +11,8 @@ using UnityEngine.UI;
 /// </summary>
 public class LoadingScreenManager : MonoBehaviour
 {
+    private const float PreActivationMaxProgress = 0.99f;
+
     [Header("UI References")]
     [Tooltip("Loading screen UI component.")]
     public LoadingScreenUI loadingScreenUI;
@@ -24,13 +26,13 @@ public class LoadingScreenManager : MonoBehaviour
 
     [Header("Progress Timing")]
     [Tooltip("Loading screen stays visible for at least this duration, even when the target scene loads very quickly.")]
-    public float minimumLoadingScreenDuration = 1.2f;
+    public float minimumLoadingScreenDuration = 0.75f;
     [Tooltip("How quickly the displayed progress catches up to the real loading progress.")]
     public float progressSmoothTime = 0.18f;
     [Tooltip("How long the final 95% -> 100% stretch should take once the target scene is ready.")]
-    public float finalProgressDuration = 0.35f;
+    public float finalProgressDuration = 0.2f;
     [Tooltip("Short pause after reaching 100% so the transition does not feel abrupt.")]
-    public float completionHoldDuration = 0.3f;
+    public float completionHoldDuration = 0.05f;
 
     [Header("Tip Rotation")]
     public float tipSwitchMinInterval = 3f;
@@ -216,23 +218,23 @@ public class LoadingScreenManager : MonoBehaviour
             elapsed += Time.unscaledDeltaTime;
             float t = Mathf.Clamp01(elapsed / duration);
             float eased = 1f - Mathf.Pow(1f - t, 3f);
-            targetProgress = Mathf.Lerp(startProgress, 1f, eased);
+            targetProgress = Mathf.Lerp(startProgress, PreActivationMaxProgress, eased);
             yield return null;
         }
 
-        targetProgress = 1f;
+        targetProgress = PreActivationMaxProgress;
 
-        while (currentDisplayProgress < 0.995f)
+        while (currentDisplayProgress < PreActivationMaxProgress - 0.002f)
         {
             yield return null;
         }
 
-        currentDisplayProgress = 1f;
+        currentDisplayProgress = PreActivationMaxProgress;
         displayProgressVelocity = 0f;
 
         if (loadingScreenUI != null)
         {
-            loadingScreenUI.UpdateProgress(1f);
+            loadingScreenUI.UpdateProgress(PreActivationMaxProgress);
         }
     }
 

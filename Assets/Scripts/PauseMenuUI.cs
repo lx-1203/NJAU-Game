@@ -35,6 +35,7 @@ public class PauseMenuUI : MonoBehaviour
     private bool isOpen;
     private static int cachedEscapeFrame = -1;
     private static bool cachedShouldCaptureEscape;
+    private static int handledEscapeFrame = -1;
 
     // ========== 生命周期 ==========
 
@@ -51,19 +52,21 @@ public class PauseMenuUI : MonoBehaviour
 
     private void Update()
     {
-        if (!Input.GetKeyDown(KeyCode.Escape))
+        if (!Input.GetKeyDown(KeyCode.Escape) || WasEscapeHandledThisFrame())
         {
             return;
         }
 
         if (isOpen)
         {
+            MarkEscapeHandledThisFrame();
             Close();
             return;
         }
 
         if (CanOpenPauseFromCurrentState())
         {
+            MarkEscapeHandledThisFrame();
             Open();
         }
     }
@@ -114,6 +117,28 @@ public class PauseMenuUI : MonoBehaviour
 
     public bool IsOpen => isOpen;
     public static bool IsBlockingUnderlyingInput => Instance != null && Instance.isOpen;
+
+    public static void MarkEscapeHandledThisFrame()
+    {
+        handledEscapeFrame = Time.frameCount;
+    }
+
+    public static bool WasEscapeHandledThisFrame()
+    {
+        return handledEscapeFrame == Time.frameCount;
+    }
+
+    public static bool TryOpenFromEscape()
+    {
+        if (Instance == null || Instance.isOpen || !CanOpenPauseFromCurrentState())
+        {
+            return false;
+        }
+
+        MarkEscapeHandledThisFrame();
+        Instance.Open();
+        return true;
+    }
 
     public static bool ShouldBlockUnderlyingEscape()
     {

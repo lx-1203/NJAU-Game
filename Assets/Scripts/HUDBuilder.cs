@@ -62,6 +62,7 @@ public class HUDBuilder : MonoBehaviour
 
     // --- 底部中央：行动按钮 ---
     [HideInInspector] public GameObject actionButtonRow;
+    [HideInInspector] public Button btnInventory;
     [HideInInspector] public Button btnActionToggle;
 
     // --- 底部右下：快捷键提示 + 功能按钮 ---
@@ -658,30 +659,41 @@ public class HUDBuilder : MonoBehaviour
 
         actionButtonRow.SetActive(false);
 
-        GameObject toggleObj = new GameObject("ActionToggleButton");
-        toggleObj.transform.SetParent(hudCanvas.transform, false);
+        btnInventory = CreateBottomQuickButton("InventoryButton", "背包", new Vector2(-92f, 12f));
+        btnActionToggle = CreateBottomQuickButton("ActionToggleButton", "行动", new Vector2(0f, 12f));
+        btnGoOut = CreateBottomQuickButton("GoOutButton", "出校", new Vector2(92f, 12f));
+    }
 
-        RectTransform toggleRT = toggleObj.AddComponent<RectTransform>();
-        toggleRT.anchorMin = new Vector2(0.5f, 0);
-        toggleRT.anchorMax = new Vector2(0.5f, 0);
-        toggleRT.pivot = new Vector2(0.5f, 0);
-        toggleRT.anchoredPosition = new Vector2(0, 12);
-        toggleRT.sizeDelta = new Vector2(76, 76);
+    private Button CreateBottomQuickButton(string name, string label, Vector2 anchoredPosition)
+    {
+        GameObject buttonObj = new GameObject(name);
+        buttonObj.transform.SetParent(hudCanvas.transform, false);
 
-        Image toggleBg = toggleObj.AddComponent<Image>();
-        toggleBg.color = new Color(0.95f, 0.88f, 0.72f, 0.96f);
+        RectTransform buttonRT = buttonObj.AddComponent<RectTransform>();
+        buttonRT.anchorMin = new Vector2(0.5f, 0f);
+        buttonRT.anchorMax = new Vector2(0.5f, 0f);
+        buttonRT.pivot = new Vector2(0.5f, 0f);
+        buttonRT.anchoredPosition = anchoredPosition;
+        buttonRT.sizeDelta = new Vector2(76f, 76f);
 
-        btnActionToggle = toggleObj.AddComponent<Button>();
-        btnActionToggle.targetGraphic = toggleBg;
-        ColorBlock tcb = btnActionToggle.colors;
-        tcb.normalColor = toggleBg.color;
-        tcb.highlightedColor = new Color(1.0f, 0.94f, 0.80f, 1.0f);
-        tcb.pressedColor = new Color(0.86f, 0.78f, 0.62f, 1.0f);
-        tcb.fadeDuration = 0.08f;
-        btnActionToggle.colors = tcb;
+        Image buttonBg = buttonObj.AddComponent<Image>();
+        buttonBg.color = new Color(0.95f, 0.88f, 0.72f, 0.96f);
 
-        CreateTMPText("ActionToggleLabel", toggleObj.transform, "行动",
-            24f, TextDark, TextAlignmentOptions.Center, new Vector2(76, 76));
+        Button button = buttonObj.AddComponent<Button>();
+        button.targetGraphic = buttonBg;
+
+        ColorBlock colors = button.colors;
+        colors.normalColor = buttonBg.color;
+        colors.highlightedColor = new Color(1.0f, 0.94f, 0.80f, 1.0f);
+        colors.pressedColor = new Color(0.86f, 0.78f, 0.62f, 1.0f);
+        colors.disabledColor = new Color(0.82f, 0.77f, 0.70f, 0.72f);
+        colors.fadeDuration = 0.08f;
+        button.colors = colors;
+
+        CreateTMPText(name + "Label", buttonObj.transform, label,
+            22f, TextDark, TextAlignmentOptions.Center, new Vector2(76f, 76f));
+
+        return button;
     }
 
     // ====================================================================
@@ -698,7 +710,7 @@ public class HUDBuilder : MonoBehaviour
         rt.anchorMax = new Vector2(1, 0);
         rt.pivot = new Vector2(1, 0);
         rt.anchoredPosition = new Vector2(-18, 96);
-        rt.sizeDelta = new Vector2(360, 32);
+        rt.sizeDelta = new Vector2(430, 32);
 
         Image bg = hotkeyPanel.AddComponent<Image>();
         bg.color = HotkeyBg;
@@ -713,6 +725,7 @@ public class HUDBuilder : MonoBehaviour
         hlg.childForceExpandHeight = true;
 
         CreateHotkeyLabel(hotkeyPanel.transform, "Tab", "信息");
+        CreateHotkeyLabel(hotkeyPanel.transform, "I", "背包");
         CreateHotkeyLabel(hotkeyPanel.transform, "1", "行动");
         CreateHotkeyLabel(hotkeyPanel.transform, "2", "成长");
         CreateHotkeyLabel(hotkeyPanel.transform, "Esc", "菜单");
@@ -814,7 +827,6 @@ public class HUDBuilder : MonoBehaviour
         hidden.SetActive(false);
 
         btnStudy = CreateHiddenButton("BtnStudy", hidden.transform);
-        btnGoOut = CreateHiddenButton("BtnGoOut", hidden.transform);
         btnSleep = CreateHiddenButton("BtnSleep", hidden.transform);
         btnShop = CreateHiddenButton("BtnShop", hidden.transform);
         btnClub = CreateHiddenButton("BtnClub", hidden.transform);

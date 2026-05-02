@@ -105,15 +105,9 @@ public class DefaultDebtEventTrigger : IDebtEventTrigger
         }
 
         // 3. 触发破产结局
-        if (EndingDeterminer.Instance != null)
+        if (GameEndingManager.Instance != null)
         {
-            EndingResult result = EndingDeterminer.Instance.DetermineEnding();
-            if (EndingUI.Instance == null)
-            {
-                GameObject uiObj = new GameObject("EndingUI");
-                uiObj.AddComponent<EndingUI>();
-            }
-            EndingUI.Instance.Show(result);
+            GameEndingManager.Instance.TriggerEnding("Bankruptcy");
         }
     }
 }

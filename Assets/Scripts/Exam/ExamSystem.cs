@@ -866,6 +866,11 @@ public class ExamSystem : MonoBehaviour, IExamResultProvider, ISaveable
     {
         Debug.Log("[ExamSystem] 收到开除信号，触发强制结局「学术不端·开除」");
         OnExpulsionTriggered?.Invoke("学术不端·开除");
+
+        if (GameEndingManager.Instance != null)
+        {
+            GameEndingManager.Instance.TriggerEnding("Academic dishonesty expulsion");
+        }
     }
 
     // ========== ISaveable 实现 ==========

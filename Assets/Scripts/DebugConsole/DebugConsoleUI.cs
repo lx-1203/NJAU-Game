@@ -71,6 +71,7 @@ public class DebugConsoleUI : MonoBehaviour
     private Toggle skipSplashToggle;
     private Toggle skipCreateToggle;
     private Toggle skipIntroToggle;
+    private Toggle skipTitleToggle;
     private Button prevDialogueButton;
 
     private AttributeModule attributeModule;
@@ -221,6 +222,11 @@ public class DebugConsoleUI : MonoBehaviour
         skipIntroToggle = CreateLabeledToggle(actionRow, "跳过开场", StartupFlowSettings.SkipOpeningStory, value =>
         {
             StartupFlowSettings.SkipOpeningStory = value;
+        });
+
+        skipTitleToggle = CreateLabeledToggle(actionRow, "跳过首页", StartupFlowSettings.SkipTitleScreen, value =>
+        {
+            StartupFlowSettings.SkipTitleScreen = value;
         });
 
         Button closeButton = CreateButton(actionRow, "关闭", NegativeColor, () => DebugConsoleManager.Instance?.Close());
@@ -462,6 +468,7 @@ public class DebugConsoleUI : MonoBehaviour
         SetToggleValue(skipSplashToggle, StartupFlowSettings.SkipSplashLogo);
         SetToggleValue(skipCreateToggle, StartupFlowSettings.SkipCharacterCreation);
         SetToggleValue(skipIntroToggle, StartupFlowSettings.SkipOpeningStory);
+        SetToggleValue(skipTitleToggle, StartupFlowSettings.SkipTitleScreen);
         RefreshTopActionButtons();
         RefreshStepButtons();
     }

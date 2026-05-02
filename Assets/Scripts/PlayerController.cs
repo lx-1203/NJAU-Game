@@ -1,6 +1,7 @@
 using System;
 using UnityEngine;
 
+[ExecuteAlways]
 [RequireComponent(typeof(Rigidbody2D))]
 [RequireComponent(typeof(SpriteSheetAnimator))]
 [RequireComponent(typeof(SpriteRenderer))]
@@ -12,9 +13,11 @@ public class PlayerController : MonoBehaviour
     private const string MaleIdleResourcePath = "MalePlayerIdleFrames";
     private const string MaleWalkResourcePath = "MalePlayerWalkFrames";
     private const string MaleJumpResourcePath = "MalePlayerJumpFrames";
+    private const string MaleIdlePreviewResourcePath = "MalePlayerIdleFrames/IdleFrame_00";
     private const string FemaleIdleResourcePath = "PlayerIdleFrames";
     private const string FemaleWalkResourcePath = "PlayerWalkFrames";
     private const string FemaleJumpResourcePath = "PlayerJumpFrames";
+    private const string FemaleIdlePreviewResourcePath = "PlayerIdleFrames/IdleFrame_00";
 
     [Header("Movement")]
     [SerializeField] private float moveSpeed = 5f;
@@ -29,17 +32,31 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private float groundCheckRadius = 0.2f;
     [SerializeField] private LayerMask groundLayer;
 
+    [Header("Collision")]
+    [SerializeField] private Vector2 colliderSize = new Vector2(0.6f, 0.9f);
+    [SerializeField] private Vector2 colliderOffset = Vector2.zero;
+
     [Header("Animation Frame Rate")]
     [SerializeField] private float idleFrameRate = 4f;
     [SerializeField] private float walkFrameRate = 8f;
     [SerializeField] private float jumpFrameRate = 12f;
 
+    [Header("Visual")]
+    [SerializeField] private bool autoScaleToVisualHeight = true;
+    [SerializeField] private float maleVisualHeight = 3f;
+    [SerializeField] private float femaleVisualHeight = 3f;
+
     [Header("Click Move")]
     [SerializeField] private float clickMoveStopDistance = 0.15f;
+
+    [Header("Scene Bounds")]
+    [SerializeField] private bool constrainToCurrentLocation = true;
+    [SerializeField] private float horizontalBoundsPadding = 0.05f;
 
     private Rigidbody2D rb;
     private SpriteSheetAnimator animator;
     private SpriteRenderer spriteRenderer;
+    private BoxCollider2D playerCollider;
     private Camera mainCamera;
 
     private bool isGrounded;
@@ -68,14 +85,22 @@ public class PlayerController : MonoBehaviour
         rb = GetComponent<Rigidbody2D>();
         animator = GetComponent<SpriteSheetAnimator>();
         spriteRenderer = GetComponent<SpriteRenderer>();
+        playerCollider = GetComponent<BoxCollider2D>();
         mainCamera = Camera.main;
 
-        if (groundCheck == null)
+        EnsureGroundCheckExists();
+        ApplyColliderSettings();
+        RepairGroundCheckIfOutOfRange();
+    }
+
+    private void OnEnable()
+    {
+        if (!Application.isPlaying)
         {
-            GameObject check = new GameObject("GroundCheck");
-            check.transform.SetParent(transform);
-            check.transform.localPosition = new Vector3(0f, -0.5f, 0f);
-            groundCheck = check.transform;
+            EnsureGroundCheckExists();
+            ApplyColliderSettings();
+            RepairGroundCheckIfOutOfRange();
+            ApplyEditorPreviewSprite();
         }
     }
 
@@ -121,23 +146,10 @@ public class PlayerController : MonoBehaviour
         if (spriteRenderer != null && spriteRenderer.sprite != null)
         {
             spriteRenderer.color = Color.white;
-
-            float targetHeight = 3f;
-            float spriteHeight = spriteRenderer.sprite.bounds.size.y;
-            if (spriteHeight > 0f)
-            {
-                float scale = targetHeight / spriteHeight;
-                transform.localScale = new Vector3(scale, scale, 1f);
-            }
-
-            BoxCollider2D collider2D = GetComponent<BoxCollider2D>();
-            if (collider2D != null)
-            {
-                float aspectRatio = spriteRenderer.sprite.bounds.size.x / spriteRenderer.sprite.bounds.size.y;
-                collider2D.size = new Vector2(aspectRatio * 0.6f, 0.9f);
-                collider2D.offset = Vector2.zero;
-            }
+            ApplyVisualScale(spriteRenderer.sprite);
         }
+
+        ApplyColliderSettings();
     }
 
     private void HandleGameStateChanged()
@@ -148,6 +160,12 @@ public class PlayerController : MonoBehaviour
 
     private void Update()
     {
+        if (!Application.isPlaying)
+        {
+            RefreshEditorPreview();
+            return;
+        }
+
         TryBindGameState();
 
         if ((DialogueSystem.Instance != null && DialogueSystem.Instance.IsDialogueActive) ||
@@ -184,7 +202,7 @@ public class PlayerController : MonoBehaviour
             {
                 pendingArrivalAction = null;
                 pendingInteractionTarget = null;
-                clickTargetX = mouseWorldPos.x;
+                clickTargetX = ClampTargetXToLocationBounds(mouseWorldPos.x);
                 isClickMoving = true;
             }
         }
@@ -298,29 +316,38 @@ public class PlayerController : MonoBehaviour
 
         if (!isGrounded)
         {
-            if (animator.CurrentClipName != AnimJump)
-            {
-                animator.Play(AnimJump, true);
-            }
+            PlayAnimationIfNeeded(AnimJump);
         }
         else if (absInput < 0.1f)
         {
-            if (animator.CurrentClipName != AnimIdle)
-            {
-                animator.Play(AnimIdle, true);
-            }
+            PlayAnimationIfNeeded(AnimIdle);
         }
         else
         {
-            if (animator.CurrentClipName != AnimWalk)
-            {
-                animator.Play(AnimWalk, true);
-            }
+            PlayAnimationIfNeeded(AnimWalk);
+        }
+    }
+
+    private void PlayAnimationIfNeeded(string clipName)
+    {
+        if (animator == null)
+        {
+            return;
+        }
+
+        if (animator.CurrentClipName != clipName || !animator.IsPlaying)
+        {
+            animator.Play(clipName, true);
         }
     }
 
     private void FixedUpdate()
     {
+        if (!Application.isPlaying)
+        {
+            return;
+        }
+
         if (jumpRequested && isGrounded)
         {
             StartJump();
@@ -334,6 +361,7 @@ public class PlayerController : MonoBehaviour
         }
 
         rb.velocity = new Vector2(moveInput * moveSpeed, rb.velocity.y);
+        ClampToCurrentLocationBounds();
 
         if (isGrounded && rb.velocity.y <= 0f)
         {
@@ -354,17 +382,111 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    private void OnDrawGizmosSelected()
+    private void Reset()
     {
-        if (groundCheck != null)
+        EnsureGroundCheckExists();
+        ApplyColliderSettings();
+        SnapGroundCheckToColliderBottom(0.02f);
+    }
+
+    private void OnValidate()
+    {
+        groundCheckRadius = Mathf.Max(0.01f, groundCheckRadius);
+        colliderSize.x = Mathf.Max(0.01f, colliderSize.x);
+        colliderSize.y = Mathf.Max(0.01f, colliderSize.y);
+        maleVisualHeight = Mathf.Max(0.1f, maleVisualHeight);
+        femaleVisualHeight = Mathf.Max(0.1f, femaleVisualHeight);
+
+        if (!Application.isPlaying)
+        {
+            EnsureGroundCheckExists();
+            ApplyColliderSettings();
+            RepairGroundCheckIfOutOfRange();
+            ApplyEditorPreviewSprite();
+        }
+    }
+
+    private void OnDrawGizmos()
+    {
+        Transform groundCheckTransform = groundCheck;
+        if (groundCheckTransform == null)
+        {
+            EnsureGroundCheckExists();
+            groundCheckTransform = groundCheck;
+        }
+
+        if (groundCheckTransform != null)
         {
             Gizmos.color = Color.red;
-            Gizmos.DrawWireSphere(groundCheck.position, groundCheckRadius);
+            Gizmos.DrawWireSphere(groundCheckTransform.position, groundCheckRadius);
+            Gizmos.DrawSphere(groundCheckTransform.position, Mathf.Max(0.03f, groundCheckRadius * 0.15f));
+        }
+
+        BoxCollider2D collider2D = GetPlayerCollider();
+        if (collider2D != null)
+        {
+            Gizmos.color = Color.cyan;
+            Matrix4x4 previousMatrix = Gizmos.matrix;
+            Gizmos.matrix = collider2D.transform.localToWorldMatrix;
+            Gizmos.DrawWireCube(collider2D.offset, collider2D.size);
+            Gizmos.DrawCube(collider2D.offset, new Vector3(collider2D.size.x, collider2D.size.y, 0.001f));
+            Gizmos.matrix = previousMatrix;
         }
     }
 
     public float MoveSpeed => moveSpeed;
     public bool FacingRight => facingRight;
+    public bool AutoScaleToVisualHeight
+    {
+        get => autoScaleToVisualHeight;
+        set => autoScaleToVisualHeight = value;
+    }
+
+    public float VisualHeight
+    {
+        get => ResolveConfiguredGender() == FemaleGenderValue ? femaleVisualHeight : maleVisualHeight;
+        set
+        {
+            float normalized = Mathf.Max(0.1f, value);
+            if (ResolveConfiguredGender() == FemaleGenderValue)
+            {
+                femaleVisualHeight = normalized;
+            }
+            else
+            {
+                maleVisualHeight = normalized;
+            }
+        }
+    }
+
+    public SpriteRenderer GetSpriteRenderer()
+    {
+        if (spriteRenderer == null)
+        {
+            spriteRenderer = GetComponent<SpriteRenderer>();
+        }
+
+        return spriteRenderer;
+    }
+
+    public void SetVisualHeight(float targetHeight)
+    {
+        VisualHeight = targetHeight;
+        autoScaleToVisualHeight = true;
+
+        SpriteRenderer renderer = GetSpriteRenderer();
+        if (renderer != null && renderer.sprite != null)
+        {
+            ApplyVisualScale(renderer.sprite);
+        }
+    }
+
+    public Transform GroundCheckTransform => groundCheck;
+    public float GroundCheckRadius
+    {
+        get => groundCheckRadius;
+        set => groundCheckRadius = Mathf.Max(0.01f, value);
+    }
 
     private void HandleJumpInput()
     {
@@ -435,5 +557,256 @@ public class PlayerController : MonoBehaviour
         }
 
         clickTargetX = target.position.x + directionSign * interactionStopDistance;
+        clickTargetX = ClampTargetXToLocationBounds(clickTargetX);
+    }
+
+    private float ClampTargetXToLocationBounds(float targetX)
+    {
+        return TryGetCurrentHorizontalBounds(out float minX, out float maxX)
+            ? Mathf.Clamp(targetX, minX, maxX)
+            : targetX;
+    }
+
+    private void ClampToCurrentLocationBounds()
+    {
+        if (!TryGetCurrentHorizontalBounds(out float minX, out float maxX))
+        {
+            return;
+        }
+
+        Vector2 position = rb.position;
+        float clampedX = Mathf.Clamp(position.x, minX, maxX);
+        if (!Mathf.Approximately(clampedX, position.x))
+        {
+            rb.position = new Vector2(clampedX, position.y);
+
+            if ((clampedX <= minX && rb.velocity.x < 0f) ||
+                (clampedX >= maxX && rb.velocity.x > 0f))
+            {
+                rb.velocity = new Vector2(0f, rb.velocity.y);
+            }
+
+            if (isClickMoving && Mathf.Abs(clickTargetX - clampedX) <= clickMoveStopDistance)
+            {
+                isClickMoving = false;
+                moveInput = 0f;
+            }
+        }
+    }
+
+    private bool TryGetCurrentHorizontalBounds(out float minX, out float maxX)
+    {
+        minX = float.NegativeInfinity;
+        maxX = float.PositiveInfinity;
+
+        if (!constrainToCurrentLocation || LocationManager.Instance == null || GameState.Instance == null)
+        {
+            return false;
+        }
+
+        LocationDefinition location = LocationManager.Instance.GetCurrentLocationDef();
+        if (location == null)
+        {
+            return false;
+        }
+
+        float halfWidth = GetHalfColliderWidth();
+        minX = location.worldMinX + halfWidth + horizontalBoundsPadding;
+        maxX = location.worldMaxX - halfWidth - horizontalBoundsPadding;
+        if (minX > maxX)
+        {
+            float center = (location.worldMinX + location.worldMaxX) * 0.5f;
+            minX = center;
+            maxX = center;
+        }
+
+        return true;
+    }
+
+    private float GetHalfColliderWidth()
+    {
+        if (playerCollider != null)
+        {
+            return playerCollider.bounds.extents.x;
+        }
+
+        return 0.2f;
+    }
+
+    public void SetGroundCheckLocalPosition(Vector3 localPosition)
+    {
+        EnsureGroundCheckExists();
+        groundCheck.localPosition = localPosition;
+    }
+
+    public BoxCollider2D GetPlayerCollider()
+    {
+        if (playerCollider == null)
+        {
+            playerCollider = GetComponent<BoxCollider2D>();
+        }
+
+        return playerCollider;
+    }
+
+    public void SetColliderShape(Vector2 offset, Vector2 size)
+    {
+        colliderOffset = offset;
+        colliderSize = new Vector2(Mathf.Max(0.01f, size.x), Mathf.Max(0.01f, size.y));
+        ApplyColliderSettings();
+    }
+
+    public void SnapGroundCheckToColliderBottom(float extraOffset = 0f)
+    {
+        BoxCollider2D collider2D = GetPlayerCollider();
+        if (collider2D == null)
+        {
+            return;
+        }
+
+        EnsureGroundCheckExists();
+        Vector3 localPosition = groundCheck.localPosition;
+        localPosition.x = collider2D.offset.x;
+        localPosition.y = collider2D.offset.y - collider2D.size.y * 0.5f - extraOffset;
+        localPosition.z = 0f;
+        groundCheck.localPosition = localPosition;
+    }
+
+    private void RepairGroundCheckIfOutOfRange()
+    {
+        BoxCollider2D collider2D = GetPlayerCollider();
+        if (collider2D == null)
+        {
+            return;
+        }
+
+        EnsureGroundCheckExists();
+
+        Vector3 localPosition = groundCheck.localPosition;
+        float expectedX = collider2D.offset.x;
+        float expectedY = collider2D.offset.y - collider2D.size.y * 0.5f - 0.02f;
+
+        float maxAllowedHorizontalDrift = Mathf.Max(0.75f, collider2D.size.x * 2f);
+        float maxAllowedVerticalDrift = Mathf.Max(1.5f, collider2D.size.y * 2f);
+
+        bool isOutOfRange =
+            Mathf.Abs(localPosition.x - expectedX) > maxAllowedHorizontalDrift ||
+            Mathf.Abs(localPosition.y - expectedY) > maxAllowedVerticalDrift ||
+            Mathf.Abs(localPosition.z) > 0.01f;
+
+        if (isOutOfRange)
+        {
+            SnapGroundCheckToColliderBottom(0.02f);
+        }
+    }
+
+    private void EnsureGroundCheckExists()
+    {
+        if (groundCheck != null)
+        {
+            return;
+        }
+
+        Transform existing = transform.Find("GroundCheck");
+        if (existing != null)
+        {
+            groundCheck = existing;
+            return;
+        }
+
+        GameObject check = new GameObject("GroundCheck");
+        check.transform.SetParent(transform);
+        check.transform.localPosition = new Vector3(0f, -0.5f, 0f);
+        check.transform.localRotation = Quaternion.identity;
+        check.transform.localScale = Vector3.one;
+        groundCheck = check.transform;
+    }
+
+    private void ApplyColliderSettings()
+    {
+        BoxCollider2D collider2D = GetPlayerCollider();
+        if (collider2D == null)
+        {
+            return;
+        }
+
+        collider2D.size = colliderSize;
+        collider2D.offset = colliderOffset;
+    }
+
+    private void ApplyEditorPreviewSprite()
+    {
+        if (spriteRenderer == null)
+        {
+            spriteRenderer = GetComponent<SpriteRenderer>();
+        }
+
+        if (spriteRenderer == null)
+        {
+            return;
+        }
+
+        int gender = ResolveConfiguredGender();
+        bool useFemaleResources = gender == FemaleGenderValue;
+        spriteFacesLeftByDefault = useFemaleResources;
+
+        string previewResourcePath = useFemaleResources
+            ? FemaleIdlePreviewResourcePath
+            : MaleIdlePreviewResourcePath;
+
+        Sprite previewSprite = Resources.Load<Sprite>(previewResourcePath);
+        if (previewSprite == null)
+        {
+            return;
+        }
+
+        spriteRenderer.sprite = previewSprite;
+        spriteRenderer.color = Color.white;
+        ApplyVisualScale(previewSprite);
+
+        SetFacingDirection(facingRight);
+    }
+
+    private void RefreshEditorPreview()
+    {
+        EnsureGroundCheckExists();
+        ApplyColliderSettings();
+        RepairGroundCheckIfOutOfRange();
+
+        if (spriteRenderer == null)
+        {
+            spriteRenderer = GetComponent<SpriteRenderer>();
+        }
+
+        if (spriteRenderer == null)
+        {
+            return;
+        }
+
+        if (!spriteRenderer.enabled || spriteRenderer.sprite == null || configuredGender != ResolveConfiguredGender())
+        {
+            ApplyEditorPreviewSprite();
+        }
+        else
+        {
+            spriteRenderer.color = Color.white;
+            ApplyVisualScale(spriteRenderer.sprite);
+            SetFacingDirection(facingRight);
+        }
+    }
+
+    private void ApplyVisualScale(Sprite sprite)
+    {
+        if (!autoScaleToVisualHeight || sprite == null)
+        {
+            return;
+        }
+
+        float spriteHeight = sprite.bounds.size.y;
+        if (spriteHeight > 0f)
+        {
+            float scale = VisualHeight / spriteHeight;
+            transform.localScale = new Vector3(scale, scale, 1f);
+        }
     }
 }

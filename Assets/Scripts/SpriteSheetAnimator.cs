@@ -29,7 +29,22 @@ public class SpriteSheetAnimator : MonoBehaviour
 
     private void Awake()
     {
-        spriteRenderer = GetComponent<SpriteRenderer>();
+        EnsureSpriteRenderer();
+    }
+
+    private void OnEnable()
+    {
+        EnsureSpriteRenderer();
+    }
+
+    private void Reset()
+    {
+        EnsureSpriteRenderer();
+    }
+
+    private void OnValidate()
+    {
+        EnsureSpriteRenderer();
     }
 
     public void LoadFromResources(string resourcePath, string clipName, float frameRate = 8f, bool loop = true, bool reverse = false)
@@ -96,6 +111,11 @@ public class SpriteSheetAnimator : MonoBehaviour
 
     private void Update()
     {
+        if (!EnsureSpriteRenderer())
+        {
+            return;
+        }
+
         if (!isPlaying || currentClip == null || currentClip.frames == null || currentClip.frames.Length == 0)
         {
             return;
@@ -129,6 +149,12 @@ public class SpriteSheetAnimator : MonoBehaviour
 
     public void Play(string clipName, bool forceRestart = false)
     {
+        if (!EnsureSpriteRenderer())
+        {
+            Debug.LogWarning("[SpriteSheetAnimator] Missing SpriteRenderer component.", this);
+            return;
+        }
+
         AnimationClip clip = animations.Find(c => c.name == clipName);
         if (clip == null || clip.frames == null || clip.frames.Length == 0)
         {
@@ -169,4 +195,14 @@ public class SpriteSheetAnimator : MonoBehaviour
 
     public bool IsPlaying => isPlaying;
     public string CurrentClipName => currentClip?.name;
+
+    private bool EnsureSpriteRenderer()
+    {
+        if (spriteRenderer == null)
+        {
+            spriteRenderer = GetComponent<SpriteRenderer>();
+        }
+
+        return spriteRenderer != null;
+    }
 }

@@ -15,7 +15,6 @@ public class DebugConsoleManager : MonoBehaviour
     private const float TildeTimeout = 0.5f;
     private const int TildeThreshold = 3;
 
-    private readonly Dictionary<string, string> snapshots = new Dictionary<string, string>();
     private static readonly List<DebugLogEntry> logEntries = new List<DebugLogEntry>();
 
     public static event Action<DebugLogEntry> OnLogAdded;
@@ -121,13 +120,13 @@ public class DebugConsoleManager : MonoBehaviour
             PlayerAttributes.Instance.SaveToData(data);
         }
 
-        snapshots[name] = JsonUtility.ToJson(data, true);
+        ZhongshanDeckToolStateBridge.SaveSnapshot(name, JsonUtility.ToJson(data, true));
         Log("Snapshot", $"Saved snapshot: {name}");
     }
 
     public void LoadSnapshot(string name)
     {
-        if (!snapshots.TryGetValue(name, out string json))
+        if (!ZhongshanDeckToolStateBridge.TryGetSnapshotJson(name, out string json))
         {
             Log("Snapshot", $"Snapshot not found: {name}");
             return;
@@ -149,7 +148,7 @@ public class DebugConsoleManager : MonoBehaviour
 
     public void DeleteSnapshot(string name)
     {
-        if (snapshots.Remove(name))
+        if (ZhongshanDeckToolStateBridge.DeleteSnapshot(name))
         {
             Log("Snapshot", $"Deleted snapshot: {name}");
         }
@@ -157,7 +156,7 @@ public class DebugConsoleManager : MonoBehaviour
 
     public List<string> GetSnapshotNames()
     {
-        return new List<string>(snapshots.Keys);
+        return ZhongshanDeckToolStateBridge.GetSnapshotNames();
     }
 
     public static void Log(string category, string message)
