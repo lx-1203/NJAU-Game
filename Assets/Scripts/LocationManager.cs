@@ -324,6 +324,16 @@ public class LocationManager : MonoBehaviour
         return new Vector3(def.worldCenterX, def.worldSpawnY, 0f);
     }
 
+    /// <summary>Returns the player entry point for a location, near the left side and inside the air wall.</summary>
+    public Vector3 GetLocationEntryPoint(LocationId id)
+    {
+        LocationDefinition def = GetLocation(id);
+        if (def == null) return Vector3.zero;
+
+        float entryX = Mathf.Min(def.worldMinX + 2f, def.worldMaxX - 2f);
+        return new Vector3(entryX, def.worldSpawnY, 0f);
+    }
+
     /// <summary>根据世界X坐标判断所处地点（用于区域检测）</summary>
     public LocationId? GetLocationAtWorldX(float x)
     {
@@ -362,6 +372,7 @@ public class LocationManager : MonoBehaviour
 
         // 更新当前地点
         gs.CurrentLocation = target;
+        TeleportPlayerTo(target);
 
         Debug.Log($"[LocationManager] 移动: {from} → {target}");
 
@@ -372,6 +383,35 @@ public class LocationManager : MonoBehaviour
     }
 
     // ========== 回合刷新 ==========
+
+    private void TeleportPlayerTo(LocationId target)
+    {
+        PlayerController controller = FindObjectOfType<PlayerController>();
+        if (controller != null)
+        {
+            controller.TeleportToLocation(target);
+            return;
+        }
+
+        GameObject player = GameObject.FindGameObjectWithTag("Player");
+        if (player == null)
+        {
+            Debug.LogWarning("[LocationManager] PlayerController and Player tag not found, cannot teleport player after map navigation.");
+            return;
+        }
+
+        Vector3 targetPosition = GetLocationEntryPoint(target);
+        Rigidbody2D playerRb = player.GetComponent<Rigidbody2D>();
+        if (playerRb != null)
+        {
+            playerRb.position = new Vector2(targetPosition.x, targetPosition.y);
+            playerRb.velocity = Vector2.zero;
+        }
+        else
+        {
+            player.transform.position = new Vector3(targetPosition.x, targetPosition.y, player.transform.position.z);
+        }
+    }
 
     private void OnRoundAdvanced(GameState.RoundAdvanceResult result)
     {

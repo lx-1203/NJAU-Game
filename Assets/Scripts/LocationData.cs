@@ -39,7 +39,7 @@ public class LocationDefinition
     public float worldCenterX;           // 区域中心世界 X 坐标
     public float worldMinX;              // 区域左边界
     public float worldMaxX;              // 区域右边界
-    public float worldSpawnY = -3.5f;    // NPC 生成 Y 坐标
+    public float worldSpawnY = -5.25f;   // Player/NPC standing Y position near the bottom of the background
 
     public LocationDefinition(
         LocationId id,
@@ -53,7 +53,7 @@ public class LocationDefinition
         float worldCenterX = 0f,
         float worldMinX = 0f,
         float worldMaxX = 0f,
-        float worldSpawnY = -3.5f)
+        float worldSpawnY = -5.25f)
     {
         this.id = id;
         this.displayName = displayName;

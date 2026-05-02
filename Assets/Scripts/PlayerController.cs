@@ -75,6 +75,7 @@ public class PlayerController : MonoBehaviour
     private bool spriteFacesLeftByDefault = true;
     private int configuredGender = -1;
     private GameState subscribedGameState;
+    private bool isSubscribedToLocationChanges;
 
     private const string AnimIdle = "Idle";
     private const string AnimWalk = "Walk";
@@ -109,6 +110,8 @@ public class PlayerController : MonoBehaviour
         TryBindGameState();
         ConfigureAnimations();
         SetFacingDirection(true);
+        TrySubscribeToLocationChanges();
+        SnapToCurrentLocation();
     }
 
     private void OnDestroy()
@@ -167,6 +170,11 @@ public class PlayerController : MonoBehaviour
         }
 
         TryBindGameState();
+
+        if (!isSubscribedToLocationChanges)
+        {
+            TrySubscribeToLocationChanges();
+        }
 
         if ((DialogueSystem.Instance != null && DialogueSystem.Instance.IsDialogueActive) ||
             (EventExecutor.Instance != null && EventExecutor.Instance.IsExecuting))
@@ -808,5 +816,83 @@ public class PlayerController : MonoBehaviour
             float scale = VisualHeight / spriteHeight;
             transform.localScale = new Vector3(scale, scale, 1f);
         }
+    }
+
+    private void TrySubscribeToLocationChanges()
+    {
+        if (GameState.Instance == null)
+        {
+            return;
+        }
+
+        GameState.Instance.OnLocationChanged -= OnGameLocationChanged;
+        GameState.Instance.OnLocationChanged += OnGameLocationChanged;
+        isSubscribedToLocationChanges = true;
+    }
+
+    private void OnGameLocationChanged(LocationId location)
+    {
+        TeleportToLocation(location);
+    }
+
+    private void SnapToCurrentLocation()
+    {
+        if (GameState.Instance == null)
+        {
+            return;
+        }
+
+        TeleportToLocation(GameState.Instance.CurrentLocation);
+    }
+
+    public void TeleportToLocation(LocationId location)
+    {
+        if (LocationManager.Instance == null)
+        {
+            return;
+        }
+
+        Vector3 targetPosition = LocationManager.Instance.GetLocationEntryPoint(location);
+        if (targetPosition == Vector3.zero && LocationManager.Instance.GetLocation(location) == null)
+        {
+            return;
+        }
+
+        isClickMoving = false;
+        pendingArrivalAction = null;
+        pendingInteractionTarget = null;
+        moveInput = 0f;
+        jumpRequested = false;
+        jumpHeld = false;
+        rightMouseDrivingJump = false;
+
+        if (rb != null)
+        {
+            rb.position = new Vector2(targetPosition.x, targetPosition.y);
+            rb.velocity = Vector2.zero;
+            Physics2D.SyncTransforms();
+        }
+        else
+        {
+            transform.position = new Vector3(targetPosition.x, targetPosition.y, transform.position.z);
+        }
+
+        UpdateAnimation(0f);
+
+        CameraFollow cameraFollow = Camera.main != null ? Camera.main.GetComponent<CameraFollow>() : FindObjectOfType<CameraFollow>();
+        if (cameraFollow != null)
+        {
+            cameraFollow.SnapToWorldPosition(targetPosition);
+        }
+    }
+
+    private void OnDisable()
+    {
+        if (GameState.Instance != null)
+        {
+            GameState.Instance.OnLocationChanged -= OnGameLocationChanged;
+        }
+
+        isSubscribedToLocationChanges = false;
     }
 }

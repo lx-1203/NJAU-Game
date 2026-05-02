@@ -1296,10 +1296,29 @@ public class HUDManager : MonoBehaviour
     {
         if (LocationManager.Instance != null)
         {
-            Vector3 targetPos = LocationManager.Instance.GetLocationWorldCenter(targetLocation);
-            GameObject player = GameObject.FindGameObjectWithTag("Player");
-            if (player != null)
-                player.transform.position = targetPos;
+            Vector3 targetPos = LocationManager.Instance.GetLocationEntryPoint(targetLocation);
+            PlayerController playerController = FindObjectOfType<PlayerController>();
+            if (playerController != null)
+            {
+                playerController.TeleportToLocation(targetLocation);
+            }
+            else
+            {
+                GameObject player = GameObject.FindGameObjectWithTag("Player");
+                if (player != null)
+                {
+                    Rigidbody2D playerRb = player.GetComponent<Rigidbody2D>();
+                    if (playerRb != null)
+                    {
+                        playerRb.position = new Vector2(targetPos.x, targetPos.y);
+                        playerRb.velocity = Vector2.zero;
+                    }
+                    else
+                    {
+                        player.transform.position = targetPos;
+                    }
+                }
+            }
         }
 
         if (campusMapUI != null) campusMapUI.HideOverlay();

@@ -23,6 +23,8 @@ public class GameSceneInitializer : MonoBehaviour
         SetupPlayerAttributes();
         SetupLocationManager();
         SetupLocationSceneController();
+        SetupLocationSceneBuilder();
+        SetupCameraFollow();
         SetupActionSystem();
         SetupClubSystem();
         SetupEconomyManager();
@@ -163,6 +165,34 @@ public class GameSceneInitializer : MonoBehaviour
         {
             GameObject obj = new GameObject("LocationManager");
             obj.AddComponent<LocationManager>();
+        }
+    }
+
+    private void SetupLocationSceneBuilder()
+    {
+        if (LocationSceneBuilder.Instance == null)
+        {
+            GameObject obj = new GameObject("LocationSceneBuilder");
+            obj.AddComponent<LocationSceneBuilder>();
+        }
+    }
+
+    private void SetupCameraFollow()
+    {
+        Camera mainCamera = Camera.main;
+        if (mainCamera == null)
+        {
+            GameObject cameraObject = new GameObject("Main Camera");
+            mainCamera = cameraObject.AddComponent<Camera>();
+            cameraObject.tag = "MainCamera";
+            mainCamera.orthographic = true;
+            mainCamera.orthographicSize = 5.5f;
+            cameraObject.transform.position = new Vector3(0f, -2.5f, -10f);
+        }
+
+        if (mainCamera.GetComponent<CameraFollow>() == null)
+        {
+            mainCamera.gameObject.AddComponent<CameraFollow>();
         }
     }
 
