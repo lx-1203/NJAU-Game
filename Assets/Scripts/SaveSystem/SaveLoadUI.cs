@@ -40,6 +40,11 @@ public class SaveLoadUI : MonoBehaviour
 
     private void Update()
     {
+        if (PauseMenuUI.IsBlockingUnderlyingInput && !Input.GetKeyDown(KeyCode.Escape))
+        {
+            return;
+        }
+
         if (confirmDialog != null)
         {
             if (Input.GetKeyDown(KeyCode.Escape))
@@ -53,6 +58,11 @@ public class SaveLoadUI : MonoBehaviour
                 UIInputHelper.TryClick(confirmDialogConfirmButton);
             }
 
+            return;
+        }
+
+        if (PauseMenuUI.ShouldBlockUnderlyingEscape())
+        {
             return;
         }
 

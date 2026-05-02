@@ -209,7 +209,7 @@ public class CampusMapUI
             string[] npcs = LocationManager.Instance.GetNPCsAtLocation(locId);
             if (npcs != null && npcs.Length > 0)
             {
-                entry.npcText.text = $"NPC: {npcs.Length}";
+                entry.npcText.text = $"人物：{npcs.Length}";
                 entry.npcText.gameObject.SetActive(true);
             }
             else

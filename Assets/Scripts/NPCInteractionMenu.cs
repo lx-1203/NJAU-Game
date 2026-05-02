@@ -415,23 +415,22 @@ public class NPCInteractionMenu : MonoBehaviour
         ClearButtons();
 
         // 返回按钮（回到NPC列表）
-        CreateListButton("← 返回NPC列表", () =>
-        {
-            ShowNPCList();
-        });
+        CreateListButton("返回NPC列表", ShowNPCList);
+        AddFeaturedInteractionButtons(npcId);
 
         // 获取可用社交行动
         List<SocialActionDefinition> actions = AffinitySystem.Instance.GetAvailableSocialActions(npcId);
-
-        if (actions.Count == 0)
-        {
-            CreateInfoLabel("当前无可用社交行动\n（行动点/金钱不足或好感等级不够）");
-            return;
-        }
+        bool hasGeneralAction = false;
 
         for (int i = 0; i < actions.Count; i++)
         {
             SocialActionDefinition action = actions[i];
+            if (action.id == "chat" || action.id == "give_gift" || action.id == "debate")
+            {
+                continue;
+            }
+
+            hasGeneralAction = true;
             string capturedActionId = action.id;
             string capturedNpcId = npcId;
 
@@ -450,8 +449,116 @@ public class NPCInteractionMenu : MonoBehaviour
             });
         }
 
+        if (!hasGeneralAction)
+        {
+            CreateInfoLabel("当前没有更多可用社交行动");
+        }
+
         // ===== 恋爱系统按钮 =====
         AddRomanceButtons(npcId);
+    }
+
+    private void AddFeaturedInteractionButtons(string npcId)
+    {
+        CreateInfoLabel("常用互动");
+
+        CreateActionButton("对话", true, () => OnTalkClicked(npcId));
+        AddFeaturedSocialButton(npcId, "debate", "\u8fa9\u8bba");
+        AddFeaturedSocialButton(npcId, "give_gift", "\u9001\u793c");
+
+        bool canDate = RomanceSystem.Instance != null && RomanceSystem.Instance.CanDate(npcId);
+        string dateLabel = canDate ? "\u7ea6\u4f1a    AP:1" : $"\u7ea6\u4f1a    {GetDateRequirementHint(npcId)}";
+        CreateRomanceButton(dateLabel, canDate, canDate ? (UnityEngine.Events.UnityAction)(() => OnDateClicked(npcId)) : null);
+    }
+
+    private void AddFeaturedSocialButton(string npcId, string actionId, string fallbackLabel)
+    {
+        SocialActionDefinition action = NPCDatabase.Instance != null ? NPCDatabase.Instance.GetSocialAction(actionId) : null;
+        string baseLabel = action != null ? action.displayName : fallbackLabel;
+        bool interactable = IsSocialActionAvailable(npcId, actionId, out string requirementHint);
+        string label = interactable ? BuildCompactActionLabel(action, baseLabel) : $"{baseLabel}    {requirementHint}";
+
+        CreateActionButton(label, interactable, interactable ? (UnityEngine.Events.UnityAction)(() => OnSocialActionClicked(npcId, actionId)) : null);
+    }
+
+    private bool IsSocialActionAvailable(string npcId, string actionId, out string requirementHint)
+    {
+        requirementHint = "\u6682\u4e0d\u53ef\u7528";
+
+        if (NPCDatabase.Instance == null || AffinitySystem.Instance == null)
+        {
+            requirementHint = "\u7cfb\u7edf\u672a\u5c31\u7eea";
+            return false;
+        }
+
+        SocialActionDefinition action = NPCDatabase.Instance.GetSocialAction(actionId);
+        if (action == null)
+        {
+            requirementHint = "\u529f\u80fd\u672a\u914d\u7f6e";
+            return false;
+        }
+
+        NPCRelationshipData rel = AffinitySystem.Instance.GetRelationship(npcId);
+        if ((int)rel.level < (int)action.GetMinAffinityLevel())
+        {
+            requirementHint = $"\u9700{GetLevelDisplayName(action.GetMinAffinityLevel())}";
+            return false;
+        }
+
+        GameState gs = GameState.Instance;
+        if (gs != null && gs.ActionPoints < action.actionPointCost)
+        {
+            requirementHint = $"\u9700{action.actionPointCost}AP";
+            return false;
+        }
+
+        if (gs != null && gs.Money < action.moneyCost)
+        {
+            requirementHint = $"\u9700\u00a5{action.moneyCost}";
+            return false;
+        }
+
+        return true;
+    }
+
+    private string BuildCompactActionLabel(SocialActionDefinition action, string fallbackLabel)
+    {
+        if (action == null)
+        {
+            return fallbackLabel;
+        }
+
+        string label = $"{action.displayName}    AP:{action.actionPointCost}";
+        if (action.moneyCost > 0)
+        {
+            label += $"    \u00a5{action.moneyCost}";
+        }
+
+        return label;
+    }
+
+    private string GetDateRequirementHint(string npcId)
+    {
+        if (RomanceSystem.Instance == null)
+        {
+            return "\u7cfb\u7edf\u672a\u5c31\u7eea";
+        }
+
+        switch (RomanceSystem.Instance.GetRomanceState(npcId))
+        {
+            case RomanceState.Dating:
+                return "\u53ef\u8fdb\u884c";
+            case RomanceState.Crushing:
+                return "\u5148\u544a\u767d";
+            case RomanceState.BrokenUp:
+                return "\u9700\u5148\u590d\u5408";
+            case RomanceState.Cooldown:
+                return "\u51b7\u5374\u4e2d";
+            case RomanceState.Hostile:
+                return "\u5173\u7cfb\u7834\u88c2";
+            default:
+                return "\u9700\u5148\u786e\u8ba4\u5173\u7cfb";
+        }
     }
 
     // ====================================================================
@@ -660,6 +767,33 @@ public class NPCInteractionMenu : MonoBehaviour
 
         // 触发约会对话
         TriggerDateDialogue(npcId);
+    }
+
+    private void OnTalkClicked(string npcId)
+    {
+        if (DialogueSystem.Instance == null)
+        {
+            return;
+        }
+
+        NPCData npcData = NPCDatabase.Instance != null ? NPCDatabase.Instance.GetNPC(npcId) : null;
+        if (npcData == null)
+        {
+            return;
+        }
+
+        CloseMenu();
+
+        if (!string.IsNullOrEmpty(npcData.dialogueId))
+        {
+            DialogueSystem.Instance.StartDialogue(npcData.dialogueId);
+            return;
+        }
+
+        string[] lines = npcData.greetingLines != null && npcData.greetingLines.Length > 0
+            ? npcData.greetingLines
+            : new[] { "..." };
+        DialogueSystem.Instance.StartDialogue(npcData.displayName, lines);
     }
 
     /// <summary>创建分手按钮（红色调）</summary>
@@ -933,6 +1067,11 @@ public class NPCInteractionMenu : MonoBehaviour
     /// <summary>创建社交行动按钮</summary>
     private void CreateActionButton(string label, UnityEngine.Events.UnityAction onClick)
     {
+        CreateActionButton(label, true, onClick);
+    }
+
+    private void CreateActionButton(string label, bool interactable, UnityEngine.Events.UnityAction onClick)
+    {
         GameObject btnObj = new GameObject("ActionBtn");
         btnObj.transform.SetParent(contentContainer, false);
 
@@ -940,20 +1079,25 @@ public class NPCInteractionMenu : MonoBehaviour
         rt.sizeDelta = new Vector2(0, ButtonHeight);
 
         Image btnBg = btnObj.AddComponent<Image>();
-        btnBg.color = ButtonNormal;
+        btnBg.color = interactable ? ButtonNormal : new Color(0.22f, 0.22f, 0.28f, 0.75f);
 
         Button btn = btnObj.AddComponent<Button>();
+        btn.interactable = interactable;
         ColorBlock cb = btn.colors;
         cb.normalColor = ButtonNormal;
         cb.highlightedColor = ButtonHover;
         cb.pressedColor = ButtonPressed;
+        cb.disabledColor = new Color(0.22f, 0.22f, 0.28f, 0.75f);
         cb.selectedColor = ButtonNormal;
         cb.fadeDuration = 0.1f;
         btn.colors = cb;
-        btn.onClick.AddListener(onClick);
+        if (interactable && onClick != null)
+        {
+            btn.onClick.AddListener(onClick);
+        }
 
         TextMeshProUGUI btnText = CreateTMPText("Label", btnObj.transform, label,
-            18f, TextWhite, TextAlignmentOptions.Center, new Vector2(0, ButtonHeight));
+            18f, interactable ? TextWhite : DisabledTextColor, TextAlignmentOptions.Center, new Vector2(0, ButtonHeight));
         RectTransform textRT = btnText.GetComponent<RectTransform>();
         textRT.anchorMin = Vector2.zero;
         textRT.anchorMax = Vector2.one;

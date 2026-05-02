@@ -6,7 +6,7 @@ using System;
 /// <summary>
 /// 游戏内暂停菜单 —— Esc 键唤起/关闭
 /// 功能: 存档 / 读档 / 返回标题 / 继续游戏
-/// 全屏半透明覆盖, 纯代码 UI, Canvas sortingOrder=250
+/// 全屏半透明覆盖, 纯代码 UI, Canvas sortingOrder=650
 /// </summary>
 public class PauseMenuUI : MonoBehaviour
 {
@@ -14,7 +14,7 @@ public class PauseMenuUI : MonoBehaviour
     public static PauseMenuUI Instance { get; private set; }
 
     // ========== 常量 ==========
-    private const int CanvasSortOrder = 250;
+    private const int CanvasSortOrder = 650;
 
     // 颜色
     private static readonly Color OverlayColor = new Color(0.02f, 0.02f, 0.06f, 0.75f);
@@ -33,6 +33,8 @@ public class PauseMenuUI : MonoBehaviour
     private Canvas canvas;
     private GameObject rootObj;
     private bool isOpen;
+    private static int cachedEscapeFrame = -1;
+    private static bool cachedShouldCaptureEscape;
 
     // ========== 生命周期 ==========
 
@@ -49,12 +51,20 @@ public class PauseMenuUI : MonoBehaviour
 
     private void Update()
     {
-        if (Input.GetKeyDown(KeyCode.Escape))
+        if (!Input.GetKeyDown(KeyCode.Escape))
         {
-            if (isOpen)
-                Close();
-            else
-                Open();
+            return;
+        }
+
+        if (isOpen)
+        {
+            Close();
+            return;
+        }
+
+        if (CanOpenPauseFromCurrentState())
+        {
+            Open();
         }
     }
 
@@ -81,13 +91,7 @@ public class PauseMenuUI : MonoBehaviour
         // 避免在其他高层UI打开时弹出
         if (isOpen) return;
 
-        // 不在对话/事件/考试期间打开暂停菜单
-        if (DialogueSystem.Instance != null && DialogueSystem.Instance.IsDialogueActive) return;
-        if (EventExecutor.Instance != null && EventExecutor.Instance.IsExecuting) return;
-        if (NewsSystem.Instance != null && NewsSystem.Instance.IsShowing) return;
-        if (ConfirmDialogUI.Instance != null && ConfirmDialogUI.Instance.IsOpen) return;
-        if (PhysicalTestUI.Instance != null && PhysicalTestUI.Instance.IsOpen) return;
-        if (AchievementUI.Instance != null && AchievementUI.Instance.isReviewShowing) return;
+        if (!CanOpenPauseFromCurrentState()) return;
 
         isOpen = true;
         Time.timeScale = 0f;
@@ -109,6 +113,51 @@ public class PauseMenuUI : MonoBehaviour
     }
 
     public bool IsOpen => isOpen;
+    public static bool IsBlockingUnderlyingInput => Instance != null && Instance.isOpen;
+
+    public static bool ShouldBlockUnderlyingEscape()
+    {
+        if (!Input.GetKeyDown(KeyCode.Escape))
+        {
+            return false;
+        }
+
+        RefreshEscapeCaptureCache();
+        return cachedShouldCaptureEscape;
+    }
+
+    private static void RefreshEscapeCaptureCache()
+    {
+        if (cachedEscapeFrame == Time.frameCount)
+        {
+            return;
+        }
+
+        cachedEscapeFrame = Time.frameCount;
+        cachedShouldCaptureEscape = false;
+
+        if (!Input.GetKeyDown(KeyCode.Escape))
+        {
+            return;
+        }
+
+        if (Instance != null && Instance.isOpen)
+        {
+            cachedShouldCaptureEscape = true;
+            return;
+        }
+
+        cachedShouldCaptureEscape = CanOpenPauseFromCurrentState();
+    }
+
+    private static bool CanOpenPauseFromCurrentState()
+    {
+        if (ConfirmDialogUI.Instance != null && ConfirmDialogUI.Instance.IsOpen) return false;
+        if (PhysicalTestUI.Instance != null && PhysicalTestUI.Instance.IsOpen) return false;
+        if (ExamUIManager.Instance != null && ExamUIManager.Instance.IsExamActive) return false;
+
+        return true;
+    }
 
     // ========== UI 构建 ==========
 

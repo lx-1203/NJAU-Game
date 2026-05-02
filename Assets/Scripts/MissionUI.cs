@@ -5,7 +5,9 @@ using UnityEngine.UI;
 using TMPro;
 
 /// <summary>
-/// 浠诲姟UI绠＄悊鍣?/// 璐熻矗鍙充笂瑙掗€氱煡寮圭獥銆佸彸渚т换鍔¤拷韪€佷换鍔″畬鎴愬脊绐?/// </summary>
+/// 任务 UI 管理器
+/// 负责右上角通知弹窗、右侧任务追踪和任务完成弹窗。
+/// </summary>
 public class MissionUI : MonoBehaviour
 {
     public static MissionUI Instance { get; private set; }
@@ -92,7 +94,8 @@ public class MissionUI : MonoBehaviour
     }
 
     /// <summary>
-    /// 鍒涘缓閫氱煡Canvas锛堝彸涓婅寮圭獥锛?    /// </summary>
+    /// 创建右上角通知 Canvas。
+    /// </summary>
     private void CreateNotificationCanvas()
     {
         GameObject canvasObj = new GameObject("MissionNotificationCanvas");
@@ -109,7 +112,7 @@ public class MissionUI : MonoBehaviour
     }
 
     /// <summary>
-    /// 鍒涘缓杩借釜Canvas锛堝彸渚т换鍔″垪琛級
+    /// 创建右侧任务追踪 Canvas。
     /// </summary>
     private void CreateTrackerCanvas()
     {
@@ -125,7 +128,7 @@ public class MissionUI : MonoBehaviour
 
         canvasObj.AddComponent<GraphicRaycaster>().blockingObjects = GraphicRaycaster.BlockingObjects.None;
 
-        // 鍒涘缓杩借釜闈㈡澘
+        // 创建追踪面板
         trackerPanel = new GameObject("TrackerPanel");
         trackerPanel.transform.SetParent(trackerCanvas.transform, false);
 
@@ -139,7 +142,7 @@ public class MissionUI : MonoBehaviour
         Image panelBg = trackerPanel.AddComponent<Image>();
         panelBg.color = new Color(0, 0, 0, 0.7f);
 
-        // 鏍囬
+        // 标题
         GameObject titleObj = new GameObject("Title");
         titleObj.transform.SetParent(trackerPanel.transform, false);
         RectTransform titleRect = titleObj.AddComponent<RectTransform>();
@@ -150,7 +153,7 @@ public class MissionUI : MonoBehaviour
         titleRect.sizeDelta = new Vector2(-20, 40);
 
         TextMeshProUGUI titleText = titleObj.AddComponent<TextMeshProUGUI>();
-        titleText.text = "杩涜涓殑浠诲姟";
+        titleText.text = "进行中的任务";
         titleText.fontSize = 24;
         titleText.alignment = TextAlignmentOptions.Center;
         titleText.color = Color.white;
@@ -197,15 +200,15 @@ public class MissionUI : MonoBehaviour
     }
 
     /// <summary>
-    /// 鏄剧ず浠诲姟瑙ｉ攣閫氱煡
+    /// 显示任务解锁通知。
     /// </summary>
     private void OnMissionUnlocked(MissionDefinition mission)
     {
-        if (mission.autoAccept) return; // 鑷姩鎺ュ彇鐨勪换鍔′笉鏄剧ず瑙ｉ攣閫氱煡
+        if (mission.autoAccept) return; // 自动接取的任务不显示解锁通知
 
         notificationQueue.Enqueue(new MissionNotification
         {
-            title = "New Mission",
+            title = "新任务",
             message = mission.missionName,
             color = new Color(0.3f, 0.6f, 1f),
             duration = 3f
@@ -218,13 +221,13 @@ public class MissionUI : MonoBehaviour
     }
 
     /// <summary>
-    /// 浠诲姟鎺ュ彇
+    /// 任务接取。
     /// </summary>
     private void OnMissionAccepted(MissionDefinition mission)
     {
         notificationQueue.Enqueue(new MissionNotification
         {
-            title = "浠诲姟鎺ュ彇",
+            title = "任务接取",
             message = mission.missionName,
             color = new Color(0.2f, 0.8f, 0.2f),
             duration = 2.5f
@@ -239,7 +242,7 @@ public class MissionUI : MonoBehaviour
     }
 
     /// <summary>
-    /// 鐩爣鏇存柊
+    /// 目标更新。
     /// </summary>
     private void OnObjectiveUpdated(MissionDefinition mission, MissionObjective objective)
     {
@@ -247,7 +250,7 @@ public class MissionUI : MonoBehaviour
     }
 
     /// <summary>
-    /// 浠诲姟瀹屾垚
+    /// 任务完成。
     /// </summary>
     private void OnMissionCompleted(MissionDefinition mission)
     {
@@ -256,7 +259,7 @@ public class MissionUI : MonoBehaviour
     }
 
     /// <summary>
-    /// 浠诲姟澶辫触
+    /// 任务失败。
     /// </summary>
     private void OnMissionFailed(MissionDefinition mission)
     {
@@ -264,7 +267,7 @@ public class MissionUI : MonoBehaviour
 
         notificationQueue.Enqueue(new MissionNotification
         {
-            title = "浠诲姟澶辫触",
+            title = "任务失败",
             message = mission.missionName,
             color = new Color(0.8f, 0.2f, 0.2f),
             duration = 3f
@@ -282,7 +285,7 @@ public class MissionUI : MonoBehaviour
     }
 
     /// <summary>
-    /// 澶勭悊閫氱煡闃熷垪
+    /// 处理通知队列。
     /// </summary>
     private IEnumerator ProcessNotificationQueue()
     {
@@ -299,7 +302,7 @@ public class MissionUI : MonoBehaviour
     }
 
     /// <summary>
-    /// 鏄剧ず閫氱煡寮圭獥
+    /// 显示通知弹窗。
     /// </summary>
     private IEnumerator ShowNotification(MissionNotification notification)
     {
@@ -316,7 +319,7 @@ public class MissionUI : MonoBehaviour
         Image bg = notifObj.AddComponent<Image>();
         bg.color = notification.color;
 
-        // 鏍囬
+        // 标题
         GameObject titleObj = new GameObject("Title");
         titleObj.transform.SetParent(notifObj.transform, false);
         RectTransform titleRect = titleObj.AddComponent<RectTransform>();
@@ -337,7 +340,7 @@ public class MissionUI : MonoBehaviour
             titleText.font = FontManager.Instance.ChineseFont;
         }
 
-        // 娑堟伅
+        // 消息
         GameObject msgObj = new GameObject("Message");
         msgObj.transform.SetParent(notifObj.transform, false);
         RectTransform msgRect = msgObj.AddComponent<RectTransform>();
@@ -356,7 +359,7 @@ public class MissionUI : MonoBehaviour
             msgText.font = FontManager.Instance.ChineseFont;
         }
 
-        // 婊戝叆鍔ㄧ敾
+        // 滑入动画
         float elapsed = 0f;
         float slideInDuration = 0.3f;
         Vector2 startPos = new Vector2(400, -20);
@@ -372,7 +375,7 @@ public class MissionUI : MonoBehaviour
 
         yield return new WaitForSeconds(notification.duration);
 
-        // 婊戝嚭鍔ㄧ敾
+        // 滑出动画
         elapsed = 0f;
         float slideOutDuration = 0.3f;
         startPos = rect.anchoredPosition;
@@ -391,7 +394,8 @@ public class MissionUI : MonoBehaviour
     }
 
     /// <summary>
-    /// 娣诲姞杩借釜椤?    /// </summary>
+    /// 添加追踪项。
+    /// </summary>
     private void AddTrackerItem(MissionDefinition mission)
     {
         if (mission == null || trackerContent == null || trackerPanel == null) return;
@@ -406,7 +410,7 @@ public class MissionUI : MonoBehaviour
         Image itemBg = itemObj.AddComponent<Image>();
         itemBg.color = new Color(0.2f, 0.2f, 0.2f, 0.8f);
 
-        // 浠诲姟鍚嶇О
+        // 任务名称
         GameObject nameObj = new GameObject("Name");
         nameObj.transform.SetParent(itemObj.transform, false);
         RectTransform nameRect = nameObj.AddComponent<RectTransform>();
@@ -427,7 +431,7 @@ public class MissionUI : MonoBehaviour
             nameText.font = FontManager.Instance.ChineseFont;
         }
 
-        // 鐩爣鍒楄〃
+        // 目标列表
         GameObject objectivesObj = new GameObject("Objectives");
         objectivesObj.transform.SetParent(itemObj.transform, false);
         RectTransform objRect = objectivesObj.AddComponent<RectTransform>();
@@ -455,7 +459,8 @@ public class MissionUI : MonoBehaviour
     }
 
     /// <summary>
-    /// 鏇存柊杩借釜椤?    /// </summary>
+    /// 更新追踪项。
+    /// </summary>
     private void UpdateTrackerItem(MissionDefinition mission)
     {
         if (mission == null || MissionSystem.Instance == null) return;
@@ -478,7 +483,8 @@ public class MissionUI : MonoBehaviour
     }
 
     /// <summary>
-    /// 绉婚櫎杩借釜椤?    /// </summary>
+    /// 移除追踪项。
+    /// </summary>
     private void RemoveTrackerItem(string missionId)
     {
         if (trackerItems.TryGetValue(missionId, out var itemObj))
@@ -532,7 +538,7 @@ public class MissionUI : MonoBehaviour
     }
 
     /// <summary>
-    /// 鏄剧ず浠诲姟瀹屾垚寮圭獥
+    /// 显示任务完成弹窗。
     /// </summary>
     private void ShowCompletionPopup(MissionDefinition mission)
     {
@@ -554,7 +560,7 @@ public class MissionUI : MonoBehaviour
         Image bg = popupObj.AddComponent<Image>();
         bg.color = new Color(0.1f, 0.1f, 0.1f, 0.95f);
 
-        // 鏍囬
+        // 标题
         GameObject titleObj = new GameObject("Title");
         titleObj.transform.SetParent(popupObj.transform, false);
         RectTransform titleRect = titleObj.AddComponent<RectTransform>();
@@ -565,7 +571,7 @@ public class MissionUI : MonoBehaviour
         titleRect.sizeDelta = new Vector2(-40, 50);
 
         TextMeshProUGUI titleText = titleObj.AddComponent<TextMeshProUGUI>();
-        titleText.text = "Mission Complete!";
+        titleText.text = "任务完成！";
         titleText.fontSize = 32;
         titleText.fontStyle = FontStyles.Bold;
         titleText.alignment = TextAlignmentOptions.Center;
@@ -575,7 +581,7 @@ public class MissionUI : MonoBehaviour
             titleText.font = FontManager.Instance.ChineseFont;
         }
 
-        // 浠诲姟鍚嶇О
+        // 任务名称
         GameObject nameObj = new GameObject("MissionName");
         nameObj.transform.SetParent(popupObj.transform, false);
         RectTransform nameRect = nameObj.AddComponent<RectTransform>();
@@ -595,7 +601,7 @@ public class MissionUI : MonoBehaviour
             nameText.font = FontManager.Instance.ChineseFont;
         }
 
-        // 濂栧姳鍒楄〃
+        // 奖励列表
         GameObject rewardsObj = new GameObject("Rewards");
         rewardsObj.transform.SetParent(popupObj.transform, false);
         RectTransform rewardsRect = rewardsObj.AddComponent<RectTransform>();
@@ -613,7 +619,7 @@ public class MissionUI : MonoBehaviour
             rewardsText.font = FontManager.Instance.ChineseFont;
         }
 
-        string rewardStr = "濂栧姳锛歕n";
+        string rewardStr = "奖励：\n";
         if (mission.rewards != null && mission.rewards.Count > 0)
         {
             foreach (var reward in mission.rewards)
@@ -627,7 +633,7 @@ public class MissionUI : MonoBehaviour
         }
         rewardsText.text = rewardStr;
 
-        // 鍏抽棴鎸夐挳
+        // 关闭按钮
         GameObject btnObj = new GameObject("CloseButton");
         btnObj.transform.SetParent(popupObj.transform, false);
         RectTransform btnRect = btnObj.AddComponent<RectTransform>();
@@ -652,7 +658,7 @@ public class MissionUI : MonoBehaviour
         btnTextRect.sizeDelta = Vector2.zero;
 
         TextMeshProUGUI btnText = btnTextObj.AddComponent<TextMeshProUGUI>();
-        btnText.text = "纭畾";
+        btnText.text = "确定";
         btnText.fontSize = 20;
         btnText.alignment = TextAlignmentOptions.Center;
         btnText.color = Color.white;
@@ -661,7 +667,7 @@ public class MissionUI : MonoBehaviour
             btnText.font = FontManager.Instance.ChineseFont;
         }
 
-        // 寮瑰嚭鍔ㄧ敾
+        // 弹出动画
         float elapsed = 0f;
         float duration = 0.3f;
 

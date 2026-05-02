@@ -52,24 +52,24 @@ public class EventModule : MonoBehaviour, IDebugModule
         fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
         scrollRect.content = contentRT;
 
-        CreateLabel(content.transform, "Event Debug", 18f, TextGold, 30f);
+        CreateLabel(content.transform, "事件调试", 18f, TextGold, 30f);
         statusText = CreateLabel(content.transform, string.Empty, 14f, TextGray, 44f);
 
         GameObject eventRow = CreateRow(content.transform, 34f);
-        CreateLabel(eventRow.transform, "Event ID", 14f, TextWhite, 30f, 72f);
-        eventIdInput = CreateInputField(eventRow.transform, "event_id", 260f, 30f);
+        CreateLabel(eventRow.transform, "事件 ID", 14f, TextWhite, 30f, 72f);
+        eventIdInput = CreateInputField(eventRow.transform, "输入事件 ID", 260f, 30f);
 
         GameObject eventButtons = CreateRow(content.transform, 36f);
-        CreateButton(eventButtons.transform, "Trigger", 120f, BtnGreen, ForceTriggerEvent);
-        CreateButton(eventButtons.transform, "Skip", 120f, BtnRed, SkipEvent);
+        CreateButton(eventButtons.transform, "触发", 120f, BtnGreen, ForceTriggerEvent);
+        CreateButton(eventButtons.transform, "跳过", 120f, BtnRed, SkipEvent);
 
         GameObject flagRow = CreateRow(content.transform, 34f);
-        CreateLabel(flagRow.transform, "Flag", 14f, TextWhite, 30f, 72f);
-        flagInput = CreateInputField(flagRow.transform, "flag_name", 260f, 30f);
+        CreateLabel(flagRow.transform, "标记", 14f, TextWhite, 30f, 72f);
+        flagInput = CreateInputField(flagRow.transform, "输入标记名", 260f, 30f);
 
         GameObject flagButtons = CreateRow(content.transform, 36f);
-        CreateButton(flagButtons.transform, "Set True", 100f, BtnGreen, () => ApplyFlag(true));
-        CreateButton(flagButtons.transform, "Set False", 100f, BtnRed, () => ApplyFlag(false));
+        CreateButton(flagButtons.transform, "设为真", 100f, BtnGreen, () => ApplyFlag(true));
+        CreateButton(flagButtons.transform, "设为假", 100f, BtnRed, () => ApplyFlag(false));
 
         queueText = CreateLabel(content.transform, string.Empty, 13f, TextWhite, 150f);
         historyText = CreateLabel(content.transform, string.Empty, 13f, TextWhite, 260f);
@@ -89,18 +89,18 @@ public class EventModule : MonoBehaviour, IDebugModule
         string eventId = eventIdInput != null ? eventIdInput.text.Trim() : string.Empty;
         if (string.IsNullOrEmpty(eventId))
         {
-            statusText.text = "Enter an event id";
+            statusText.text = "请输入事件 ID";
             return;
         }
 
         if (EventScheduler.Instance == null)
         {
-            statusText.text = "EventScheduler not ready";
+            statusText.text = "EventScheduler 尚未就绪";
             return;
         }
 
         EventScheduler.Instance.EnqueueEvent(eventId);
-        statusText.text = $"Queued trigger: {eventId}";
+        statusText.text = $"已加入触发队列：{eventId}";
         DebugConsoleManager.Log("Event", $"Force trigger {eventId}");
         Refresh();
     }
@@ -110,18 +110,18 @@ public class EventModule : MonoBehaviour, IDebugModule
         string eventId = eventIdInput != null ? eventIdInput.text.Trim() : string.Empty;
         if (string.IsNullOrEmpty(eventId))
         {
-            statusText.text = "Enter an event id";
+            statusText.text = "请输入事件 ID";
             return;
         }
 
         if (EventHistory.Instance == null)
         {
-            statusText.text = "EventHistory not ready";
+            statusText.text = "EventHistory 尚未就绪";
             return;
         }
 
         EventHistory.Instance.RecordEvent(eventId, -1);
-        statusText.text = $"Marked skipped: {eventId}";
+        statusText.text = $"已标记为跳过：{eventId}";
         DebugConsoleManager.Log("Event", $"Skip event {eventId}");
         Refresh();
     }
@@ -131,18 +131,18 @@ public class EventModule : MonoBehaviour, IDebugModule
         string flag = flagInput != null ? flagInput.text.Trim() : string.Empty;
         if (string.IsNullOrEmpty(flag))
         {
-            statusText.text = "Enter a flag name";
+            statusText.text = "请输入标记名";
             return;
         }
 
         if (EventHistory.Instance == null)
         {
-            statusText.text = "EventHistory not ready";
+            statusText.text = "EventHistory 尚未就绪";
             return;
         }
 
         EventHistory.Instance.SetFlag(flag, value);
-        statusText.text = $"Flag {flag} = {value}";
+        statusText.text = $"标记 {flag} = {value}";
         DebugConsoleManager.Log("Event", $"Flag {flag} -> {value}");
         Refresh();
     }
@@ -156,27 +156,27 @@ public class EventModule : MonoBehaviour, IDebugModule
         int darkness = EventHistory.Instance != null ? EventHistory.Instance.DarknessValue : 0;
 
         statusText.text =
-            $"Loaded {loaded}   Queue {queued}   History {historyCount}   Flags {flagCount}\n" +
-            $"Darkness {darkness}";
+            $"已加载 {loaded}   队列 {queued}   历史 {historyCount}   标记 {flagCount}\n" +
+            $"黑暗值 {darkness}";
     }
 
     private void RefreshQueue()
     {
         if (EventScheduler.Instance == null)
         {
-            queueText.text = "Queue: EventScheduler not ready";
+            queueText.text = "队列：EventScheduler 尚未就绪";
             return;
         }
 
         List<EventDefinition> pending = EventScheduler.Instance.GetPendingEventsSnapshot();
         if (pending.Count == 0)
         {
-            queueText.text = "Queue: empty";
+            queueText.text = "队列：空";
             return;
         }
 
         StringBuilder builder = new StringBuilder();
-        builder.AppendLine("Queue");
+        builder.AppendLine("事件队列");
         for (int i = 0; i < pending.Count; i++)
         {
             EventDefinition evt = pending[i];
@@ -189,18 +189,18 @@ public class EventModule : MonoBehaviour, IDebugModule
     {
         if (EventHistory.Instance == null)
         {
-            historyText.text = "History: EventHistory not ready";
+            historyText.text = "历史：EventHistory 尚未就绪";
             return;
         }
 
         List<EventHistory.EventRecord> records = EventHistory.Instance.GetAllRecords();
         Dictionary<string, bool> flags = EventHistory.Instance.GetAllFlagsSnapshot();
         StringBuilder builder = new StringBuilder();
-        builder.AppendLine("Recent Events");
+        builder.AppendLine("近期事件");
 
         if (records.Count == 0)
         {
-            builder.AppendLine("- none");
+            builder.AppendLine("- 无");
         }
         else
         {
@@ -213,11 +213,11 @@ public class EventModule : MonoBehaviour, IDebugModule
         }
 
         builder.AppendLine();
-        builder.AppendLine("Flags");
+        builder.AppendLine("标记");
 
         if (flags.Count == 0)
         {
-            builder.Append("- none");
+            builder.Append("- 无");
         }
         else
         {

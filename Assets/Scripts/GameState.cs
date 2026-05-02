@@ -268,6 +268,11 @@ public class GameState : MonoBehaviour, ISaveable
         }
         Instance = this;
         DontDestroyOnLoad(gameObject);
+
+        if (SaveManager.PendingLoadData == null)
+        {
+            CharacterCreationUI.ApplyPendingCharacterToGameState(this);
+        }
     }
 
     private void NotifyChanged()

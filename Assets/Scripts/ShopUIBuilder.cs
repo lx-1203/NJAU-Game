@@ -54,6 +54,7 @@ public class ShopUIBuilder : MonoBehaviour
     private TextMeshProUGUI balanceText;
     private TextMeshProUGUI bottomInfoText;
     private Transform itemListContent;
+    private Button inventoryButton;
     private string currentCategory = "food";
     private Dictionary<string, Button> categoryButtons = new Dictionary<string, Button>();
 
@@ -186,6 +187,20 @@ public class ShopUIBuilder : MonoBehaviour
         balanceRT.pivot = new Vector2(1, 0.5f);
         balanceRT.anchoredPosition = new Vector2(-15, 0);
         balanceRT.sizeDelta = new Vector2(250, 0);
+
+        inventoryButton = CreateShopButton("BtnInventory", titleBar.transform, "背包", new Vector2(90, 40));
+        RectTransform inventoryRT = inventoryButton.GetComponent<RectTransform>();
+        inventoryRT.anchorMin = new Vector2(1, 0.5f);
+        inventoryRT.anchorMax = new Vector2(1, 0.5f);
+        inventoryRT.pivot = new Vector2(1, 0.5f);
+        inventoryRT.anchoredPosition = new Vector2(-280, 0);
+        inventoryButton.onClick.AddListener(() =>
+        {
+            if (InventoryUIManager.Instance != null)
+            {
+                InventoryUIManager.Instance.OpenPanel();
+            }
+        });
     }
 
     // ====================================================================
@@ -403,7 +418,11 @@ public class ShopUIBuilder : MonoBehaviour
         // — 效果描述 —
         string effectStr = BuildEffectString(item.effects);
         CreateTMPText("ItemEffect", card.transform, effectStr,
-            16f, TextWhite, TextAlignmentOptions.Left, new Vector2(260, ItemCardHeight));
+            16f, TextWhite, TextAlignmentOptions.Left, new Vector2(220, ItemCardHeight));
+
+        int ownedCount = InventorySystem.Instance != null ? InventorySystem.Instance.GetItemCount(item.id) : 0;
+        CreateTMPText("ItemOwned", card.transform, $"持有 x{ownedCount}",
+            16f, TextGold, TextAlignmentOptions.Center, new Vector2(100, ItemCardHeight));
 
         // — 购买按钮 —
         bool canBuy = ShopSystem.Instance.CanBuyItem(item.id);

@@ -37,12 +37,7 @@ public class CharacterCreationUI : MonoBehaviour
         PendingPlayerMajor = string.IsNullOrWhiteSpace(playerMajor) ? StartupFlowSettings.DefaultPlayerMajor : playerMajor.Trim();
         HasPendingCharacter = true;
 
-        if (GameState.Instance != null)
-        {
-            GameState.Instance.PlayerName = PendingPlayerName;
-            GameState.Instance.PlayerGender = PendingPlayerGender;
-            GameState.Instance.PlayerMajor = PendingPlayerMajor;
-        }
+        ApplyPendingCharacterToGameState(GameState.Instance);
     }
 
     public static void ApplyDefaultPendingCharacter()
@@ -51,6 +46,18 @@ public class CharacterCreationUI : MonoBehaviour
             StartupFlowSettings.DefaultPlayerName,
             StartupFlowSettings.DefaultPlayerGender,
             StartupFlowSettings.DefaultPlayerMajor);
+    }
+
+    public static void ApplyPendingCharacterToGameState(GameState gameState)
+    {
+        if (gameState == null || !HasPendingCharacter)
+        {
+            return;
+        }
+
+        gameState.PlayerName = PendingPlayerName;
+        gameState.PlayerGender = PendingPlayerGender;
+        gameState.PlayerMajor = PendingPlayerMajor;
     }
 
     private void Awake()

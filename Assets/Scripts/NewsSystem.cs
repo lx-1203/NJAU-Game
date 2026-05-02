@@ -167,6 +167,12 @@ public class NewsSystem : MonoBehaviour
     private void Update()
     {
         if (!isShowing) return;
+        if (PauseMenuUI.IsBlockingUnderlyingInput && !Input.GetKeyDown(KeyCode.Escape)) return;
+
+        if (PauseMenuUI.ShouldBlockUnderlyingEscape())
+        {
+            return;
+        }
 
         if (Input.GetKeyDown(KeyCode.Space) ||
             Input.GetKeyDown(KeyCode.Return) ||

@@ -88,8 +88,8 @@ public class AttributeModule : MonoBehaviour, IDebugModule
         fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
         scrollRect.content = contentRect;
 
-        CreateLabel(content.transform, "Attributes", 20f, AccentColor, 34f);
-        CreateLabel(content.transform, "Edit exact values directly, or drag the slider for quick tuning.", 14f, TextColor, 26f);
+        CreateLabel(content.transform, "属性调整", 20f, AccentColor, 34f);
+        CreateLabel(content.transform, "可以直接输入精确数值，也可以拖动滑条快速微调。", 14f, TextColor, 26f);
 
         foreach (AttributeDefinition definition in Definitions)
         {
@@ -97,7 +97,7 @@ public class AttributeModule : MonoBehaviour, IDebugModule
         }
 
         CreateSpacer(content.transform, 8f);
-        apText = CreateLabel(content.transform, "AP: - / -", 15f, TextColor, 28f);
+        apText = CreateLabel(content.transform, "行动点：- / -", 15f, TextColor, 28f);
 
         CreateButtonRow(content.transform);
     }
@@ -117,7 +117,7 @@ public class AttributeModule : MonoBehaviour, IDebugModule
 
         if (apText != null && GameState.Instance != null)
         {
-            apText.text = $"AP: {GameState.Instance.ActionPoints} / {GameState.Instance.EffectiveMaxActionPoints}";
+            apText.text = $"行动点：{GameState.Instance.ActionPoints} / {GameState.Instance.EffectiveMaxActionPoints}";
         }
 
         isRefreshing = false;
@@ -220,7 +220,7 @@ public class AttributeModule : MonoBehaviour, IDebugModule
         layout.childForceExpandWidth = false;
         layout.childForceExpandHeight = false;
 
-        CreateWideButton(rowObject.transform, "Preset: Freshman", () =>
+        CreateWideButton(rowObject.transform, "预设：新生", () =>
         {
             if (PlayerAttributes.Instance == null)
             {
@@ -237,7 +237,7 @@ public class AttributeModule : MonoBehaviour, IDebugModule
             Refresh();
         });
 
-        CreateWideButton(rowObject.transform, "Preset: Max", () =>
+        CreateWideButton(rowObject.transform, "预设：封顶", () =>
         {
             if (PlayerAttributes.Instance == null)
             {
@@ -254,7 +254,7 @@ public class AttributeModule : MonoBehaviour, IDebugModule
             Refresh();
         });
 
-        CreateWideButton(rowObject.transform, "Clamp Status", () =>
+        CreateWideButton(rowObject.transform, "状态归位", () =>
         {
             if (PlayerAttributes.Instance == null)
             {

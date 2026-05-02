@@ -13,7 +13,7 @@ public class LogModule : MonoBehaviour, IDebugModule
     private static readonly Color ActiveColor = new Color(0.28f, 0.5f, 0.78f, 1f);
     private static readonly Color DangerColor = new Color(0.68f, 0.28f, 0.28f, 1f);
 
-    private readonly string[] filters = { "All", "Attributes", "Time", "Economy", "Events" };
+    private readonly string[] filters = { "全部", "属性", "时间", "经济", "事件" };
     private readonly List<Image> filterBackgrounds = new List<Image>();
 
     private string currentFilter = string.Empty;
@@ -36,7 +36,7 @@ public class LogModule : MonoBehaviour, IDebugModule
         for (int i = 0; i < filters.Length; i++)
         {
             int capturedIndex = i;
-            string filter = filters[i] == "All" ? string.Empty : filters[i];
+            string filter = filters[i] == "全部" ? string.Empty : filters[i];
             Button button = CreateButton(filterRow, filters[i], ButtonColor, () =>
             {
                 currentFilter = filter;
@@ -47,7 +47,7 @@ public class LogModule : MonoBehaviour, IDebugModule
             filterBackgrounds.Add(button.GetComponent<Image>());
         }
 
-        CreateButton(filterRow, "Clear", DangerColor, () =>
+        CreateButton(filterRow, "清空", DangerColor, () =>
         {
             DebugConsoleManager.ClearLogs();
             RefreshLogDisplay();
@@ -155,7 +155,7 @@ public class LogModule : MonoBehaviour, IDebugModule
 
         if (shown == 0)
         {
-            builder.Append("<color=#73737D>No logs for this filter.</color>");
+            builder.Append("<color=#73737D>这个筛选下还没有日志。</color>");
         }
 
         logText.text = builder.ToString();
@@ -176,13 +176,13 @@ public class LogModule : MonoBehaviour, IDebugModule
 
         switch (currentFilter)
         {
-            case "Attributes":
+            case "属性":
                 return entry.category == "Attributes" || entry.category == "Adjust";
-            case "Time":
+            case "时间":
                 return entry.category == "Time";
-            case "Economy":
+            case "经济":
                 return entry.category == "Economy";
-            case "Events":
+            case "事件":
                 return entry.category == "Event" || entry.category == "Events";
             default:
                 return entry.category == currentFilter;

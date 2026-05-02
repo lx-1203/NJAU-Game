@@ -108,6 +108,7 @@ public class LoadingScreenUI : MonoBehaviour
     // 当前显示的提示索引
     private int currentTipIndex = 0;
     private int currentGameTipIndex = 0;
+    private Coroutine tipSwitchCoroutine;
 
     // 渐变材质实例（运行时创建，避免修改共享材质）
     private Material gradientMaterialInstance;
@@ -178,7 +179,18 @@ public class LoadingScreenUI : MonoBehaviour
     public void SwitchTip()
     {
         if (tipRect == null) return;
-        StartCoroutine(SwitchTipCoroutine());
+
+        if (loadingTips == null || loadingTips.Count <= 1)
+        {
+            return;
+        }
+
+        if (tipSwitchCoroutine != null)
+        {
+            StopCoroutine(tipSwitchCoroutine);
+        }
+
+        tipSwitchCoroutine = StartCoroutine(SwitchTipCoroutine());
     }
 
     /// <summary>
@@ -360,7 +372,7 @@ public class LoadingScreenUI : MonoBehaviour
         {
             float t = elapsed / fadeOutDuration;
             tipText.color = new Color(originalColor.r, originalColor.g, originalColor.b, Mathf.Lerp(1f, 0f, t));
-            elapsed += Time.deltaTime;
+            elapsed += Time.unscaledDeltaTime;
             yield return null;
         }
 
@@ -376,11 +388,12 @@ public class LoadingScreenUI : MonoBehaviour
         {
             float t = elapsed / fadeInDuration;
             tipText.color = new Color(originalColor.r, originalColor.g, originalColor.b, Mathf.Lerp(0f, 1f, t));
-            elapsed += Time.deltaTime;
+            elapsed += Time.unscaledDeltaTime;
             yield return null;
         }
 
         tipText.color = originalColor;
+        tipSwitchCoroutine = null;
     }
 
     #endregion

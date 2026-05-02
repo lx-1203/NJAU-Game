@@ -163,6 +163,11 @@ public class OpeningStoryManager : MonoBehaviour, IPointerClickHandler
             return;
         }
 
+        if (PauseMenuUI.IsBlockingUnderlyingInput)
+        {
+            return;
+        }
+
         if (Input.GetMouseButtonDown(0) || Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.Return))
         {
             StartCoroutine(Advance());

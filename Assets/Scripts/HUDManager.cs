@@ -25,6 +25,7 @@ public class HUDManager : MonoBehaviour
     private RectTransform actionMenuContent;
     private Button actionMenuCloseButton;
     private TextMeshProUGUI actionMenuTitleText;
+    private bool isActionRowExpanded;
 
     // ========== 社团面板 ==========
     private ClubPanelManager clubPanelManager;
@@ -110,25 +111,30 @@ public class HUDManager : MonoBehaviour
 
     private void SanitizeActionIcons()
     {
-        ActionIcons["study"] = "ST";
-        ActionIcons["attend_class"] = "CL";
-        ActionIcons["social"] = "SO";
-        ActionIcons["play_game"] = "GM";
-        ActionIcons["sleep"] = "SL";
-        ActionIcons["goout"] = "GO";
-        ActionIcons["eat"] = "EA";
-        ActionIcons["exercise"] = "EX";
-        ActionIcons["sports_test"] = "SP";
-        ActionIcons["shop"] = "SH";
-        ActionIcons["pickup_express"] = "PK";
-        ActionIcons["order_takeout"] = "TO";
-        ActionIcons["memorize_words"] = "WD";
+        ActionIcons["study"] = "学";
+        ActionIcons["attend_class"] = "课";
+        ActionIcons["social"] = "交";
+        ActionIcons["play_game"] = "玩";
+        ActionIcons["sleep"] = "睡";
+        ActionIcons["goout"] = "外";
+        ActionIcons["eat"] = "食";
+        ActionIcons["exercise"] = "跑";
+        ActionIcons["sports_test"] = "测";
+        ActionIcons["shop"] = "购";
+        ActionIcons["pickup_express"] = "取";
+        ActionIcons["order_takeout"] = "卖";
+        ActionIcons["memorize_words"] = "词";
     }
 
     private void Update()
     {
         if (IsActionMenuOpen)
         {
+            if (PauseMenuUI.ShouldBlockUnderlyingEscape())
+            {
+                return;
+            }
+
             if (Input.GetKeyDown(KeyCode.Alpha1) || Input.GetKeyDown(KeyCode.Escape))
             {
                 CloseActionMenu();
@@ -144,6 +150,10 @@ public class HUDManager : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.Tab))
         {
             ToggleInfoPanel();
+        }
+        else if (Input.GetKeyDown(KeyCode.I))
+        {
+            ToggleInventoryPanel();
         }
         else if (Input.GetKeyDown(KeyCode.Alpha1))
         {
@@ -246,6 +256,25 @@ public class HUDManager : MonoBehaviour
 
                 if (builder.hudAnimator != null)
                     builder.hudAnimator.ButtonPressEffect(builder.btnFeature);
+
+                if (TurnManager.Instance != null)
+                {
+                    TurnManager.Instance.RequestAdvanceRound();
+                }
+            });
+        }
+
+        if (builder.btnActionToggle != null)
+        {
+            builder.btnActionToggle.onClick.AddListener(() =>
+            {
+                if (!CanProcessHotkeys())
+                {
+                    return;
+                }
+
+                if (builder.hudAnimator != null)
+                    builder.hudAnimator.ButtonPressEffect(builder.btnActionToggle);
 
                 ToggleActionMenu();
             });
@@ -375,7 +404,7 @@ public class HUDManager : MonoBehaviour
         }
     }
 
-    private bool IsActionMenuOpen => actionMenuPanel != null && actionMenuPanel.activeSelf;
+    private bool IsActionMenuOpen => isActionRowExpanded;
 
     private void ToggleActionMenu()
     {
@@ -391,25 +420,50 @@ public class HUDManager : MonoBehaviour
 
     private void OpenActionMenu()
     {
-        if (builder == null || actionMenuPanel == null || actionMenuOverlay == null)
+        isActionRowExpanded = true;
+
+        if (builder == null)
         {
             return;
         }
 
+        if (actionMenuOverlay != null)
+        {
+            actionMenuOverlay.SetActive(true);
+            actionMenuOverlay.transform.SetAsLastSibling();
+        }
+
+        if (actionMenuPanel != null)
+        {
+            actionMenuPanel.SetActive(true);
+            actionMenuPanel.transform.SetAsLastSibling();
+        }
+
+        SetModalState(true);
         RefreshBottomBar();
-        actionMenuOverlay.SetActive(true);
-        actionMenuPanel.SetActive(true);
     }
 
     private void CloseActionMenu()
     {
-        if (actionMenuPanel == null || actionMenuOverlay == null)
+        isActionRowExpanded = false;
+
+        if (builder == null)
         {
             return;
         }
 
-        actionMenuPanel.SetActive(false);
-        actionMenuOverlay.SetActive(false);
+        if (actionMenuOverlay != null)
+        {
+            actionMenuOverlay.SetActive(false);
+        }
+
+        if (actionMenuPanel != null)
+        {
+            actionMenuPanel.SetActive(false);
+        }
+
+        SetModalState(false);
+        RefreshBottomBar();
     }
 
     private void ToggleTalentPanel()
@@ -432,6 +486,16 @@ public class HUDManager : MonoBehaviour
         {
             TalentUI.Instance.ShowPanel();
         }
+    }
+
+    private void ToggleInventoryPanel()
+    {
+        if (InventoryUIManager.Instance == null)
+        {
+            return;
+        }
+
+        InventoryUIManager.Instance.TogglePanel();
     }
 
     private void CreateActionMenuUI()
@@ -459,18 +523,18 @@ public class HUDManager : MonoBehaviour
         actionMenuPanel = new GameObject("ActionMenuPanel");
         actionMenuPanel.transform.SetParent(builder.hudCanvas.transform, false);
         RectTransform panelRT = actionMenuPanel.AddComponent<RectTransform>();
-        panelRT.anchorMin = new Vector2(0.5f, 0f);
-        panelRT.anchorMax = new Vector2(0.5f, 0f);
-        panelRT.pivot = new Vector2(0.5f, 0f);
-        panelRT.anchoredPosition = new Vector2(0f, 120f);
-        panelRT.sizeDelta = new Vector2(520f, 500f);
+        panelRT.anchorMin = new Vector2(0.5f, 0.5f);
+        panelRT.anchorMax = new Vector2(0.5f, 0.5f);
+        panelRT.pivot = new Vector2(0.5f, 0.5f);
+        panelRT.anchoredPosition = new Vector2(0f, 24f);
+        panelRT.sizeDelta = new Vector2(620f, 760f);
 
         Image panelBg = actionMenuPanel.AddComponent<Image>();
-        panelBg.color = new Color(0.97f, 0.95f, 0.90f, 0.98f);
+        panelBg.color = new Color(0.98f, 0.97f, 0.94f, 0.995f);
 
         VerticalLayoutGroup panelLayout = actionMenuPanel.AddComponent<VerticalLayoutGroup>();
-        panelLayout.padding = new RectOffset(18, 18, 18, 18);
-        panelLayout.spacing = 12f;
+        panelLayout.padding = new RectOffset(26, 26, 26, 26);
+        panelLayout.spacing = 16f;
         panelLayout.childAlignment = TextAnchor.UpperCenter;
         panelLayout.childControlWidth = true;
         panelLayout.childControlHeight = false;
@@ -480,14 +544,14 @@ public class HUDManager : MonoBehaviour
         GameObject header = new GameObject("Header");
         header.transform.SetParent(actionMenuPanel.transform, false);
         RectTransform headerRT = header.AddComponent<RectTransform>();
-        headerRT.sizeDelta = new Vector2(0f, 56f);
+        headerRT.sizeDelta = new Vector2(0f, 82f);
 
         Image headerBg = header.AddComponent<Image>();
-        headerBg.color = new Color(0.93f, 0.89f, 0.76f, 1f);
+        headerBg.color = new Color(0.95f, 0.91f, 0.80f, 1f);
 
         actionMenuTitleText = CreateMenuText("ActionMenuTitle", header.transform, "\u884C\u52A8", 24f,
-            new Color(0.35f, 0.23f, 0.12f), TextAlignmentOptions.Center);
-        StretchRect(actionMenuTitleText.rectTransform, new Vector2(16f, 0f), new Vector2(-64f, 0f));
+            new Color(0.40f, 0.24f, 0.12f), TextAlignmentOptions.Left);
+        StretchRect(actionMenuTitleText.rectTransform, new Vector2(24f, 0f), new Vector2(-92f, 0f));
 
         actionMenuCloseButton = CreateMenuButton("ActionMenuClose", header.transform, "\u5173\u95ED", new Vector2(72f, 38f),
             new Color(0.85f, 0.78f, 0.60f, 1f), 16f);
@@ -501,10 +565,10 @@ public class HUDManager : MonoBehaviour
         GameObject body = new GameObject("Body");
         body.transform.SetParent(actionMenuPanel.transform, false);
         RectTransform bodyRT = body.AddComponent<RectTransform>();
-        bodyRT.sizeDelta = new Vector2(0f, 396f);
+        bodyRT.sizeDelta = new Vector2(0f, 626f);
 
         Image bodyBg = body.AddComponent<Image>();
-        bodyBg.color = new Color(0.99f, 0.98f, 0.96f, 0.98f);
+        bodyBg.color = new Color(0.99f, 0.985f, 0.965f, 0.985f);
 
         ScrollRect scrollRect = body.AddComponent<ScrollRect>();
         scrollRect.horizontal = false;
@@ -1252,6 +1316,7 @@ public class HUDManager : MonoBehaviour
     {
         ClearDynamicButtons();
         HideStaticButtons();
+
         if (builder != null && builder.actionButtonRow != null)
         {
             builder.actionButtonRow.SetActive(false);
@@ -1310,7 +1375,7 @@ public class HUDManager : MonoBehaviour
         {
             Button socialButton = CreateActionMenuCommandEntry(
                 actionMenuContent,
-                "NPC",
+                "社交",
                 "\u793E\u4EA4\u4E92\u52A8",
                 "\u6253\u5F00\u89D2\u8272\u793E\u4EA4\u4E92\u52A8\u5217\u8868",
                 "\u8FDB\u5165",
@@ -1320,6 +1385,22 @@ public class HUDManager : MonoBehaviour
                     builder.npcInteractionMenu.ShowForNPC(null);
                 });
             dynamicActionButtons.Add(socialButton);
+        }
+
+        if (InventoryUIManager.Instance != null)
+        {
+            Button inventoryButton = CreateActionMenuCommandEntry(
+                actionMenuContent,
+                "背包",
+                "背包",
+                "查看并使用已购买的道具",
+                "打开",
+                () =>
+                {
+                    CloseActionMenu();
+                    InventoryUIManager.Instance.OpenPanel();
+                });
+            dynamicActionButtons.Add(inventoryButton);
         }
     }
 
@@ -1336,6 +1417,14 @@ public class HUDManager : MonoBehaviour
             for (int i = actionMenuContent.childCount - 1; i >= 0; i--)
             {
                 Destroy(actionMenuContent.GetChild(i).gameObject);
+            }
+        }
+
+        if (builder != null && builder.actionButtonRow != null)
+        {
+            for (int i = builder.actionButtonRow.transform.childCount - 1; i >= 0; i--)
+            {
+                Destroy(builder.actionButtonRow.transform.GetChild(i).gameObject);
             }
         }
     }
@@ -1379,7 +1468,7 @@ public class HUDManager : MonoBehaviour
 
     private Button CreateActionMenuEntry(Transform parent, ActionDefinition action)
     {
-        string icon = ActionIcons.ContainsKey(action.id) ? ActionIcons[action.id] : "ACT";
+        string icon = ActionIcons.ContainsKey(action.id) ? ActionIcons[action.id] : "行动";
         string detail = BuildActionDetailText(action);
         string cost = BuildActionCostText(action);
 
@@ -1499,7 +1588,7 @@ public class HUDManager : MonoBehaviour
         }
 
         System.Text.StringBuilder sb = new System.Text.StringBuilder();
-        sb.Append(action.actionPointCost).Append("AP");
+        sb.Append(action.actionPointCost).Append("行动点");
         if (action.moneyCost > 0)
         {
             sb.Append(" / ").Append("\u00A5").Append(action.moneyCost);

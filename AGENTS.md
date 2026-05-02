@@ -1,12 +1,46 @@
 # Project Memory - 钟山下 (Unity)
 
 ## MCP Server (Unity MCP)
-启动命令:
+已验证时间: `2026-05-02`
+
+当前项目内安装的 Unity MCP 包:
+- `Packages/com.coplaydev.unity-mcp`
+- version `9.6.9-beta.3`
+
+当前活跃传输模式:
+- **Stdio**
+- Unity 插件窗口显示 `Session Active (My project)`
+- Unity Socket 端口: `6400`
+- Unity EditorPrefs 中 `MCPForUnity.UseHttpTransport=0`
+- 当前选中的客户端: `Codex`
+
+Codex 实际使用的配置位置:
+- `C:\Users\lenovo\.codex\config.toml`
+- 当前已存在:
+  - `[mcp_servers.unityMCP]`
+  - `command = "...\\uvx.exe"`
+  - `args = ["--prerelease","explicit","--from","mcpforunityserver>=0.0.0a0","mcp-for-unity","--transport","stdio"]`
+- 项目根目录 `.mcp.json` 当前是空配置（`{"mcpServers":{}}`），**不是** Codex 当前生效的 Unity MCP 配置来源
+
+备用/遗留 HTTP 配置:
+- Unity 仍保留本地 HTTP endpoint 偏好: `http://127.0.0.1:8080`
+- MCP RPC endpoint: `http://127.0.0.1:8080/mcp`
+- 已验证该 endpoint 可响应 `initialize`
+- 直接 `GET /mcp` 会返回 `406 Not Acceptable`，这是正常现象
+- 当前 HTTP 配置更像备用通道，不是现在 Unity 插件的活跃传输模式
+
+当前已知现象:
+- Codex 平台内建 `list_mcp_resources` / `list_mcp_resource_templates` 目前返回空，说明**当前会话没有自动挂载平台级 MCP 资源**
+- 但从网络与本地配置上看，Unity MCP 服务/桥接本身是存在的
+- `~/.codex/skills/unity-mcp-skill` 目前未发现，说明 Unity MCP skill 没有额外安装到 Codex skills 目录
+
+若需手动启动 HTTP 服务器，可使用:
 ```
 C:\Users\lenovo\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\Scripts\uvx.exe --prerelease explicit --from "mcpforunityserver>=0.0.0a0" mcp-for-unity --transport http --http-url http://127.0.0.1:8080
 ```
 
-MCP 协议: Streamable HTTP, endpoint `http://localhost:8080/mcp`
+MCP 协议补充:
+- HTTP 模式为 Streamable HTTP，endpoint `http://127.0.0.1:8080/mcp`
 - 初始化: POST `/mcp` with `method: "initialize"`
 - 获取 session ID: 从 response header `mcp-session-id` 读取
 - 后续请求: 带上 `mcp-session-id` header

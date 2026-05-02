@@ -15,7 +15,7 @@ public class DebugConsoleUI : MonoBehaviour
 
     private static DebugConsoleUI instance;
 
-    private const float TopBarHeight = 76f;
+    private const float TopBarHeight = 118f;
     private const float BottomBarHeight = 132f;
     private const float SidebarWidth = 156f;
 
@@ -36,29 +36,29 @@ public class DebugConsoleUI : MonoBehaviour
 
     private static readonly string[] TabNames =
     {
-        "Attributes",
-        "Time",
-        "Ending",
-        "Events",
+        "属性",
+        "时间",
+        "结局",
+        "事件",
         "NPC",
-        "Economy",
-        "Formula",
-        "Snapshot",
-        "Logs"
+        "经济",
+        "公式",
+        "快照",
+        "日志"
     };
 
     private static readonly (string Label, string Key)[] QuickAdjustKeys =
     {
-        ("Study", "Study"),
-        ("Charm", "Charm"),
-        ("Physique", "Physique"),
-        ("Leadership", "Leadership"),
-        ("Stress", "Stress"),
-        ("Mood", "Mood"),
-        ("Darkness", "Darkness"),
-        ("Guilt", "Guilt"),
-        ("Luck", "Luck"),
-        ("Money", "Money")
+        ("学力", "Study"),
+        ("魅力", "Charm"),
+        ("体魄", "Physique"),
+        ("领导力", "Leadership"),
+        ("压力", "Stress"),
+        ("心情", "Mood"),
+        ("黑暗值", "Darkness"),
+        ("负罪感", "Guilt"),
+        ("幸运", "Luck"),
+        ("金钱", "Money")
     };
 
     private CanvasGroup rootCanvasGroup;
@@ -169,38 +169,38 @@ public class DebugConsoleUI : MonoBehaviour
         topRect.anchoredPosition = Vector2.zero;
         topRect.sizeDelta = new Vector2(0f, TopBarHeight);
 
-        TextMeshProUGUI title = CreateText("Title", topBar.transform, "Zhongshan Deck", 24f, AccentColor, TextAlignmentOptions.MidlineLeft);
+        TextMeshProUGUI title = CreateText("Title", topBar.transform, "钟山台", 24f, AccentColor, TextAlignmentOptions.MidlineLeft);
         RectTransform titleRect = title.rectTransform;
-        titleRect.anchorMin = new Vector2(0f, 0.5f);
-        titleRect.anchorMax = new Vector2(0f, 0.5f);
-        titleRect.pivot = new Vector2(0f, 0.5f);
-        titleRect.sizeDelta = new Vector2(240f, 34f);
-        titleRect.anchoredPosition = new Vector2(18f, 16f);
+        titleRect.anchorMin = new Vector2(0f, 1f);
+        titleRect.anchorMax = new Vector2(0f, 1f);
+        titleRect.pivot = new Vector2(0f, 1f);
+        titleRect.sizeDelta = new Vector2(320f, 34f);
+        titleRect.anchoredPosition = new Vector2(18f, -14f);
 
-        TextMeshProUGUI subtitle = CreateText("Subtitle", topBar.transform, "Fast testing, clean switches, no more mystery buttons.", 13f, TextColor, TextAlignmentOptions.MidlineLeft);
+        TextMeshProUGUI subtitle = CreateText("Subtitle", topBar.transform, "快速测试，清晰切换，把调试台收拾得明明白白。", 13f, TextColor, TextAlignmentOptions.MidlineLeft);
         RectTransform subtitleRect = subtitle.rectTransform;
-        subtitleRect.anchorMin = new Vector2(0f, 0.5f);
-        subtitleRect.anchorMax = new Vector2(0f, 0.5f);
-        subtitleRect.pivot = new Vector2(0f, 0.5f);
-        subtitleRect.sizeDelta = new Vector2(520f, 24f);
-        subtitleRect.anchoredPosition = new Vector2(18f, -14f);
+        subtitleRect.anchorMin = new Vector2(0f, 1f);
+        subtitleRect.anchorMax = new Vector2(1f, 1f);
+        subtitleRect.pivot = new Vector2(0f, 1f);
+        subtitleRect.sizeDelta = new Vector2(-36f, 24f);
+        subtitleRect.anchoredPosition = new Vector2(18f, -48f);
 
-        Transform actionRow = CreateHorizontalRow("ActionRow", topBar.transform, 8f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleRight);
+        Transform actionRow = CreateHorizontalRow("ActionRow", topBar.transform, 8f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleLeft);
         RectTransform actionRect = actionRow.GetComponent<RectTransform>();
-        actionRect.anchorMin = new Vector2(1f, 0.5f);
-        actionRect.anchorMax = new Vector2(1f, 0.5f);
-        actionRect.pivot = new Vector2(1f, 0.5f);
-        actionRect.sizeDelta = new Vector2(1180f, 56f);
-        actionRect.anchoredPosition = new Vector2(-12f, 0f);
+        actionRect.anchorMin = new Vector2(0f, 0f);
+        actionRect.anchorMax = new Vector2(1f, 0f);
+        actionRect.pivot = new Vector2(0.5f, 0f);
+        actionRect.offsetMin = new Vector2(18f, 10f);
+        actionRect.offsetMax = new Vector2(-18f, 46f);
 
-        prevDialogueButton = CreateButton(actionRow, "Prev Line", ButtonColor, () =>
+        prevDialogueButton = CreateButton(actionRow, "上一句", ButtonColor, () =>
         {
             DialogueSystem.Instance?.DebugStepBackOneLine();
             RefreshTopActionButtons();
         });
         SetLayoutSize(prevDialogueButton.gameObject, 110f, 34f);
 
-        Button quickStartButton = CreateButton(actionRow, "Quick Start", ButtonColor, () =>
+        Button quickStartButton = CreateButton(actionRow, "快速开局", ButtonColor, () =>
         {
             StartupFlowSettings.ApplyQuickStartPreset();
             SyncTopControls();
@@ -208,22 +208,22 @@ public class DebugConsoleUI : MonoBehaviour
         });
         SetLayoutSize(quickStartButton.gameObject, 110f, 34f);
 
-        skipSplashToggle = CreateLabeledToggle(actionRow, "Skip Splash", StartupFlowSettings.SkipSplashLogo, value =>
+        skipSplashToggle = CreateLabeledToggle(actionRow, "跳过开屏", StartupFlowSettings.SkipSplashLogo, value =>
         {
             StartupFlowSettings.SkipSplashLogo = value;
         });
 
-        skipCreateToggle = CreateLabeledToggle(actionRow, "Skip Create", StartupFlowSettings.SkipCharacterCreation, value =>
+        skipCreateToggle = CreateLabeledToggle(actionRow, "跳过建角", StartupFlowSettings.SkipCharacterCreation, value =>
         {
             StartupFlowSettings.SkipCharacterCreation = value;
         });
 
-        skipIntroToggle = CreateLabeledToggle(actionRow, "Skip Intro", StartupFlowSettings.SkipOpeningStory, value =>
+        skipIntroToggle = CreateLabeledToggle(actionRow, "跳过开场", StartupFlowSettings.SkipOpeningStory, value =>
         {
             StartupFlowSettings.SkipOpeningStory = value;
         });
 
-        Button closeButton = CreateButton(actionRow, "Close", NegativeColor, () => DebugConsoleManager.Instance?.Close());
+        Button closeButton = CreateButton(actionRow, "关闭", NegativeColor, () => DebugConsoleManager.Instance?.Close());
         SetLayoutSize(closeButton.gameObject, 88f, 34f);
     }
 
@@ -296,7 +296,7 @@ public class DebugConsoleUI : MonoBehaviour
 
         Transform stepRow = CreateHorizontalRow("StepRow", bottomBar.transform, 8f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleLeft);
         stepRow.gameObject.AddComponent<LayoutElement>().preferredHeight = 32f;
-        TextMeshProUGUI stepLabel = CreateText("StepLabel", stepRow, "Step", 14f, AccentColor, TextAlignmentOptions.MidlineLeft);
+        TextMeshProUGUI stepLabel = CreateText("StepLabel", stepRow, "步进", 14f, AccentColor, TextAlignmentOptions.MidlineLeft);
         SetLayoutSize(stepLabel.gameObject, 44f, 28f);
 
         int[] steps = DebugPresets.GetStepOptions();

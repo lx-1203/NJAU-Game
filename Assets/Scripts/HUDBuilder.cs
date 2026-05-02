@@ -62,6 +62,7 @@ public class HUDBuilder : MonoBehaviour
 
     // --- 底部中央：行动按钮 ---
     [HideInInspector] public GameObject actionButtonRow;
+    [HideInInspector] public Button btnActionToggle;
 
     // --- 底部右下：快捷键提示 + 功能按钮 ---
     [HideInInspector] public GameObject hotkeyPanel;
@@ -516,7 +517,7 @@ public class HUDBuilder : MonoBehaviour
         btnMapIcon.colors = cb;
 
         // 地图图标符号
-        CreateTMPText("MapSymbol", mapObj.transform, "MAP",
+        CreateTMPText("MapSymbol", mapObj.transform, "地图",
             28f, TextBrown, TextAlignmentOptions.Center, new Vector2(65, 65));
 
         // 兼容旧 btnMap
@@ -643,7 +644,7 @@ public class HUDBuilder : MonoBehaviour
         rt.anchorMin = new Vector2(0.5f, 0);
         rt.anchorMax = new Vector2(0.5f, 0);
         rt.pivot = new Vector2(0.5f, 0);
-        rt.anchoredPosition = new Vector2(0, 15);
+        rt.anchoredPosition = new Vector2(0, 88);
         rt.sizeDelta = new Vector2(600, 80);
 
         HorizontalLayoutGroup hlg = actionButtonRow.AddComponent<HorizontalLayoutGroup>();
@@ -654,6 +655,33 @@ public class HUDBuilder : MonoBehaviour
         hlg.childControlHeight = false;
         hlg.childForceExpandWidth = false;
         hlg.childForceExpandHeight = false;
+
+        actionButtonRow.SetActive(false);
+
+        GameObject toggleObj = new GameObject("ActionToggleButton");
+        toggleObj.transform.SetParent(hudCanvas.transform, false);
+
+        RectTransform toggleRT = toggleObj.AddComponent<RectTransform>();
+        toggleRT.anchorMin = new Vector2(0.5f, 0);
+        toggleRT.anchorMax = new Vector2(0.5f, 0);
+        toggleRT.pivot = new Vector2(0.5f, 0);
+        toggleRT.anchoredPosition = new Vector2(0, 12);
+        toggleRT.sizeDelta = new Vector2(76, 76);
+
+        Image toggleBg = toggleObj.AddComponent<Image>();
+        toggleBg.color = new Color(0.95f, 0.88f, 0.72f, 0.96f);
+
+        btnActionToggle = toggleObj.AddComponent<Button>();
+        btnActionToggle.targetGraphic = toggleBg;
+        ColorBlock tcb = btnActionToggle.colors;
+        tcb.normalColor = toggleBg.color;
+        tcb.highlightedColor = new Color(1.0f, 0.94f, 0.80f, 1.0f);
+        tcb.pressedColor = new Color(0.86f, 0.78f, 0.62f, 1.0f);
+        tcb.fadeDuration = 0.08f;
+        btnActionToggle.colors = tcb;
+
+        CreateTMPText("ActionToggleLabel", toggleObj.transform, "行动",
+            24f, TextDark, TextAlignmentOptions.Center, new Vector2(76, 76));
     }
 
     // ====================================================================
@@ -710,7 +738,7 @@ public class HUDBuilder : MonoBehaviour
         fcb.fadeDuration = 0.1f;
         btnFeature.colors = fcb;
 
-        // 信封图标 + 文字
+        // 下一回合按钮
         HorizontalLayoutGroup fhlg = featureObj.AddComponent<HorizontalLayoutGroup>();
         fhlg.spacing = 10f;
         fhlg.padding = new RectOffset(18, 18, 8, 8);
@@ -718,9 +746,9 @@ public class HUDBuilder : MonoBehaviour
         fhlg.childControlWidth = false;
         fhlg.childControlHeight = true;
 
-        CreateTMPText("FeatureIcon", featureObj.transform, "ACT",
+        CreateTMPText("FeatureIcon", featureObj.transform, ">>",
             24f, TextDark, TextAlignmentOptions.Center, new Vector2(40, 44));
-        CreateTMPText("FeatureLabel", featureObj.transform, "\u884C\u52A8",
+        CreateTMPText("FeatureLabel", featureObj.transform, "\u4E0B\u4E00\u56DE\u5408",
             16f, TextDark, TextAlignmentOptions.Left, new Vector2(120, 35));
 
         // 兼容旧 btnSocial

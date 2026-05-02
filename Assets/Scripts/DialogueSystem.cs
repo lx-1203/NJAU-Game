@@ -110,6 +110,11 @@ public class DialogueSystem : MonoBehaviour, IDialogueTrigger, ISaveable
             return;
         }
 
+        if (PauseMenuUI.IsBlockingUnderlyingInput)
+        {
+            return;
+        }
+
         if (Input.GetKeyDown(KeyCode.Space) || Input.GetMouseButtonDown(0))
         {
             HandleInput();

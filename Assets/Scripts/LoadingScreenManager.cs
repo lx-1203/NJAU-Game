@@ -22,6 +22,16 @@ public class LoadingScreenManager : MonoBehaviour
     public float fadeInDuration = 0.5f;
     public float fadeOutDuration = 0.5f;
 
+    [Header("Progress Timing")]
+    [Tooltip("Loading screen stays visible for at least this duration, even when the target scene loads very quickly.")]
+    public float minimumLoadingScreenDuration = 1.2f;
+    [Tooltip("How quickly the displayed progress catches up to the real loading progress.")]
+    public float progressSmoothTime = 0.18f;
+    [Tooltip("How long the final 95% -> 100% stretch should take once the target scene is ready.")]
+    public float finalProgressDuration = 0.35f;
+    [Tooltip("Short pause after reaching 100% so the transition does not feel abrupt.")]
+    public float completionHoldDuration = 0.3f;
+
     [Header("Tip Rotation")]
     public float tipSwitchMinInterval = 3f;
     public float tipSwitchMaxInterval = 5f;
@@ -35,6 +45,8 @@ public class LoadingScreenManager : MonoBehaviour
     private string resolvedTargetSceneName;
     private float targetProgress;
     private float currentDisplayProgress;
+    private float displayProgressVelocity;
+    private float loadingStartTime;
 
     private void Awake()
     {
@@ -84,7 +96,20 @@ public class LoadingScreenManager : MonoBehaviour
             return;
         }
 
-        currentDisplayProgress = targetProgress;
+        currentDisplayProgress = Mathf.SmoothDamp(
+            currentDisplayProgress,
+            targetProgress,
+            ref displayProgressVelocity,
+            Mathf.Max(0.01f, progressSmoothTime),
+            Mathf.Infinity,
+            Time.unscaledDeltaTime);
+
+        if (targetProgress >= 0.999f && currentDisplayProgress >= 0.995f)
+        {
+            currentDisplayProgress = 1f;
+            displayProgressVelocity = 0f;
+        }
+
         loadingScreenUI.UpdateProgress(currentDisplayProgress);
     }
 
@@ -131,6 +156,8 @@ public class LoadingScreenManager : MonoBehaviour
         isLoading = true;
         targetProgress = 0f;
         currentDisplayProgress = 0f;
+        displayProgressVelocity = 0f;
+        loadingStartTime = Time.unscaledTime;
 
         if (loadingScreenUI != null)
         {
@@ -158,17 +185,55 @@ public class LoadingScreenManager : MonoBehaviour
 
         while (targetSceneLoadOperation.progress < 0.9f)
         {
-            targetProgress = Mathf.Clamp01(targetSceneLoadOperation.progress / 0.9f);
+            float normalizedProgress = Mathf.Clamp01(targetSceneLoadOperation.progress / 0.9f);
+            targetProgress = Mathf.Lerp(0.08f, 0.92f, normalizedProgress);
+            yield return null;
+        }
+
+        targetProgress = 0.95f;
+
+        float minimumVisibleUntil = loadingStartTime + Mathf.Max(0f, minimumLoadingScreenDuration);
+        while (Time.unscaledTime < minimumVisibleUntil || currentDisplayProgress < 0.92f)
+        {
+            yield return null;
+        }
+
+        yield return FinalizeDisplayedProgress();
+
+        OnLoadingComplete();
+    }
+
+    private IEnumerator FinalizeDisplayedProgress()
+    {
+        float startProgress = Mathf.Max(currentDisplayProgress, targetProgress);
+        float duration = Mathf.Max(0.01f, finalProgressDuration);
+        float elapsed = 0f;
+
+        displayProgressVelocity = 0f;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+            float eased = 1f - Mathf.Pow(1f - t, 3f);
+            targetProgress = Mathf.Lerp(startProgress, 1f, eased);
             yield return null;
         }
 
         targetProgress = 1f;
+
+        while (currentDisplayProgress < 0.995f)
+        {
+            yield return null;
+        }
+
+        currentDisplayProgress = 1f;
+        displayProgressVelocity = 0f;
+
         if (loadingScreenUI != null)
         {
             loadingScreenUI.UpdateProgress(1f);
         }
-
-        OnLoadingComplete();
     }
 
     private void OnLoadingComplete()
@@ -236,6 +301,20 @@ public class LoadingScreenManager : MonoBehaviour
 
     private IEnumerator CleanupAfterSceneActivation()
     {
+        targetProgress = 1f;
+        currentDisplayProgress = 1f;
+        displayProgressVelocity = 0f;
+
+        if (loadingScreenUI != null)
+        {
+            loadingScreenUI.UpdateProgress(1f);
+        }
+
+        if (completionHoldDuration > 0f)
+        {
+            yield return new WaitForSecondsRealtime(completionHoldDuration);
+        }
+
         yield return null;
 
         CanvasGroup rootGroup = loadingScreenUI != null

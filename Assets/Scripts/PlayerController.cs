@@ -56,6 +56,8 @@ public class PlayerController : MonoBehaviour
     private float jumpHoldTimer;
     private bool rightMouseDrivingJump;
     private bool spriteFacesLeftByDefault = true;
+    private int configuredGender = -1;
+    private GameState subscribedGameState;
 
     private const string AnimIdle = "Idle";
     private const string AnimWalk = "Walk";
@@ -79,17 +81,33 @@ public class PlayerController : MonoBehaviour
 
     private void Start()
     {
+        TryBindGameState();
         ConfigureAnimations();
-        animator.Play(AnimIdle);
         SetFacingDirection(true);
+    }
+
+    private void OnDestroy()
+    {
+        if (subscribedGameState != null)
+        {
+            subscribedGameState.OnStateChanged -= HandleGameStateChanged;
+            subscribedGameState = null;
+        }
     }
 
     private void ConfigureAnimations()
     {
-        int gender = GameState.Instance != null ? GameState.Instance.PlayerGender : MaleGenderValue;
+        int gender = ResolveConfiguredGender();
+        if (configuredGender == gender && !string.IsNullOrEmpty(animator.CurrentClipName))
+        {
+            return;
+        }
+
+        configuredGender = gender;
         bool useFemaleResources = gender == FemaleGenderValue;
         spriteFacesLeftByDefault = useFemaleResources;
         bool reverseWalkFrames = useFemaleResources;
+        string clipToPlay = string.IsNullOrEmpty(animator.CurrentClipName) ? AnimIdle : animator.CurrentClipName;
 
         string idleResourcePath = useFemaleResources ? FemaleIdleResourcePath : MaleIdleResourcePath;
         string walkResourcePath = useFemaleResources ? FemaleWalkResourcePath : MaleWalkResourcePath;
@@ -98,6 +116,7 @@ public class PlayerController : MonoBehaviour
         animator.LoadFromResources(idleResourcePath, AnimIdle, idleFrameRate, true);
         animator.LoadFromResources(walkResourcePath, AnimWalk, walkFrameRate, true, reverseWalkFrames);
         animator.LoadFromResources(jumpResourcePath, AnimJump, jumpFrameRate, false);
+        animator.Play(clipToPlay, true);
 
         if (spriteRenderer != null && spriteRenderer.sprite != null)
         {
@@ -121,8 +140,16 @@ public class PlayerController : MonoBehaviour
         }
     }
 
+    private void HandleGameStateChanged()
+    {
+        ConfigureAnimations();
+        SetFacingDirection(facingRight);
+    }
+
     private void Update()
     {
+        TryBindGameState();
+
         if ((DialogueSystem.Instance != null && DialogueSystem.Instance.IsDialogueActive) ||
             (EventExecutor.Instance != null && EventExecutor.Instance.IsExecuting))
         {
@@ -222,6 +249,47 @@ public class PlayerController : MonoBehaviour
         }
 
         UpdateAnimation(moveInput);
+    }
+
+    private void TryBindGameState()
+    {
+        if (subscribedGameState == GameState.Instance)
+        {
+            return;
+        }
+
+        if (subscribedGameState != null)
+        {
+            subscribedGameState.OnStateChanged -= HandleGameStateChanged;
+        }
+
+        subscribedGameState = GameState.Instance;
+        if (subscribedGameState != null)
+        {
+            subscribedGameState.OnStateChanged += HandleGameStateChanged;
+            ConfigureAnimations();
+            SetFacingDirection(facingRight);
+        }
+    }
+
+    private static int ResolveConfiguredGender()
+    {
+        if (GameState.Instance != null)
+        {
+            return Mathf.Clamp(GameState.Instance.PlayerGender, MaleGenderValue, FemaleGenderValue);
+        }
+
+        if (SaveManager.PendingLoadData != null)
+        {
+            return Mathf.Clamp(SaveManager.PendingLoadData.playerGender, MaleGenderValue, FemaleGenderValue);
+        }
+
+        if (CharacterCreationUI.HasPendingCharacter)
+        {
+            return Mathf.Clamp(CharacterCreationUI.PendingPlayerGender, MaleGenderValue, FemaleGenderValue);
+        }
+
+        return MaleGenderValue;
     }
 
     private void UpdateAnimation(float input)

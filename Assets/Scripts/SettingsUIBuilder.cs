@@ -107,6 +107,11 @@ public class SettingsUIBuilder : MonoBehaviour
             return;
         }
 
+        if (PauseMenuUI.IsBlockingUnderlyingInput && !Input.GetKeyDown(KeyCode.Escape))
+        {
+            return;
+        }
+
         if (confirmDialogCanvasObj != null)
         {
             if (Input.GetKeyDown(KeyCode.Escape))
@@ -120,6 +125,11 @@ public class SettingsUIBuilder : MonoBehaviour
                 UIInputHelper.TryClick(confirmDialogConfirmButton);
             }
 
+            return;
+        }
+
+        if (PauseMenuUI.ShouldBlockUnderlyingEscape())
+        {
             return;
         }
 

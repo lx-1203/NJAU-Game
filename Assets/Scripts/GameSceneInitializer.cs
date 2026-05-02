@@ -22,11 +22,13 @@ public class GameSceneInitializer : MonoBehaviour
         SetupGameState();
         SetupPlayerAttributes();
         SetupLocationManager();
+        SetupDormitoryBackground();
         SetupActionSystem();
         SetupClubSystem();
         SetupEconomyManager();
         SetupDebtSystem();
         SetupShopSystem();
+        SetupInventorySystem();
         SetupRomanceSystem();
         SetupConfessionSystem();
         SetupCampusRunSystem();
@@ -76,6 +78,7 @@ public class GameSceneInitializer : MonoBehaviour
         SetupSettingsManager();
         SetupPauseMenuUI();
         SetupInfoPanelManager();
+        SetupInventoryUI();
         SetupMissionUI();
         SetupMissionPanelBuilder();
         SetupJobSelectionUI();
@@ -170,6 +173,15 @@ public class GameSceneInitializer : MonoBehaviour
         }
     }
 
+    private void SetupDormitoryBackground()
+    {
+        if (FindFirstObjectByType<DormitoryBackgroundController>() == null)
+        {
+            GameObject obj = new GameObject("DormitoryBackgroundController");
+            obj.AddComponent<DormitoryBackgroundController>();
+        }
+    }
+
     private void SetupRomanceSystem()
     {
         if (RomanceSystem.Instance == null)
@@ -212,6 +224,15 @@ public class GameSceneInitializer : MonoBehaviour
         {
             GameObject obj = new GameObject("ShopSystem");
             obj.AddComponent<ShopSystem>();
+        }
+    }
+
+    private void SetupInventorySystem()
+    {
+        if (InventorySystem.Instance == null)
+        {
+            GameObject obj = new GameObject("InventorySystem");
+            obj.AddComponent<InventorySystem>();
         }
     }
 
@@ -474,6 +495,15 @@ public class GameSceneInitializer : MonoBehaviour
         {
             GameObject obj = new GameObject("InfoPanelManager");
             obj.AddComponent<InfoPanelManager>();
+        }
+    }
+
+    private void SetupInventoryUI()
+    {
+        if (InventoryUIManager.Instance == null)
+        {
+            GameObject obj = new GameObject("InventoryUIManager");
+            obj.AddComponent<InventoryUIManager>();
         }
     }
 

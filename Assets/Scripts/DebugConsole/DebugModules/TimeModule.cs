@@ -20,14 +20,14 @@ public class TimeModule : MonoBehaviour, IDebugModule
     {
         Transform content = CreateScrollableContent(parent);
 
-        CreateLabel(content, "Time Control", 20f, AccentColor, 34f);
-        statusText = CreateLabel(content, "Current: --", 15f, TextColor, 28f);
+        CreateLabel(content, "时间控制", 20f, AccentColor, 34f);
+        statusText = CreateLabel(content, "当前：--", 15f, TextColor, 28f);
 
-        yearInput = CreateInputRow(content, "Year", "1", 1);
-        semesterInput = CreateInputRow(content, "Semester", "1", 1);
-        roundInput = CreateInputRow(content, "Round", "1", 2);
+        yearInput = CreateInputRow(content, "学年", "1", 1);
+        semesterInput = CreateInputRow(content, "学期", "1", 1);
+        roundInput = CreateInputRow(content, "回合", "1", 2);
 
-        CreateButton(content, "Jump To Exact Time", () =>
+        CreateButton(content, "跳转到指定时间", () =>
         {
             if (GameState.Instance == null)
             {
@@ -45,7 +45,7 @@ public class TimeModule : MonoBehaviour, IDebugModule
         });
 
         CreateSpacer(content, 8f);
-        CreateButton(content, "Advance 1 Round", () =>
+        CreateButton(content, "前进 1 回合", () =>
         {
             if (GameState.Instance == null)
             {
@@ -61,7 +61,7 @@ public class TimeModule : MonoBehaviour, IDebugModule
             }
         });
 
-        CreateButton(content, "Advance 5 Rounds", () =>
+        CreateButton(content, "前进 5 回合", () =>
         {
             if (GameState.Instance == null)
             {
@@ -81,7 +81,7 @@ public class TimeModule : MonoBehaviour, IDebugModule
             Refresh();
         });
 
-        CreateButton(content, "Advance 1 Round After 0.5s", () =>
+        CreateButton(content, "0.5 秒后前进 1 回合", () =>
         {
             if (GameState.Instance != null)
             {
@@ -97,7 +97,7 @@ public class TimeModule : MonoBehaviour, IDebugModule
             return;
         }
 
-        statusText.text = $"Current: {GameState.Instance.GetTimeDescription()}";
+        statusText.text = $"当前：{GameState.Instance.GetTimeDescription()}";
         yearInput.SetTextWithoutNotify(GameState.Instance.CurrentYear.ToString());
         semesterInput.SetTextWithoutNotify(GameState.Instance.CurrentSemester.ToString());
         roundInput.SetTextWithoutNotify(GameState.Instance.CurrentRound.ToString());

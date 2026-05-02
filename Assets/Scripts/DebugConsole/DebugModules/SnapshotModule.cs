@@ -21,7 +21,7 @@ public class SnapshotModule : MonoBehaviour, IDebugModule
     {
         Transform content = CreateScrollableContent(parent);
 
-        CreateLabel(content, "Snapshots", 20f, AccentColor, 34f);
+        CreateLabel(content, "快照", 20f, AccentColor, 34f);
 
         GameObject row = CreateRect("SaveRow", content).gameObject;
         row.AddComponent<LayoutElement>().preferredHeight = 40f;
@@ -33,12 +33,12 @@ public class SnapshotModule : MonoBehaviour, IDebugModule
         layout.childForceExpandWidth = false;
         layout.childForceExpandHeight = true;
 
-        TextMeshProUGUI label = CreateLabel(row.transform, "Name", 15f, TextColor, 36f);
+        TextMeshProUGUI label = CreateLabel(row.transform, "名称", 15f, TextColor, 36f);
         label.gameObject.AddComponent<LayoutElement>().preferredWidth = 70f;
 
         nameInput = CreateInputField(row.transform, 220f);
 
-        CreateButton(row.transform, "Save", PositiveColor, () =>
+        CreateButton(row.transform, "保存", PositiveColor, () =>
         {
             if (DebugConsoleManager.Instance == null || nameInput == null)
             {
@@ -58,8 +58,8 @@ public class SnapshotModule : MonoBehaviour, IDebugModule
         });
 
         CreateSpacer(content, 8f);
-        CreateLabel(content, "Saved Snapshots", 15f, TextColor, 24f);
-        emptyHint = CreateLabel(content, "No snapshots yet.", 14f, new Color(0.58f, 0.58f, 0.62f), 24f);
+        CreateLabel(content, "已保存快照", 15f, TextColor, 24f);
+        emptyHint = CreateLabel(content, "还没有快照。", 14f, new Color(0.58f, 0.58f, 0.62f), 24f);
 
         GameObject listObject = CreateRect("ListRoot", content).gameObject;
         VerticalLayoutGroup listLayout = listObject.AddComponent<VerticalLayoutGroup>();
@@ -114,12 +114,12 @@ public class SnapshotModule : MonoBehaviour, IDebugModule
         nameLayout.preferredWidth = 240f;
         nameLayout.flexibleWidth = 1f;
 
-        CreateButton(row.transform, "Load", ButtonColor, () =>
+        CreateButton(row.transform, "载入", ButtonColor, () =>
         {
             DebugConsoleManager.Instance?.LoadSnapshot(name);
         }, 76f, 32f);
 
-        CreateButton(row.transform, "Delete", NegativeColor, () =>
+        CreateButton(row.transform, "删除", NegativeColor, () =>
         {
             DebugConsoleManager.Instance?.DeleteSnapshot(name);
             Refresh();
@@ -185,7 +185,7 @@ public class SnapshotModule : MonoBehaviour, IDebugModule
         StretchFull(text.rectTransform);
         text.alignment = TextAlignmentOptions.Center;
 
-        TextMeshProUGUI placeholder = CreateLabel(viewport.transform, "snapshot_name", 13f, new Color(0.55f, 0.55f, 0.6f), 28f);
+        TextMeshProUGUI placeholder = CreateLabel(viewport.transform, "输入快照名称", 13f, new Color(0.55f, 0.55f, 0.6f), 28f);
         StretchFull(placeholder.rectTransform);
         placeholder.alignment = TextAlignmentOptions.Center;
 

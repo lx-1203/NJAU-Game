@@ -223,7 +223,7 @@ public class LocationDetailPanel
             {
                 string costInfo = "";
                 if (action.actionPointCost > 0)
-                    costInfo += $" [{action.actionPointCost}AP]";
+                    costInfo += $" [{action.actionPointCost}行动点]";
                 if (action.moneyCost > 0)
                     costInfo += $" [¥{action.moneyCost}]";
 
@@ -249,13 +249,13 @@ public class LocationDetailPanel
     /// <summary>NPC 列表</summary>
     private void BuildNPCList(LocationId targetLocation)
     {
-        CreateText("NPCHeader", "当前NPC:", 16f, TextWhite, TextAlignmentOptions.Left, 24f);
+        CreateText("NPCHeader", "当前人物：", 16f, TextWhite, TextAlignmentOptions.Left, 24f);
 
         string[] npcs = LocationManager.Instance.GetNPCsAtLocation(targetLocation);
 
         if (npcs.Length == 0)
         {
-            CreateText("NoNPCs", "  此处暂无 NPC", 14f, TextGray, TextAlignmentOptions.Left, 20f);
+            CreateText("NoNPCs", "  此处暂无人物", 14f, TextGray, TextAlignmentOptions.Left, 20f);
         }
         else
         {

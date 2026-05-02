@@ -16,6 +16,36 @@ public class NPCDatabase : MonoBehaviour
     private NPCData[] allNPCs;
     private SocialActionDefinition[] allSocialActions;
 
+    private void EnsureBuiltInSocialActions()
+    {
+        List<SocialActionDefinition> actions = new List<SocialActionDefinition>(allSocialActions ?? new SocialActionDefinition[0]);
+
+        if (!socialActionMap.ContainsKey("debate"))
+        {
+            SocialActionDefinition debate = new SocialActionDefinition
+            {
+                id = "debate",
+                displayName = "\u8fa9\u8bba",
+                actionPointCost = 2,
+                moneyCost = 0,
+                minAffinityLevel = "Friend",
+                baseAffinityMin = 6,
+                baseAffinityMax = 12,
+                attributeEffects = new[]
+                {
+                    new AttributeEffect("\u5b66\u529b", 1),
+                    new AttributeEffect("\u9886\u5bfc\u529b", 2),
+                    new AttributeEffect("\u538b\u529b", 1)
+                }
+            };
+
+            actions.Add(debate);
+            socialActionMap[debate.id] = debate;
+        }
+
+        allSocialActions = actions.ToArray();
+    }
+
     // ========== 公共方法 ==========
 
     /// <summary>获取所有 NPC 数据</summary>
@@ -113,5 +143,6 @@ public class NPCDatabase : MonoBehaviour
         DontDestroyOnLoad(gameObject);
 
         LoadDatabase();
+        EnsureBuiltInSocialActions();
     }
 }

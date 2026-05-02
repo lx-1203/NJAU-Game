@@ -32,19 +32,19 @@ public class FormulaModule : MonoBehaviour, IDebugModule
     {
         Transform content = CreateScrollableContent(parent);
 
-        CreateLabel(content, "Formula Tools", 20f, AccentColor, 34f);
+        CreateLabel(content, "公式工具", 20f, AccentColor, 34f);
         CreateDropdown(content);
 
-        inputA = CreateInputRow(content, "Base Value", "10", out labelA);
-        inputB = CreateInputRow(content, "Last Cycle Value", "80", out labelB);
-        inputC = CreateInputRow(content, "Next Cycle", "2", out labelC, out thirdRow);
+        inputA = CreateInputRow(content, "基础值", "10", out labelA);
+        inputB = CreateInputRow(content, "上一周目值", "80", out labelB);
+        inputC = CreateInputRow(content, "下一周目", "2", out labelC, out thirdRow);
 
-        CreateButton(content, "Calculate", () =>
+        CreateButton(content, "计算", () =>
         {
             Calculate();
         });
 
-        resultText = CreateLabel(content, "Result will appear here.", 14f, TextColor, 120f);
+        resultText = CreateLabel(content, "计算结果会显示在这里。", 14f, TextColor, 120f);
         resultText.enableWordWrapping = true;
         resultText.overflowMode = TextOverflowModes.Overflow;
 
@@ -67,29 +67,29 @@ public class FormulaModule : MonoBehaviour, IDebugModule
                 float rate = NewGamePlusData.GetInheritRate(Mathf.Max(c, 2));
                 int attributeResult = NewGamePlusData.CalcInheritedAttribute(a, b, rate);
                 resultText.text =
-                    $"Rate: {rate:P0}\n" +
-                    $"Base: {a}\n" +
-                    $"Last cycle final value: {b}\n" +
-                    $"Inherited starting value: {attributeResult}";
+                    $"继承比例：{rate:P0}\n" +
+                    $"基础值：{a}\n" +
+                    $"上一周目最终值：{b}\n" +
+                    $"本周目继承初始值：{attributeResult}";
                 break;
 
             case FormulaType.AffinityInherit:
                 bool wasLover = c > 0;
                 int affinityResult = NewGamePlusData.CalcInheritedAffinity(a, wasLover);
                 resultText.text =
-                    $"Last affinity: {a}\n" +
-                    $"Was lover: {(wasLover ? "Yes" : "No")}\n" +
-                    $"Inherited affinity: {affinityResult}";
+                    $"上周目好感：{a}\n" +
+                    $"是否恋人：{(wasLover ? "是" : "否")}\n" +
+                    $"继承好感：{affinityResult}";
                 break;
 
             case FormulaType.MoneyInherit:
                 int moneyResult = NewGamePlusData.CalcInheritedMoney(a, Mathf.Max(b, 2));
                 int bonusMoney = NewGamePlusData.GetBonusMoney(Mathf.Max(b, 2));
                 resultText.text =
-                    $"Last cycle money: {a}\n" +
-                    $"Next cycle: {Mathf.Max(b, 2)}\n" +
-                    $"Cycle bonus: {bonusMoney}\n" +
-                    $"Inherited money: {moneyResult}";
+                    $"上周目金钱：{a}\n" +
+                    $"下一周目：{Mathf.Max(b, 2)}\n" +
+                    $"周目奖励：{bonusMoney}\n" +
+                    $"继承金钱：{moneyResult}";
                 break;
         }
 
@@ -108,7 +108,7 @@ public class FormulaModule : MonoBehaviour, IDebugModule
         layout.childForceExpandWidth = false;
         layout.childForceExpandHeight = true;
 
-        TextMeshProUGUI label = CreateLabel(row.transform, "Type", 15f, TextColor, 36f);
+        TextMeshProUGUI label = CreateLabel(row.transform, "类型", 15f, TextColor, 36f);
         label.gameObject.AddComponent<LayoutElement>().preferredWidth = 80f;
 
         Transform buttonRow = CreateRect("ModeButtons", row.transform);
@@ -120,9 +120,9 @@ public class FormulaModule : MonoBehaviour, IDebugModule
         buttonLayout.childForceExpandWidth = false;
         buttonLayout.childForceExpandHeight = false;
 
-        CreateModeButton(buttonRow, "Attribute", FormulaType.AttributeInherit);
-        CreateModeButton(buttonRow, "Affinity", FormulaType.AffinityInherit);
-        CreateModeButton(buttonRow, "Money", FormulaType.MoneyInherit);
+        CreateModeButton(buttonRow, "属性", FormulaType.AttributeInherit);
+        CreateModeButton(buttonRow, "好感", FormulaType.AffinityInherit);
+        CreateModeButton(buttonRow, "金钱", FormulaType.MoneyInherit);
     }
 
     private TMP_InputField CreateInputRow(Transform parent, string label, string defaultValue, out TextMeshProUGUI labelText)
@@ -155,26 +155,26 @@ public class FormulaModule : MonoBehaviour, IDebugModule
         switch (currentFormula)
         {
             case FormulaType.AttributeInherit:
-                labelA.text = "Base Value";
-                labelB.text = "Last Cycle Value";
-                labelC.text = "Next Cycle";
+                labelA.text = "基础值";
+                labelB.text = "上一周目值";
+                labelC.text = "下一周目";
                 thirdRow.SetActive(true);
                 inputA.SetTextWithoutNotify("10");
                 inputB.SetTextWithoutNotify("80");
                 inputC.SetTextWithoutNotify("2");
                 break;
             case FormulaType.AffinityInherit:
-                labelA.text = "Last Affinity";
-                labelB.text = "Unused";
-                labelC.text = "Was Lover? 1/0";
+                labelA.text = "上周目好感";
+                labelB.text = "保留字段";
+                labelC.text = "是否恋人 1/0";
                 thirdRow.SetActive(true);
                 inputA.SetTextWithoutNotify("80");
                 inputB.SetTextWithoutNotify("0");
                 inputC.SetTextWithoutNotify("1");
                 break;
             case FormulaType.MoneyInherit:
-                labelA.text = "Last Money";
-                labelB.text = "Next Cycle";
+                labelA.text = "上周目金钱";
+                labelB.text = "下一周目";
                 thirdRow.SetActive(false);
                 inputA.SetTextWithoutNotify("12000");
                 inputB.SetTextWithoutNotify("2");

@@ -3,6 +3,8 @@ using UnityEngine;
 
 public class NPCController : MonoBehaviour
 {
+    private const string DefaultNPCSpriteResourcePath = "NPCSprite";
+
     [Header("NPC Settings")]
     [SerializeField] private float interactionRange = 2.5f;
 
@@ -68,10 +70,18 @@ public class NPCController : MonoBehaviour
 
         if (npcSprite == null)
         {
-            npcSprite = CreateNPCPlaceholderSprite();
-            Debug.LogWarning($"[NPCController] Using placeholder sprite for {npcId}; missing Resources/{npcData.portraitId}");
+            npcSprite = Resources.Load<Sprite>(DefaultNPCSpriteResourcePath);
+            Debug.LogWarning($"[NPCController] Missing Resources/{npcData.portraitId}, fallback to Resources/{DefaultNPCSpriteResourcePath}");
         }
 
+        if (npcSprite == null)
+        {
+            spriteRenderer.enabled = false;
+            Debug.LogWarning($"[NPCController] Missing fallback sprite Resources/{DefaultNPCSpriteResourcePath}; hiding renderer for {npcId}");
+            return;
+        }
+
+        spriteRenderer.enabled = true;
         spriteRenderer.sprite = npcSprite;
         spriteRenderer.color = Color.white;
 
@@ -81,66 +91,6 @@ public class NPCController : MonoBehaviour
         {
             float scale = targetHeight / spriteHeight;
             transform.localScale = new Vector3(scale, scale, 1f);
-        }
-    }
-
-    private Sprite CreateNPCPlaceholderSprite()
-    {
-        const int width = 64;
-        const int height = 96;
-        Texture2D texture = new Texture2D(width, height, TextureFormat.RGBA32, false);
-        texture.filterMode = FilterMode.Point;
-
-        Color clear = new Color(0f, 0f, 0f, 0f);
-        Color body = new Color(0.25f, 0.45f, 0.75f, 1f);
-        Color head = new Color(0.95f, 0.78f, 0.58f, 1f);
-        Color outline = new Color(0.08f, 0.12f, 0.20f, 1f);
-
-        for (int y = 0; y < height; y++)
-        {
-            for (int x = 0; x < width; x++)
-            {
-                texture.SetPixel(x, y, clear);
-            }
-        }
-
-        FillRect(texture, 20, 10, 44, 54, outline);
-        FillRect(texture, 22, 12, 42, 52, body);
-        FillCircle(texture, 32, 68, 15, outline);
-        FillCircle(texture, 32, 68, 13, head);
-        FillRect(texture, 24, 64, 28, 67, outline);
-        FillRect(texture, 36, 64, 40, 67, outline);
-        FillRect(texture, 30, 58, 35, 61, outline);
-
-        texture.Apply();
-        return Sprite.Create(texture, new Rect(0, 0, width, height), new Vector2(0.5f, 0f), 32f);
-    }
-
-    private void FillRect(Texture2D texture, int xMin, int yMin, int xMax, int yMax, Color color)
-    {
-        for (int y = yMin; y <= yMax; y++)
-        {
-            for (int x = xMin; x <= xMax; x++)
-            {
-                texture.SetPixel(x, y, color);
-            }
-        }
-    }
-
-    private void FillCircle(Texture2D texture, int centerX, int centerY, int radius, Color color)
-    {
-        int radiusSquared = radius * radius;
-        for (int y = centerY - radius; y <= centerY + radius; y++)
-        {
-            for (int x = centerX - radius; x <= centerX + radius; x++)
-            {
-                int dx = x - centerX;
-                int dy = y - centerY;
-                if (dx * dx + dy * dy <= radiusSquared)
-                {
-                    texture.SetPixel(x, y, color);
-                }
-            }
         }
     }
 

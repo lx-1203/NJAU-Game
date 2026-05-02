@@ -48,6 +48,11 @@ public class MissionPanelBuilder : MonoBehaviour
         }
 
         // ESC关闭
+        if (isOpen && PauseMenuUI.ShouldBlockUnderlyingEscape())
+        {
+            return;
+        }
+
         if (isOpen && Input.GetKeyDown(KeyCode.Escape))
         {
             ClosePanel();

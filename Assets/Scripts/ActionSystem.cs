@@ -131,7 +131,7 @@ public class ActionSystem : MonoBehaviour
             displayName = "睡觉",
             actionPointCost = 1,
             moneyCost = 0,
-            endsRound = true,
+            endsRound = false,
             isGlobal = true,
             effects = new AttributeEffect[]
             {
@@ -433,15 +433,7 @@ public class ActionSystem : MonoBehaviour
         // 6. 触发事件
         OnActionExecuted?.Invoke(action);
 
-        // 7. 如果 endsRound 且还有剩余行动点，清零
-        //    睡觉特殊处理：设计文档要求睡觉回复3行动点，但同时结束回合
-        //    因此先回复再清零（回复效果体现在下回合初始AP不变，设计意义在于"每回合必须睡觉"）
-        if (action.endsRound && gs.ActionPoints > 0)
-        {
-            gs.ActionPoints = 0;
-        }
-
-        // 8. 返回成功
+        // 7. 返回成功
         return true;
     }
 

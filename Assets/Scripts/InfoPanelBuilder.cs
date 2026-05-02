@@ -98,6 +98,7 @@ public class InfoPanelBuilder : MonoBehaviour
 
         // 默认隐藏面板
         panelRoot.SetActive(false);
+        overlayObj.SetActive(false);
     }
 
     // ========== Canvas 创建 ==========

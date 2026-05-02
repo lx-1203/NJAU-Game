@@ -48,7 +48,7 @@ public class EndingSimModule : MonoBehaviour, IDebugModule
         fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
         scrollRect.content = contentRT;
 
-        CreateLabel(content.transform, "Ending Sim", 18f, TextGold, 30f);
+        CreateLabel(content.transform, "结局模拟", 18f, TextGold, 30f);
         summaryText = CreateLabel(content.transform, string.Empty, 14f, TextWhite, 164f);
         currentEndingText = CreateLabel(content.transform, string.Empty, 14f, TextWhite, 172f);
         candidatesText = CreateLabel(content.transform, string.Empty, 13f, TextGray, 320f);
@@ -72,14 +72,14 @@ public class EndingSimModule : MonoBehaviour, IDebugModule
 
         PlayerAttributes pa = PlayerAttributes.Instance;
         StringBuilder builder = new StringBuilder();
-        builder.AppendLine("Current State");
-        builder.AppendLine($"Study {pa.Study}  Charm {pa.Charm}  Physique {pa.Physique}  Lead {pa.Leadership}");
-        builder.AppendLine($"Stress {pa.Stress}  Mood {pa.Mood}  Dark {pa.Darkness}  Guilt {pa.Guilt}  Luck {pa.Luck}");
+        builder.AppendLine("当前状态");
+        builder.AppendLine($"学力 {pa.Study}  魅力 {pa.Charm}  体魄 {pa.Physique}  领导力 {pa.Leadership}");
+        builder.AppendLine($"压力 {pa.Stress}  心情 {pa.Mood}  黑暗值 {pa.Darkness}  负罪感 {pa.Guilt}  幸运 {pa.Luck}");
 
         if (GameState.Instance != null)
         {
-            builder.AppendLine($"Time {GameState.Instance.GetTimeDescription()}");
-            builder.AppendLine($"Money {GameState.Instance.Money}  AP {GameState.Instance.ActionPoints}/{GameState.Instance.EffectiveMaxActionPoints}");
+            builder.AppendLine($"时间 {GameState.Instance.GetTimeDescription()}");
+            builder.AppendLine($"金钱 {GameState.Instance.Money}  行动点 {GameState.Instance.ActionPoints}/{GameState.Instance.EffectiveMaxActionPoints}");
         }
 
         if (ExamSystem.Instance != null)
@@ -88,9 +88,9 @@ public class EndingSimModule : MonoBehaviour, IDebugModule
         if (SemesterSummarySystem.Instance != null)
         {
             builder.AppendLine(
-                $"StudyCount {SemesterSummarySystem.Instance.StudyCount}  SocialCount {SemesterSummarySystem.Instance.SocialCount}  " +
-                $"GoOut {SemesterSummarySystem.Instance.GoOutCount}  Sleep {SemesterSummarySystem.Instance.SleepCount}");
-            builder.AppendLine($"GradScore {SemesterSummarySystem.Instance.CalculateGraduationScore():F1}");
+                $"学习次数 {SemesterSummarySystem.Instance.StudyCount}  社交次数 {SemesterSummarySystem.Instance.SocialCount}  " +
+                $"外出次数 {SemesterSummarySystem.Instance.GoOutCount}  睡觉次数 {SemesterSummarySystem.Instance.SleepCount}");
+            builder.AppendLine($"毕业总评 {SemesterSummarySystem.Instance.CalculateGraduationScore():F1}");
         }
 
         summaryText.text = builder.ToString().TrimEnd();
@@ -100,7 +100,7 @@ public class EndingSimModule : MonoBehaviour, IDebugModule
     {
         if (EndingDeterminer.Instance == null)
         {
-            currentEndingText.text = "EndingDeterminer not ready";
+            currentEndingText.text = "EndingDeterminer 尚未就绪";
             currentEndingText.color = TextGray;
             return;
         }
@@ -108,7 +108,7 @@ public class EndingSimModule : MonoBehaviour, IDebugModule
         EndingResult result = EndingDeterminer.Instance.DetermineEnding();
         if (result == null || result.ending == null)
         {
-            currentEndingText.text = "No ending result";
+            currentEndingText.text = "暂无结局结果";
             currentEndingText.color = TextGray;
             return;
         }
@@ -116,27 +116,27 @@ public class EndingSimModule : MonoBehaviour, IDebugModule
         EndingDefinition ending = result.ending;
         string stars = new string('*', Mathf.Max(0, ending.stars));
         StringBuilder builder = new StringBuilder();
-        builder.AppendLine($"Current Ending: {ending.name}");
-        builder.AppendLine($"Stars {stars} ({ending.stars})");
-        builder.AppendLine($"Layer {GetLayerText(ending.GetLayer())} / {ending.layer}");
-        builder.AppendLine($"Talent {result.talentPoints}  FinalScore {result.finalScore:F1}");
+        builder.AppendLine($"当前结局：{ending.name}");
+        builder.AppendLine($"星级 {stars} ({ending.stars})");
+        builder.AppendLine($"层级 {GetLayerText(ending.GetLayer())} / {ending.layer}");
+        builder.AppendLine($"天赋点 {result.talentPoints}  结算分 {result.finalScore:F1}");
 
         if (!string.IsNullOrEmpty(ending.description))
-            builder.AppendLine($"Desc {ending.description}");
+            builder.AppendLine($"描述 {ending.description}");
 
         if (ending.conditions != null && ending.conditions.Count > 0)
         {
-            builder.AppendLine("Matched Conditions");
+            builder.AppendLine("命中条件");
             for (int i = 0; i < ending.conditions.Count; i++)
             {
                 EndingCondition condition = ending.conditions[i];
                 bool matched = EndingDeterminer.Instance.EvaluateCondition(condition);
-                builder.AppendLine($"- {(matched ? "[OK]" : "[NO]")} {EndingDeterminer.Instance.DescribeCondition(condition)}");
+                builder.AppendLine($"- {(matched ? "[满足]" : "[未满足]")} {EndingDeterminer.Instance.DescribeCondition(condition)}");
             }
         }
         else
         {
-            builder.AppendLine("Matched Conditions: AlwaysTrue");
+            builder.AppendLine("命中条件：恒为真");
         }
 
         currentEndingText.text = builder.ToString().TrimEnd();
@@ -154,16 +154,16 @@ public class EndingSimModule : MonoBehaviour, IDebugModule
         List<EndingDefinition> matches = EndingDeterminer.Instance.GetMatchingEndings(5);
         if (matches == null || matches.Count == 0)
         {
-            candidatesText.text = "Candidates: none";
+            candidatesText.text = "候选结局：无";
             return;
         }
 
         StringBuilder builder = new StringBuilder();
-        builder.AppendLine("Candidate Endings");
+        builder.AppendLine("候选结局");
         for (int i = 0; i < matches.Count; i++)
         {
             EndingDefinition ending = matches[i];
-            builder.AppendLine($"{i + 1}. {ending.name} | Layer {ending.layer} | {ending.stars}*");
+            builder.AppendLine($"{i + 1}. {ending.name} | 层级 {ending.layer} | {ending.stars} 星");
         }
 
         candidatesText.text = builder.ToString().TrimEnd();
@@ -173,14 +173,14 @@ public class EndingSimModule : MonoBehaviour, IDebugModule
     {
         switch (layer)
         {
-            case EndingLayer.ForcedEnding: return "Forced";
-            case EndingLayer.PeakEnding: return "Peak";
-            case EndingLayer.PlannedPath: return "Planned";
-            case EndingLayer.UnplannedPath: return "Unplanned";
-            case EndingLayer.DarkEnding: return "Dark";
-            case EndingLayer.SpecialEnding: return "Special";
-            case EndingLayer.NewCareer: return "NewCareer";
-            case EndingLayer.FallbackEnding: return "Fallback";
+            case EndingLayer.ForcedEnding: return "强制";
+            case EndingLayer.PeakEnding: return "巅峰";
+            case EndingLayer.PlannedPath: return "规划内";
+            case EndingLayer.UnplannedPath: return "规划外";
+            case EndingLayer.DarkEnding: return "黑暗";
+            case EndingLayer.SpecialEnding: return "特殊";
+            case EndingLayer.NewCareer: return "新职业";
+            case EndingLayer.FallbackEnding: return "兜底";
             default: return layer.ToString();
         }
     }

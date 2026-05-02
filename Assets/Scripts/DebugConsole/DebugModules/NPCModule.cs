@@ -72,7 +72,7 @@ public class NPCModule : MonoBehaviour, IDebugModule
         scrollRect.content = contentRT;
         contentRoot = content.transform;
 
-        CreateLabel(contentRoot, "NPC Debug", 18f, TextGold, 30f);
+        CreateLabel(contentRoot, "NPC 调试", 18f, TextGold, 30f);
         BuildNPCBlocks();
     }
 
@@ -82,14 +82,14 @@ public class NPCModule : MonoBehaviour, IDebugModule
 
         if (NPCDatabase.Instance == null)
         {
-            CreateLabel(contentRoot, "NPCDatabase not ready", 14f, TextGray, 30f);
+            CreateLabel(contentRoot, "NPCDatabase 尚未就绪", 14f, TextGray, 30f);
             return;
         }
 
         NPCData[] allNPCs = NPCDatabase.Instance.GetAllNPCs();
         if (allNPCs == null || allNPCs.Length == 0)
         {
-            CreateLabel(contentRoot, "No NPC data", 14f, TextGray, 30f);
+            CreateLabel(contentRoot, "没有 NPC 数据", 14f, TextGray, 30f);
             return;
         }
 
@@ -117,7 +117,7 @@ public class NPCModule : MonoBehaviour, IDebugModule
         CreateLabel(block.transform, $"{npc.displayName} [{npc.id}]", 16f, TextGold, 24f);
         entry.metaText = CreateLabel(block.transform, string.Empty, 12f, TextGray, 38f);
 
-        entry.affinityValueText = CreateLabel(block.transform, "Affinity 0", 13f, TextWhite, 22f);
+        entry.affinityValueText = CreateLabel(block.transform, "好感度 0", 13f, TextWhite, 22f);
         entry.affinitySlider = CreateSliderRow(block.transform, "Affinity", 0, 100, value =>
         {
             if (entry.suppressCallbacks || AffinitySystem.Instance == null)
@@ -128,9 +128,9 @@ public class NPCModule : MonoBehaviour, IDebugModule
             DebugConsoleManager.Log("NPC", $"{entry.npcId} affinity -> {Mathf.RoundToInt(value)}");
         });
 
-        entry.levelText = CreateLabel(block.transform, "Level: -", 13f, TextWhite, 20f);
-        entry.romanceText = CreateLabel(block.transform, "Romance: -", 13f, TextWhite, 20f);
-        entry.healthValueText = CreateLabel(block.transform, "Health 70", 13f, TextWhite, 22f);
+        entry.levelText = CreateLabel(block.transform, "关系等级：-", 13f, TextWhite, 20f);
+        entry.romanceText = CreateLabel(block.transform, "恋爱状态：-", 13f, TextWhite, 20f);
+        entry.healthValueText = CreateLabel(block.transform, "健康度 70", 13f, TextWhite, 22f);
         entry.healthSlider = CreateSliderRow(block.transform, "Health", 0, 100, value =>
         {
             if (entry.suppressCallbacks || RomanceSystem.Instance == null)
@@ -144,10 +144,10 @@ public class NPCModule : MonoBehaviour, IDebugModule
         });
 
         GameObject cooldownRow = CreateRow(block.transform, 30f);
-        CreateLabel(cooldownRow.transform, "CD", 13f, TextWhite, 28f, 44f);
+        CreateLabel(cooldownRow.transform, "冷却", 13f, TextWhite, 28f, 44f);
         entry.cooldownInput = CreateInputField(cooldownRow.transform, "0", 80f, 28f);
         entry.cooldownInput.contentType = TMP_InputField.ContentType.IntegerNumber;
-        CreateButton(cooldownRow.transform, "Apply", 72f, ButtonBlue, () =>
+        CreateButton(cooldownRow.transform, "应用", 72f, ButtonBlue, () =>
         {
             if (RomanceSystem.Instance == null)
                 return;
@@ -167,12 +167,12 @@ public class NPCModule : MonoBehaviour, IDebugModule
         CreateButton(affinityButtons.transform, "100", 56f, ButtonGreen, () => SetAffinity(entry, 100));
 
         GameObject romanceButtons = CreateRow(block.transform, 34f);
-        CreateButton(romanceButtons.transform, "None", 56f, ButtonBlue, () => SetRomanceState(entry, RomanceState.None));
-        CreateButton(romanceButtons.transform, "Crush", 56f, ButtonPurple, () => SetRomanceState(entry, RomanceState.Crushing));
-        CreateButton(romanceButtons.transform, "CD", 56f, ButtonBlue, () => SetRomanceState(entry, RomanceState.Cooldown));
-        CreateButton(romanceButtons.transform, "Date", 56f, ButtonPink, () => SetRomanceState(entry, RomanceState.Dating));
-        CreateButton(romanceButtons.transform, "Break", 56f, ButtonRed, () => SetRomanceState(entry, RomanceState.BrokenUp));
-        CreateButton(romanceButtons.transform, "Hostile", 56f, ButtonRed, () => SetRomanceState(entry, RomanceState.Hostile));
+        CreateButton(romanceButtons.transform, "无", 56f, ButtonBlue, () => SetRomanceState(entry, RomanceState.None));
+        CreateButton(romanceButtons.transform, "心动", 56f, ButtonPurple, () => SetRomanceState(entry, RomanceState.Crushing));
+        CreateButton(romanceButtons.transform, "冷却", 56f, ButtonBlue, () => SetRomanceState(entry, RomanceState.Cooldown));
+        CreateButton(romanceButtons.transform, "交往", 56f, ButtonPink, () => SetRomanceState(entry, RomanceState.Dating));
+        CreateButton(romanceButtons.transform, "分手", 56f, ButtonRed, () => SetRomanceState(entry, RomanceState.BrokenUp));
+        CreateButton(romanceButtons.transform, "敌对", 56f, ButtonRed, () => SetRomanceState(entry, RomanceState.Hostile));
 
         entry.memoryText = CreateLabel(block.transform, string.Empty, 12f, TextGray, 72f);
         entry.memoryText.enableWordWrapping = true;
@@ -204,18 +204,18 @@ public class NPCModule : MonoBehaviour, IDebugModule
             entry.cooldownInput.SetTextWithoutNotify(record.cooldownRoundsLeft.ToString());
         entry.suppressCallbacks = false;
 
-        entry.affinityValueText.text = $"Affinity {rel.affinity}";
-        entry.levelText.text = $"Level: {GetAffinityLevelText(rel.level)}";
+        entry.affinityValueText.text = $"好感度 {rel.affinity}";
+        entry.levelText.text = $"关系等级：{GetAffinityLevelText(rel.level)}";
         entry.levelText.color = GetAffinityLevelColor(rel.level);
-        entry.romanceText.text = $"Romance: {GetRomanceStateText(record.state)}";
+        entry.romanceText.text = $"恋爱状态：{GetRomanceStateText(record.state)}";
         entry.romanceText.color = GetRomanceStateColor(record.state);
-        entry.healthValueText.text = $"Health {record.healthScore}";
+        entry.healthValueText.text = $"健康度 {record.healthScore}";
 
         string personality = npc != null ? npc.GetPersonality().ToString() : "-";
         string lastAction = string.IsNullOrEmpty(rel.lastInteractionActionId) ? "-" : rel.lastInteractionActionId;
         entry.metaText.text =
-            $"Personality {personality}   NoInteract {rel.consecutiveNoInteractionTurns}   Repeat {rel.repeatedActionCount}\n" +
-            $"LastAction {lastAction}   Cooldown {record.cooldownRoundsLeft}   DateRounds {record.durationRounds}";
+            $"性格 {personality}   未互动 {rel.consecutiveNoInteractionTurns}   重复 {rel.repeatedActionCount}\n" +
+            $"上次行动 {lastAction}   冷却 {record.cooldownRoundsLeft}   交往回合 {record.durationRounds}";
 
         entry.memoryText.text = BuildMemorySummary(rel.memories);
     }

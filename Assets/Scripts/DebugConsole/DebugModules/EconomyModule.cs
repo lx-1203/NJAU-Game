@@ -19,8 +19,8 @@ public class EconomyModule : MonoBehaviour, IDebugModule
     {
         Transform content = CreateRoot(parent);
 
-        CreateLabel(content, "Economy", 20f, AccentColor, 34f);
-        moneyDisplay = CreateLabel(content, "Money: --", 18f, AccentColor, 30f);
+        CreateLabel(content, "经济调整", 20f, AccentColor, 34f);
+        moneyDisplay = CreateLabel(content, "金钱：--", 18f, AccentColor, 30f);
 
         GameObject row = CreateRect("SetRow", content).gameObject;
         row.AddComponent<LayoutElement>().preferredHeight = 40f;
@@ -32,13 +32,13 @@ public class EconomyModule : MonoBehaviour, IDebugModule
         layout.childForceExpandWidth = false;
         layout.childForceExpandHeight = true;
 
-        TextMeshProUGUI label = CreateLabel(row.transform, "Set To", 15f, TextColor, 36f);
+        TextMeshProUGUI label = CreateLabel(row.transform, "设为", 15f, TextColor, 36f);
         label.gameObject.AddComponent<LayoutElement>().preferredWidth = 80f;
 
         amountInput = CreateInputField(row.transform, 180f);
         amountInput.SetTextWithoutNotify("8000");
 
-        CreateButton(row.transform, "Apply", ButtonColor, () =>
+        CreateButton(row.transform, "应用", ButtonColor, () =>
         {
             if (GameState.Instance == null || amountInput == null)
             {
@@ -77,7 +77,7 @@ public class EconomyModule : MonoBehaviour, IDebugModule
             return;
         }
 
-        moneyDisplay.text = $"Money: {GameState.Instance.Money}";
+        moneyDisplay.text = $"金钱：{GameState.Instance.Money}";
         amountInput.SetTextWithoutNotify(GameState.Instance.Money.ToString());
     }
 
