@@ -8,42 +8,32 @@
 - version `9.6.9-beta.3`
 
 当前活跃传输模式:
-- **Stdio**
+- **HTTP**
+- MCP 入口: `http://127.0.0.1:8080/mcp`
 - Unity 插件窗口显示 `Session Active (My project)`
-- Unity Socket 端口: `6400`
-- Unity EditorPrefs 中 `MCPForUnity.UseHttpTransport=0`
+- Unity Socket 端口: `6400`（Unity 内部桥仍可保留，用于插件侧通信）
 - 当前选中的客户端: `Codex`
+- 约定: **当前项目优先使用本机 `8080/HTTP` 作为 Codex → Unity MCP 通道**
 
 Codex 实际使用的配置位置:
 - `C:\Users\lenovo\.codex\config.toml`
 - 当前已存在:
   - `[mcp_servers.unityMCP]`
-  - `command = "...\\uvx.exe"`
-  - `args = ["--prerelease","explicit","--from","mcpforunityserver>=0.0.0a0","mcp-for-unity","--transport","stdio"]`
+  - `url = "http://127.0.0.1:8080/mcp"`
 - 项目根目录 `.mcp.json` 当前是空配置（`{"mcpServers":{}}`），**不是** Codex 当前生效的 Unity MCP 配置来源
-
-备用/遗留 HTTP 配置:
-- Unity 仍保留本地 HTTP endpoint 偏好: `http://127.0.0.1:8080`
-- MCP RPC endpoint: `http://127.0.0.1:8080/mcp`
-- 已验证该 endpoint 可响应 `initialize`
-- 直接 `GET /mcp` 会返回 `406 Not Acceptable`，这是正常现象
-- 当前 HTTP 配置更像备用通道，不是现在 Unity 插件的活跃传输模式
 
 当前已知现象:
 - Codex 平台内建 `list_mcp_resources` / `list_mcp_resource_templates` 目前返回空，说明**当前会话没有自动挂载平台级 MCP 资源**
 - 但从网络与本地配置上看，Unity MCP 服务/桥接本身是存在的
 - `~/.codex/skills/unity-mcp-skill` 目前未发现，说明 Unity MCP skill 没有额外安装到 Codex skills 目录
 
-若需手动启动 HTTP 服务器，可使用:
-```
-C:\Users\lenovo\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\Scripts\uvx.exe --prerelease explicit --from "mcpforunityserver>=0.0.0a0" mcp-for-unity --transport http --http-url http://127.0.0.1:8080
-```
-
-MCP 协议补充:
-- HTTP 模式为 Streamable HTTP，endpoint `http://127.0.0.1:8080/mcp`
-- 初始化: POST `/mcp` with `method: "initialize"`
-- 获取 session ID: 从 response header `mcp-session-id` 读取
-- 后续请求: 带上 `mcp-session-id` header
+2026-05-03 当前排查结论:
+- `127.0.0.1:6400` 已确认可由 Unity 插件侧监听，说明 Unity 内部桥接仍然存在
+- Codex 当前实际生效配置是 `C:\Users\lenovo\.codex\config.toml` 中的:
+  - `[mcp_servers.unityMCP]`
+  - `url = "http://127.0.0.1:8080/mcp"`
+- 因此当前推荐链路为: **Codex -> local HTTP MCP (`8080`) -> Unity MCP -> Unity**
+- 若后续看到 `stdio`、`transport stdio`、`unity_mcp_stdio_proxy.py` 等记录，统一视为历史排障方案，仅在 HTTP 不可用时再回头检查
 
 ## 项目结构
 - Unity 2022.x 项目

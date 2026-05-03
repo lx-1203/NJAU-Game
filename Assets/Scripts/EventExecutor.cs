@@ -135,6 +135,7 @@ public class EventExecutor : MonoBehaviour
             else
             {
                 // 所有选项均不满足条件 → 应用默认效果
+                ApplyEventCosts(eventDef.actionPointCost, eventDef.moneyCost, eventDef.id, "默认效果");
                 if (eventDef.defaultEffects != null && eventDef.defaultEffects.Length > 0)
                 {
                     ApplyEffects(eventDef.defaultEffects);
@@ -147,6 +148,7 @@ public class EventExecutor : MonoBehaviour
         else
         {
             // 无选项 → 应用默认效果
+            ApplyEventCosts(eventDef.actionPointCost, eventDef.moneyCost, eventDef.id, "默认效果");
             if (eventDef.defaultEffects != null && eventDef.defaultEffects.Length > 0)
             {
                 ApplyEffects(eventDef.defaultEffects);
@@ -222,6 +224,12 @@ public class EventExecutor : MonoBehaviour
 
         Debug.Log($"[EventExecutor] 事件 {eventDef.id} 玩家选择了选项 {index}: {selectedChoice.text}");
 
+        ApplyEventCosts(
+            eventDef.actionPointCost + Mathf.Max(0, selectedChoice.actionPointCost),
+            eventDef.moneyCost + Mathf.Max(0, selectedChoice.moneyCost),
+            eventDef.id,
+            selectedChoice.text);
+
         // 应用选项效果
         if (selectedChoice.effects != null && selectedChoice.effects.Length > 0)
         {
@@ -265,6 +273,13 @@ public class EventExecutor : MonoBehaviour
                     Debug.Log($"[EventExecutor] 效果: 金钱 {(effect.value >= 0 ? "+" : "")}{effect.value}");
                     break;
 
+                case "actionpoint":
+                case "action_point":
+                case "ap":
+                    ApplyActionPointDelta(effect.value);
+                    Debug.Log($"[EventExecutor] 效果: 行动点 {(effect.value >= 0 ? "+" : "")}{effect.value}");
+                    break;
+
                 case "flag":
                     EventHistory.Instance.SetFlag(effect.target, effect.value != 0);
                     Debug.Log($"[EventExecutor] 效果: 标记 {effect.target} = {(effect.value != 0)}");
@@ -285,6 +300,41 @@ public class EventExecutor : MonoBehaviour
                     break;
             }
         }
+    }
+
+    private void ApplyEventCosts(int actionPointCost, int moneyCost, string eventId, string sourceLabel)
+    {
+        GameState gs = GameState.Instance;
+        if (gs == null)
+        {
+            return;
+        }
+
+        if (actionPointCost > 0)
+        {
+            gs.ActionPoints = Mathf.Max(0, gs.ActionPoints - actionPointCost);
+        }
+
+        if (moneyCost != 0)
+        {
+            gs.AddMoney(-moneyCost);
+        }
+
+        if (actionPointCost > 0 || moneyCost != 0)
+        {
+            Debug.Log($"[EventExecutor] 事件成本 {eventId} / {sourceLabel}: AP-{actionPointCost}, Money-{moneyCost}");
+        }
+    }
+
+    private void ApplyActionPointDelta(int delta)
+    {
+        GameState gs = GameState.Instance;
+        if (gs == null)
+        {
+            return;
+        }
+
+        gs.ActionPoints = Mathf.Clamp(gs.ActionPoints + delta, 0, gs.EffectiveMaxActionPoints);
     }
 
     // ========== 执行完成 ==========

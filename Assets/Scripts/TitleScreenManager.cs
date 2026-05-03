@@ -62,7 +62,6 @@ public class TitleScreenManager : MonoBehaviour
     private Coroutine loopMonitorCoroutine;
     private int activePlayerIndex = -1;
     private int standbyPlayerIndex = -1;
-    private bool isTransitioning = false;
     private bool hasEnteredMenu = false;
     private bool transitionRequested = false;
     private string resolvedVideoPath;
@@ -1515,6 +1514,14 @@ public class TitleScreenManager : MonoBehaviour
             }));
         }
 
+        float cellHeight = 170f;
+        float verticalSpacing = 18f;
+        int topPadding = 8;
+        int bottomPadding = 24;
+        int rowCount = Mathf.Max(1, Mathf.CeilToInt(entries.Count / 3f));
+        float requiredHeight = topPadding + bottomPadding + rowCount * cellHeight + Mathf.Max(0, rowCount - 1) * verticalSpacing;
+        galleryGridContent.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, requiredHeight);
+
         LayoutRebuilder.ForceRebuildLayoutImmediate(galleryGridContent);
         UpdateGallerySelection();
     }
@@ -1522,8 +1529,14 @@ public class TitleScreenManager : MonoBehaviour
     private Button CreateGalleryEntryButton(RectTransform parent, GalleryEntry entry, UnityEngine.Events.UnityAction onClick)
     {
         GameObject buttonGO = CreateUIElement(entry.Id + "Card", parent);
+        RectTransform rect = buttonGO.GetComponent<RectTransform>();
+        rect.sizeDelta = new Vector2(280f, 170f);
+        LayoutElement layout = buttonGO.AddComponent<LayoutElement>();
+        layout.preferredWidth = 280f;
+        layout.preferredHeight = 170f;
+
         Image bg = buttonGO.AddComponent<Image>();
-        bg.color = entry.IsUnlocked ? new Color(0.96f, 0.93f, 0.85f, 1f) : new Color(0.34f, 0.35f, 0.32f, 0.96f);
+        bg.color = entry.IsUnlocked ? new Color(0.96f, 0.93f, 0.85f, 1f) : new Color(0.2f, 0.2f, 0.2f, 0.98f);
         Outline outline = buttonGO.AddComponent<Outline>();
         outline.effectColor = new Color(0.35f, 0.28f, 0.2f, 0.45f);
         outline.effectDistance = new Vector2(3f, -3f);
@@ -1532,7 +1545,6 @@ public class TitleScreenManager : MonoBehaviour
         button.targetGraphic = bg;
         button.onClick.AddListener(onClick);
 
-        RectTransform rect = buttonGO.GetComponent<RectTransform>();
         TextMeshProUGUI badge = CreateTMPBlock(rect, "Badge", entry.Badge, 22f, Color.white, TextAlignmentOptions.Left);
         badge.rectTransform.anchorMin = new Vector2(0f, 1f);
         badge.rectTransform.anchorMax = new Vector2(1f, 1f);
@@ -1540,10 +1552,10 @@ public class TitleScreenManager : MonoBehaviour
         badge.rectTransform.offsetMax = new Vector2(-10f, 0f);
         badge.fontStyle = FontStyles.Bold;
 
-        TextMeshProUGUI lockIcon = CreateTMPBlock(rect, "Lock", entry.IsUnlocked ? "" : "LOCK", 26f, new Color(0.82f, 0.82f, 0.78f, 1f), TextAlignmentOptions.Center);
+        TextMeshProUGUI lockIcon = CreateTMPBlock(rect, "Lock", entry.IsUnlocked ? "" : "???", 28f, new Color(0.82f, 0.82f, 0.78f, 1f), TextAlignmentOptions.Center);
         StretchFull(lockIcon.rectTransform);
 
-        TextMeshProUGUI title = CreateTMPBlock(rect, "Title", entry.IsUnlocked ? entry.Title : "??????", 22f, entry.IsUnlocked ? TutorialTextColor : Color.white, TextAlignmentOptions.Right);
+        TextMeshProUGUI title = CreateTMPBlock(rect, "Title", entry.IsUnlocked ? entry.Title : "???", 22f, entry.IsUnlocked ? TutorialTextColor : new Color(0.92f, 0.92f, 0.92f, 0.95f), TextAlignmentOptions.Right);
         title.rectTransform.anchorMin = new Vector2(0f, 0f);
         title.rectTransform.anchorMax = new Vector2(1f, 0.28f);
         title.rectTransform.offsetMin = new Vector2(10f, 8f);
@@ -1562,8 +1574,8 @@ public class TitleScreenManager : MonoBehaviour
             {
                 GalleryEntry entry = galleryCategories[currentGalleryCategoryIndex].Entries[i];
                 bg.color = i == currentGalleryEntryIndex
-                    ? new Color(1f, 0.92f, 0.64f, 1f)
-                    : (entry.IsUnlocked ? new Color(0.96f, 0.93f, 0.85f, 1f) : new Color(0.34f, 0.35f, 0.32f, 0.96f));
+                    ? (entry.IsUnlocked ? new Color(1f, 0.92f, 0.64f, 1f) : new Color(0.3f, 0.3f, 0.3f, 1f))
+                    : (entry.IsUnlocked ? new Color(0.96f, 0.93f, 0.85f, 1f) : new Color(0.2f, 0.2f, 0.2f, 0.98f));
             }
         }
     }
@@ -1583,8 +1595,8 @@ public class TitleScreenManager : MonoBehaviour
         }
 
         gallerySectionTitle.text = galleryCategories[currentGalleryCategoryIndex].Name;
-        galleryPreviewTitle.text = entry.IsUnlocked ? entry.Title : "尚未解锁";
-        galleryPreviewSubtitle.text = entry.IsUnlocked ? entry.Subtitle : "继续游玩以收集该内容";
+        galleryPreviewTitle.text = entry.IsUnlocked ? entry.Title : "???";
+        galleryPreviewSubtitle.text = entry.IsUnlocked ? entry.Subtitle : "未解锁";
         galleryPreviewDescription.text = entry.IsUnlocked ? entry.Description : "达成对应结局后，这里会显示完整的CG与结局说明。";
         galleryOpenButton.interactable = entry.IsUnlocked;
         SetGalleryImage(galleryPreviewImage, galleryPreviewImageLabel, entry);
@@ -1698,8 +1710,8 @@ public class TitleScreenManager : MonoBehaviour
             ? Resources.Load<Sprite>($"CG/{entry.ResourceKey}")
             : null;
         image.sprite = sprite;
-        image.color = sprite != null ? Color.white : new Color(0.36f, 0.37f, 0.34f, 0.96f);
-        label.text = sprite != null ? string.Empty : (entry.IsUnlocked ? $"CG: {entry.ResourceKey}" : "LOCK");
+        image.color = sprite != null ? Color.white : new Color(0.16f, 0.16f, 0.16f, 0.98f);
+        label.text = sprite != null ? string.Empty : (entry.IsUnlocked ? "CG 已解锁" : "???");
     }
 
     private static HashSet<string> LoadGallerySet(string key)
@@ -2225,6 +2237,7 @@ public class TitleScreenManager : MonoBehaviour
             return;
         }
 
+        HideAllTitleOverlayPanels();
         transitionRequested = true;
         StartCoroutine(TransitionToGameScene(playOpeningStory));
     }
@@ -2243,6 +2256,7 @@ public class TitleScreenManager : MonoBehaviour
     private IEnumerator TransitionToGameScene(bool playOpeningStory)
     {
         UIFlowGuard.CleanupBlockingUI();
+        HideAllTitleOverlayPanels();
 
         if (menuOverlay != null)
         {
@@ -2271,6 +2285,21 @@ public class TitleScreenManager : MonoBehaviour
         else
         {
             SceneLoader.LoadSceneAfterOpening(gameSceneName);
+        }
+    }
+
+    private void HideAllTitleOverlayPanels()
+    {
+        HideGalleryViewer();
+        HideGalleryPanel();
+        HideCreditsPanel();
+        HideTutorialPanel();
+        HideChangelogPanel();
+
+        if (menuOverlay != null)
+        {
+            menuOverlay.interactable = false;
+            menuOverlay.blocksRaycasts = false;
         }
     }
 

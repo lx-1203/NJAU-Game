@@ -199,10 +199,19 @@ public class MissionPanelBuilder : MonoBehaviour
     /// </summary>
     private void RefreshPanel()
     {
-        // 清空现有内容
-        foreach (Transform child in contentTransform)
+        if (contentTransform == null || MissionSystem.Instance == null)
         {
-            Destroy(child.gameObject);
+            return;
+        }
+
+        // 清空现有内容
+        for (int i = contentTransform.childCount - 1; i >= 0; i--)
+        {
+            Transform child = contentTransform.GetChild(i);
+            if (child != null)
+            {
+                Destroy(child.gameObject);
+            }
         }
 
         var activeMissions = MissionSystem.Instance.GetActiveMissions();

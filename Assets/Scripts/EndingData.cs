@@ -33,29 +33,38 @@ public enum EndingConditionType
     Physique_GreaterOrEqual,    // 体魄 >= value
     Leadership_GreaterOrEqual,  // 领导力 >= value
     Stress_GreaterOrEqual,      // 压力 >= value
+    Study_Less,                 // 学力 < value
     Mood_Equals,                // 心情 == value
     Mood_Less,                  // 心情 < value
 
     // ========== 状态条件 ==========
     Money_Less,                 // 金钱 < value
     Money_GreaterOrEqual,       // 金钱 >= value
+    Guilt_LessOrEqual,          // 负罪感 <= value
+    Darkness_GreaterOrEqual,    // 黑暗值 >= value
 
     // ========== 社交/组织条件 ==========
     HasPartner,                 // 有恋人
+    NoPartner,                  // 无恋人
     RomanceLevel_GreaterOrEqual,// 恋爱等级 >= value
+    FriendCount_GreaterOrEqual, // 好友数 >= value
     IsStudentCouncilPresident,  // 学生会主席
     IsPartyMember,              // 入党
+    PlayerGender_Equals,        // 玩家性别 == value (0男, 1女)
 
     // ========== 成就/标记条件 ==========
     HasNationalScholarship,     // 获得国奖
     CheatingCount_GreaterOrEqual, // 作弊次数 >= value
     SlackingValue_GreaterOrEqual, // 摆烂值 >= value
     MentalHealth_Equals,        // 心理健康 == value
+    CET4Passed,                 // 通过英语四级
+    CET6Passed,                 // 通过英语六级
 
     // ========== 统计条件 ==========
     TotalStudyCount_GreaterOrEqual,  // 总学习次数 >= value
     TotalSocialCount_GreaterOrEqual, // 总社交次数 >= value
     GraduationScore_GreaterOrEqual,  // 毕业总评分 >= value
+    InternshipCount_GreaterOrEqual,  // 实习次数 >= value
 
     // ========== 特殊 ==========
     AlwaysTrue                  // 无条件（兜底结局）
@@ -76,6 +85,11 @@ public class EndingCondition
     {
         this.type = type;
         this.value = value;
+    }
+
+    public EndingCondition Clone()
+    {
+        return new EndingCondition(type, value);
     }
 
     /// <summary>
@@ -107,6 +121,30 @@ public class EndingDefinition
     public EndingDefinition()
     {
         conditions = new List<EndingCondition>();
+    }
+
+    public EndingDefinition Clone()
+    {
+        EndingDefinition clone = new EndingDefinition
+        {
+            id = id,
+            name = name,
+            stars = stars,
+            layer = layer,
+            description = description,
+            cgId = cgId,
+            conditions = new List<EndingCondition>()
+        };
+
+        if (conditions != null)
+        {
+            for (int i = 0; i < conditions.Count; i++)
+            {
+                clone.conditions.Add(conditions[i] != null ? conditions[i].Clone() : new EndingCondition());
+            }
+        }
+
+        return clone;
     }
 
     /// <summary>

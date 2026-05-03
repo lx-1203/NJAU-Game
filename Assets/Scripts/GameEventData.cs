@@ -73,6 +73,8 @@ public class EventTriggerCondition
     public int roundMin;
     /// <summary>回合上限 (0=不限)</summary>
     public int roundMax;
+    /// <summary>指定回合列表（为空表示不限）</summary>
+    public int[] specificRounds;
 
     // ----- 属性条件 -----
     /// <summary>属性比较条件列表（全部满足才通过）</summary>
@@ -101,6 +103,9 @@ public class EventTriggerCondition
     // ----- 行为触发（DE 专用） -----
     /// <summary>触发行为标识，如 "cheat", "loan", "pua"</summary>
     public string triggerBehavior;
+
+    /// <summary>触发概率，0~1，默认 1</summary>
+    public float triggerChance = 1f;
 
     // ----- 触发阶段 -----
     /// <summary>在哪个阶段检查："RoundStart", "ActionComplete", "RoundEnd"</summary>
@@ -141,6 +146,10 @@ public class EventChoice
 {
     /// <summary>选项显示文字</summary>
     public string text;
+    /// <summary>选择该选项时额外消耗的行动点</summary>
+    public int actionPointCost;
+    /// <summary>选择该选项时额外消耗的金钱</summary>
+    public int moneyCost;
     /// <summary>选择后应用的效果列表</summary>
     public EventEffect[] effects;
     /// <summary>选择后触发的事件ID（事件链）</summary>
@@ -172,6 +181,12 @@ public class EventDefinition
     public bool isForced;
     /// <summary>是否可重复触发</summary>
     public bool isRepeatable;
+    /// <summary>事件基础行动点消耗（固定事件可作为行动面板事件成本）</summary>
+    public int actionPointCost;
+    /// <summary>事件基础金钱消耗</summary>
+    public int moneyCost;
+    /// <summary>每回合最多可触发次数，0 表示不限制</summary>
+    public int maxTriggersPerRound;
 
     /// <summary>触发条件</summary>
     public EventTriggerCondition trigger;

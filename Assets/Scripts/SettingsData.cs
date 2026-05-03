@@ -68,6 +68,31 @@ public class SettingsData
         return resolutionWidth + "x" + resolutionHeight;
     }
 
+    public string GetResolutionDisplayLabel()
+    {
+        float aspect = resolutionHeight > 0 ? (float)resolutionWidth / resolutionHeight : 0f;
+        string aspectLabel = Mathf.Abs(aspect - (16f / 9f)) < 0.02f ? "16:9"
+            : Mathf.Abs(aspect - (16f / 10f)) < 0.02f ? "16:10"
+            : Mathf.Abs(aspect - (4f / 3f)) < 0.02f ? "4:3"
+            : "其他";
+        return GetResolutionLabel() + "  (" + aspectLabel + ")";
+    }
+
+    public string GetFullscreenLabel()
+    {
+        return fullscreen ? "全屏" : "窗口";
+    }
+
+    public string GetUIScaleLabel()
+    {
+        return Mathf.RoundToInt(uiScale * 100f) + "%";
+    }
+
+    public static string FormatVolumeLabel(float value)
+    {
+        return Mathf.RoundToInt(Mathf.Clamp01(value) * 100f) + "%";
+    }
+
     public string GetTextSpeedLabel()
     {
         switch (textSpeed)
@@ -80,7 +105,7 @@ public class SettingsData
 
     public string GetLanguageLabel()
     {
-        return language == 1 ? "English (开发中)" : "简体中文";
+        return language == 1 ? "英语（开发中）" : "简体中文";
     }
 
     public string GetAutoPlayIntervalLabel()

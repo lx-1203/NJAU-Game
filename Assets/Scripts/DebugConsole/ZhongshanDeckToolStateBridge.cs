@@ -100,6 +100,70 @@ public static class ZhongshanDeckToolStateBridge
         SaveState();
     }
 
+    public static List<ZhongshanDeckEventEntry> GetAuthoredEvents()
+    {
+        ZhongshanDeckToolState state = GetState();
+        return new List<ZhongshanDeckEventEntry>(state.authoredEvents);
+    }
+
+    public static bool TryGetAuthoredEvent(string eventId, out ZhongshanDeckEventEntry entry)
+    {
+        ZhongshanDeckToolState state = GetState();
+        for (int i = 0; i < state.authoredEvents.Count; i++)
+        {
+            ZhongshanDeckEventEntry current = state.authoredEvents[i];
+            if (current != null && current.eventId == eventId)
+            {
+                entry = current;
+                return true;
+            }
+        }
+
+        entry = null;
+        return false;
+    }
+
+    public static void SaveAuthoredEvent(string eventId, string title, string json)
+    {
+        ZhongshanDeckToolState state = GetState();
+        for (int i = 0; i < state.authoredEvents.Count; i++)
+        {
+            ZhongshanDeckEventEntry current = state.authoredEvents[i];
+            if (current != null && current.eventId == eventId)
+            {
+                current.title = title;
+                current.json = json;
+                SaveState();
+                return;
+            }
+        }
+
+        state.authoredEvents.Add(new ZhongshanDeckEventEntry
+        {
+            eventId = eventId,
+            title = title,
+            json = json
+        });
+        SaveState();
+    }
+
+    public static bool DeleteAuthoredEvent(string eventId)
+    {
+        ZhongshanDeckToolState state = GetState();
+        for (int i = 0; i < state.authoredEvents.Count; i++)
+        {
+            ZhongshanDeckEventEntry current = state.authoredEvents[i];
+            if (current != null && current.eventId == eventId)
+            {
+                state.authoredEvents.RemoveAt(i);
+                SaveState();
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public static bool DeleteSnapshot(string name)
     {
         ZhongshanDeckToolState state = GetState();

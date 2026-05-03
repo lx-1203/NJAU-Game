@@ -4,19 +4,29 @@ using TMPro;
 using System.Collections;
 
 /// <summary>
-/// 单个属性条组件 —— 参照参考界面的卡片式属性条
-/// 布局：[属性图标] [属性名] [进度条 + 还差X] [等级字母]
-/// 支持平滑动画过渡
+/// 单个属性条组件。
+/// 参考目标是“标签 + 大数字 + 进度条 + 等级徽记”的高辨识度表现，
+/// 同时兼容 HUD 紧凑版和信息面板详细版。
 /// </summary>
 public class AttributeBar : MonoBehaviour
 {
+    private enum DisplayMode
+    {
+        Compact,
+        Detailed
+    }
+
     // ========== UI 引用 ==========
-    private Image iconImage;             // 属性图标
-    private TextMeshProUGUI nameLabel;   // 属性名
-    private Image fillImage;             // 进度条填充
-    private Image barBackground;         // 进度条背景
-    private TextMeshProUGUI valueLabel;  // 数值文本（还差X）
-    private TextMeshProUGUI gradeLabel;  // 等级字母（F/D/C/B/A/S）
+    private Image cardBackground;
+    private Image accentStrip;
+    private Image iconImage;
+    private TextMeshProUGUI nameLabel;
+    private TextMeshProUGUI valueLabel;
+    private TextMeshProUGUI deltaLabel;
+    private Image fillImage;
+    private Image barBackground;
+    private TextMeshProUGUI gradeLabel;
+    private Image gradeBadge;
 
     // ========== 动画参数 ==========
     private float animDuration = 0.35f;
@@ -25,203 +35,346 @@ public class AttributeBar : MonoBehaviour
 
     // ========== 缓存 ==========
     private float currentFill = 0f;
-
-    // ========== 尺寸常量 ==========
-    private const float BarHeight = 14f;
-    private const float BarWidth = 100f;
-    private const float IconSize = 22f;
-    private const float NameWidth = 20f;
-    private const float ValueWidth = 55f;
-    private const float GradeWidth = 22f;
-    private const float TotalHeight = 28f;
+    private float fillTrackWidth = 150f;
+    private DisplayMode mode = DisplayMode.Compact;
 
     // ========== 颜色 ==========
-    private static readonly Color BarBgColor = new Color(0.75f, 0.82f, 0.88f, 0.6f);
-    private static readonly Color TextDark = new Color(0.20f, 0.15f, 0.10f);
-    private static readonly Color TextGray = new Color(0.45f, 0.45f, 0.50f);
+    private static readonly Color CardBgColor = new Color(0.97f, 0.90f, 0.80f, 0.98f);
+    private static readonly Color CardBgDetailed = new Color(0.99f, 0.94f, 0.86f, 0.99f);
+    private static readonly Color BorderColor = new Color(0.55f, 0.34f, 0.18f, 0.95f);
+    private static readonly Color TextDark = new Color(0.22f, 0.15f, 0.10f, 1f);
+    private static readonly Color TextMuted = new Color(0.54f, 0.38f, 0.24f, 1f);
+    private static readonly Color BarBgColor = new Color(0.74f, 0.80f, 0.84f, 0.82f);
+    private static readonly Color BadgeBg = new Color(0.30f, 0.20f, 0.12f, 0.95f);
 
     /// <summary>
-    /// 在指定父对象下创建一个属性条
+    /// 创建属性条。
+    /// HUD 使用紧凑版，信息面板可使用详细版。
     /// </summary>
-    public static AttributeBar Create(Transform parent)
+    public static AttributeBar Create(Transform parent, bool detailed = false)
     {
         GameObject root = new GameObject("AttributeBar");
         root.transform.SetParent(parent, false);
-        RectTransform rootRT = root.AddComponent<RectTransform>();
-        rootRT.sizeDelta = new Vector2(190, TotalHeight);
 
-        HorizontalLayoutGroup hlg = root.AddComponent<HorizontalLayoutGroup>();
-        hlg.spacing = 3f;
-        hlg.childAlignment = TextAnchor.MiddleLeft;
-        hlg.childControlWidth = false;
-        hlg.childControlHeight = false;
-        hlg.childForceExpandWidth = false;
-        hlg.childForceExpandHeight = false;
+        RectTransform rootRT = root.AddComponent<RectTransform>();
+        rootRT.sizeDelta = detailed ? new Vector2(1020f, 88f) : new Vector2(230f, 56f);
+
+        LayoutElement layout = root.AddComponent<LayoutElement>();
+        layout.preferredWidth = rootRT.sizeDelta.x;
+        layout.preferredHeight = rootRT.sizeDelta.y;
+        layout.minHeight = rootRT.sizeDelta.y;
 
         AttributeBar bar = root.AddComponent<AttributeBar>();
-
-        // --- 属性图标（彩色小圆点） ---
-        GameObject iconObj = new GameObject("Icon");
-        iconObj.transform.SetParent(root.transform, false);
-        RectTransform iconRT = iconObj.AddComponent<RectTransform>();
-        iconRT.sizeDelta = new Vector2(IconSize, IconSize);
-        bar.iconImage = iconObj.AddComponent<Image>();
-        bar.iconImage.color = Color.white;
-
-        // --- 进度条区域 ---
-        GameObject barArea = new GameObject("BarArea");
-        barArea.transform.SetParent(root.transform, false);
-        RectTransform baRT = barArea.AddComponent<RectTransform>();
-        baRT.sizeDelta = new Vector2(BarWidth, TotalHeight);
-
-        // 进度条背景
-        GameObject barBg = new GameObject("BarBackground");
-        barBg.transform.SetParent(barArea.transform, false);
-        RectTransform bgRT = barBg.AddComponent<RectTransform>();
-        bgRT.anchorMin = new Vector2(0, 0.3f);
-        bgRT.anchorMax = new Vector2(1, 0.7f);
-        bgRT.offsetMin = Vector2.zero;
-        bgRT.offsetMax = Vector2.zero;
-        bar.barBackground = barBg.AddComponent<Image>();
-        bar.barBackground.color = BarBgColor;
-
-        // 进度条填充
-        GameObject fillObj = new GameObject("Fill");
-        fillObj.transform.SetParent(barBg.transform, false);
-        RectTransform fillRT = fillObj.AddComponent<RectTransform>();
-        fillRT.anchorMin = new Vector2(0, 0);
-        fillRT.anchorMax = new Vector2(0, 1);
-        fillRT.pivot = new Vector2(0, 0.5f);
-        fillRT.anchoredPosition = Vector2.zero;
-        fillRT.sizeDelta = new Vector2(0, 0);
-        bar.fillImage = fillObj.AddComponent<Image>();
-        bar.fillImage.color = Color.white;
-
-        // 数值文本（还差X 或 当前值）
-        bar.valueLabel = CreateText("Value", barArea.transform,
-            "", 11f, TextGray, TextAlignmentOptions.Right, new Vector2(BarWidth, TotalHeight));
-        RectTransform valRT = bar.valueLabel.rectTransform;
-        valRT.anchorMin = Vector2.zero;
-        valRT.anchorMax = Vector2.one;
-        valRT.offsetMin = Vector2.zero;
-        valRT.offsetMax = Vector2.zero;
-
-        // --- 等级字母 ---
-        GameObject gradeObj = new GameObject("Grade");
-        gradeObj.transform.SetParent(root.transform, false);
-        RectTransform gradeRT = gradeObj.AddComponent<RectTransform>();
-        gradeRT.sizeDelta = new Vector2(GradeWidth, TotalHeight);
-        bar.gradeLabel = gradeObj.AddComponent<TextMeshProUGUI>();
-        bar.gradeLabel.fontSize = 18f;
-        bar.gradeLabel.alignment = TextAlignmentOptions.Center;
-        bar.gradeLabel.color = TextDark;
-        bar.gradeLabel.fontStyle = FontStyles.Bold;
-        bar.gradeLabel.text = "F";
-
+        bar.mode = detailed ? DisplayMode.Detailed : DisplayMode.Compact;
+        bar.BuildUI(rootRT);
         return bar;
     }
 
-    /// <summary>
-    /// 设置属性条数据（带平滑动画）
-    /// </summary>
     public void SetAttribute(PlayerAttributes.AttributeInfo info)
     {
-        if (iconImage != null) iconImage.color = info.barColor;
-        if (fillImage != null) fillImage.color = info.barColor;
-
-        // 更新数值文本
-        UpdateValueText(info);
-
-        // 更新等级字母
+        ApplyStaticVisuals(info);
+        UpdateTexts(info);
         UpdateGrade(info);
 
-        // 启动平滑填充动画
-        float targetFill = info.NormalizedValue;
-        if (fillCoroutine != null) StopCoroutine(fillCoroutine);
+        float targetFill = Mathf.Clamp01(info.NormalizedValue);
+        if (fillCoroutine != null)
+        {
+            StopCoroutine(fillCoroutine);
+        }
         fillCoroutine = StartCoroutine(AnimateFillCoroutine(targetFill));
     }
 
-    /// <summary>
-    /// 立即设置属性条（无动画），用于初始化
-    /// </summary>
     public void SetAttributeImmediate(PlayerAttributes.AttributeInfo info)
     {
-        if (iconImage != null) iconImage.color = info.barColor;
-        if (fillImage != null) fillImage.color = info.barColor;
-
-        UpdateValueText(info);
+        ApplyStaticVisuals(info);
+        UpdateTexts(info);
         UpdateGrade(info);
 
-        float targetFill = info.NormalizedValue;
+        float targetFill = Mathf.Clamp01(info.NormalizedValue);
         currentFill = targetFill;
         UpdateFillWidth(targetFill);
     }
 
-    private void UpdateValueText(PlayerAttributes.AttributeInfo info)
+    private void BuildUI(RectTransform rootRT)
     {
-        if (valueLabel == null) return;
+        Image rootBg = gameObject.AddComponent<Image>();
+        rootBg.color = mode == DisplayMode.Detailed ? CardBgDetailed : CardBgColor;
+        cardBackground = rootBg;
 
-        // 计算距离下一等级还差多少
-        int nextThreshold = GetNextThreshold(info.value);
-        int remaining = nextThreshold - info.value;
+        GameObject frame = CreateRectObject("Frame", transform, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+        Image frameImage = frame.AddComponent<Image>();
+        frameImage.color = BorderColor;
+        frame.transform.SetAsFirstSibling();
 
-        if (remaining > 0)
+        GameObject inner = CreateRectObject("Inner", transform, Vector2.zero, Vector2.one,
+            mode == DisplayMode.Detailed ? new Vector2(3f, 3f) : new Vector2(2f, 2f),
+            mode == DisplayMode.Detailed ? new Vector2(-3f, -3f) : new Vector2(-2f, -2f));
+        inner.AddComponent<Image>().color = mode == DisplayMode.Detailed ? CardBgDetailed : CardBgColor;
+
+        GameObject accent = CreateRectObject("Accent", inner.transform, new Vector2(0f, 0f), new Vector2(0f, 1f),
+            Vector2.zero, Vector2.zero);
+        RectTransform accentRT = accent.GetComponent<RectTransform>();
+        accentRT.sizeDelta = new Vector2(mode == DisplayMode.Detailed ? 16f : 10f, 0f);
+        accentStrip = accent.AddComponent<Image>();
+
+        if (mode == DisplayMode.Compact)
         {
-            valueLabel.text = $"{info.value}  还差{remaining}";
+            BuildCompact(inner.transform, rootRT.sizeDelta);
         }
         else
         {
-            valueLabel.text = info.isPercentage ? $"{info.value}%" : $"{info.value}";
+            BuildDetailed(inner.transform, rootRT.sizeDelta);
+        }
+    }
+
+    private void BuildCompact(Transform parent, Vector2 size)
+    {
+        GameObject iconBg = CreateRectObject("IconBg", parent, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f),
+            new Vector2(18f, -18f), Vector2.zero);
+        RectTransform iconBgRT = iconBg.GetComponent<RectTransform>();
+        iconBgRT.pivot = new Vector2(0f, 0.5f);
+        iconBgRT.sizeDelta = new Vector2(38f, 38f);
+        Image iconBgImage = iconBg.AddComponent<Image>();
+        iconBgImage.color = new Color(1f, 1f, 1f, 0.52f);
+
+        GameObject icon = CreateRectObject("Icon", iconBg.transform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
+            Vector2.zero, Vector2.zero);
+        RectTransform iconRT = icon.GetComponent<RectTransform>();
+        iconRT.sizeDelta = new Vector2(22f, 22f);
+        iconImage = icon.AddComponent<Image>();
+
+        nameLabel = CreateText("Name", parent, "", 15f, TextDark, FontStyles.Bold);
+        RectTransform nameRT = nameLabel.rectTransform;
+        nameRT.anchorMin = new Vector2(0f, 0.5f);
+        nameRT.anchorMax = new Vector2(0f, 0.5f);
+        nameRT.pivot = new Vector2(0f, 0.5f);
+        nameRT.anchoredPosition = new Vector2(64f, 11f);
+        nameRT.sizeDelta = new Vector2(50f, 22f);
+
+        GameObject barBg = CreateRectObject("BarBg", parent, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f),
+            new Vector2(110f, -16f), Vector2.zero);
+        RectTransform barBgRT = barBg.GetComponent<RectTransform>();
+        barBgRT.pivot = new Vector2(0f, 0.5f);
+        barBgRT.sizeDelta = new Vector2(86f, 12f);
+        barBackground = barBg.AddComponent<Image>();
+        barBackground.color = BarBgColor;
+
+        GameObject fill = CreateRectObject("Fill", barBg.transform, new Vector2(0f, 0f), new Vector2(0f, 1f),
+            Vector2.zero, Vector2.zero);
+        RectTransform fillRT = fill.GetComponent<RectTransform>();
+        fillRT.pivot = new Vector2(0f, 0.5f);
+        fillRT.sizeDelta = new Vector2(0f, 0f);
+        fillImage = fill.AddComponent<Image>();
+        fillTrackWidth = 86f;
+
+        GameObject badge = CreateRectObject("GradeBadge", parent, new Vector2(1f, 0.5f), new Vector2(1f, 0.5f),
+            new Vector2(-12f, 0f), Vector2.zero);
+        RectTransform badgeRT = badge.GetComponent<RectTransform>();
+        badgeRT.pivot = new Vector2(1f, 0.5f);
+        badgeRT.sizeDelta = new Vector2(28f, 28f);
+        gradeBadge = badge.AddComponent<Image>();
+        gradeBadge.color = BadgeBg;
+
+        gradeLabel = CreateText("Grade", badge.transform, "F", 18f, Color.white, FontStyles.Bold);
+        Stretch(gradeLabel.rectTransform, Vector2.zero, Vector2.zero);
+        gradeLabel.alignment = TextAlignmentOptions.Center;
+
+        GameObject overlay = CreateRectObject("Overlay", parent, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+        overlay.transform.SetAsLastSibling();
+
+        valueLabel = CreateText("Value", overlay.transform, "0", 22f, new Color(0.98f, 0.82f, 0.35f, 1f), FontStyles.Bold);
+        RectTransform valueRT = valueLabel.rectTransform;
+        valueRT.anchorMin = new Vector2(0f, 0.5f);
+        valueRT.anchorMax = new Vector2(0f, 0.5f);
+        valueRT.pivot = new Vector2(0f, 0.5f);
+        valueRT.anchoredPosition = new Vector2(118f, 8f);
+        valueRT.sizeDelta = new Vector2(52f, 28f);
+
+        deltaLabel = CreateText("Delta", overlay.transform, "", 10f, TextMuted, FontStyles.Normal);
+        RectTransform deltaRT = deltaLabel.rectTransform;
+        deltaRT.anchorMin = new Vector2(0f, 0.5f);
+        deltaRT.anchorMax = new Vector2(0f, 0.5f);
+        deltaRT.pivot = new Vector2(0f, 0.5f);
+        deltaRT.anchoredPosition = new Vector2(108f, -2f);
+        deltaRT.sizeDelta = new Vector2(96f, 14f);
+    }
+
+    private void BuildDetailed(Transform parent, Vector2 size)
+    {
+        GameObject titleGroup = CreateRectObject("TitleGroup", parent, new Vector2(0f, 0f), new Vector2(0f, 1f),
+            new Vector2(24f, 0f), Vector2.zero);
+        RectTransform titleRT = titleGroup.GetComponent<RectTransform>();
+        titleRT.pivot = new Vector2(0f, 0.5f);
+        titleRT.sizeDelta = new Vector2(196f, 0f);
+
+        GameObject iconBg = CreateRectObject("IconBg", titleGroup.transform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f),
+            new Vector2(0f, 0f), Vector2.zero);
+        RectTransform iconBgRT = iconBg.GetComponent<RectTransform>();
+        iconBgRT.pivot = new Vector2(0f, 0.5f);
+        iconBgRT.sizeDelta = new Vector2(38f, 38f);
+        iconBg.AddComponent<Image>().color = new Color(1f, 1f, 1f, 0.56f);
+
+        GameObject icon = CreateRectObject("Icon", iconBg.transform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
+            Vector2.zero, Vector2.zero);
+        RectTransform iconRT = icon.GetComponent<RectTransform>();
+        iconRT.sizeDelta = new Vector2(22f, 22f);
+        iconImage = icon.AddComponent<Image>();
+
+        nameLabel = CreateText("Name", titleGroup.transform, "", 24f, TextDark, FontStyles.Bold);
+        RectTransform nameLabelRT = nameLabel.rectTransform;
+        nameLabelRT.anchorMin = new Vector2(0f, 0.5f);
+        nameLabelRT.anchorMax = new Vector2(0f, 0.5f);
+        nameLabelRT.pivot = new Vector2(0f, 0.5f);
+        nameLabelRT.anchoredPosition = new Vector2(56f, 4f);
+        nameLabelRT.sizeDelta = new Vector2(136f, 40f);
+
+        GameObject barBg = CreateRectObject("BarBg", parent, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f),
+            new Vector2(286f, -20f), Vector2.zero);
+        RectTransform barBgRT = barBg.GetComponent<RectTransform>();
+        barBgRT.pivot = new Vector2(0f, 0.5f);
+        barBgRT.sizeDelta = new Vector2(484f, 18f);
+        barBackground = barBg.AddComponent<Image>();
+        barBackground.color = BarBgColor;
+
+        GameObject fill = CreateRectObject("Fill", barBg.transform, new Vector2(0f, 0f), new Vector2(0f, 1f),
+            Vector2.zero, Vector2.zero);
+        RectTransform fillRT = fill.GetComponent<RectTransform>();
+        fillRT.pivot = new Vector2(0f, 0.5f);
+        fillRT.sizeDelta = new Vector2(0f, 0f);
+        fillImage = fill.AddComponent<Image>();
+        fillTrackWidth = 484f;
+
+        GameObject badge = CreateRectObject("GradeBadge", parent, new Vector2(1f, 0.5f), new Vector2(1f, 0.5f),
+            new Vector2(-18f, 0f), Vector2.zero);
+        RectTransform badgeRT = badge.GetComponent<RectTransform>();
+        badgeRT.pivot = new Vector2(1f, 0.5f);
+        badgeRT.sizeDelta = new Vector2(56f, 56f);
+        gradeBadge = badge.AddComponent<Image>();
+        gradeBadge.color = BadgeBg;
+
+        gradeLabel = CreateText("Grade", badge.transform, "F", 28f, Color.white, FontStyles.Bold);
+        Stretch(gradeLabel.rectTransform, Vector2.zero, Vector2.zero);
+        gradeLabel.alignment = TextAlignmentOptions.Center;
+
+        GameObject overlay = CreateRectObject("Overlay", parent, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+        overlay.transform.SetAsLastSibling();
+
+        valueLabel = CreateText("Value", overlay.transform, "0", 34f, new Color(0.16f, 0.12f, 0.08f, 1f), FontStyles.Bold);
+        RectTransform valueRT = valueLabel.rectTransform;
+        valueRT.anchorMin = new Vector2(0f, 0.5f);
+        valueRT.anchorMax = new Vector2(0f, 0.5f);
+        valueRT.pivot = new Vector2(0f, 0.5f);
+        valueRT.anchoredPosition = new Vector2(244f, 12f);
+        valueRT.sizeDelta = new Vector2(100f, 40f);
+
+        deltaLabel = CreateText("Delta", overlay.transform, "", 14f, TextMuted, FontStyles.Bold);
+        RectTransform deltaRT = deltaLabel.rectTransform;
+        deltaRT.anchorMin = new Vector2(0f, 0.5f);
+        deltaRT.anchorMax = new Vector2(0f, 0.5f);
+        deltaRT.pivot = new Vector2(0f, 0.5f);
+        deltaRT.anchoredPosition = new Vector2(372f, 12f);
+        deltaRT.sizeDelta = new Vector2(150f, 24f);
+    }
+
+    private void ApplyStaticVisuals(PlayerAttributes.AttributeInfo info)
+    {
+        if (iconImage != null)
+        {
+            iconImage.color = info.barColor;
+        }
+
+        if (fillImage != null)
+        {
+            fillImage.color = info.barColor;
+        }
+
+        if (accentStrip != null)
+        {
+            accentStrip.color = Color.Lerp(info.barColor, Color.white, 0.18f);
+        }
+
+        if (nameLabel != null)
+        {
+            nameLabel.text = info.name;
+        }
+
+        if (cardBackground != null)
+        {
+            cardBackground.color = mode == DisplayMode.Detailed ? CardBgDetailed : CardBgColor;
+        }
+    }
+
+    private void UpdateTexts(PlayerAttributes.AttributeInfo info)
+    {
+        if (valueLabel != null)
+        {
+            valueLabel.text = info.isPercentage ? $"{info.value}%" : info.value.ToString();
+        }
+
+        if (deltaLabel == null)
+        {
+            return;
+        }
+
+        int nextThreshold = AttributeGradeSettings.GetNextThreshold(info.value);
+        int remaining = nextThreshold - info.value;
+        if (remaining > 0)
+        {
+            deltaLabel.text = $"还差 {remaining}";
+            deltaLabel.gameObject.SetActive(true);
+        }
+        else
+        {
+            deltaLabel.text = info.isPercentage ? "已满" : "顶级";
+            deltaLabel.gameObject.SetActive(mode == DisplayMode.Detailed);
         }
     }
 
     private void UpdateGrade(PlayerAttributes.AttributeInfo info)
     {
-        if (gradeLabel == null) return;
+        if (gradeLabel == null)
+        {
+            return;
+        }
 
         string grade;
         Color gradeColor;
 
-        if (info.value >= 90)
+        grade = AttributeGradeSettings.GetGradeLetter(info.value);
+
+        if (grade == "S")
         {
-            grade = "S"; gradeColor = new Color(0.85f, 0.60f, 0.10f); // 金色
+            gradeColor = new Color(1.00f, 0.88f, 0.38f);
         }
-        else if (info.value >= 75)
+        else if (grade == "A")
         {
-            grade = "A"; gradeColor = new Color(0.20f, 0.70f, 0.30f); // 绿色
+            gradeColor = new Color(1.00f, 0.67f, 0.22f);
         }
-        else if (info.value >= 60)
+        else if (grade == "B")
         {
-            grade = "B"; gradeColor = new Color(0.30f, 0.55f, 0.85f); // 蓝色
+            gradeColor = new Color(0.46f, 0.78f, 0.35f);
         }
-        else if (info.value >= 40)
+        else if (grade == "C")
         {
-            grade = "C"; gradeColor = new Color(0.80f, 0.60f, 0.20f); // 橙色
+            gradeColor = new Color(0.38f, 0.67f, 0.95f);
         }
-        else if (info.value >= 25)
+        else if (grade == "D")
         {
-            grade = "D"; gradeColor = new Color(0.85f, 0.40f, 0.30f); // 红橙
+            gradeColor = new Color(0.88f, 0.53f, 0.26f);
         }
         else
         {
-            grade = "F"; gradeColor = new Color(0.70f, 0.25f, 0.25f); // 红色
+            gradeColor = new Color(0.86f, 0.36f, 0.32f);
         }
 
         gradeLabel.text = grade;
         gradeLabel.color = gradeColor;
-    }
 
-    private int GetNextThreshold(int currentValue)
-    {
-        if (currentValue < 25) return 25;
-        if (currentValue < 40) return 40;
-        if (currentValue < 60) return 60;
-        if (currentValue < 75) return 75;
-        if (currentValue < 90) return 90;
-        return 100;
+        if (gradeBadge != null)
+        {
+            gradeBadge.color = new Color(0.24f, 0.16f, 0.10f, 0.96f);
+        }
     }
-
-    // ========== 协程动画 ==========
 
     private IEnumerator AnimateFillCoroutine(float targetFill)
     {
@@ -244,29 +397,65 @@ public class AttributeBar : MonoBehaviour
 
     private void UpdateFillWidth(float normalizedValue)
     {
-        if (fillImage != null)
+        if (fillImage == null)
         {
-            RectTransform fillRT = fillImage.rectTransform;
-            fillRT.sizeDelta = new Vector2(BarWidth * normalizedValue, fillRT.sizeDelta.y);
+            return;
         }
+
+        RectTransform fillRT = fillImage.rectTransform;
+        fillRT.sizeDelta = new Vector2(fillTrackWidth * Mathf.Clamp01(normalizedValue), fillRT.sizeDelta.y);
     }
 
-    // ========== 工具 ==========
-
-    private static TextMeshProUGUI CreateText(string name, Transform parent, string text,
-        float fontSize, Color color, TextAlignmentOptions alignment, Vector2 size)
+    private static GameObject CreateRectObject(
+        string name,
+        Transform parent,
+        Vector2 anchorMin,
+        Vector2 anchorMax,
+        Vector2 offsetMin,
+        Vector2 offsetMax)
     {
         GameObject obj = new GameObject(name);
         obj.transform.SetParent(parent, false);
         RectTransform rt = obj.AddComponent<RectTransform>();
-        rt.sizeDelta = size;
+        rt.anchorMin = anchorMin;
+        rt.anchorMax = anchorMax;
+        rt.offsetMin = offsetMin;
+        rt.offsetMax = offsetMax;
+        return obj;
+    }
+
+    private static TextMeshProUGUI CreateText(string name, Transform parent, string text, float fontSize, Color color, FontStyles style)
+    {
+        GameObject obj = new GameObject(name);
+        obj.transform.SetParent(parent, false);
+
+        RectTransform rt = obj.AddComponent<RectTransform>();
+        rt.sizeDelta = new Vector2(100f, 30f);
+
         TextMeshProUGUI tmp = obj.AddComponent<TextMeshProUGUI>();
         tmp.text = text;
         tmp.fontSize = fontSize;
         tmp.color = color;
-        tmp.alignment = alignment;
+        tmp.fontStyle = style;
+        tmp.alignment = TextAlignmentOptions.MidlineLeft;
         tmp.enableWordWrapping = false;
         tmp.overflowMode = TextOverflowModes.Ellipsis;
+        tmp.margin = new Vector4(2f, 4f, 2f, 4f);
+        tmp.extraPadding = true;
+
+        if (FontManager.Instance != null)
+        {
+            FontManager.Instance.ApplyChineseFont(tmp);
+        }
+
         return tmp;
+    }
+
+    private static void Stretch(RectTransform rectTransform, Vector2 offsetMin, Vector2 offsetMax)
+    {
+        rectTransform.anchorMin = Vector2.zero;
+        rectTransform.anchorMax = Vector2.one;
+        rectTransform.offsetMin = offsetMin;
+        rectTransform.offsetMax = offsetMax;
     }
 }

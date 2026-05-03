@@ -61,6 +61,8 @@ public class NewsItem
 /// </summary>
 public class NewsSystem : MonoBehaviour
 {
+    private static readonly bool UseFallbackNewsPresentation = true;
+
     // ========== 单例 ==========
     public static NewsSystem Instance { get; private set; }
 
@@ -226,27 +228,27 @@ public class NewsSystem : MonoBehaviour
                     return new NewsItem(NewsType.Headline,
                         "热烈欢迎2024级新同学！今日南农迎来3000余名新生",
                         "钟山脚下又添新面孔。今年的新生中，最远的来自新疆，最近的就住在学校对面小区。校长在开学典礼上表示：\"希望同学们珍惜四年时光，不要等到毕业才后悔。\"")
-                    { author = "南农青年报记者 小明" };
+                    { author = "南农校园集市记者 小明" };
                 case 2:
                     return new NewsItem(NewsType.Headline,
                         "国庆七天乐！但你的选课选好了吗？",
                         "据统计，本届新生中有47%的同学在国庆假期前一天才完成选课。教务处温馨提醒：热门课程先到先得，\"水课\"也是有灵魂的。")
-                    { author = "南农青年报记者 小红" };
+                    { author = "南农校园集市记者 小红" };
                 case 3:
                     return new NewsItem(NewsType.Headline,
                         "期中考试来袭！图书馆座位一位难求",
                         "随着期中考试周临近，图书馆日均入馆人次突破历史新高。心理咨询中心提醒：合理安排学习时间，不要给自己太大压力。")
-                    { author = "南农青年报记者 小华" };
+                    { author = "南农校园集市记者 小华" };
                 case 4:
                     return new NewsItem(NewsType.Headline,
                         "期末季 + 四六级！南农学子迎来最忙十二月",
                         "十二月的南农校园弥漫着焦虑与奶茶的气息。CET-4考试将于本月举行，而期末考试也近在咫尺。后勤处贴心提醒：天冷了记得加衣服。")
-                    { author = "南农青年报记者 小李" };
+                    { author = "南农校园集市记者 小李" };
                 case 5:
                     return new NewsItem(NewsType.Headline,
                         "大一上学期即将落幕！你的第一张成绩单准备好了吗？",
                         "一学期转瞬即逝。回望这几个月，有人收获了友情和成长，有人在迷茫中摸索方向。辅导员提醒：回家注意安全，别忘了给家人带一只南农烧鸡。")
-                    { author = "南农青年报记者 小刘" };
+                    { author = "南农校园集市记者 小刘" };
             }
         }
 
@@ -268,21 +270,21 @@ public class NewsSystem : MonoBehaviour
             return new NewsItem(NewsType.Headline,
                 $"{yearName}{semName}开学啦！新学期新气象",
                 $"又是一个新学期的开始，{yearName}的同学们已经是\"老生\"了。教务处提醒：别忘了确认课表，新学期一起加油！")
-            { author = "南农青年报" };
+            { author = "南农校园集市" };
         }
         else if (round == 3)
         {
             return new NewsItem(NewsType.Headline,
                 $"期中考试周来临，你准备好了吗？",
                 $"{yearName}{semName}期中考试即将开始，图书馆再次人满为患。加油，少年！")
-            { author = "南农青年报" };
+            { author = "南农校园集市" };
         }
         else if (round == 5)
         {
             return new NewsItem(NewsType.Headline,
                 $"{yearName}{semName}即将结束，期末冲刺！",
                 $"本学期进入尾声，期末考试在即。回顾这个学期，你收获了什么？")
-            { author = "南农青年报" };
+            { author = "南农校园集市" };
         }
         else
         {
@@ -298,7 +300,7 @@ public class NewsSystem : MonoBehaviour
             int idx = (year * 10 + semester * 5 + round) % midHeadlines.Length;
             return new NewsItem(NewsType.Headline, midHeadlines[idx],
                 "校园生活丰富多彩，每一天都有新的故事在发生。")
-            { author = "南农青年报" };
+            { author = "南农校园集市" };
         }
     }
 
@@ -599,8 +601,11 @@ public class NewsSystem : MonoBehaviour
 
     private void BuildNewsUI(List<NewsItem> news, int year, int semester, int round)
     {
-        BuildFallbackNewsUI(news, year, semester, round);
-        return;
+        if (UseFallbackNewsPresentation)
+        {
+            BuildFallbackNewsUI(news, year, semester, round);
+            return;
+        }
 
         if (newsCanvas != null) Destroy(newsCanvas);
 
@@ -645,7 +650,7 @@ public class NewsSystem : MonoBehaviour
         headerBg.color = new Color(0.6f, 0.15f, 0.15f, 1f); // 红色报头
 
         TextMeshProUGUI headerText = CreateTMP(header.transform, "HeaderText");
-        headerText.text = $"南农青年报  第{issueNum}期\n{yearName}{semName} 第{round}回合";
+        headerText.text = $"南农校园集市  第{issueNum}期\n{yearName}{semName} 第{round}回合";
         headerText.fontSize = 28;
         headerText.fontStyle = FontStyles.Bold;
         headerText.color = Color.white;
@@ -1007,7 +1012,7 @@ public class NewsSystem : MonoBehaviour
         headerImage.raycastTarget = false;
 
         TextMeshProUGUI headerText = CreateTMP(header.transform, "HeaderText");
-        headerText.text = $"南友青年报  第{GetIssueNumber(year, semester, round)}期\n{GetYearDisplayName(year)}{GetSemesterDisplayName(semester)} 第{round}回合";
+        headerText.text = $"南农校园集市  第{GetIssueNumber(year, semester, round)}期\n{GetYearDisplayName(year)}{GetSemesterDisplayName(semester)} 第{round}回合";
         headerText.fontSize = 28;
         headerText.fontStyle = FontStyles.Bold;
         headerText.color = Color.white;

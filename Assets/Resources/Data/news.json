@@ -5,7 +5,7 @@
                 "id": "h_1_1_1",
                 "title": "热烈欢迎2024级新同学！今日南农迎来3000余名新生",
                 "content": "钟山脚下又添新面孔。今年的新生中，最远的来自新疆，最近的就住在学校对面小区。校长在开学典礼上表示：\"希望同学们珍惜四年时光，不要等到毕业才后悔。\"",
-                "author": "南农青年报记者 小明",
+                "author": "南农校园集市记者 小明",
                 "targetYear": 1,
                 "targetSemester": 1,
                 "targetRound": 1
@@ -14,7 +14,7 @@
                 "id": "h_1_1_2",
                 "title": "国庆七天乐！但你的选课选好了吗？",
                 "content": "据统计，本届新生中有47%的同学在国庆假期前一天才完成选课。教务处温馨提醒：热门课程先到先得，\"水课\"也是有灵魂的。",
-                "author": "南农青年报记者 小红",
+                "author": "南农校园集市记者 小红",
                 "targetYear": 1,
                 "targetSemester": 1,
                 "targetRound": 2
@@ -23,7 +23,7 @@
                 "id": "h_1_1_3",
                 "title": "期中考试来袭！图书馆座位一位难求",
                 "content": "随着期中考试周临近，图书馆日均入馆人次突破历史新高。心理咨询中心提醒：合理安排学习时间，不要给自己太大压力。",
-                "author": "南农青年报记者 小华",
+                "author": "南农校园集市记者 小华",
                 "targetYear": 1,
                 "targetSemester": 1,
                 "targetRound": 3
@@ -32,7 +32,7 @@
                 "id": "h_1_1_4",
                 "title": "期末季 + 四六级！南农学子迎来最忙十二月",
                 "content": "十二月的南农校园弥漫着焦虑与奶茶的气息。CET-4考试将于本月举行，而期末考试也近在咫尺。后勤处贴心提醒：天冷了记得加衣服。",
-                "author": "南农青年报记者 小李",
+                "author": "南农校园集市记者 小李",
                 "targetYear": 1,
                 "targetSemester": 1,
                 "targetRound": 4
@@ -41,7 +41,7 @@
                 "id": "h_1_1_5",
                 "title": "大一上学期即将落幕！你的第一张成绩单准备好了吗？",
                 "content": "一学期转瞬即逝。回望这几个月，有人收获了友情和成长，有人在迷茫中摸索方向。辅导员提醒：回家注意安全，别忘了给家人带一只南农烧鸡。",
-                "author": "南农青年报记者 小刘",
+                "author": "南农校园集市记者 小刘",
                 "targetYear": 1,
                 "targetSemester": 1,
                 "targetRound": 5
@@ -51,17 +51,17 @@
             "round1": {
                 "titleTemplate": "{yearName}{semName}开学啦！新学期新气象",
                 "contentTemplate": "又是一个新学期的开始，{yearName}的同学们已经是\"老生\"了。教务处提醒：别忘了确认课表，新学期一起加油！",
-                "author": "南农青年报"
+                "author": "南农校园集市"
             },
             "round3": {
                 "titleTemplate": "期中考试周来临，你准备好了吗？",
                 "contentTemplate": "{yearName}{semName}期中考试即将开始，图书馆再次人满为患。加油，少年！",
-                "author": "南农青年报"
+                "author": "南农校园集市"
             },
             "round5": {
                 "titleTemplate": "{yearName}{semName}即将结束，期末冲刺！",
                 "contentTemplate": "本学期进入尾声，期末考试在即。回顾这个学期，你收获了什么？",
-                "author": "南农青年报"
+                "author": "南农校园集市"
             },
             "midRound": [
                 "校园文化节精彩纷呈，各社团大显身手",
@@ -71,7 +71,7 @@
                 "校运动会报名启动，各学院积极备战"
             ],
             "midRoundContent": "校园生活丰富多彩，每一天都有新的故事在发生。",
-            "midRoundAuthor": "南农青年报"
+            "midRoundAuthor": "南农校园集市"
         }
     },
     "trending": {

@@ -237,6 +237,8 @@ public class LogModule : MonoBehaviour, IDebugModule
         text.fontSize = fontSize;
         text.color = color;
         text.alignment = alignment;
+        text.margin = new Vector4(2f, 4f, 2f, 4f);
+        text.extraPadding = true;
         if (FontManager.Instance != null && FontManager.Instance.ChineseFont != null)
         {
             text.font = FontManager.Instance.ChineseFont;

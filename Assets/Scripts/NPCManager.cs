@@ -1,5 +1,8 @@
 using UnityEngine;
 using System.Collections.Generic;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 /// <summary>
 /// NPC 管理器 —— 根据时间段和当前地点刷新场景中的 NPC，管理活跃 NPC 实例
@@ -19,16 +22,16 @@ public class NPCManager : MonoBehaviour
 
     // ========== 内部字段 ==========
     private Dictionary<string, NPCController> activeNPCs = new Dictionary<string, NPCController>();
-    private readonly Dictionary<string, GameObject> editorPreviewNPCs = new Dictionary<string, GameObject>();
-
     // ========== NPC 生成参数 ==========
     private const float PositionOffsetX = 3.0f;
-    private const string DefaultNPCSpriteResourcePath = "NPCSprite";
-    private const string PreviewRootName = "_EditorPreviewNPCs";
+    private const string AnchorRootName = "_NPCSceneAnchors";
 
     [Header("Editor Preview")]
     [SerializeField] private bool previewInEditMode = true;
     [SerializeField] private TimeSlot previewTimeSlot = TimeSlot.Evening;
+#if UNITY_EDITOR
+    private bool editorRefreshQueued;
+#endif
 
     // ========== 公共方法 ==========
 
@@ -111,11 +114,23 @@ public class NPCManager : MonoBehaviour
                 NPCData data = NPCDatabase.Instance.GetNPC(npcId);
                 if (data != null)
                 {
-                    float x = centerX + (spawnIndex - (newCount - 1) * 0.5f) * PositionOffsetX;
-                    x = Mathf.Clamp(x, minX, maxX);
-                    Vector3 position = new Vector3(x, spawnY, 0f);
-                    CreateNPCObject(data, position);
-                    spawnIndex++;
+                    Vector3? scaleOverride = null;
+                    Vector3 position;
+
+                    if (TryGetSceneAnchor(data.id, currentLoc, currentSlot, out NPCSceneAnchor anchor))
+                    {
+                        position = anchor.transform.position;
+                        scaleOverride = anchor.transform.localScale;
+                    }
+                    else
+                    {
+                        float x = centerX + (spawnIndex - (newCount - 1) * 0.5f) * PositionOffsetX;
+                        x = Mathf.Clamp(x, minX, maxX);
+                        position = new Vector3(x, spawnY, 0f);
+                        spawnIndex++;
+                    }
+
+                    CreateNPCObject(data, position, scaleOverride);
                 }
             }
         }
@@ -159,7 +174,7 @@ public class NPCManager : MonoBehaviour
     /// <summary>
     /// 创建 NPC GameObject，添加 SpriteRenderer + NPCController 并初始化
     /// </summary>
-    private void CreateNPCObject(NPCData data, Vector3 position)
+    private void CreateNPCObject(NPCData data, Vector3 position, Vector3? scaleOverride = null)
     {
         GameObject npcObj = new GameObject($"NPC_{data.id}");
         npcObj.transform.position = position;
@@ -168,7 +183,7 @@ public class NPCManager : MonoBehaviour
         sr.sortingOrder = 1;
 
         NPCController controller = npcObj.AddComponent<NPCController>();
-        controller.Initialize(data);
+        controller.Initialize(data, scaleOverride);
 
         activeNPCs[data.id] = controller;
     }
@@ -206,9 +221,11 @@ public class NPCManager : MonoBehaviour
     {
         if (!Application.isPlaying)
         {
-            RefreshEditorPreviewNPCs();
+            RefreshEditorSceneAnchors();
             return;
         }
+
+        SetAnchorPreviewVisibility(false);
 
         // 订阅回合推进事件
         if (TurnManager.Instance != null)
@@ -232,11 +249,6 @@ public class NPCManager : MonoBehaviour
 
     private void OnDestroy()
     {
-        if (!Application.isPlaying)
-        {
-            ClearEditorPreviewNPCs();
-        }
-
         if (TurnManager.Instance != null)
         {
             TurnManager.Instance.OnRoundAdvanced -= OnRoundAdvanced;
@@ -251,7 +263,7 @@ public class NPCManager : MonoBehaviour
     {
         if (!Application.isPlaying)
         {
-            RefreshEditorPreviewNPCs();
+            QueueEditorPreviewRefresh();
         }
     }
 
@@ -259,7 +271,7 @@ public class NPCManager : MonoBehaviour
     {
         if (!Application.isPlaying)
         {
-            RefreshEditorPreviewNPCs();
+            QueueEditorPreviewRefresh();
         }
     }
 
@@ -267,43 +279,42 @@ public class NPCManager : MonoBehaviour
     {
         if (!Application.isPlaying)
         {
-            RefreshEditorPreviewNPCs();
+            RefreshEditorSceneAnchors();
         }
     }
 
-    private void RefreshEditorPreviewNPCs()
+    public void RefreshEditorSceneAnchors()
     {
         if (!previewInEditMode)
         {
-            ClearEditorPreviewNPCs();
+            SetAnchorPreviewVisibility(false);
             return;
         }
 
         LocationSceneController sceneController = FindFirstObjectByType<LocationSceneController>();
         if (sceneController == null)
         {
-            ClearEditorPreviewNPCs();
+            SetAnchorPreviewVisibility(false);
             return;
         }
 
         LocationSceneController.LocationSceneProfile profile = sceneController.GetPreviewProfile();
         if (profile == null)
         {
-            ClearEditorPreviewNPCs();
+            SetAnchorPreviewVisibility(false);
             return;
         }
 
         NPCData[] previewNpcs = LoadPreviewNPCData();
         if (previewNpcs == null || previewNpcs.Length == 0)
         {
-            ClearEditorPreviewNPCs();
+            SetAnchorPreviewVisibility(false);
             return;
         }
 
         int previewPlayerGender = Mathf.Clamp(StartupFlowSettings.DefaultPlayerGender, 0, 1);
-
-        Transform previewRoot = GetOrCreatePreviewRoot();
-        HashSet<string> shouldExist = new HashSet<string>();
+        Transform anchorRoot = GetOrCreateSceneAnchorRoot();
+        HashSet<string> visibleAnchorKeys = new HashSet<string>();
         List<NPCData> visibleNpcs = new List<NPCData>();
 
         for (int i = 0; i < previewNpcs.Length; i++)
@@ -326,7 +337,6 @@ public class NPCManager : MonoBehaviour
                 if (resolved.HasValue && resolved.Value == profile.locationId)
                 {
                     visibleNpcs.Add(npc);
-                    shouldExist.Add(npc.id);
                     break;
                 }
             }
@@ -342,33 +352,57 @@ public class NPCManager : MonoBehaviour
             NPCData npc = visibleNpcs[i];
             float x = centerX + (i - (visibleNpcs.Count - 1) * 0.5f) * PositionOffsetX;
             x = Mathf.Clamp(x, minX, maxX);
-            Vector3 position = new Vector3(x, spawnY, 0f);
+            Vector3 defaultPosition = new Vector3(x, spawnY, 0f);
 
-            GameObject previewObject = GetOrCreatePreviewNPC(previewRoot, npc.id);
-            previewObject.name = $"PreviewNPC_{npc.id}";
-            previewObject.transform.position = position;
-            UpdatePreviewNPCVisual(previewObject, npc);
-        }
+            bool created;
+            NPCSceneAnchor anchor = GetOrCreateSceneAnchor(anchorRoot, npc.id, profile.locationId, previewTimeSlot, out created);
+            visibleAnchorKeys.Add(BuildAnchorKey(npc.id, profile.locationId, previewTimeSlot));
 
-        List<string> staleIds = new List<string>();
-        foreach (KeyValuePair<string, GameObject> kvp in editorPreviewNPCs)
-        {
-            if (!shouldExist.Contains(kvp.Key))
+            if (created)
             {
-                staleIds.Add(kvp.Key);
+                anchor.transform.position = defaultPosition;
+                anchor.ApplyDefaultScale(npc);
             }
+
+            anchor.gameObject.SetActive(true);
+            anchor.ApplyPreviewVisual(npc);
         }
 
-        for (int i = 0; i < staleIds.Count; i++)
-        {
-            string id = staleIds[i];
-            if (editorPreviewNPCs.TryGetValue(id, out GameObject obj) && obj != null)
-            {
-                DestroyImmediate(obj);
-            }
-            editorPreviewNPCs.Remove(id);
-        }
+        SetAnchorPreviewVisibility(true, profile.locationId, previewTimeSlot, visibleAnchorKeys);
     }
+
+    private void QueueEditorPreviewRefresh()
+    {
+        if (Application.isPlaying)
+        {
+            return;
+        }
+
+#if UNITY_EDITOR
+        if (editorRefreshQueued)
+        {
+            return;
+        }
+
+        editorRefreshQueued = true;
+        EditorApplication.delayCall += ProcessQueuedEditorPreviewRefresh;
+#endif
+    }
+
+#if UNITY_EDITOR
+    private void ProcessQueuedEditorPreviewRefresh()
+    {
+        EditorApplication.delayCall -= ProcessQueuedEditorPreviewRefresh;
+        editorRefreshQueued = false;
+
+        if (this == null || Application.isPlaying)
+        {
+            return;
+        }
+
+        RefreshEditorSceneAnchors();
+    }
+#endif
 
     private NPCData[] LoadPreviewNPCData()
     {
@@ -382,85 +416,113 @@ public class NPCManager : MonoBehaviour
         return root != null ? root.npcs : null;
     }
 
-    private Transform GetOrCreatePreviewRoot()
+    public Transform GetSceneAnchorRoot()
     {
-        Transform root = transform.Find(PreviewRootName);
+        return transform.Find(AnchorRootName);
+    }
+
+    private Transform GetOrCreateSceneAnchorRoot()
+    {
+        Transform root = GetSceneAnchorRoot();
         if (root != null)
         {
             return root;
         }
 
-        GameObject rootObject = new GameObject(PreviewRootName);
+        GameObject rootObject = new GameObject(AnchorRootName);
         rootObject.transform.SetParent(transform, false);
-        rootObject.hideFlags = HideFlags.DontSave;
         return rootObject.transform;
     }
 
-    private GameObject GetOrCreatePreviewNPC(Transform root, string npcId)
+    private NPCSceneAnchor GetOrCreateSceneAnchor(Transform anchorRoot, string npcId, LocationId locationId, TimeSlot timeSlot, out bool created)
     {
-        if (editorPreviewNPCs.TryGetValue(npcId, out GameObject existing) && existing != null)
+        Transform locationRoot = GetOrCreateAnchorGroup(anchorRoot, locationId.ToString());
+        Transform timeRoot = GetOrCreateAnchorGroup(locationRoot, timeSlot.ToString());
+
+        NPCSceneAnchor[] anchors = timeRoot.GetComponentsInChildren<NPCSceneAnchor>(true);
+        for (int i = 0; i < anchors.Length; i++)
         {
-            return existing;
-        }
-
-        GameObject npcObject = new GameObject($"PreviewNPC_{npcId}");
-        npcObject.transform.SetParent(root, false);
-        npcObject.hideFlags = HideFlags.DontSave;
-        editorPreviewNPCs[npcId] = npcObject;
-        return npcObject;
-    }
-
-    private void UpdatePreviewNPCVisual(GameObject npcObject, NPCData data)
-    {
-        SpriteRenderer renderer = npcObject.GetComponent<SpriteRenderer>();
-        if (renderer == null)
-        {
-            renderer = npcObject.AddComponent<SpriteRenderer>();
-        }
-
-        renderer.sortingOrder = 1;
-        renderer.enabled = true;
-        renderer.color = Color.white;
-
-        Sprite sprite = null;
-        if (!string.IsNullOrEmpty(data.portraitId))
-        {
-            sprite = Resources.Load<Sprite>(data.portraitId);
-        }
-
-        if (sprite == null)
-        {
-            sprite = Resources.Load<Sprite>(DefaultNPCSpriteResourcePath);
-        }
-
-        renderer.sprite = sprite;
-        if (sprite != null)
-        {
-            float spriteHeight = sprite.bounds.size.y;
-            if (spriteHeight > 0f)
+            if (anchors[i] != null && anchors[i].Matches(npcId, locationId, timeSlot))
             {
-                float scale = 3f / spriteHeight;
-                npcObject.transform.localScale = new Vector3(scale, scale, 1f);
-            }
-        }
-    }
-
-    private void ClearEditorPreviewNPCs()
-    {
-        foreach (KeyValuePair<string, GameObject> kvp in editorPreviewNPCs)
-        {
-            if (kvp.Value != null)
-            {
-                DestroyImmediate(kvp.Value);
+                created = false;
+                return anchors[i];
             }
         }
 
-        editorPreviewNPCs.Clear();
+        GameObject anchorObject = new GameObject();
+        anchorObject.transform.SetParent(timeRoot, false);
 
-        Transform root = transform.Find(PreviewRootName);
+        NPCSceneAnchor anchor = anchorObject.AddComponent<NPCSceneAnchor>();
+        anchor.Configure(npcId, locationId, timeSlot);
+        created = true;
+        return anchor;
+    }
+
+    private static Transform GetOrCreateAnchorGroup(Transform parent, string groupName)
+    {
+        Transform group = parent.Find(groupName);
+        if (group != null)
+        {
+            return group;
+        }
+
+        GameObject groupObject = new GameObject(groupName);
+        groupObject.transform.SetParent(parent, false);
+        return groupObject.transform;
+    }
+
+    private bool TryGetSceneAnchor(string npcId, LocationId locationId, TimeSlot timeSlot, out NPCSceneAnchor anchor)
+    {
+        NPCSceneAnchor[] anchors = GetComponentsInChildren<NPCSceneAnchor>(true);
+        for (int i = 0; i < anchors.Length; i++)
+        {
+            if (anchors[i] != null && anchors[i].Matches(npcId, locationId, timeSlot))
+            {
+                anchor = anchors[i];
+                return true;
+            }
+        }
+
+        anchor = null;
+        return false;
+    }
+
+    private void SetAnchorPreviewVisibility(bool isVisible, LocationId activeLocationId = LocationId.Dormitory, TimeSlot activeTimeSlot = TimeSlot.Evening, HashSet<string> activeKeys = null)
+    {
+        Transform root = GetSceneAnchorRoot();
         if (root != null)
         {
-            DestroyImmediate(root.gameObject);
+            root.gameObject.SetActive(isVisible);
+        }
+
+        NPCSceneAnchor[] anchors = GetComponentsInChildren<NPCSceneAnchor>(true);
+        for (int i = 0; i < anchors.Length; i++)
+        {
+            NPCSceneAnchor anchor = anchors[i];
+            if (anchor == null)
+            {
+                continue;
+            }
+
+            bool shouldShow = isVisible &&
+                anchor.LocationId == activeLocationId &&
+                anchor.TimeSlot == activeTimeSlot &&
+                (activeKeys == null || activeKeys.Contains(BuildAnchorKey(anchor.NpcId, anchor.LocationId, anchor.TimeSlot)));
+
+            anchor.gameObject.SetActive(shouldShow);
+        }
+    }
+
+    private static string BuildAnchorKey(string npcId, LocationId locationId, TimeSlot timeSlot)
+    {
+        return $"{locationId}|{timeSlot}|{npcId}";
+    }
+
+    private void Reset()
+    {
+        if (!Application.isPlaying)
+        {
+            RefreshEditorSceneAnchors();
         }
     }
 }

@@ -15,6 +15,7 @@ public class EndingDeterminer : MonoBehaviour
 
     /// <summary>从 JSON 加载的所有结局定义</summary>
     private List<EndingDefinition> endingDefinitions = new List<EndingDefinition>();
+    private List<EndingDefinition> sourceEndingDefinitions = new List<EndingDefinition>();
 
     /// <summary>是否成功加载了结局定义</summary>
     public bool IsLoaded => endingDefinitions.Count > 0;
@@ -54,7 +55,8 @@ public class EndingDeterminer : MonoBehaviour
             EndingDataRoot root = JsonUtility.FromJson<EndingDataRoot>(jsonAsset.text);
             if (root != null && root.endings != null)
             {
-                endingDefinitions = root.endings;
+                sourceEndingDefinitions = CloneEndings(root.endings);
+                endingDefinitions = CloneEndings(root.endings);
                 Debug.Log($"[EndingDeterminer] 成功加载 {endingDefinitions.Count} 个结局定义");
             }
             else
@@ -75,6 +77,16 @@ public class EndingDeterminer : MonoBehaviour
     /// </summary>
     public EndingResult DetermineEnding()
     {
+        return DetermineEndingInternal(true);
+    }
+
+    public EndingResult DetermineEndingPreview()
+    {
+        return DetermineEndingInternal(false);
+    }
+
+    private EndingResult DetermineEndingInternal(bool shouldLog)
+    {
         if (endingDefinitions.Count == 0)
         {
             Debug.LogError("[EndingDeterminer] 结局定义为空，无法判定结局");
@@ -92,8 +104,11 @@ public class EndingDeterminer : MonoBehaviour
         {
             if (CheckAllConditions(ending))
             {
-                Debug.Log($"[EndingDeterminer] 结局判定: {ending.name} (id={ending.id}, " +
-                          $"layer={ending.layer}, stars={ending.stars})");
+                if (shouldLog)
+                {
+                    Debug.Log($"[EndingDeterminer] 结局判定: {ending.name} (id={ending.id}, " +
+                              $"layer={ending.layer}, stars={ending.stars})");
+                }
                 return BuildEndingResult(ending);
             }
         }
@@ -114,6 +129,69 @@ public class EndingDeterminer : MonoBehaviour
             .Where(CheckAllConditions)
             .Take(maxCount)
             .ToList();
+    }
+
+    public List<EndingDefinition> GetAllEndings()
+    {
+        return endingDefinitions
+            .OrderBy(e => e.layer)
+            .ThenByDescending(e => e.stars)
+            .ThenBy(e => e.id)
+            .ToList();
+    }
+
+    public EndingDefinition GetEndingById(string endingId)
+    {
+        if (string.IsNullOrWhiteSpace(endingId))
+            return null;
+
+        return endingDefinitions.FirstOrDefault(e =>
+            string.Equals(e.id, endingId, StringComparison.OrdinalIgnoreCase));
+    }
+
+    public bool UpdateEndingDefinition(EndingDefinition updatedDefinition)
+    {
+        if (updatedDefinition == null || string.IsNullOrWhiteSpace(updatedDefinition.id))
+            return false;
+
+        int index = endingDefinitions.FindIndex(e =>
+            string.Equals(e.id, updatedDefinition.id, StringComparison.OrdinalIgnoreCase));
+
+        if (index < 0)
+            return false;
+
+        endingDefinitions[index] = updatedDefinition.Clone();
+        return true;
+    }
+
+    public bool ResetEndingToOriginal(string endingId)
+    {
+        if (string.IsNullOrWhiteSpace(endingId))
+            return false;
+
+        EndingDefinition original = sourceEndingDefinitions.FirstOrDefault(e =>
+            string.Equals(e.id, endingId, StringComparison.OrdinalIgnoreCase));
+
+        if (original == null)
+            return false;
+
+        return UpdateEndingDefinition(original);
+    }
+
+    public void ResetAllRuntimeOverrides()
+    {
+        endingDefinitions = CloneEndings(sourceEndingDefinitions);
+    }
+
+    public EndingResult BuildResultForEnding(EndingDefinition ending)
+    {
+        if (ending == null)
+        {
+            Debug.LogWarning("[EndingDeterminer] BuildResultForEnding 收到空结局定义，返回兜底结果");
+            return CreateFallbackResult();
+        }
+
+        return BuildEndingResult(ending);
     }
 
     public string DescribeCondition(EndingCondition condition)
@@ -145,6 +223,8 @@ public class EndingDeterminer : MonoBehaviour
                 return $"Leadership {leadership:F0} >= {target:F0}";
             case EndingConditionType.Stress_GreaterOrEqual:
                 return $"Stress {stress:F0} >= {target:F0}";
+            case EndingConditionType.Study_Less:
+                return $"Study {study:F0} < {target:F0}";
             case EndingConditionType.Mood_Equals:
                 return $"Mood {mood:F0} == {target:F0}";
             case EndingConditionType.Mood_Less:
@@ -153,14 +233,24 @@ public class EndingDeterminer : MonoBehaviour
                 return $"Money {GetMoney():F0} < {target:F0}";
             case EndingConditionType.Money_GreaterOrEqual:
                 return $"Money {GetMoney():F0} >= {target:F0}";
+            case EndingConditionType.Guilt_LessOrEqual:
+                return $"Guilt {GetGuilt():F0} <= {target:F0}";
+            case EndingConditionType.Darkness_GreaterOrEqual:
+                return $"Darkness {GetDarkness():F0} >= {target:F0}";
             case EndingConditionType.HasPartner:
                 return $"HasPartner = {CheckHasPartner()}";
+            case EndingConditionType.NoPartner:
+                return $"NoPartner = {!CheckHasPartner()}";
             case EndingConditionType.RomanceLevel_GreaterOrEqual:
                 return $"RomanceHealth {GetMaxRomanceHealth():F0} >= {target:F0}";
+            case EndingConditionType.FriendCount_GreaterOrEqual:
+                return $"FriendCount {GetFriendCount():F0} >= {target:F0}";
             case EndingConditionType.IsStudentCouncilPresident:
                 return $"StudentCouncilPresident = {CheckIsStudentCouncilPresident()}";
             case EndingConditionType.IsPartyMember:
                 return $"PartyMember = {CheckIsPartyMember()}";
+            case EndingConditionType.PlayerGender_Equals:
+                return $"PlayerGender {GetPlayerGender():F0} == {target:F0}";
             case EndingConditionType.HasNationalScholarship:
                 return $"HasNationalScholarship = {hasScholarship}";
             case EndingConditionType.CheatingCount_GreaterOrEqual:
@@ -169,12 +259,18 @@ public class EndingDeterminer : MonoBehaviour
                 return $"SlackingValue {GetSlackingValue():F0} >= {target:F0}";
             case EndingConditionType.MentalHealth_Equals:
                 return $"MentalHealth {GetMentalHealth():F0} == {target:F0}";
+            case EndingConditionType.CET4Passed:
+                return $"CET4Passed = {IsCET4Passed()}";
+            case EndingConditionType.CET6Passed:
+                return $"CET6Passed = {IsCET6Passed()}";
             case EndingConditionType.TotalStudyCount_GreaterOrEqual:
                 return $"StudyCount {GetStudyCount():F0} >= {target:F0}";
             case EndingConditionType.TotalSocialCount_GreaterOrEqual:
                 return $"SocialCount {GetSocialCount():F0} >= {target:F0}";
             case EndingConditionType.GraduationScore_GreaterOrEqual:
                 return $"GraduationScore {GetGraduationScore():F1} >= {target:F1}";
+            case EndingConditionType.InternshipCount_GreaterOrEqual:
+                return $"InternshipCount {GetInternshipCount():F0} >= {target:F0}";
             case EndingConditionType.AlwaysTrue:
                 return "AlwaysTrue";
             default:
@@ -238,6 +334,9 @@ public class EndingDeterminer : MonoBehaviour
             case EndingConditionType.Stress_GreaterOrEqual:
                 return GetPlayerAttribute("stress") >= val;
 
+            case EndingConditionType.Study_Less:
+                return GetPlayerAttribute("study") < val;
+
             case EndingConditionType.Mood_Equals:
                 return Mathf.Approximately(GetPlayerAttribute("mood"), val);
 
@@ -251,18 +350,33 @@ public class EndingDeterminer : MonoBehaviour
             case EndingConditionType.Money_GreaterOrEqual:
                 return GetMoney() >= val;
 
+            case EndingConditionType.Guilt_LessOrEqual:
+                return GetGuilt() <= val;
+
+            case EndingConditionType.Darkness_GreaterOrEqual:
+                return GetDarkness() >= val;
+
             // ========== 社交/组织条件 ==========
             case EndingConditionType.HasPartner:
                 return CheckHasPartner();
 
+            case EndingConditionType.NoPartner:
+                return !CheckHasPartner();
+
             case EndingConditionType.RomanceLevel_GreaterOrEqual:
                 return GetMaxRomanceHealth() >= val;
+
+            case EndingConditionType.FriendCount_GreaterOrEqual:
+                return GetFriendCount() >= val;
 
             case EndingConditionType.IsStudentCouncilPresident:
                 return CheckIsStudentCouncilPresident();
 
             case EndingConditionType.IsPartyMember:
                 return CheckIsPartyMember();
+
+            case EndingConditionType.PlayerGender_Equals:
+                return Mathf.Approximately(GetPlayerGender(), val);
 
             // ========== 成就/标记条件 ==========
             case EndingConditionType.HasNationalScholarship:
@@ -277,6 +391,12 @@ public class EndingDeterminer : MonoBehaviour
             case EndingConditionType.MentalHealth_Equals:
                 return Mathf.Approximately(GetMentalHealth(), val);
 
+            case EndingConditionType.CET4Passed:
+                return IsCET4Passed();
+
+            case EndingConditionType.CET6Passed:
+                return IsCET6Passed();
+
             // ========== 统计条件 ==========
             case EndingConditionType.TotalStudyCount_GreaterOrEqual:
                 return GetStudyCount() >= val;
@@ -286,6 +406,9 @@ public class EndingDeterminer : MonoBehaviour
 
             case EndingConditionType.GraduationScore_GreaterOrEqual:
                 return GetGraduationScore() >= val;
+
+            case EndingConditionType.InternshipCount_GreaterOrEqual:
+                return GetInternshipCount() >= val;
 
             // ========== 特殊 ==========
             case EndingConditionType.AlwaysTrue:
@@ -341,6 +464,41 @@ public class EndingDeterminer : MonoBehaviour
     private float GetMoney()
     {
         return GameState.Instance != null ? GameState.Instance.Money : 0f;
+    }
+
+    private float GetGuilt()
+    {
+        return PlayerAttributes.Instance != null ? PlayerAttributes.Instance.Guilt : 0f;
+    }
+
+    private float GetDarkness()
+    {
+        return PlayerAttributes.Instance != null ? PlayerAttributes.Instance.Darkness : 0f;
+    }
+
+    private float GetFriendCount()
+    {
+        return AffinitySystem.Instance != null ? AffinitySystem.Instance.GetFriendOrAboveCount() : 0f;
+    }
+
+    private float GetPlayerGender()
+    {
+        return GameState.Instance != null ? GameState.Instance.PlayerGender : 0f;
+    }
+
+    private bool IsCET4Passed()
+    {
+        return ExamSystem.Instance != null && ExamSystem.Instance.IsCET4Passed;
+    }
+
+    private bool IsCET6Passed()
+    {
+        return ExamSystem.Instance != null && ExamSystem.Instance.IsCET6Passed;
+    }
+
+    private float GetInternshipCount()
+    {
+        return JobSystem.Instance != null ? JobSystem.Instance.totalInternshipCount : 0f;
     }
 
     /// <summary>
@@ -541,5 +699,20 @@ public class EndingDeterminer : MonoBehaviour
         // 已完成的完整学期数
         int completedSemesters = (year - 1) * 2 + (semester - 1);
         return completedSemesters * GameState.MaxRoundsPerSemester + round;
+    }
+
+    private List<EndingDefinition> CloneEndings(List<EndingDefinition> source)
+    {
+        List<EndingDefinition> clones = new List<EndingDefinition>();
+        if (source == null)
+            return clones;
+
+        for (int i = 0; i < source.Count; i++)
+        {
+            if (source[i] != null)
+                clones.Add(source[i].Clone());
+        }
+
+        return clones;
     }
 }

@@ -98,6 +98,7 @@ public class HUDManager : MonoBehaviour
 
         if (gameState != null) gameState.OnStateChanged += RefreshTopBar;
         if (playerAttributes != null) playerAttributes.OnAttributesChanged += RefreshAttributes;
+        AttributeGradeSettings.OnThresholdsChanged += RefreshAttributes;
 
         StartCoroutine(DeferredSubscriptions());
 
@@ -280,6 +281,24 @@ public class HUDManager : MonoBehaviour
             });
         }
 
+        if (builder.btnInfo != null)
+        {
+            builder.btnInfo.onClick.AddListener(() =>
+            {
+                if (!CanProcessHotkeys())
+                {
+                    return;
+                }
+
+                if (builder.hudAnimator != null)
+                {
+                    builder.hudAnimator.ButtonPressEffect(builder.btnInfo);
+                }
+
+                ToggleInfoPanel();
+            });
+        }
+
         if (builder.btnInventory != null)
         {
             builder.btnInventory.onClick.AddListener(() =>
@@ -319,6 +338,42 @@ public class HUDManager : MonoBehaviour
                 }
 
                 ActionSystem.Instance.ExecuteAction("goout");
+            });
+        }
+
+        if (builder.btnGrowth != null)
+        {
+            builder.btnGrowth.onClick.AddListener(() =>
+            {
+                if (!CanProcessHotkeys())
+                {
+                    return;
+                }
+
+                if (builder.hudAnimator != null)
+                {
+                    builder.hudAnimator.ButtonPressEffect(builder.btnGrowth);
+                }
+
+                ToggleTalentPanel();
+            });
+        }
+
+        if (builder.btnGraduationRequirements != null)
+        {
+            builder.btnGraduationRequirements.onClick.AddListener(() =>
+            {
+                if (!CanProcessHotkeys())
+                {
+                    return;
+                }
+
+                if (builder.hudAnimator != null)
+                {
+                    builder.hudAnimator.ButtonPressEffect(builder.btnGraduationRequirements);
+                }
+
+                ToggleGraduationRequirementsPanel();
             });
         }
     }
@@ -376,6 +431,7 @@ public class HUDManager : MonoBehaviour
     {
         if (gameState != null) gameState.OnStateChanged -= RefreshTopBar;
         if (playerAttributes != null) playerAttributes.OnAttributesChanged -= RefreshAttributes;
+        AttributeGradeSettings.OnThresholdsChanged -= RefreshAttributes;
         if (TurnManager.Instance != null) TurnManager.Instance.OnRoundAdvanced -= OnRoundAdvanced;
         if (NPCEventHub.Instance != null) NPCEventHub.Instance.OnSocialInteractionFeedback -= OnSocialFeedback;
         if (LocationManager.Instance != null) LocationManager.Instance.OnLocationChanged -= OnLocationChangedHandler;
@@ -422,6 +478,11 @@ public class HUDManager : MonoBehaviour
         }
 
         if (PauseMenuUI.Instance != null && PauseMenuUI.Instance.IsOpen)
+        {
+            return false;
+        }
+
+        if (CourseScheduleUI.Instance != null && CourseScheduleUI.Instance.IsOpen)
         {
             return false;
         }
@@ -538,6 +599,23 @@ public class HUDManager : MonoBehaviour
         }
 
         InventoryUIManager.Instance.TogglePanel();
+    }
+
+    private void ToggleGraduationRequirementsPanel()
+    {
+        if (MissionPanelBuilder.Instance == null)
+        {
+            return;
+        }
+
+        if (MissionPanelBuilder.Instance.IsOpen)
+        {
+            MissionPanelBuilder.Instance.ClosePanel();
+        }
+        else
+        {
+            MissionPanelBuilder.Instance.OpenPanel();
+        }
     }
 
     private void CreateActionMenuUI()
@@ -1353,7 +1431,7 @@ public class HUDManager : MonoBehaviour
 
         if (builder != null && builder.actionButtonRow != null)
         {
-            builder.actionButtonRow.SetActive(false);
+            builder.actionButtonRow.SetActive(true);
         }
 
         RefreshQuickAccessButtons();
@@ -1367,9 +1445,24 @@ public class HUDManager : MonoBehaviour
             return;
         }
 
+        if (builder.btnInfo != null)
+        {
+            builder.btnInfo.interactable = InfoPanelManager.Instance != null && !IsModalOpen;
+        }
+
         if (builder.btnInventory != null)
         {
-            builder.btnInventory.interactable = InventoryUIManager.Instance != null;
+            builder.btnInventory.interactable = InfoPanelManager.Instance != null || InventoryUIManager.Instance != null;
+        }
+
+        if (builder.btnGrowth != null)
+        {
+            builder.btnGrowth.interactable = TalentUI.Instance != null && !IsModalOpen;
+        }
+
+        if (builder.btnGraduationRequirements != null)
+        {
+            builder.btnGraduationRequirements.interactable = MissionPanelBuilder.Instance != null && !IsModalOpen;
         }
 
         if (builder.btnGoOut != null)
@@ -1462,14 +1555,6 @@ public class HUDManager : MonoBehaviour
             for (int i = actionMenuContent.childCount - 1; i >= 0; i--)
             {
                 Destroy(actionMenuContent.GetChild(i).gameObject);
-            }
-        }
-
-        if (builder != null && builder.actionButtonRow != null)
-        {
-            for (int i = builder.actionButtonRow.transform.childCount - 1; i >= 0; i--)
-            {
-                Destroy(builder.actionButtonRow.transform.GetChild(i).gameObject);
             }
         }
     }
@@ -1792,6 +1877,7 @@ public class HUDManager : MonoBehaviour
     {
         if (NewsSystem.Instance == null) return;
 
+        UIFlowGuard.CleanupBlockingUI();
         SetActionButtonsInteractable(false);
         NewsSystem.Instance.OnNewsDismissed += OnNewsDismissed;
         NewsSystem.Instance.ShowNews();

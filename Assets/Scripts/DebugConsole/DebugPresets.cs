@@ -18,6 +18,7 @@ public static class DebugPresets
         ["Guilt"] = () => PlayerAttributes.Instance != null ? PlayerAttributes.Instance.Guilt : 0,
         ["Luck"] = () => PlayerAttributes.Instance != null ? PlayerAttributes.Instance.Luck : 0,
         ["Money"] = () => GameState.Instance != null ? GameState.Instance.Money : 0,
+        ["ActionPoints"] = () => GameState.Instance != null ? GameState.Instance.ActionPoints : 0,
     };
 
     private static readonly Dictionary<string, Action<int>> Setters = new Dictionary<string, Action<int>>(StringComparer.OrdinalIgnoreCase)
@@ -32,6 +33,7 @@ public static class DebugPresets
         ["Guilt"] = value => { if (PlayerAttributes.Instance != null) PlayerAttributes.Instance.Guilt = Mathf.Clamp(value, 0, PlayerAttributes.MaxStatusValue); },
         ["Luck"] = value => { if (PlayerAttributes.Instance != null) PlayerAttributes.Instance.Luck = Mathf.Clamp(value, 0, PlayerAttributes.MaxStatusValue); },
         ["Money"] = value => { if (GameState.Instance != null) GameState.Instance.Money = value; },
+        ["ActionPoints"] = value => { if (GameState.Instance != null) GameState.Instance.ActionPoints = value; },
     };
 
     public static int CurrentStep => StepOptions[CurrentStepIndex];
@@ -134,6 +136,10 @@ public static class DebugPresets
             case "Money":
             case "金钱":
                 canonicalKey = "Money";
+                return true;
+            case "ActionPoints":
+            case "行动点":
+                canonicalKey = "ActionPoints";
                 return true;
             default:
                 return false;

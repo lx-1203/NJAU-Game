@@ -1,17 +1,23 @@
 using System.Collections.Generic;
+using System.Linq;
 using TMPro;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 public class InventoryUIManager : MonoBehaviour
 {
     public static InventoryUIManager Instance { get; private set; }
 
+    private const string FilterAll = "all";
+
     private Canvas inventoryCanvas;
     private GameObject overlayObject;
+    private GameObject frameObject;
     private GameObject panelRoot;
     private Transform itemListContent;
     private TextMeshProUGUI summaryText;
+    private TextMeshProUGUI collectionText;
     private TextMeshProUGUI itemNameText;
     private TextMeshProUGUI itemCategoryText;
     private TextMeshProUGUI itemDescriptionText;
@@ -21,17 +27,28 @@ public class InventoryUIManager : MonoBehaviour
     private TextMeshProUGUI useButtonText;
 
     private string selectedItemId;
+    private string currentCategoryFilter = FilterAll;
 
-    private static readonly Color OverlayColor = new Color(0f, 0f, 0f, 0.55f);
-    private static readonly Color PanelColor = new Color(0.08f, 0.08f, 0.12f, 0.96f);
-    private static readonly Color HeaderColor = new Color(0.10f, 0.10f, 0.16f, 0.96f);
-    private static readonly Color CardColor = new Color(0.12f, 0.12f, 0.18f, 0.95f);
-    private static readonly Color AccentColor = new Color(0.26f, 0.46f, 0.76f, 1f);
-    private static readonly Color AccentPressedColor = new Color(0.20f, 0.34f, 0.58f, 1f);
-    private static readonly Color DisabledColor = new Color(0.28f, 0.28f, 0.32f, 1f);
-    private static readonly Color TextWhite = new Color(0.92f, 0.92f, 0.92f, 1f);
-    private static readonly Color TextGray = new Color(0.70f, 0.72f, 0.76f, 1f);
-    private static readonly Color TextGold = new Color(1f, 0.84f, 0.32f, 1f);
+    private readonly Dictionary<string, Button> filterButtons = new Dictionary<string, Button>();
+    private readonly Dictionary<string, TextMeshProUGUI> filterButtonTexts = new Dictionary<string, TextMeshProUGUI>();
+
+    private static readonly Color OverlayColor = new Color(0.20f, 0.15f, 0.10f, 0.42f);
+    private static readonly Color FrameColor = new Color32(0xB7, 0xA4, 0x8D, 0xFF);
+    private static readonly Color PaperColor = new Color32(0xF7, 0xF1, 0xE5, 0xFF);
+    private static readonly Color PaperSoftColor = new Color32(0xFB, 0xF7, 0xEE, 0xFF);
+    private static readonly Color GridLineColor = new Color32(0xE9, 0xDE, 0xCC, 0xB0);
+    private static readonly Color TabIdleColor = new Color32(0xEE, 0xE8, 0xDF, 0xFF);
+    private static readonly Color TabActiveColor = new Color32(0xF7, 0xE7, 0xAA, 0xFF);
+    private static readonly Color DetailPanelColor = new Color32(0xFC, 0xF1, 0xCF, 0xFF);
+    private static readonly Color CardColor = new Color32(0xFF, 0xFC, 0xF7, 0xFF);
+    private static readonly Color CardSelectedColor = new Color32(0xFF, 0xF0, 0xBF, 0xFF);
+    private static readonly Color AccentColor = new Color32(0xF5, 0xC3, 0x57, 0xFF);
+    private static readonly Color AccentPressedColor = new Color32(0xE6, 0xAF, 0x45, 0xFF);
+    private static readonly Color DisabledColor = new Color32(0xCF, 0xC4, 0xB4, 0xFF);
+    private static readonly Color TextPrimary = new Color32(0x73, 0x56, 0x3C, 0xFF);
+    private static readonly Color TextSecondary = new Color32(0x9B, 0x86, 0x72, 0xFF);
+    private static readonly Color TextMuted = new Color32(0xB7, 0xAA, 0x98, 0xFF);
+    private static readonly Color PreviewColor = new Color32(0x41, 0x40, 0x3D, 0xFF);
 
     public bool IsOpen => panelRoot != null && panelRoot.activeSelf;
 
@@ -50,6 +67,8 @@ public class InventoryUIManager : MonoBehaviour
 
     private void OnEnable()
     {
+        SceneManager.sceneLoaded += OnSceneLoaded;
+
         if (InventorySystem.Instance != null)
         {
             InventorySystem.Instance.OnInventoryChanged += Refresh;
@@ -58,6 +77,8 @@ public class InventoryUIManager : MonoBehaviour
 
     private void OnDisable()
     {
+        SceneManager.sceneLoaded -= OnSceneLoaded;
+
         if (InventorySystem.Instance != null)
         {
             InventorySystem.Instance.OnInventoryChanged -= Refresh;
@@ -102,11 +123,12 @@ public class InventoryUIManager : MonoBehaviour
 
     public void OpenPanel()
     {
-        if (panelRoot == null)
+        if (panelRoot == null || frameObject == null)
         {
             return;
         }
 
+        frameObject.SetActive(true);
         panelRoot.SetActive(true);
         overlayObject.SetActive(true);
         Refresh();
@@ -114,13 +136,19 @@ public class InventoryUIManager : MonoBehaviour
 
     public void ClosePanel()
     {
-        if (panelRoot == null)
+        if (panelRoot == null || frameObject == null)
         {
             return;
         }
 
+        frameObject.SetActive(false);
         panelRoot.SetActive(false);
         overlayObject.SetActive(false);
+    }
+
+    private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        ClosePanel();
     }
 
     public void Refresh()
@@ -135,19 +163,38 @@ public class InventoryUIManager : MonoBehaviour
             Destroy(child.gameObject);
         }
 
-        List<InventorySystem.InventoryEntry> entries = InventorySystem.Instance.GetAllEntries();
-        summaryText.text = $"Total {InventorySystem.Instance.GetTotalItemCount()}";
+        List<InventorySystem.InventoryEntry> entries = InventorySystem.Instance
+            .GetAllEntries()
+            .OrderBy(entry => ShopSystem.Instance != null ? ShopSystem.Instance.GetCategoryDisplayName(entry.definition.category) : entry.definition.category)
+            .ThenBy(entry => entry.definition.displayName)
+            .ToList();
 
-        if (entries.Count == 0)
+        List<InventorySystem.InventoryEntry> filteredEntries = entries
+            .Where(entry => currentCategoryFilter == FilterAll || entry.definition.category == currentCategoryFilter)
+            .ToList();
+
+        summaryText.text = "背包";
+        collectionText.text = $"已收集 {entries.Count}/{GetTotalCollectableCount()}";
+        RefreshFilterVisuals(entries);
+
+        if (filteredEntries.Count == 0)
         {
-            selectedItemId = null;
-            CreateListHint("Inventory is empty");
+            if (entries.Count == 0)
+            {
+                selectedItemId = null;
+            }
+            else if (string.IsNullOrEmpty(selectedItemId) || entries.All(entry => entry.definition.id != selectedItemId))
+            {
+                selectedItemId = entries[0].definition.id;
+            }
+
+            CreateListHint(entries.Count == 0 ? "还没有收集到物品" : "当前分类下暂无物品");
             RefreshDetails(null);
             return;
         }
 
         bool hasSelection = false;
-        foreach (InventorySystem.InventoryEntry entry in entries)
+        foreach (InventorySystem.InventoryEntry entry in filteredEntries)
         {
             if (entry.definition.id == selectedItemId)
             {
@@ -159,7 +206,7 @@ public class InventoryUIManager : MonoBehaviour
 
         if (!hasSelection)
         {
-            selectedItemId = entries[0].definition.id;
+            selectedItemId = filteredEntries[0].definition.id;
         }
 
         RefreshDetails(ShopSystem.Instance != null ? ShopSystem.Instance.GetItemDefinition(selectedItemId) : null);
@@ -190,135 +237,215 @@ public class InventoryUIManager : MonoBehaviour
         overlayRect.offsetMax = Vector2.zero;
         overlayObject.AddComponent<Button>().onClick.AddListener(ClosePanel);
 
-        panelRoot = CreatePanel("InventoryPanel", inventoryCanvas.transform, PanelColor);
+        frameObject = CreatePanel("InventoryFrame", inventoryCanvas.transform, FrameColor);
+        RectTransform frameRect = frameObject.GetComponent<RectTransform>();
+        frameRect.anchorMin = new Vector2(0.5f, 0.5f);
+        frameRect.anchorMax = new Vector2(0.5f, 0.5f);
+        frameRect.pivot = new Vector2(0.5f, 0.5f);
+        frameRect.sizeDelta = new Vector2(1280f, 780f);
+
+        panelRoot = CreatePanel("InventoryPanel", frameObject.transform, PaperColor);
         RectTransform panelRect = panelRoot.GetComponent<RectTransform>();
-        panelRect.anchorMin = new Vector2(0.5f, 0.5f);
-        panelRect.anchorMax = new Vector2(0.5f, 0.5f);
-        panelRect.pivot = new Vector2(0.5f, 0.5f);
-        panelRect.sizeDelta = new Vector2(1100f, 680f);
+        panelRect.anchorMin = new Vector2(0f, 0f);
+        panelRect.anchorMax = new Vector2(1f, 1f);
+        panelRect.offsetMin = new Vector2(18f, 18f);
+        panelRect.offsetMax = new Vector2(-18f, -18f);
 
         BuildHeader();
+        BuildBackgroundGrid();
+        BuildTabs();
         BuildColumns();
 
+        frameObject.SetActive(false);
         panelRoot.SetActive(false);
         overlayObject.SetActive(false);
     }
 
     private void BuildHeader()
     {
-        GameObject header = CreatePanel("Header", panelRoot.transform, HeaderColor);
+        GameObject header = CreatePanel("Header", panelRoot.transform, FrameColor);
         RectTransform rect = header.GetComponent<RectTransform>();
         rect.anchorMin = new Vector2(0f, 1f);
         rect.anchorMax = new Vector2(1f, 1f);
         rect.pivot = new Vector2(0.5f, 1f);
-        rect.sizeDelta = new Vector2(0f, 64f);
+        rect.sizeDelta = new Vector2(0f, 72f);
 
-        TextMeshProUGUI titleText = CreateText("Title", header.transform, "Inventory", 26f, TextGold, TextAlignmentOptions.Left, new Vector2(240f, 40f));
+        TextMeshProUGUI titleText = CreateText("Title", header.transform, "背包 / 收藏", 28f, TextPrimary, TextAlignmentOptions.Left, new Vector2(320f, 46f));
         RectTransform titleRect = titleText.rectTransform;
         titleRect.anchorMin = new Vector2(0f, 0.5f);
         titleRect.anchorMax = new Vector2(0f, 0.5f);
         titleRect.pivot = new Vector2(0f, 0.5f);
         titleRect.anchoredPosition = new Vector2(28f, 0f);
 
-        summaryText = CreateText("Summary", header.transform, "Total 0", 18f, TextWhite, TextAlignmentOptions.Right, new Vector2(220f, 32f));
+        summaryText = CreateText("Summary", header.transform, "背包", 22f, TextPrimary, TextAlignmentOptions.Center, new Vector2(180f, 40f));
         RectTransform summaryRect = summaryText.rectTransform;
-        summaryRect.anchorMin = new Vector2(1f, 0.5f);
-        summaryRect.anchorMax = new Vector2(1f, 0.5f);
-        summaryRect.pivot = new Vector2(1f, 0.5f);
-        summaryRect.anchoredPosition = new Vector2(-88f, 0f);
+        summaryRect.anchorMin = new Vector2(0.5f, 0.5f);
+        summaryRect.anchorMax = new Vector2(0.5f, 0.5f);
+        summaryRect.pivot = new Vector2(0.5f, 0.5f);
+        summaryRect.anchoredPosition = Vector2.zero;
 
-        Button closeButton = CreateButton("CloseButton", header.transform, "X", new Vector2(44f, 44f), AccentColor, AccentPressedColor);
+        Button closeButton = CreateButton("CloseButton", header.transform, "×", new Vector2(52f, 52f), FrameColor, AccentPressedColor, 28f, TextPrimary);
         RectTransform closeRect = closeButton.GetComponent<RectTransform>();
         closeRect.anchorMin = new Vector2(1f, 0.5f);
         closeRect.anchorMax = new Vector2(1f, 0.5f);
         closeRect.pivot = new Vector2(1f, 0.5f);
-        closeRect.anchoredPosition = new Vector2(-20f, 0f);
+        closeRect.anchoredPosition = new Vector2(-18f, 0f);
         closeButton.onClick.AddListener(ClosePanel);
+    }
+
+    private void BuildBackgroundGrid()
+    {
+        GameObject grid = new GameObject("GridBackground");
+        grid.transform.SetParent(panelRoot.transform, false);
+        RectTransform rect = grid.AddComponent<RectTransform>();
+        rect.anchorMin = new Vector2(0f, 0f);
+        rect.anchorMax = new Vector2(1f, 1f);
+        rect.offsetMin = Vector2.zero;
+        rect.offsetMax = new Vector2(0f, -72f);
+
+        Image image = grid.AddComponent<Image>();
+        image.color = new Color(1f, 1f, 1f, 0.02f);
+
+        for (int i = 1; i < 10; i++)
+        {
+            CreateGridLine(grid.transform, true, i / 10f);
+        }
+
+        for (int i = 1; i < 7; i++)
+        {
+            CreateGridLine(grid.transform, false, i / 7f);
+        }
+    }
+
+    private void BuildTabs()
+    {
+        GameObject tabRow = new GameObject("TabRow");
+        tabRow.transform.SetParent(panelRoot.transform, false);
+        RectTransform rect = tabRow.AddComponent<RectTransform>();
+        rect.anchorMin = new Vector2(0f, 1f);
+        rect.anchorMax = new Vector2(1f, 1f);
+        rect.pivot = new Vector2(0.5f, 1f);
+        rect.sizeDelta = new Vector2(0f, 54f);
+        rect.anchoredPosition = new Vector2(0f, -72f);
+
+        HorizontalLayoutGroup layout = tabRow.AddComponent<HorizontalLayoutGroup>();
+        layout.padding = new RectOffset(260, 260, 0, 0);
+        layout.spacing = 12f;
+        layout.childAlignment = TextAnchor.MiddleCenter;
+        layout.childControlWidth = false;
+        layout.childControlHeight = true;
+        layout.childForceExpandWidth = false;
+        layout.childForceExpandHeight = false;
+
+        CreateFilterTab(tabRow.transform, FilterAll, "全部");
+
+        if (ShopSystem.Instance != null)
+        {
+            foreach (string category in ShopSystem.Instance.GetCategories())
+            {
+                CreateFilterTab(tabRow.transform, category, ShopSystem.Instance.GetCategoryDisplayName(category));
+            }
+        }
     }
 
     private void BuildColumns()
     {
-        GameObject leftPanel = CreatePanel("LeftPanel", panelRoot.transform, new Color(0.09f, 0.09f, 0.14f, 0.96f));
+        GameObject leftPanel = CreatePanel("LeftPanel", panelRoot.transform, new Color(1f, 1f, 1f, 0f));
         RectTransform leftRect = leftPanel.GetComponent<RectTransform>();
         leftRect.anchorMin = new Vector2(0f, 0f);
-        leftRect.anchorMax = new Vector2(0f, 1f);
+        leftRect.anchorMax = new Vector2(1f, 1f);
         leftRect.offsetMin = new Vector2(0f, 0f);
-        leftRect.offsetMax = new Vector2(320f, -64f);
-
-        TextMeshProUGUI leftTitle = CreateText("ListTitle", leftPanel.transform, "Items", 20f, TextWhite, TextAlignmentOptions.Left, new Vector2(200f, 30f));
-        leftTitle.rectTransform.anchorMin = new Vector2(0f, 1f);
-        leftTitle.rectTransform.anchorMax = new Vector2(0f, 1f);
-        leftTitle.rectTransform.pivot = new Vector2(0f, 1f);
-        leftTitle.rectTransform.anchoredPosition = new Vector2(20f, -18f);
+        leftRect.offsetMax = new Vector2(-340f, -124f);
 
         ScrollRect scrollRect = CreateScrollView("ItemScroll", leftPanel.transform, new Vector2(0f, 0f));
         RectTransform scrollRectTransform = scrollRect.GetComponent<RectTransform>();
         scrollRectTransform.anchorMin = new Vector2(0f, 0f);
         scrollRectTransform.anchorMax = new Vector2(1f, 1f);
-        scrollRectTransform.offsetMin = new Vector2(12f, 12f);
-        scrollRectTransform.offsetMax = new Vector2(-12f, -56f);
+        scrollRectTransform.offsetMin = new Vector2(18f, 18f);
+        scrollRectTransform.offsetMax = new Vector2(-18f, -18f);
         itemListContent = scrollRect.content;
 
-        GameObject rightPanel = CreatePanel("RightPanel", panelRoot.transform, CardColor);
+        GameObject rightPanel = CreatePanel("RightPanel", panelRoot.transform, DetailPanelColor);
         RectTransform rightRect = rightPanel.GetComponent<RectTransform>();
-        rightRect.anchorMin = new Vector2(0f, 0f);
+        rightRect.anchorMin = new Vector2(1f, 0f);
         rightRect.anchorMax = new Vector2(1f, 1f);
-        rightRect.offsetMin = new Vector2(336f, 0f);
-        rightRect.offsetMax = new Vector2(0f, -64f);
+        rightRect.pivot = new Vector2(1f, 0.5f);
+        rightRect.offsetMin = new Vector2(-328f, 18f);
+        rightRect.offsetMax = new Vector2(-18f, -124f);
 
         VerticalLayoutGroup layout = rightPanel.AddComponent<VerticalLayoutGroup>();
-        layout.padding = new RectOffset(28, 28, 28, 28);
-        layout.spacing = 12f;
+        layout.padding = new RectOffset(20, 20, 18, 18);
+        layout.spacing = 10f;
         layout.childAlignment = TextAnchor.UpperLeft;
         layout.childControlWidth = true;
         layout.childControlHeight = false;
         layout.childForceExpandWidth = true;
         layout.childForceExpandHeight = false;
 
-        itemNameText = CreateText("ItemName", rightPanel.transform, "No item selected", 28f, TextGold, TextAlignmentOptions.Left, new Vector2(700f, 38f));
-        itemCategoryText = CreateText("ItemCategory", rightPanel.transform, "", 18f, TextGray, TextAlignmentOptions.Left, new Vector2(700f, 28f));
-        itemCountText = CreateText("ItemCount", rightPanel.transform, "", 18f, TextWhite, TextAlignmentOptions.Left, new Vector2(700f, 28f));
-        itemDescriptionText = CreateText("ItemDescription", rightPanel.transform, "", 19f, TextWhite, TextAlignmentOptions.TopLeft, new Vector2(700f, 110f));
+        CreateText("DetailTitle", rightPanel.transform, "物品详情", 22f, TextPrimary, TextAlignmentOptions.Center, new Vector2(240f, 34f));
+
+        GameObject preview = CreatePanel("Preview", rightPanel.transform, PreviewColor);
+        preview.AddComponent<LayoutElement>().preferredHeight = 216f;
+        CreateText("PreviewText", preview.transform, "已收纳", 26f, new Color32(0xF4, 0xF1, 0xEA, 0xFF), TextAlignmentOptions.Center, new Vector2(220f, 42f));
+
+        itemNameText = CreateText("ItemName", rightPanel.transform, "未选择物品", 30f, TextPrimary, TextAlignmentOptions.Center, new Vector2(240f, 40f));
+        itemCategoryText = CreateText("ItemCategory", rightPanel.transform, "", 18f, TextSecondary, TextAlignmentOptions.Center, new Vector2(240f, 26f));
+        itemCountText = CreateText("ItemCount", rightPanel.transform, "", 18f, TextPrimary, TextAlignmentOptions.Center, new Vector2(240f, 28f));
+        itemDescriptionText = CreateText("ItemDescription", rightPanel.transform, "", 18f, TextPrimary, TextAlignmentOptions.TopLeft, new Vector2(240f, 150f));
         itemDescriptionText.enableWordWrapping = true;
-        itemEffectText = CreateText("ItemEffects", rightPanel.transform, "", 18f, TextWhite, TextAlignmentOptions.TopLeft, new Vector2(700f, 180f));
+        itemDescriptionText.overflowMode = TextOverflowModes.Ellipsis;
+        itemEffectText = CreateText("ItemEffects", rightPanel.transform, "", 18f, TextSecondary, TextAlignmentOptions.TopLeft, new Vector2(240f, 110f));
         itemEffectText.enableWordWrapping = true;
+        itemEffectText.overflowMode = TextOverflowModes.Ellipsis;
 
         GameObject buttonRow = new GameObject("ButtonRow");
         buttonRow.transform.SetParent(rightPanel.transform, false);
-        RectTransform buttonRect = buttonRow.AddComponent<RectTransform>();
-        buttonRect.sizeDelta = new Vector2(700f, 56f);
+        buttonRow.AddComponent<RectTransform>().sizeDelta = new Vector2(240f, 56f);
+        buttonRow.AddComponent<LayoutElement>().preferredHeight = 56f;
 
-        useButton = CreateButton("UseButton", buttonRow.transform, "Use", new Vector2(180f, 50f), AccentColor, AccentPressedColor);
+        useButton = CreateButton("UseButton", buttonRow.transform, "使用", new Vector2(150f, 46f), AccentColor, AccentPressedColor, 24f, Color.white);
         useButton.onClick.AddListener(OnUseButtonClicked);
         useButtonText = useButton.GetComponentInChildren<TextMeshProUGUI>();
         RectTransform useRect = useButton.GetComponent<RectTransform>();
-        useRect.anchorMin = new Vector2(0f, 0.5f);
-        useRect.anchorMax = new Vector2(0f, 0.5f);
-        useRect.pivot = new Vector2(0f, 0.5f);
-        useRect.anchoredPosition = new Vector2(0f, 0f);
+        useRect.anchorMin = new Vector2(0.5f, 0.5f);
+        useRect.anchorMax = new Vector2(0.5f, 0.5f);
+        useRect.pivot = new Vector2(0.5f, 0.5f);
+        useRect.anchoredPosition = Vector2.zero;
+
+        collectionText = CreateText("CollectionText", panelRoot.transform, "已收集 0/0", 18f, TextSecondary, TextAlignmentOptions.Right, new Vector2(240f, 30f));
+        RectTransform collectionRect = collectionText.rectTransform;
+        collectionRect.anchorMin = new Vector2(1f, 0f);
+        collectionRect.anchorMax = new Vector2(1f, 0f);
+        collectionRect.pivot = new Vector2(1f, 0f);
+        collectionRect.anchoredPosition = new Vector2(-28f, 20f);
     }
 
     private void CreateItemRow(InventorySystem.InventoryEntry entry)
     {
-        Button button = CreateButton($"Item_{entry.definition.id}", itemListContent, "", new Vector2(0f, 72f), CardColor, AccentPressedColor);
+        Button button = CreateButton($"Item_{entry.definition.id}", itemListContent, "", new Vector2(170f, 148f), CardColor, AccentPressedColor);
         LayoutElement layoutElement = button.gameObject.AddComponent<LayoutElement>();
-        layoutElement.preferredHeight = 72f;
+        layoutElement.preferredWidth = 170f;
+        layoutElement.preferredHeight = 148f;
 
         Image image = button.GetComponent<Image>();
-        image.color = entry.definition.id == selectedItemId ? AccentColor : CardColor;
+        image.color = entry.definition.id == selectedItemId ? CardSelectedColor : CardColor;
 
-        HorizontalLayoutGroup layout = button.gameObject.AddComponent<HorizontalLayoutGroup>();
-        layout.padding = new RectOffset(16, 16, 10, 10);
-        layout.spacing = 10f;
-        layout.childAlignment = TextAnchor.MiddleLeft;
-        layout.childControlWidth = false;
+        VerticalLayoutGroup layout = button.gameObject.AddComponent<VerticalLayoutGroup>();
+        layout.padding = new RectOffset(12, 12, 12, 12);
+        layout.spacing = 8f;
+        layout.childAlignment = TextAnchor.UpperCenter;
+        layout.childControlWidth = true;
         layout.childControlHeight = false;
-        layout.childForceExpandWidth = false;
+        layout.childForceExpandWidth = true;
         layout.childForceExpandHeight = false;
 
-        CreateText("Name", button.transform, entry.definition.displayName, 18f, TextWhite, TextAlignmentOptions.Left, new Vector2(150f, 26f));
-        CreateText("Category", button.transform, ShopSystem.Instance.GetCategoryDisplayName(entry.definition.category), 16f, TextGray, TextAlignmentOptions.Left, new Vector2(90f, 24f));
-        CreateText("Count", button.transform, $"x{entry.quantity}", 18f, TextGold, TextAlignmentOptions.Right, new Vector2(60f, 26f));
+        GameObject preview = CreatePanel("Thumb", button.transform, PreviewColor);
+        preview.AddComponent<LayoutElement>().preferredHeight = 72f;
+        CreateText("ThumbText", preview.transform, entry.definition.canUse ? "可用" : "收藏", 18f, new Color32(0xF2, 0xEF, 0xE7, 0xFF), TextAlignmentOptions.Center, new Vector2(90f, 26f));
+
+        CreateText("Name", button.transform, entry.definition.displayName, 19f, TextPrimary, TextAlignmentOptions.Center, new Vector2(120f, 28f));
+        CreateText("Category", button.transform, ShopSystem.Instance.GetCategoryDisplayName(entry.definition.category), 15f, TextSecondary, TextAlignmentOptions.Center, new Vector2(120f, 22f));
+        CreateText("Count", button.transform, $"持有 x{entry.quantity}", 16f, TextPrimary, TextAlignmentOptions.Center, new Vector2(120f, 24f));
 
         string itemId = entry.definition.id;
         button.onClick.AddListener(() =>
@@ -330,28 +457,29 @@ public class InventoryUIManager : MonoBehaviour
 
     private void CreateListHint(string message)
     {
-        TextMeshProUGUI hint = CreateText("EmptyHint", itemListContent, message, 18f, TextGray, TextAlignmentOptions.Center, new Vector2(220f, 40f));
+        TextMeshProUGUI hint = CreateText("EmptyHint", itemListContent, message, 22f, TextMuted, TextAlignmentOptions.Center, new Vector2(520f, 52f));
         LayoutElement layoutElement = hint.gameObject.AddComponent<LayoutElement>();
-        layoutElement.preferredHeight = 56f;
+        layoutElement.preferredWidth = 520f;
+        layoutElement.preferredHeight = 300f;
     }
 
     private void RefreshDetails(ShopItemDefinition definition)
     {
         if (definition == null)
         {
-            itemNameText.text = "No item selected";
+            itemNameText.text = "未选择物品";
             itemCategoryText.text = "";
             itemCountText.text = "";
-            itemDescriptionText.text = "Items bought from the shop will be stored here.";
+            itemDescriptionText.text = "这里会展示物品说明。收集到的道具会按照分类陈列在左侧。";
             itemEffectText.text = "";
-            SetUseButtonState(false, "Use");
+            SetUseButtonState(false, "使用");
             return;
         }
 
         int quantity = InventorySystem.Instance != null ? InventorySystem.Instance.GetItemCount(definition.id) : 0;
         itemNameText.text = definition.displayName;
-        itemCategoryText.text = $"Category: {ShopSystem.Instance.GetCategoryDisplayName(definition.category)}";
-        itemCountText.text = $"Owned: x{quantity}";
+        itemCategoryText.text = ShopSystem.Instance.GetCategoryDisplayName(definition.category);
+        itemCountText.text = $"持有数量 x{quantity}";
         itemDescriptionText.text = definition.description;
         itemEffectText.text = BuildEffectText(definition.effects);
         SetUseButtonState(quantity > 0 && definition.canUse, definition.useVerb);
@@ -375,7 +503,7 @@ public class InventoryUIManager : MonoBehaviour
 
         if (definition != null)
         {
-            itemDescriptionText.text = $"{definition.description}\n\nUsed 1 item.";
+            itemDescriptionText.text = $"{definition.description}\n\n已使用 1 个。";
         }
 
         Refresh();
@@ -390,14 +518,14 @@ public class InventoryUIManager : MonoBehaviour
 
         useButton.interactable = interactable;
         useButton.GetComponent<Image>().color = interactable ? AccentColor : DisabledColor;
-        useButtonText.text = string.IsNullOrEmpty(verb) ? "Use" : verb;
+        useButtonText.text = string.IsNullOrEmpty(verb) ? "使用" : verb;
     }
 
     private string BuildEffectText(AttributeEffect[] effects)
     {
         if (effects == null || effects.Length == 0)
         {
-            return "No attribute effect";
+            return "效果：无属性变化";
         }
 
         List<string> parts = new List<string>();
@@ -407,7 +535,70 @@ public class InventoryUIManager : MonoBehaviour
             parts.Add($"{effect.attributeName}{sign}{effect.amount}");
         }
 
-        return $"Effect: {string.Join("  ", parts)}";
+        return $"效果：{string.Join("  ", parts)}";
+    }
+
+    private int GetTotalCollectableCount()
+    {
+        return ShopSystem.Instance != null ? ShopSystem.Instance.GetAllItems().Count(item => item.canStore) : 0;
+    }
+
+    private void CreateFilterTab(Transform parent, string key, string label)
+    {
+        Button button = CreateButton($"Filter_{key}", parent, label, new Vector2(150f, 54f), TabIdleColor, TabActiveColor, 21f, TextPrimary);
+        filterButtons[key] = button;
+        filterButtonTexts[key] = button.GetComponentInChildren<TextMeshProUGUI>();
+        button.onClick.AddListener(() =>
+        {
+            currentCategoryFilter = key;
+            Refresh();
+        });
+    }
+
+    private void RefreshFilterVisuals(List<InventorySystem.InventoryEntry> allEntries)
+    {
+        foreach (var pair in filterButtons)
+        {
+            bool isActive = pair.Key == currentCategoryFilter;
+            Image image = pair.Value.GetComponent<Image>();
+            image.color = isActive ? TabActiveColor : TabIdleColor;
+
+            if (filterButtonTexts.TryGetValue(pair.Key, out TextMeshProUGUI text))
+            {
+                int count = pair.Key == FilterAll
+                    ? allEntries.Count
+                    : allEntries.Count(entry => entry.definition.category == pair.Key);
+
+                string label = pair.Key == FilterAll
+                    ? "全部"
+                    : (ShopSystem.Instance != null ? ShopSystem.Instance.GetCategoryDisplayName(pair.Key) : pair.Key);
+
+                text.text = $"{label} {count}";
+                text.color = isActive ? TextPrimary : TextSecondary;
+            }
+        }
+    }
+
+    private void CreateGridLine(Transform parent, bool vertical, float normalizedPosition)
+    {
+        GameObject line = new GameObject(vertical ? "GridLineV" : "GridLineH");
+        line.transform.SetParent(parent, false);
+        RectTransform rect = line.AddComponent<RectTransform>();
+        Image image = line.AddComponent<Image>();
+        image.color = GridLineColor;
+
+        if (vertical)
+        {
+            rect.anchorMin = new Vector2(normalizedPosition, 0f);
+            rect.anchorMax = new Vector2(normalizedPosition, 1f);
+            rect.sizeDelta = new Vector2(1f, 0f);
+        }
+        else
+        {
+            rect.anchorMin = new Vector2(0f, normalizedPosition);
+            rect.anchorMax = new Vector2(1f, normalizedPosition);
+            rect.sizeDelta = new Vector2(0f, 1f);
+        }
     }
 
     private GameObject CreatePanel(string name, Transform parent, Color color)
@@ -420,7 +611,7 @@ public class InventoryUIManager : MonoBehaviour
         return panel;
     }
 
-    private Button CreateButton(string name, Transform parent, string label, Vector2 size, Color normalColor, Color pressedColor)
+    private Button CreateButton(string name, Transform parent, string label, Vector2 size, Color normalColor, Color pressedColor, float fontSize = 18f, Color? textColor = null)
     {
         GameObject buttonObject = new GameObject(name);
         buttonObject.transform.SetParent(parent, false);
@@ -435,9 +626,9 @@ public class InventoryUIManager : MonoBehaviour
         ColorBlock colors = button.colors;
         colors.normalColor = normalColor;
         colors.highlightedColor = new Color(
-            Mathf.Clamp01(normalColor.r + 0.08f),
-            Mathf.Clamp01(normalColor.g + 0.08f),
-            Mathf.Clamp01(normalColor.b + 0.08f),
+            Mathf.Clamp01(normalColor.r + 0.05f),
+            Mathf.Clamp01(normalColor.g + 0.05f),
+            Mathf.Clamp01(normalColor.b + 0.05f),
             normalColor.a);
         colors.pressedColor = pressedColor;
         colors.selectedColor = normalColor;
@@ -446,7 +637,7 @@ public class InventoryUIManager : MonoBehaviour
 
         if (!string.IsNullOrEmpty(label))
         {
-            TextMeshProUGUI text = CreateText("Label", buttonObject.transform, label, 18f, TextWhite, TextAlignmentOptions.Center, size);
+            TextMeshProUGUI text = CreateText("Label", buttonObject.transform, label, fontSize, textColor ?? TextPrimary, TextAlignmentOptions.Center, size);
             text.rectTransform.anchorMin = Vector2.zero;
             text.rectTransform.anchorMax = Vector2.one;
             text.rectTransform.offsetMin = Vector2.zero;
@@ -470,6 +661,11 @@ public class InventoryUIManager : MonoBehaviour
         tmp.color = color;
         tmp.alignment = alignment;
         tmp.enableWordWrapping = false;
+        tmp.richText = true;
+        if (FontManager.Instance != null)
+        {
+            FontManager.Instance.ApplyChineseFont(tmp);
+        }
         return tmp;
     }
 
@@ -482,7 +678,7 @@ public class InventoryUIManager : MonoBehaviour
         scrollRect.sizeDelta = size;
 
         Image background = scrollObject.AddComponent<Image>();
-        background.color = new Color(0.06f, 0.06f, 0.10f, 0.70f);
+        background.color = new Color(PaperSoftColor.r, PaperSoftColor.g, PaperSoftColor.b, 0.72f);
 
         ScrollRect scroll = scrollObject.AddComponent<ScrollRect>();
         scroll.horizontal = false;
@@ -508,16 +704,17 @@ public class InventoryUIManager : MonoBehaviour
         contentRect.pivot = new Vector2(0.5f, 1f);
         contentRect.anchoredPosition = Vector2.zero;
 
-        VerticalLayoutGroup layout = content.AddComponent<VerticalLayoutGroup>();
-        layout.spacing = 8f;
-        layout.childAlignment = TextAnchor.UpperCenter;
-        layout.childControlWidth = true;
-        layout.childControlHeight = false;
-        layout.childForceExpandWidth = true;
-        layout.childForceExpandHeight = false;
+        GridLayoutGroup layout = content.AddComponent<GridLayoutGroup>();
+        layout.cellSize = new Vector2(170f, 148f);
+        layout.spacing = new Vector2(18f, 18f);
+        layout.padding = new RectOffset(8, 8, 8, 8);
+        layout.childAlignment = TextAnchor.UpperLeft;
+        layout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+        layout.constraintCount = 4;
 
         ContentSizeFitter fitter = content.AddComponent<ContentSizeFitter>();
         fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        fitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
 
         scroll.content = contentRect;
         return scroll;

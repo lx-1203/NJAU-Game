@@ -1,23 +1,21 @@
 using UnityEngine;
 
 /// <summary>
-/// 区域检测器 —— 挂载在 Player 上，根据世界X坐标自动检测所处地点
-/// 当玩家走入新区域时自动调用 LocationManager.MoveTo() 切换地点
+/// 区域检测器 —— 挂载在 Player 上，根据当前地点同步玩家所处区域缓存
+/// 当前项目主要通过地图/按钮显式切换地点，此组件不再主动发起 MoveTo，
+/// 以免和传送逻辑互相覆盖导致地点立刻跳回。
 /// </summary>
 public class LocationZoneDetector : MonoBehaviour
 {
     private LocationId? lastDetectedLocation;
-    private bool skipNextDetection;
 
     private void Start()
     {
-        // 初始化当前地点
         if (GameState.Instance != null)
         {
             lastDetectedLocation = GameState.Instance.CurrentLocation;
         }
 
-        // 订阅外部地点变更（地图传送时）跳过下一帧检测防止重复触发
         if (LocationManager.Instance != null)
         {
             LocationManager.Instance.OnLocationChanged += OnExternalLocationChanged;
@@ -26,30 +24,24 @@ public class LocationZoneDetector : MonoBehaviour
 
     private void Update()
     {
-        if (skipNextDetection)
+        if (LocationManager.Instance == null)
         {
-            skipNextDetection = false;
             return;
         }
 
-        if (LocationManager.Instance == null) return;
-
         float x = transform.position.x;
         LocationId? detected = LocationManager.Instance.GetLocationAtWorldX(x);
+        if (!detected.HasValue)
+        {
+            return;
+        }
 
-        if (!detected.HasValue) return;
-        if (lastDetectedLocation.HasValue && detected.Value == lastDetectedLocation.Value) return;
-
-        // 走入新区域
         lastDetectedLocation = detected.Value;
-        LocationManager.Instance.MoveTo(detected.Value);
     }
 
     private void OnExternalLocationChanged(LocationId from, LocationId to)
     {
-        // 外部变更（地图传送）时更新缓存并跳过下一帧检测
         lastDetectedLocation = to;
-        skipNextDetection = true;
     }
 
     private void OnDestroy()

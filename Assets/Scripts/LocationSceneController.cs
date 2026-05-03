@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 [ExecuteAlways]
 public class LocationSceneController : MonoBehaviour
@@ -61,6 +64,7 @@ public class LocationSceneController : MonoBehaviour
     [SerializeField] private LocationId previewLocation = LocationId.Dormitory;
     [SerializeField] private bool useCurrentLocationInPlayMode = true;
     [SerializeField] private bool previewInEditMode = true;
+    [SerializeField] [Range(0, 1)] private int previewPlayerGenderInEditMode;
 
     [Header("Legacy Scene")]
     [SerializeField] private bool disableLegacyGround = true;
@@ -70,10 +74,14 @@ public class LocationSceneController : MonoBehaviour
     [SerializeField] private List<LocationSceneProfile> profiles = new List<LocationSceneProfile>();
 
     private LocationManager subscribedLocationManager;
+#if UNITY_EDITOR
+    private bool editorRefreshQueued;
+#endif
 
     private void Reset()
     {
         EnsureDefaultProfiles();
+        EnsureEditorNPCManager();
         RebuildScene();
     }
 
@@ -81,6 +89,7 @@ public class LocationSceneController : MonoBehaviour
     {
         EnsureDefaultProfiles();
         SubscribeToLocationChanges();
+        EnsureEditorNPCManager();
 
         if (!Application.isPlaying && previewInEditMode)
         {
@@ -108,12 +117,7 @@ public class LocationSceneController : MonoBehaviour
     private void OnValidate()
     {
         ClampProfiles();
-
-        if (!Application.isPlaying && previewInEditMode)
-        {
-            EnsureDefaultProfiles();
-            RebuildScene();
-        }
+        QueueEditorRefresh();
     }
 
     public void EnsureDefaultProfiles()
@@ -125,6 +129,62 @@ public class LocationSceneController : MonoBehaviour
 
         profiles.Add(CreateDormitoryProfile());
     }
+
+    private void EnsureEditorNPCManager()
+    {
+        if (Application.isPlaying)
+        {
+            return;
+        }
+
+        if (FindFirstObjectByType<NPCManager>() != null)
+        {
+            return;
+        }
+
+        GameObject npcManagerObject = new GameObject("NPCManager");
+        npcManagerObject.AddComponent<NPCManager>();
+    }
+
+    private void QueueEditorRefresh()
+    {
+        if (Application.isPlaying)
+        {
+            return;
+        }
+
+#if UNITY_EDITOR
+        if (editorRefreshQueued)
+        {
+            return;
+        }
+
+        editorRefreshQueued = true;
+        EditorApplication.delayCall += ProcessQueuedEditorRefresh;
+#endif
+    }
+
+#if UNITY_EDITOR
+    private void ProcessQueuedEditorRefresh()
+    {
+        EditorApplication.delayCall -= ProcessQueuedEditorRefresh;
+        editorRefreshQueued = false;
+
+        if (this == null)
+        {
+            return;
+        }
+
+        ClampProfiles();
+        EnsureDefaultProfiles();
+        EnsureEditorNPCManager();
+
+        if (previewInEditMode)
+        {
+            RebuildScene();
+        }
+    }
+#endif
 
     public void RebuildScene()
     {
@@ -159,6 +219,16 @@ public class LocationSceneController : MonoBehaviour
     public void SetPreviewLocation(LocationId locationId)
     {
         previewLocation = locationId;
+
+        if (!Application.isPlaying && previewInEditMode)
+        {
+            RebuildScene();
+        }
+    }
+
+    public void SetPreviewPlayerGenderInEditMode(int gender)
+    {
+        previewPlayerGenderInEditMode = Mathf.Clamp(gender, 0, 1);
 
         if (!Application.isPlaying && previewInEditMode)
         {
@@ -465,8 +535,7 @@ public class LocationSceneController : MonoBehaviour
     private Sprite LoadBackgroundSprite(LocationSceneProfile profile)
     {
         string resourcePath = profile.backgroundResourcePath;
-        bool useFemale = GameState.Instance != null &&
-                         GameState.Instance.PlayerGender == 1 &&
+        bool useFemale = ResolvePreviewPlayerGender() == 1 &&
                          !string.IsNullOrWhiteSpace(profile.femaleBackgroundResourcePath);
         if (useFemale)
         {
@@ -474,6 +543,16 @@ public class LocationSceneController : MonoBehaviour
         }
 
         return string.IsNullOrWhiteSpace(resourcePath) ? null : Resources.Load<Sprite>(resourcePath);
+    }
+
+    private int ResolvePreviewPlayerGender()
+    {
+        if (Application.isPlaying && GameState.Instance != null)
+        {
+            return Mathf.Clamp(GameState.Instance.PlayerGender, 0, 1);
+        }
+
+        return Mathf.Clamp(previewPlayerGenderInEditMode, 0, 1);
     }
 
     private float GetTargetHeight(LocationSceneProfile profile)

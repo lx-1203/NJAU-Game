@@ -21,9 +21,9 @@ public class GameState : MonoBehaviour, ISaveable
 
     // ========== 常量 ==========
     /// <summary>每回合默认行动点（设计文档：基础上限20点）</summary>
-    public const int DefaultActionPoints = 20;
-    /// <summary>每学期回合数上限（设计文档：每学期5回合，共40回合）</summary>
-    public const int MaxRoundsPerSemester = 5;
+    public static int BaseActionPoints => Mathf.Clamp(StartupFlowSettings.InitialActionPoints, 1, 999);
+    /// <summary>每学期回合数上限（默认5，可由启动配置覆盖）</summary>
+    public static int MaxRoundsPerSemester => Mathf.Clamp(StartupFlowSettings.SemesterRoundCount, 3, 12);
 
     // ========== 内部字段 ==========
     [Header("学业进度")]
@@ -34,7 +34,7 @@ public class GameState : MonoBehaviour, ISaveable
 
     [Header("资源")]
     [SerializeField] private int money = 8000;
-    [SerializeField] private int actionPoints = DefaultActionPoints;
+    [SerializeField] private int actionPoints = 20;
 
     [Header("地点")]
     [SerializeField] private LocationId currentLocation = LocationId.Dormitory;
@@ -127,7 +127,7 @@ public class GameState : MonoBehaviour, ISaveable
     }
 
     /// <summary>每回合实际可用最大行动点（基础 - 职务扣减）</summary>
-    public int EffectiveMaxActionPoints => Mathf.Max(1, DefaultActionPoints - positionAPCost);
+    public int EffectiveMaxActionPoints => Mathf.Max(1, BaseActionPoints - positionAPCost);
 
     // ========== 回合推进结果 ==========
 
@@ -191,17 +191,21 @@ public class GameState : MonoBehaviour, ISaveable
 
     /// <summary>
     /// 根据学期和回合计算对应月份。
-    /// 每学期5回合，按设计文档映射：
-    /// 上学期: 回合1→9月, 回合2→10月, 回合3→11月, 回合4→12月, 回合5→1月
-    /// 下学期: 回合1→2月, 回合2→3月, 回合3→4月, 回合4→5月, 回合5→6月
+    /// 回合映射到月份。
+    /// 当每学期回合数大于5时，会把多个回合压到同一个月份；
+    /// 当每学期回合数小于5时，会跳过部分月份。
     /// </summary>
     public static int CalculateMonth(int semester, int round)
     {
-        int baseMonth = (semester == 1) ? 9 : 2; // 上学期从9月，下学期从2月
+        int[] semesterMonths = semester == 1
+            ? new[] { 9, 10, 11, 12, 1 }
+            : new[] { 2, 3, 4, 5, 6 };
 
-        int monthOffset = Mathf.Clamp(round - 1, 0, 4); // 0~4
-
-        int month = baseMonth + monthOffset;
+        int maxRounds = Mathf.Max(1, MaxRoundsPerSemester);
+        int clampedRound = Mathf.Clamp(round, 1, maxRounds);
+        int monthIndex = Mathf.FloorToInt(((clampedRound - 1f) / maxRounds) * semesterMonths.Length);
+        monthIndex = Mathf.Clamp(monthIndex, 0, semesterMonths.Length - 1);
+        int month = semesterMonths[monthIndex];
         if (month > 12) month -= 12; // 处理跨年（12月→1月）
         return month;
     }
@@ -272,6 +276,7 @@ public class GameState : MonoBehaviour, ISaveable
         if (SaveManager.PendingLoadData == null)
         {
             CharacterCreationUI.ApplyPendingCharacterToGameState(this);
+            StartupFlowSettings.ApplyStartupCoreState(this);
         }
     }
 

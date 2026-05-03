@@ -31,10 +31,14 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private Transform groundCheck;
     [SerializeField] private float groundCheckRadius = 0.2f;
     [SerializeField] private LayerMask groundLayer;
+    [SerializeField] private float groundProbeDistance = 0.12f;
+    [SerializeField] [Range(0.1f, 0.95f)] private float walkableGroundNormalY = 0.35f;
+    [SerializeField] private float feetContactGraceHeight = 0.08f;
 
     [Header("Collision")]
     [SerializeField] private Vector2 colliderSize = new Vector2(0.6f, 0.9f);
     [SerializeField] private Vector2 colliderOffset = Vector2.zero;
+    [SerializeField] private float colliderEdgeRadius = 0.02f;
 
     [Header("Animation Frame Rate")]
     [SerializeField] private float idleFrameRate = 4f;
@@ -48,6 +52,8 @@ public class PlayerController : MonoBehaviour
 
     [Header("Click Move")]
     [SerializeField] private float clickMoveStopDistance = 0.15f;
+    [SerializeField] private float clickMoveWallProbeDistance = 0.08f;
+    [SerializeField] private float wallStickReleaseFallSpeed = 1.5f;
 
     [Header("Scene Bounds")]
     [SerializeField] private bool constrainToCurrentLocation = true;
@@ -76,6 +82,8 @@ public class PlayerController : MonoBehaviour
     private int configuredGender = -1;
     private GameState subscribedGameState;
     private bool isSubscribedToLocationChanges;
+    private readonly ContactPoint2D[] contactBuffer = new ContactPoint2D[8];
+    private readonly RaycastHit2D[] clickMoveWallHits = new RaycastHit2D[8];
 
     private const string AnimIdle = "Idle";
     private const string AnimWalk = "Walk";
@@ -177,7 +185,8 @@ public class PlayerController : MonoBehaviour
         }
 
         if ((DialogueSystem.Instance != null && DialogueSystem.Instance.IsDialogueActive) ||
-            (EventExecutor.Instance != null && EventExecutor.Instance.IsExecuting))
+            (EventExecutor.Instance != null && EventExecutor.Instance.IsExecuting) ||
+            (CourseScheduleUI.Instance != null && CourseScheduleUI.Instance.IsOpen))
         {
             moveInput = 0f;
             isClickMoving = false;
@@ -235,13 +244,8 @@ public class PlayerController : MonoBehaviour
 
             if (Mathf.Abs(diff) <= stopDistance)
             {
-                isClickMoving = false;
-                moveInput = 0f;
                 pendingInteractionTarget = null;
-
-                Action arrivalAction = pendingArrivalAction;
-                pendingArrivalAction = null;
-                arrivalAction?.Invoke();
+                StopClickMove(clearInteractionTarget: false, clearArrivalAction: true, invokeArrivalAction: true);
             }
             else
             {
@@ -253,15 +257,7 @@ public class PlayerController : MonoBehaviour
             moveInput = 0f;
         }
 
-        if (groundLayer.value != 0)
-        {
-            isGrounded = Physics2D.OverlapCircle(groundCheck.position, groundCheckRadius, groundLayer);
-        }
-        else
-        {
-            RaycastHit2D hit = Physics2D.Raycast(groundCheck.position, Vector2.down, 0.1f);
-            isGrounded = hit.collider != null && hit.collider.gameObject != gameObject;
-        }
+        UpdateGroundedState();
 
         HandleJumpInput();
 
@@ -305,6 +301,12 @@ public class PlayerController : MonoBehaviour
             return Mathf.Clamp(GameState.Instance.PlayerGender, MaleGenderValue, FemaleGenderValue);
         }
 
+        if (!Application.isPlaying &&
+            StartupFlowSettings.TryGetEditorPreviewPlayerGenderOverride(out int editorPreviewGender))
+        {
+            return Mathf.Clamp(editorPreviewGender, MaleGenderValue, FemaleGenderValue);
+        }
+
         if (SaveManager.PendingLoadData != null)
         {
             return Mathf.Clamp(SaveManager.PendingLoadData.playerGender, MaleGenderValue, FemaleGenderValue);
@@ -315,7 +317,7 @@ public class PlayerController : MonoBehaviour
             return Mathf.Clamp(CharacterCreationUI.PendingPlayerGender, MaleGenderValue, FemaleGenderValue);
         }
 
-        return MaleGenderValue;
+        return Mathf.Clamp(StartupFlowSettings.DefaultPlayerGender, MaleGenderValue, FemaleGenderValue);
     }
 
     private void UpdateAnimation(float input)
@@ -356,6 +358,8 @@ public class PlayerController : MonoBehaviour
             return;
         }
 
+        UpdateGroundedState();
+
         if (jumpRequested && isGrounded)
         {
             StartJump();
@@ -368,13 +372,86 @@ public class PlayerController : MonoBehaviour
             jumpHoldTimer += Time.fixedDeltaTime;
         }
 
-        rb.velocity = new Vector2(moveInput * moveSpeed, rb.velocity.y);
+        if (isClickMoving && Mathf.Abs(moveInput) > 0.01f && IsClickMoveBlocked(moveInput))
+        {
+            StopClickMove(clearInteractionTarget: false, clearArrivalAction: true, invokeArrivalAction: false);
+        }
+
+        float targetHorizontalVelocity = moveInput * moveSpeed;
+        if (!isGrounded && IsPressingIntoBlockingWall(moveInput))
+        {
+            targetHorizontalVelocity = 0f;
+            if (rb.velocity.y > -wallStickReleaseFallSpeed)
+            {
+                rb.velocity = new Vector2(rb.velocity.x, -wallStickReleaseFallSpeed);
+            }
+        }
+
+        rb.velocity = new Vector2(targetHorizontalVelocity, rb.velocity.y);
         ClampToCurrentLocationBounds();
 
         if (isGrounded && rb.velocity.y <= 0f)
         {
             isJumping = false;
             jumpHoldTimer = 0f;
+        }
+    }
+
+    private bool IsClickMoveBlocked(float direction)
+    {
+        BoxCollider2D collider2D = GetPlayerCollider();
+        if (collider2D == null)
+        {
+            return false;
+        }
+
+        float directionSign = Mathf.Sign(direction);
+        if (Mathf.Approximately(directionSign, 0f))
+        {
+            return false;
+        }
+
+        ContactFilter2D filter = new ContactFilter2D
+        {
+            useTriggers = false,
+            useLayerMask = true
+        };
+        filter.SetLayerMask(Physics2D.GetLayerCollisionMask(gameObject.layer));
+
+        int hitCount = collider2D.Cast(Vector2.right * directionSign, filter, clickMoveWallHits, clickMoveWallProbeDistance);
+        for (int i = 0; i < hitCount; i++)
+        {
+            RaycastHit2D hit = clickMoveWallHits[i];
+            if (hit.collider == null || hit.collider.gameObject == gameObject)
+            {
+                continue;
+            }
+
+            return true;
+        }
+
+        return false;
+    }
+
+    private void StopClickMove(bool clearInteractionTarget, bool clearArrivalAction, bool invokeArrivalAction)
+    {
+        isClickMoving = false;
+        moveInput = 0f;
+
+        if (clearInteractionTarget)
+        {
+            pendingInteractionTarget = null;
+        }
+
+        Action arrivalAction = pendingArrivalAction;
+        if (clearArrivalAction)
+        {
+            pendingArrivalAction = null;
+        }
+
+        if (invokeArrivalAction)
+        {
+            arrivalAction?.Invoke();
         }
     }
 
@@ -400,8 +477,12 @@ public class PlayerController : MonoBehaviour
     private void OnValidate()
     {
         groundCheckRadius = Mathf.Max(0.01f, groundCheckRadius);
+        groundProbeDistance = Mathf.Max(0.01f, groundProbeDistance);
+        feetContactGraceHeight = Mathf.Max(0.01f, feetContactGraceHeight);
+        wallStickReleaseFallSpeed = Mathf.Max(0.1f, wallStickReleaseFallSpeed);
         colliderSize.x = Mathf.Max(0.01f, colliderSize.x);
         colliderSize.y = Mathf.Max(0.01f, colliderSize.y);
+        colliderEdgeRadius = Mathf.Clamp(colliderEdgeRadius, 0f, Mathf.Min(colliderSize.x, colliderSize.y) * 0.5f);
         maleVisualHeight = Mathf.Max(0.1f, maleVisualHeight);
         femaleVisualHeight = Mathf.Max(0.1f, femaleVisualHeight);
 
@@ -546,6 +627,102 @@ public class PlayerController : MonoBehaviour
         rb.velocity = new Vector2(rb.velocity.x, Mathf.Min(minJumpForce, jumpForce));
     }
 
+    private void UpdateGroundedState()
+    {
+        isGrounded = IsGroundedByProbe() || HasWalkableFeetContact();
+    }
+
+    private bool IsGroundedByProbe()
+    {
+        if (groundCheck == null)
+        {
+            return false;
+        }
+
+        RaycastHit2D hit;
+        if (groundLayer.value != 0)
+        {
+            hit = Physics2D.CircleCast(groundCheck.position, groundCheckRadius, Vector2.down, groundProbeDistance, groundLayer);
+        }
+        else
+        {
+            hit = Physics2D.CircleCast(groundCheck.position, groundCheckRadius, Vector2.down, groundProbeDistance);
+        }
+
+        if (hit.collider == null || hit.collider.gameObject == gameObject)
+        {
+            return false;
+        }
+
+        return hit.normal.y >= walkableGroundNormalY;
+    }
+
+    private bool HasWalkableFeetContact()
+    {
+        BoxCollider2D collider2D = GetPlayerCollider();
+        if (collider2D == null)
+        {
+            return false;
+        }
+
+        int contactCount = collider2D.GetContacts(contactBuffer);
+        if (contactCount <= 0)
+        {
+            return false;
+        }
+
+        float feetThreshold = collider2D.bounds.min.y + feetContactGraceHeight;
+        for (int i = 0; i < contactCount; i++)
+        {
+            ContactPoint2D contact = contactBuffer[i];
+            if (contact.collider == null)
+            {
+                continue;
+            }
+
+            if (contact.normal.y >= walkableGroundNormalY && contact.point.y <= feetThreshold)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private bool IsPressingIntoBlockingWall(float direction)
+    {
+        if (Mathf.Abs(direction) < 0.01f)
+        {
+            return false;
+        }
+
+        BoxCollider2D collider2D = GetPlayerCollider();
+        if (collider2D == null)
+        {
+            return false;
+        }
+
+        float directionSign = Mathf.Sign(direction);
+        int contactCount = collider2D.GetContacts(contactBuffer);
+        for (int i = 0; i < contactCount; i++)
+        {
+            ContactPoint2D contact = contactBuffer[i];
+            if (contact.collider == null)
+            {
+                continue;
+            }
+
+            bool isWallLikeSurface = Mathf.Abs(contact.normal.x) > 0.5f && contact.normal.y < walkableGroundNormalY;
+            bool blocksMovementDirection = Mathf.Sign(contact.normal.x) == -directionSign;
+            if (isWallLikeSurface && blocksMovementDirection)
+            {
+                return true;
+            }
+        }
+
+        return IsClickMoveBlocked(direction);
+    }
+
     public void MoveToInteractionTarget(Transform target, float stopDistance, Action onArrived)
     {
         if (target == null)
@@ -596,8 +773,7 @@ public class PlayerController : MonoBehaviour
 
             if (isClickMoving && Mathf.Abs(clickTargetX - clampedX) <= clickMoveStopDistance)
             {
-                isClickMoving = false;
-                moveInput = 0f;
+                StopClickMove(clearInteractionTarget: false, clearArrivalAction: true, invokeArrivalAction: false);
             }
         }
     }
@@ -740,6 +916,7 @@ public class PlayerController : MonoBehaviour
 
         collider2D.size = colliderSize;
         collider2D.offset = colliderOffset;
+        collider2D.edgeRadius = colliderEdgeRadius;
     }
 
     private void ApplyEditorPreviewSprite()

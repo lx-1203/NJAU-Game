@@ -103,6 +103,8 @@ public class EventScheduler : MonoBehaviour
                     continue;
                 }
 
+                NormalizeEventDefinition(evt, treatZeroChanceAsLegacyDefault: true);
+
                 if (allEvents.ContainsKey(evt.id))
                 {
                     Debug.LogWarning($"[EventScheduler] 事件 id 重复: {evt.id}，后者覆盖前者");
@@ -155,6 +157,22 @@ public class EventScheduler : MonoBehaviour
 
         if (trigger.roundMax > 0 && gs.CurrentRound > trigger.roundMax)
             return false;
+
+        if (trigger.specificRounds != null && trigger.specificRounds.Length > 0)
+        {
+            bool matchedRound = false;
+            for (int i = 0; i < trigger.specificRounds.Length; i++)
+            {
+                if (gs.CurrentRound == trigger.specificRounds[i])
+                {
+                    matchedRound = true;
+                    break;
+                }
+            }
+
+            if (!matchedRound)
+                return false;
+        }
 
         // --- 属性条件 ---
         if (trigger.attributeConditions != null)
@@ -242,6 +260,9 @@ public class EventScheduler : MonoBehaviour
             case "领导力": return pa.Leadership;
             case "压力":   return pa.Stress;
             case "心情":   return pa.Mood;
+            case "黑暗值": return pa.Darkness;
+            case "负罪感": return pa.Guilt;
+            case "幸运":   return pa.Luck;
             default:
                 Debug.LogWarning($"[EventScheduler] 未知属性名称: {attrName}");
                 return 0;
@@ -286,8 +307,18 @@ public class EventScheduler : MonoBehaviour
             if (!evt.isRepeatable && EventHistory.Instance.HasTriggered(evt.id))
                 continue;
 
+            // 每回合触发上限检查
+            if (evt.maxTriggersPerRound > 0 &&
+                EventHistory.Instance.GetTriggerCountForRound(evt.id, GameState.Instance.CurrentYear, GameState.Instance.CurrentSemester, GameState.Instance.CurrentRound) >= evt.maxTriggersPerRound)
+            {
+                continue;
+            }
+
             // 条件检查
             if (!CheckCondition(evt.trigger))
+                continue;
+
+            if (!PassProbabilityCheck(evt))
                 continue;
 
             candidates.Add(evt);
@@ -391,6 +422,41 @@ public class EventScheduler : MonoBehaviour
         return allEvents.Count;
     }
 
+    public List<EventDefinition> GetAllEventsSnapshot()
+    {
+        return allEvents.Values
+            .OrderBy(evt => evt.priority)
+            .ThenBy(evt => evt.id)
+            .ToList();
+    }
+
+    public void RegisterOrReplaceRuntimeEvent(EventDefinition evt)
+    {
+        if (evt == null || string.IsNullOrWhiteSpace(evt.id))
+        {
+            Debug.LogWarning("[EventScheduler] 尝试注册空事件或无 ID 事件");
+            return;
+        }
+
+        NormalizeEventDefinition(evt, treatZeroChanceAsLegacyDefault: false);
+        allEvents[evt.id] = evt;
+        Debug.Log($"[EventScheduler] 已注册运行时事件: {evt.id} - {evt.title}");
+    }
+
+    public bool RemoveRuntimeEvent(string eventId)
+    {
+        if (string.IsNullOrWhiteSpace(eventId))
+            return false;
+
+        bool removed = allEvents.Remove(eventId);
+        if (removed)
+        {
+            Debug.Log($"[EventScheduler] 已移除运行时事件: {eventId}");
+        }
+
+        return removed;
+    }
+
     // ========== 行为通知 ==========
 
     /// <summary>
@@ -417,8 +483,17 @@ public class EventScheduler : MonoBehaviour
             if (!evt.isRepeatable && EventHistory.Instance.HasTriggered(evt.id))
                 continue;
 
+            if (evt.maxTriggersPerRound > 0 &&
+                EventHistory.Instance.GetTriggerCountForRound(evt.id, GameState.Instance.CurrentYear, GameState.Instance.CurrentSemester, GameState.Instance.CurrentRound) >= evt.maxTriggersPerRound)
+            {
+                continue;
+            }
+
             // 条件检查
             if (!CheckCondition(evt.trigger))
+                continue;
+
+            if (!PassProbabilityCheck(evt))
                 continue;
 
             matched.Add(evt);
@@ -437,5 +512,50 @@ public class EventScheduler : MonoBehaviour
         {
             ProcessNextEvent();
         }
+    }
+
+    private bool PassProbabilityCheck(EventDefinition evt)
+    {
+        if (evt == null || evt.trigger == null)
+            return true;
+
+        float chance = evt.trigger.triggerChance;
+        if (chance <= 0f)
+            return false;
+
+        if (chance >= 1f)
+            return true;
+
+        bool passed = UnityEngine.Random.value <= chance;
+        if (!passed)
+        {
+            Debug.Log($"[EventScheduler] 事件 {evt.id} 未通过概率检定: {chance:P0}");
+        }
+
+        return passed;
+    }
+
+    private void NormalizeEventDefinition(EventDefinition evt, bool treatZeroChanceAsLegacyDefault)
+    {
+        if (evt == null || evt.trigger == null)
+            return;
+
+        if (evt.trigger.specificRounds == null)
+            evt.trigger.specificRounds = Array.Empty<int>();
+
+        if (evt.trigger.attributeConditions == null)
+            evt.trigger.attributeConditions = Array.Empty<AttributeCondition>();
+
+        if (evt.trigger.affinityConditions == null)
+            evt.trigger.affinityConditions = Array.Empty<AffinityCondition>();
+
+        if (evt.trigger.requiredEventIds == null)
+            evt.trigger.requiredEventIds = Array.Empty<string>();
+
+        if (evt.trigger.excludedEventIds == null)
+            evt.trigger.excludedEventIds = Array.Empty<string>();
+
+        if (treatZeroChanceAsLegacyDefault && evt.trigger.triggerChance <= 0f)
+            evt.trigger.triggerChance = 1f;
     }
 }

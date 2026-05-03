@@ -76,6 +76,12 @@ public class DebugConsoleManager : MonoBehaviour
         }
 
         isOpen = true;
+        if (consoleUI != null)
+        {
+            Destroy(consoleUI.gameObject);
+            consoleUI = null;
+        }
+
         if (consoleUI == null)
         {
             GameObject uiObject = new GameObject("DebugConsoleUI");

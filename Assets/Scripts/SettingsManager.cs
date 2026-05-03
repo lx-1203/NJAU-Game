@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 /// <summary>
 /// 设置管理器，负责设置数据的加载、保存和应用。
@@ -29,6 +31,19 @@ public class SettingsManager : MonoBehaviour
     private const string KeyAutoPlayInterval = KeyPrefix + "AutoPlayInterval";
     private const string KeySkipMode = KeyPrefix + "SkipMode";
     private const string KeyFastForwardSpeed = KeyPrefix + "FastForwardSpeed";
+    private readonly Dictionary<int, Vector2> canvasReferenceCache = new Dictionary<int, Vector2>();
+    private int lastUIScaleRefreshFrame = -999;
+
+    public static SettingsManager EnsureInstance()
+    {
+        if (Instance != null)
+        {
+            return Instance;
+        }
+
+        GameObject obj = new GameObject("SettingsManager");
+        return obj.AddComponent<SettingsManager>();
+    }
 
     private void Awake()
     {
@@ -72,6 +87,17 @@ public class SettingsManager : MonoBehaviour
     public void SaveSettings()
     {
         SaveSettings(CurrentSettings);
+    }
+
+    public void EnsureLoaded()
+    {
+        if (CurrentSettings != null)
+        {
+            return;
+        }
+
+        LoadSettings();
+        ApplyAllSettings();
     }
 
     public void SaveSettings(SettingsData settings)
@@ -209,6 +235,7 @@ public class SettingsManager : MonoBehaviour
     {
         Screen.fullScreen = settings.fullscreen;
         Screen.SetResolution(settings.resolutionWidth, settings.resolutionHeight, settings.fullscreen);
+        ApplyUIScaleToActiveCanvases(settings.uiScale);
         OnUIScaleChanged?.Invoke(settings.uiScale);
     }
 
@@ -234,5 +261,45 @@ public class SettingsManager : MonoBehaviour
         }
 
         DialogueSystem.Instance.SetTextSpeed(speed);
+    }
+
+    private void LateUpdate()
+    {
+        if (CurrentSettings == null)
+        {
+            return;
+        }
+
+        if (Time.frameCount - lastUIScaleRefreshFrame < 30)
+        {
+            return;
+        }
+
+        ApplyUIScaleToActiveCanvases(CurrentSettings.uiScale);
+    }
+
+    private void ApplyUIScaleToActiveCanvases(float uiScale)
+    {
+        uiScale = Mathf.Clamp(uiScale, 0.8f, 1.3f);
+        CanvasScaler[] scalers = FindObjectsByType<CanvasScaler>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        for (int i = 0; i < scalers.Length; i++)
+        {
+            CanvasScaler scaler = scalers[i];
+            if (scaler == null || scaler.uiScaleMode != CanvasScaler.ScaleMode.ScaleWithScreenSize)
+            {
+                continue;
+            }
+
+            int id = scaler.GetInstanceID();
+            if (!canvasReferenceCache.TryGetValue(id, out Vector2 baseResolution))
+            {
+                baseResolution = scaler.referenceResolution;
+                canvasReferenceCache[id] = baseResolution;
+            }
+
+            scaler.referenceResolution = baseResolution / uiScale;
+        }
+
+        lastUIScaleRefreshFrame = Time.frameCount;
     }
 }

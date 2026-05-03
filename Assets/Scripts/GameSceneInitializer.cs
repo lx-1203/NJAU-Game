@@ -85,6 +85,7 @@ public class GameSceneInitializer : MonoBehaviour
         SetupJobSelectionUI();
         SetupPhysicalTestUI();
         SetupConfirmDialogUI();
+        SetupCourseScheduleUI();
 
         // 注入真实 Provider（所有子系统已初始化完毕）
         if (SemesterSummarySystem.Instance != null)
@@ -153,6 +154,11 @@ public class GameSceneInitializer : MonoBehaviour
         {
             GameObject obj = new GameObject("PlayerAttributes");
             obj.AddComponent<PlayerAttributes>();
+        }
+
+        if (SaveManager.PendingLoadData == null && PlayerAttributes.Instance != null)
+        {
+            StartupFlowSettings.ApplyStartupPlayerAttributes(PlayerAttributes.Instance);
         }
     }
 
@@ -594,6 +600,15 @@ public class GameSceneInitializer : MonoBehaviour
         {
             GameObject obj = new GameObject("ConfirmDialogUI");
             obj.AddComponent<ConfirmDialogUI>();
+        }
+    }
+
+    private void SetupCourseScheduleUI()
+    {
+        if (CourseScheduleUI.Instance == null)
+        {
+            GameObject obj = new GameObject("CourseScheduleUI");
+            obj.AddComponent<CourseScheduleUI>();
         }
     }
 

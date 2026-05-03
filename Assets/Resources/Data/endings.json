@@ -74,40 +74,45 @@
         },
         {
             "id": "END_007",
-            "name": "保研清北",
+            "name": "顶尖高校直博",
             "stars": 5,
             "layer": 2,
             "conditions": [
+                { "type": "Study_GreaterOrEqual", "value": 250 },
                 { "type": "GPA_GreaterOrEqual", "value": 3.8 },
-                { "type": "Study_GreaterOrEqual", "value": 85 }
+                { "type": "CET6Passed", "value": 1 },
+                { "type": "TotalStudyCount_GreaterOrEqual", "value": 80 },
+                { "type": "Guilt_LessOrEqual", "value": 20 }
             ],
-            "description": "凭借大学四年的努力，你成功获得了清华/北大的推免资格。站在更高的学术殿堂门前，你知道这只是新征程的起点。",
-            "cgId": "cg_ending_top_grad"
+            "description": "毕业典礼还没结束，导师的邮件已经到了。你把四年来图书馆的灯光、竞赛答辩的深夜、自习室里啃过的每一本书，都折叠进了那封直博录取通知书里。钟山下的苦读没有白费，你终于走上了自己选定的那条学术道路。",
+            "cgId": "cg_ending_direct_phd"
         },
         {
             "id": "END_008",
-            "name": "保研本校",
+            "name": "985 硕士",
             "stars": 4,
             "layer": 2,
             "conditions": [
+                { "type": "Study_GreaterOrEqual", "value": 200 },
                 { "type": "GPA_GreaterOrEqual", "value": 3.5 },
-                { "type": "Study_GreaterOrEqual", "value": 70 }
+                { "type": "CET4Passed", "value": 1 },
+                { "type": "Guilt_LessOrEqual", "value": 40 }
             ],
-            "description": "你的成绩在同届中名列前茅，顺利获得了本校的推免资格。虽然没有远走高飞，但在熟悉的校园里继续深造，也是一种幸福。",
-            "cgId": "cg_ending_local_grad"
+            "description": "成绩出来的那个凌晨，你盯着屏幕上的'拟录取'三个字，好半天没敢呼吸。不是最顶尖的那一档，但足够好，一所 985 高校的硕士录取通知书，已经足够证明你这四年的坚持没有白费。",
+            "cgId": "cg_ending_985_master"
         },
         {
             "id": "END_009",
-            "name": "考研上岸",
-            "stars": 4,
+            "name": "普通院校研究生",
+            "stars": 3,
             "layer": 2,
             "conditions": [
+                { "type": "Study_GreaterOrEqual", "value": 150 },
                 { "type": "GPA_GreaterOrEqual", "value": 3.0 },
-                { "type": "Study_GreaterOrEqual", "value": 60 },
-                { "type": "Stress_GreaterOrEqual", "value": 50 }
+                { "type": "CET4Passed", "value": 1 }
             ],
-            "description": "备考的日子无比煎熬，但你咬牙坚持了下来。当录取通知到来的那一刻，所有的付出都有了回报。研究生的新生活在向你招手。",
-            "cgId": "cg_ending_exam_grad"
+            "description": "调剂结果不算理想，但你终究还是上岸了。拖着行李走进陌生城市校园的那一刻，你心里五味杂陈，可至少未来并没有在这里停下。新的三年，也许还能把遗憾一点点追回来。",
+            "cgId": "cg_ending_grad_school"
         },
         {
             "id": "END_010",
@@ -253,6 +258,131 @@
             ],
             "description": "在校期间你就开始了电商生意，毕业时已经有了稳定的客户群。虽然规模不大，但这是完全属于你的事业。",
             "cgId": "cg_ending_ecommerce"
+        },
+        {
+            "id": "END_025",
+            "name": "考研落榜·二战",
+            "stars": 2,
+            "layer": 3,
+            "conditions": [
+                { "type": "Study_GreaterOrEqual", "value": 100 },
+                { "type": "GPA_GreaterOrEqual", "value": 2.5 },
+                { "type": "Stress_GreaterOrEqual", "value": 70 }
+            ],
+            "description": "分数线出来的那一刻，你知道自己差得并不算远。室友们各奔前程，你把桌上的旧书重新摊开，给自己写下新的倒计时。二战很苦，但你还没打算认输。",
+            "cgId": "cg_ending_exam_retry"
+        },
+        {
+            "id": "END_026",
+            "name": "学术梦碎·转行求职",
+            "stars": 1,
+            "layer": 3,
+            "conditions": [
+                { "type": "Study_Less", "value": 100 },
+                { "type": "GPA_GreaterOrEqual", "value": 2.0 }
+            ],
+            "description": "查分那天，你盯着屏幕沉默了很久。图书馆去得断断续续，真题也没做完，结果像一记闷棍，却又并不意外。你最终擦掉了白板上的考研倒计时，开始认真改简历，学着把人生往另一条路上推。",
+            "cgId": "cg_ending_academic_shift"
+        },
+        {
+            "id": "END_027",
+            "name": "获得天使投资",
+            "stars": 5,
+            "layer": 3,
+            "conditions": [
+                { "type": "Study_GreaterOrEqual", "value": 180 },
+                { "type": "Charm_GreaterOrEqual", "value": 180 },
+                { "type": "Money_GreaterOrEqual", "value": 20000 },
+                { "type": "Guilt_LessOrEqual", "value": 40 }
+            ],
+            "description": "路演结束的那个下午，投资人没有绕弯子，直接问你要公司账户。你走出咖啡馆时手心还在发汗，从宿舍里写商业计划书的深夜，到创业比赛上被追问到哑口无言的时刻，全都在这一笔投资里有了回响。",
+            "cgId": "cg_ending_angel_investment"
+        },
+        {
+            "id": "END_028",
+            "name": "校园创业新星",
+            "stars": 4,
+            "layer": 3,
+            "conditions": [
+                { "type": "Leadership_GreaterOrEqual", "value": 70 },
+                { "type": "Study_GreaterOrEqual", "value": 140 },
+                { "type": "Money_GreaterOrEqual", "value": 10000 },
+                { "type": "Guilt_LessOrEqual", "value": 60 }
+            ],
+            "description": "创业园那间不大的办公室里，堆满了样机、样稿和外卖盒。团队只有几个人，但订单已经排到了下个季度。毕业照上你笑得很用力，因为你知道自己不用再去海投简历了。",
+            "cgId": "cg_ending_campus_founder"
+        },
+        {
+            "id": "END_029",
+            "name": "世界 500 强管培生",
+            "stars": 5,
+            "layer": 3,
+            "conditions": [
+                { "type": "Study_GreaterOrEqual", "value": 200 },
+                { "type": "Charm_GreaterOrEqual", "value": 180 },
+                { "type": "GPA_GreaterOrEqual", "value": 3.5 },
+                { "type": "CET6Passed", "value": 1 },
+                { "type": "InternshipCount_GreaterOrEqual", "value": 4 },
+                { "type": "Guilt_LessOrEqual", "value": 30 }
+            ],
+            "description": "终面那天，你把四段实习攒下来的项目经验、比赛里磨出来的分析能力和一口流畅英文，全都稳稳地端了出来。offer call 打来时你正在食堂吃饭，筷子差点掉进汤里。世界 500 强的管培生工牌，终于写上了你的名字。",
+            "cgId": "cg_ending_fortune_500"
+        },
+        {
+            "id": "END_030",
+            "name": "独立女性·单身精英",
+            "stars": 4,
+            "layer": 3,
+            "conditions": [
+                { "type": "PlayerGender_Equals", "value": 1 },
+                { "type": "Study_GreaterOrEqual", "value": 180 },
+                { "type": "GPA_GreaterOrEqual", "value": 3.3 },
+                { "type": "CET6Passed", "value": 1 },
+                { "type": "InternshipCount_GreaterOrEqual", "value": 3 },
+                { "type": "NoPartner", "value": 1 },
+                { "type": "FriendCount_GreaterOrEqual", "value": 3 }
+            ],
+            "description": "你把秋招 offer 一条条列进表格，对薪资、成长性和生活节奏做了最冷静的比较。别人问你有没有男朋友时，你只是笑笑，把注意力重新放回自己的路线图。入职第一天，你拍下工位发了朋友圈，没有配文，但那张照片已经足够说明一切。",
+            "cgId": "cg_ending_independent_woman"
+        },
+        {
+            "id": "END_031",
+            "name": "普通企业职员",
+            "stars": 3,
+            "layer": 3,
+            "conditions": [
+                { "type": "Study_GreaterOrEqual", "value": 120 },
+                { "type": "GPA_GreaterOrEqual", "value": 2.5 },
+                { "type": "InternshipCount_GreaterOrEqual", "value": 1 }
+            ],
+            "description": "春招投出去几十份简历后，你终于在一家公司把三方签了下来。它不算耀眼，却足够稳妥，五险一金、通勤距离和团队氛围都过得去。没有狂喜，也没有不甘，只是心里那块悬着的石头终于落了地。",
+            "cgId": "cg_ending_office_worker"
+        },
+        {
+            "id": "END_032",
+            "name": "基层编制·县乡之路",
+            "stars": 3,
+            "layer": 3,
+            "conditions": [
+                { "type": "Leadership_GreaterOrEqual", "value": 90 },
+                { "type": "GPA_GreaterOrEqual", "value": 3.0 },
+                { "type": "IsPartyMember", "value": 1 },
+                { "type": "Guilt_LessOrEqual", "value": 30 }
+            ],
+            "description": "录用名单公示的那天，你的名字静静地挂在县乡基层岗位那一栏。起点不算耀眼，却很踏实。你知道自己接下来的日子不会轻松，但也正因为如此，这条路才更像一份真正值得负责的选择。",
+            "cgId": "cg_ending_grassroots_service"
+        },
+        {
+            "id": "END_033",
+            "name": "摆摊个体户",
+            "stars": 2,
+            "layer": 6,
+            "conditions": [
+                { "type": "Leadership_GreaterOrEqual", "value": 40 },
+                { "type": "Money_GreaterOrEqual", "value": 3000 }
+            ],
+            "description": "毕业那个暑假，你用攒下的钱进了第一批货，在夜市尽头支起了一个小摊。城管来的时候得赶紧收，下雨天也会整晚没生意，但每一块钱都是自己挣的，这份踏实感比任何空头承诺都真切。",
+            "cgId": "cg_ending_street_vendor"
         },
         {
             "id": "END_022",

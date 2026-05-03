@@ -63,6 +63,21 @@ public static class UIFlowGuard
             PhysicalTestUI.Instance.Hide();
         }
 
+        if (InventoryUIManager.Instance != null && InventoryUIManager.Instance.IsOpen)
+        {
+            InventoryUIManager.Instance.ClosePanel();
+        }
+
+        if (MissionPanelBuilder.Instance != null && MissionPanelBuilder.Instance.IsOpen)
+        {
+            MissionPanelBuilder.Instance.ClosePanel();
+        }
+
+        if (JobSelectionUI.Instance != null && JobSelectionUI.Instance.IsOpen)
+        {
+            JobSelectionUI.Instance.Hide();
+        }
+
         if (TalentUI.Instance != null && TalentUI.Instance.IsOpen)
         {
             TalentUI.Instance.ClosePanel();
@@ -71,6 +86,29 @@ public static class UIFlowGuard
         if (InfoPanelManager.Instance != null && InfoPanelManager.Instance.IsOpen)
         {
             InfoPanelManager.Instance.ClosePanel();
+        }
+
+        if (NPCInteractionMenu.Instance != null && NPCInteractionMenu.Instance.IsMenuOpen)
+        {
+            NPCInteractionMenu.Instance.CloseMenu();
+        }
+
+        ClubPanelManager clubPanelManager = Object.FindObjectOfType<ClubPanelManager>();
+        if (clubPanelManager != null && clubPanelManager.IsOpen)
+        {
+            clubPanelManager.ClosePanel();
+        }
+
+        ShopUIBuilder shopUIBuilder = Object.FindObjectOfType<ShopUIBuilder>();
+        if (shopUIBuilder != null && shopUIBuilder.IsShopOpen)
+        {
+            shopUIBuilder.HideShop();
+        }
+
+        SaveLoadUI saveLoadUI = Object.FindObjectOfType<SaveLoadUI>();
+        if (saveLoadUI != null)
+        {
+            Object.Destroy(saveLoadUI.gameObject);
         }
 
         if (SettingsUIBuilder.Instance != null && SettingsUIBuilder.Instance.IsOpen)

@@ -104,6 +104,42 @@ public class EventHistory : MonoBehaviour, ISaveable
         return records.Any(r => r.eventId == eventId);
     }
 
+    public int GetTriggerCount(string eventId)
+    {
+        if (string.IsNullOrEmpty(eventId))
+            return 0;
+
+        int count = 0;
+        for (int i = 0; i < records.Count; i++)
+        {
+            if (records[i].eventId == eventId)
+                count++;
+        }
+
+        return count;
+    }
+
+    public int GetTriggerCountForRound(string eventId, int year, int semester, int round)
+    {
+        if (string.IsNullOrEmpty(eventId))
+            return 0;
+
+        int count = 0;
+        for (int i = 0; i < records.Count; i++)
+        {
+            EventRecord record = records[i];
+            if (record.eventId == eventId &&
+                record.triggerYear == year &&
+                record.triggerSemester == semester &&
+                record.triggerRound == round)
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
     /// <summary>
     /// 获取某事件最后一次触发时的选项索引。
     /// </summary>

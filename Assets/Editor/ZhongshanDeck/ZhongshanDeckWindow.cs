@@ -1,14 +1,57 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Text;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
 
 public class ZhongshanDeckWindow : EditorWindow
 {
+    private sealed class EventListEntry
+    {
+        public EventDefinition Event;
+        public bool IsDraft;
+        public string SourceLabel;
+    }
+
+    [Serializable]
+    private sealed class EventAttributeConditionDraft
+    {
+        public int attributeIndex;
+        public int comparisonIndex;
+        public int value;
+    }
+
+    [Serializable]
+    private sealed class EventEffectDraft
+    {
+        public int effectTypeIndex;
+        public int attributeIndex;
+        public string targetText = string.Empty;
+        public int value;
+    }
+
+    [Serializable]
+    private sealed class EventChoiceDraft
+    {
+        public string text = string.Empty;
+        public string nextEventId = string.Empty;
+        public List<EventEffectDraft> effects = new List<EventEffectDraft>();
+    }
+
+    private const string SplashScenePath = "Assets/Scenes/SplashScreen.unity";
+    private const string LoadingScenePath = "Assets/Scenes/LoadingScreen.unity";
+    private const string TitleScenePath = "Assets/Scenes/TitleScreen.unity";
+    private const string GameScenePath = "Assets/Scenes/GameScene/GameScene.unity";
+    private const string EndingsDataPath = "Assets/Resources/Data/endings.json";
+    private const int SceneJumpColumnCount = 3;
+
     public enum Tab
     {
         Overview,
+        SceneJump,
         Attributes,
         Time,
         Endings,
@@ -22,7 +65,7 @@ public class ZhongshanDeckWindow : EditorWindow
 
     private static readonly string[] TabLabels =
     {
-        "总览", "属性", "时间", "结局", "事件", "NPC", "经济", "公式", "快照", "日志"
+        "总览", "场景跳转", "属性", "时间", "结局", "事件", "NPC", "经济", "公式", "快照", "日志"
     };
 
     private static readonly (string Label, string Key, int Min, int Max)[] AttributeDefs =
@@ -36,14 +79,72 @@ public class ZhongshanDeckWindow : EditorWindow
         ("黑暗值", "Darkness", 0, 999),
         ("负罪感", "Guilt", 0, PlayerAttributes.MaxStatusValue),
         ("幸运", "Luck", 0, PlayerAttributes.MaxStatusValue),
-        ("金钱", "Money", -999999, 999999)
+        ("金钱", "Money", -999999, 999999),
+        ("行动点", "ActionPoints", 0, 999)
     };
+
+    private static readonly string[] EndingCategoryOrder =
+    {
+        "特殊/强制",
+        "巅峰",
+        "学术",
+        "仕途",
+        "创业",
+        "职场",
+        "留学",
+        "文体/特长",
+        "新兴职业/自由",
+        "黑暗",
+        "保底"
+    };
+
+    private static readonly int[] EndingStarOrder = { 7, 6, 5, 4, 3, 2, 1, 0 };
 
     private Tab currentTab;
     private Vector2 scrollPosition;
     private readonly Dictionary<string, int> attributeInputs = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
     private string eventIdInput = string.Empty;
     private string flagInput = string.Empty;
+    private string eventTitleInput = string.Empty;
+    private string eventDescriptionInput = string.Empty;
+    private int eventTypeIndex = 0;
+    private int eventPhaseIndex = 0;
+    private int eventPriorityInput = 2;
+    private bool eventForcedInput;
+    private bool eventRepeatableInput = true;
+    private int eventYearTriggerInput;
+    private int eventSemesterTriggerInput;
+    private int eventRoundMinInput;
+    private int eventRoundMaxInput;
+    private string eventSpecificRoundsInput = string.Empty;
+    private float eventProbabilityInput = 1f;
+    private string eventTriggerBehaviorInput = string.Empty;
+    private readonly List<EventAttributeConditionDraft> eventAttributeConditionDrafts = new List<EventAttributeConditionDraft>();
+    private int eventMinMoneyInput;
+    private int eventMaxMoneyInput;
+    private int eventMinDarknessInput;
+    private readonly List<string> eventRequiredEventIds = new List<string>();
+    private readonly List<string> eventExcludedEventIds = new List<string>();
+    private int eventRequiredAddIndex;
+    private int eventExcludedAddIndex;
+    private string eventSpeakerInput = string.Empty;
+    private string eventPortraitInput = string.Empty;
+    private readonly List<string> eventDialogueLines = new List<string>();
+    private readonly List<EventEffectDraft> eventDefaultEffectDrafts = new List<EventEffectDraft>();
+    private readonly List<string> eventChainEventIds = new List<string>();
+    private int eventChainAddIndex;
+    private readonly List<EventChoiceDraft> eventChoiceDrafts = new List<EventChoiceDraft>();
+    private string eventAuthoringStatus = string.Empty;
+    private int eventTimelineYearInput = 1;
+    private int eventTimelineSemesterInput = 1;
+    private int eventTimelineRoundInput = 1;
+    private int eventTimelinePhaseIndex;
+    private int eventRoundAddSelectionIndex;
+    private string eventLibrarySearchInput = string.Empty;
+    private string eventEditorModeText = "请从上方事件列表右侧的编辑按钮进入详情编辑";
+    private string editingEventId = string.Empty;
+    private string editingEventSource = string.Empty;
+    private bool isCreatingNewEvent;
     private string snapshotNameInput = string.Empty;
     private string npcIdInput = string.Empty;
     private int npcAffinityValue;
@@ -60,6 +161,85 @@ public class ZhongshanDeckWindow : EditorWindow
     private int formulaC = 2;
     private string formulaResult = string.Empty;
     private string logFilter = string.Empty;
+    private string endingSearchInput = string.Empty;
+    private string endingEditorStatus = string.Empty;
+    private string editingEndingId = string.Empty;
+    private string endingEditName = string.Empty;
+    private string endingEditDescription = string.Empty;
+    private string endingEditCgId = string.Empty;
+    private List<EndingDefinition> endingEditorCache = new List<EndingDefinition>();
+    private readonly List<EndingCondition> endingConditionDrafts = new List<EndingCondition>();
+    private readonly Dictionary<string, bool> endingCategoryFoldouts = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase)
+    {
+        { "特殊/强制", true },
+        { "巅峰", true },
+        { "学术", true },
+        { "仕途", true },
+        { "创业", true },
+        { "职场", true },
+        { "留学", true },
+        { "文体/特长", true },
+        { "新兴职业/自由", true },
+        { "黑暗", true },
+        { "保底", true }
+    };
+    private readonly Dictionary<int, bool> endingStarFoldouts = new Dictionary<int, bool>
+    {
+        { 7, true },
+        { 6, true },
+        { 5, true },
+        { 4, true },
+        { 3, true },
+        { 2, true },
+        { 1, true },
+        { 0, true }
+    };
+    private static readonly string[] EventTypeOptions = { "Fixed", "MainStory", "Conditional", "Dark" };
+    private static readonly string[] EventTypeDisplayOptions = { "固定事件", "主线事件", "条件事件", "黑暗事件" };
+    private static readonly string[] EventPhaseOptions = { "RoundStart", "ActionComplete", "RoundEnd" };
+    private static readonly string[] EventPhaseDisplayOptions = { "回合开始", "行动完成后", "回合结束" };
+    private static readonly string[] EventTimelinePhaseOptions = { "All", "RoundStart", "ActionComplete", "RoundEnd" };
+    private static readonly string[] EventTimelinePhaseDisplayOptions = { "全部阶段", "回合开始", "行动完成后", "回合结束" };
+    private static readonly string[] EventAttributeOptions = { "学力", "魅力", "体魄", "领导力", "压力", "心情", "黑暗值", "负罪感", "幸运" };
+    private static readonly string[] EventComparisonOptions = { ">=", "<=", "==", "!=", ">", "<" };
+    private static readonly string[] EventEffectTypeOptions = { "attribute", "money", "flag", "darkness", "unlock" };
+    private static readonly string[] EventEffectTypeDisplayOptions = { "属性变化", "金钱变化", "标记开关", "黑暗值变化", "解锁内容" };
+    private static readonly string[] EndingConditionTypeOptions = Enum.GetNames(typeof(EndingConditionType));
+    private static readonly string[] EndingConditionTypeDisplayOptions =
+    {
+        "GPA >= 阈值",
+        "GPA < 阈值",
+        "学力 >= 阈值",
+        "魅力 >= 阈值",
+        "体魄 >= 阈值",
+        "领导力 >= 阈值",
+        "压力 >= 阈值",
+        "学力 < 阈值",
+        "心情 == 阈值",
+        "心情 < 阈值",
+        "金钱 < 阈值",
+        "金钱 >= 阈值",
+        "负罪感 <= 阈值",
+        "黑暗值 >= 阈值",
+        "有恋人",
+        "无恋人",
+        "恋爱等级 >= 阈值",
+        "好友数 >= 阈值",
+        "学生会主席",
+        "正式党员",
+        "玩家性别 == 阈值",
+        "获得国奖",
+        "作弊次数 >= 阈值",
+        "摆烂值 >= 阈值",
+        "心理健康 == 阈值",
+        "通过四级",
+        "通过六级",
+        "总学习次数 >= 阈值",
+        "总社交次数 >= 阈值",
+        "毕业总评分 >= 阈值",
+        "实习次数 >= 阈值",
+        "始终满足"
+    };
 
     [InitializeOnLoadMethod]
     private static void AutoEnsureStateAsset()
@@ -116,6 +296,7 @@ public class ZhongshanDeckWindow : EditorWindow
         switch (currentTab)
         {
             case Tab.Overview: DrawOverview(); break;
+            case Tab.SceneJump: DrawSceneJump(); break;
             case Tab.Attributes: DrawAttributes(); break;
             case Tab.Time: DrawTime(); break;
             case Tab.Endings: DrawEndings(); break;
@@ -133,7 +314,7 @@ public class ZhongshanDeckWindow : EditorWindow
     private void DrawToolbar()
     {
         EditorGUILayout.BeginHorizontal(EditorStyles.toolbar);
-        int selected = GUILayout.Toolbar((int)currentTab, TabLabels, EditorStyles.toolbarButton);
+        int selected = GUILayout.Toolbar((int)currentTab, TabLabels, EditorStyles.toolbarButton, GUILayout.Width(620f));
         if (selected != (int)currentTab)
         {
             currentTab = (Tab)selected;
@@ -224,11 +405,67 @@ public class ZhongshanDeckWindow : EditorWindow
         if (GUILayout.Button("NPC", GUILayout.Width(70f))) currentTab = Tab.NPC;
         if (GUILayout.Button("快照", GUILayout.Width(70f))) currentTab = Tab.Snapshots;
         EditorGUILayout.EndHorizontal();
+
+    }
+
+    private void DrawSceneJump()
+    {
+        EditorGUILayout.Space(8f);
+        EditorGUILayout.LabelField("场景跳转", EditorStyles.boldLabel);
+        EditorGUILayout.HelpBox("这里会自动列出项目里当前已有的全部 .unity 场景。普通场景直接打开，宿舍入口会同步切换主角身份与宿舍编辑状态。", MessageType.None);
+
+        EditorGUILayout.Space(6f);
+        EditorGUILayout.LabelField("项目场景", EditorStyles.boldLabel);
+        DrawSceneButtonGrid(GetAllScenePaths());
+
+        EditorGUILayout.Space(8f);
+        EditorGUILayout.LabelField("快速入口", EditorStyles.boldLabel);
+        using (new EditorGUILayout.HorizontalScope())
+        {
+            if (GUILayout.Button("SplashScreen", GUILayout.Width(140f)) && HasSceneAsset(SplashScenePath))
+            {
+                OpenSceneByPath(SplashScenePath);
+            }
+
+            if (GUILayout.Button("LoadingScreen", GUILayout.Width(140f)) && HasSceneAsset(LoadingScenePath))
+            {
+                OpenSceneByPath(LoadingScenePath);
+            }
+
+            if (GUILayout.Button("TitleScreen", GUILayout.Width(140f)) && HasSceneAsset(TitleScenePath))
+            {
+                OpenSceneByPath(TitleScenePath);
+            }
+
+            if (GUILayout.Button("GameScene", GUILayout.Width(140f)) && HasSceneAsset(GameScenePath))
+            {
+                OpenSceneByPath(GameScenePath);
+            }
+        }
+
+        EditorGUILayout.Space(8f);
+        EditorGUILayout.LabelField("宿舍编辑", EditorStyles.boldLabel);
+        using (new EditorGUILayout.HorizontalScope())
+        {
+            if (GUILayout.Button("进入男生宿舍", GUILayout.Width(180f)))
+            {
+                OpenDormitoryPreview(0);
+            }
+
+            if (GUILayout.Button("进入女生宿舍", GUILayout.Width(180f)))
+            {
+                OpenDormitoryPreview(1);
+            }
+        }
     }
 
     private void DrawAttributes()
     {
         EditorGUILayout.LabelField("属性调试", EditorStyles.boldLabel);
+        DrawStartupAttributeSettings();
+
+        EditorGUILayout.Space(10f);
+        EditorGUILayout.LabelField("运行中属性", EditorStyles.boldLabel);
         EditorGUILayout.BeginHorizontal();
         EditorGUILayout.LabelField("步进", GUILayout.Width(40f));
         int[] steps = DebugPresets.GetStepOptions();
@@ -246,7 +483,7 @@ public class ZhongshanDeckWindow : EditorWindow
 
         if (!EditorApplication.isPlaying)
         {
-            EditorGUILayout.HelpBox("属性修改需要在 Play 模式中执行。步进设置已同步到工具状态资产。", MessageType.None);
+            EditorGUILayout.HelpBox("上面是新游戏默认属性；下面的运行中属性修改需要在 Play 模式中执行。步进设置已同步到工具状态资产。", MessageType.None);
             return;
         }
 
@@ -297,9 +534,73 @@ public class ZhongshanDeckWindow : EditorWindow
         EditorGUILayout.EndHorizontal();
     }
 
+    private bool OpenSceneByPath(string scenePath)
+    {
+        if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+        {
+            return false;
+        }
+
+        if (AssetDatabase.LoadAssetAtPath<SceneAsset>(scenePath) == null)
+        {
+            EditorUtility.DisplayDialog("钟山台", $"找不到场景：{scenePath}", "确定");
+            return false;
+        }
+
+        EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Single);
+        return true;
+    }
+
+    private void OpenDormitoryPreview(int previewGender)
+    {
+        if (!OpenSceneByPath(GameScenePath))
+        {
+            return;
+        }
+
+        StartupFlowSettings.SetEditorPreviewPlayerGenderOverride(previewGender);
+        StartupFlowSettings.DefaultPlayerGender = Mathf.Clamp(previewGender, 0, 1);
+
+        LocationSceneController controller = UnityEngine.Object.FindFirstObjectByType<LocationSceneController>();
+        if (controller == null)
+        {
+            GameObject controllerObject = new GameObject("LocationSceneController");
+            controller = controllerObject.AddComponent<LocationSceneController>();
+            controller.EnsureDefaultProfiles();
+        }
+
+        Undo.RecordObject(controller, "Open Dormitory Preview");
+        controller.SetPreviewLocation(LocationId.Dormitory);
+        controller.SetPreviewPlayerGenderInEditMode(previewGender);
+        controller.RebuildScene();
+        EditorUtility.SetDirty(controller);
+
+        PlayerController playerController = UnityEngine.Object.FindFirstObjectByType<PlayerController>();
+        if (playerController != null)
+        {
+            Undo.RecordObject(playerController, "Switch Dormitory Character");
+            playerController.SendMessage("ApplyEditorPreviewSprite", SendMessageOptions.DontRequireReceiver);
+            EditorUtility.SetDirty(playerController);
+            Selection.activeObject = playerController.gameObject;
+            EditorGUIUtility.PingObject(playerController.gameObject);
+        }
+        else
+        {
+            Selection.activeObject = controller.gameObject;
+            EditorGUIUtility.PingObject(controller.gameObject);
+        }
+
+        SceneView.lastActiveSceneView?.FrameSelected();
+    }
+
     private void DrawTime()
     {
         EditorGUILayout.LabelField("时间调试", EditorStyles.boldLabel);
+
+        DrawStartupTimeSettings();
+
+        EditorGUILayout.Space(8f);
+
         if (!EditorApplication.isPlaying || GameState.Instance == null)
         {
             EditorGUILayout.HelpBox("进入 Play 模式后可调整学年、学期和回合。", MessageType.None);
@@ -337,80 +638,1147 @@ public class ZhongshanDeckWindow : EditorWindow
         }
         EditorGUILayout.EndHorizontal();
 
+        int totalRounds = GetTotalRounds(
+            GameState.Instance.CurrentYear,
+            GameState.Instance.CurrentSemester,
+            GameState.Instance.CurrentRound);
         EditorGUILayout.HelpBox($"当前：{GameState.Instance.GetTimeDescription()}", MessageType.None);
+        EditorGUILayout.HelpBox($"当前总回合数：{totalRounds}", MessageType.None);
+    }
+
+    private void DrawStartupTimeSettings()
+    {
+        EditorGUILayout.LabelField("新游戏起始时间", EditorStyles.boldLabel);
+        EditorGUILayout.HelpBox("这里配置的是进游戏前的新档起始时间。只影响新游戏，不影响读档。", MessageType.None);
+
+        bool useOverride = StartupFlowSettings.UseStartupTimeOverride;
+        bool newUseOverride = EditorGUILayout.Toggle("启用启动前时间覆盖", useOverride);
+        if (newUseOverride != useOverride)
+        {
+            StartupFlowSettings.UseStartupTimeOverride = newUseOverride;
+        }
+
+        int semesterRoundCount = EditorGUILayout.IntField("每学期回合数", StartupFlowSettings.SemesterRoundCount);
+        semesterRoundCount = Mathf.Clamp(semesterRoundCount, 3, 12);
+        if (semesterRoundCount != StartupFlowSettings.SemesterRoundCount)
+        {
+            StartupFlowSettings.SemesterRoundCount = semesterRoundCount;
+        }
+
+        int startupYear = EditorGUILayout.IntField("起始学年", StartupFlowSettings.StartupYear);
+        int startupSemester = EditorGUILayout.IntField("起始学期", StartupFlowSettings.StartupSemester);
+        int startupRound = EditorGUILayout.IntField("起始回合", StartupFlowSettings.StartupRound);
+
+        startupYear = Mathf.Clamp(startupYear, 1, 4);
+        startupSemester = Mathf.Clamp(startupSemester, 1, 2);
+        startupRound = Mathf.Clamp(startupRound, 1, StartupFlowSettings.SemesterRoundCount);
+
+        if (startupYear != StartupFlowSettings.StartupYear)
+        {
+            StartupFlowSettings.StartupYear = startupYear;
+        }
+
+        if (startupSemester != StartupFlowSettings.StartupSemester)
+        {
+            StartupFlowSettings.StartupSemester = startupSemester;
+        }
+
+        if (startupRound != StartupFlowSettings.StartupRound)
+        {
+            StartupFlowSettings.StartupRound = startupRound;
+        }
+
+        int startupMonth = GameState.CalculateMonth(StartupFlowSettings.StartupSemester, StartupFlowSettings.StartupRound);
+        string semesterLabel = StartupFlowSettings.StartupSemester == 1 ? "上" : "下";
+        string startupSummary = StartupFlowSettings.UseStartupTimeOverride
+            ? $"当前启动配置：每学期{StartupFlowSettings.SemesterRoundCount}回合 | 大{StartupFlowSettings.StartupYear}{semesterLabel} · 回合{StartupFlowSettings.StartupRound} · {startupMonth}月"
+            : "当前启动配置：使用默认开局时间";
+        EditorGUILayout.HelpBox(startupSummary, MessageType.None);
+        EditorGUILayout.HelpBox("考试回合当前先写死处理：期中第3回合，证书考试第4回合，期末为学期最后一回合。", MessageType.None);
+
+        EditorGUILayout.BeginHorizontal();
+        if (GUILayout.Button("用当前运行时间写入", GUILayout.Width(160f)))
+        {
+            if (EditorApplication.isPlaying && GameState.Instance != null)
+            {
+                StartupFlowSettings.StartupYear = GameState.Instance.CurrentYear;
+                StartupFlowSettings.StartupSemester = GameState.Instance.CurrentSemester;
+                StartupFlowSettings.StartupRound = GameState.Instance.CurrentRound;
+                StartupFlowSettings.UseStartupTimeOverride = true;
+                ZhongshanDeckToolStateBridge.SaveState();
+            }
+            else
+            {
+                EditorUtility.DisplayDialog("钟山台", "当前不在 Play 模式，无法读取运行中的时间。", "确定");
+            }
+        }
+
+        if (GUILayout.Button("清除启动前覆盖", GUILayout.Width(140f)))
+        {
+            StartupFlowSettings.UseStartupTimeOverride = false;
+            ZhongshanDeckToolStateBridge.SaveState();
+        }
+        EditorGUILayout.EndHorizontal();
+    }
+
+    private void DrawStartupAttributeSettings()
+    {
+        EditorGUILayout.HelpBox("这里配置新游戏默认属性。会写入钟山台状态资产，对新开档生效，不影响读档。", MessageType.None);
+
+        foreach (var item in AttributeDefs)
+        {
+            int currentValue = GetStartupAttributeValue(item.Key);
+            EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.LabelField(item.Label, GUILayout.Width(80f));
+            int nextValue = EditorGUILayout.IntField(currentValue, GUILayout.Width(90f));
+            nextValue = Mathf.Clamp(nextValue, item.Min, item.Max);
+            if (nextValue != currentValue)
+            {
+                SetStartupAttributeValue(item.Key, nextValue);
+            }
+            EditorGUILayout.EndHorizontal();
+        }
+
+        EditorGUILayout.BeginHorizontal();
+        if (GUILayout.Button("当前运行值写入开局", GUILayout.Width(140f)))
+        {
+            if (EditorApplication.isPlaying)
+            {
+                CaptureRuntimeAttributesAsStartup();
+            }
+            else
+            {
+                EditorUtility.DisplayDialog("钟山台", "当前不在 Play 模式，无法读取运行中的属性。", "确定");
+            }
+        }
+
+        if (GUILayout.Button("重置为默认开局", GUILayout.Width(140f)))
+        {
+            ResetStartupAttributesToDefaults();
+        }
+        EditorGUILayout.EndHorizontal();
+    }
+
+    private int GetStartupAttributeValue(string key)
+    {
+        switch (key)
+        {
+            case "Study": return StartupFlowSettings.InitialStudy;
+            case "Charm": return StartupFlowSettings.InitialCharm;
+            case "Physique": return StartupFlowSettings.InitialPhysique;
+            case "Leadership": return StartupFlowSettings.InitialLeadership;
+            case "Stress": return StartupFlowSettings.InitialStress;
+            case "Mood": return StartupFlowSettings.InitialMood;
+            case "Darkness": return StartupFlowSettings.InitialDarkness;
+            case "Guilt": return StartupFlowSettings.InitialGuilt;
+            case "Luck": return StartupFlowSettings.InitialLuck;
+            case "Money": return StartupFlowSettings.InitialMoney;
+            case "ActionPoints": return StartupFlowSettings.InitialActionPoints;
+            default: return 0;
+        }
+    }
+
+    private void SetStartupAttributeValue(string key, int value)
+    {
+        switch (key)
+        {
+            case "Study": StartupFlowSettings.InitialStudy = value; break;
+            case "Charm": StartupFlowSettings.InitialCharm = value; break;
+            case "Physique": StartupFlowSettings.InitialPhysique = value; break;
+            case "Leadership": StartupFlowSettings.InitialLeadership = value; break;
+            case "Stress": StartupFlowSettings.InitialStress = value; break;
+            case "Mood": StartupFlowSettings.InitialMood = value; break;
+            case "Darkness": StartupFlowSettings.InitialDarkness = value; break;
+            case "Guilt": StartupFlowSettings.InitialGuilt = value; break;
+            case "Luck": StartupFlowSettings.InitialLuck = value; break;
+            case "Money": StartupFlowSettings.InitialMoney = value; break;
+            case "ActionPoints": StartupFlowSettings.InitialActionPoints = value; break;
+        }
+    }
+
+    private void CaptureRuntimeAttributesAsStartup()
+    {
+        if (PlayerAttributes.Instance != null)
+        {
+            StartupFlowSettings.InitialStudy = PlayerAttributes.Instance.Study;
+            StartupFlowSettings.InitialCharm = PlayerAttributes.Instance.Charm;
+            StartupFlowSettings.InitialPhysique = PlayerAttributes.Instance.Physique;
+            StartupFlowSettings.InitialLeadership = PlayerAttributes.Instance.Leadership;
+            StartupFlowSettings.InitialStress = PlayerAttributes.Instance.Stress;
+            StartupFlowSettings.InitialMood = PlayerAttributes.Instance.Mood;
+            StartupFlowSettings.InitialDarkness = PlayerAttributes.Instance.Darkness;
+            StartupFlowSettings.InitialGuilt = PlayerAttributes.Instance.Guilt;
+            StartupFlowSettings.InitialLuck = PlayerAttributes.Instance.Luck;
+        }
+
+        if (GameState.Instance != null)
+        {
+            StartupFlowSettings.InitialMoney = GameState.Instance.Money;
+            StartupFlowSettings.InitialActionPoints = GameState.Instance.EffectiveMaxActionPoints + GameState.Instance.PositionAPCost;
+        }
+    }
+
+    private void ResetStartupAttributesToDefaults()
+    {
+        StartupFlowSettings.InitialStudy = 10;
+        StartupFlowSettings.InitialCharm = 5;
+        StartupFlowSettings.InitialPhysique = 8;
+        StartupFlowSettings.InitialLeadership = 3;
+        StartupFlowSettings.InitialStress = 20;
+        StartupFlowSettings.InitialMood = 70;
+        StartupFlowSettings.InitialDarkness = 0;
+        StartupFlowSettings.InitialGuilt = 0;
+        StartupFlowSettings.InitialLuck = 50;
+        StartupFlowSettings.InitialMoney = 8000;
+        StartupFlowSettings.InitialActionPoints = 20;
     }
 
     private void DrawEndings()
     {
-        EditorGUILayout.LabelField("结局模拟", EditorStyles.boldLabel);
-        if (!EditorApplication.isPlaying || EndingDeterminer.Instance == null)
+        EditorGUILayout.LabelField("结局总览 / 直接触发", EditorStyles.boldLabel);
+        EnsureEndingEditorDataLoaded();
+
+        if (EditorApplication.isPlaying && EndingDeterminer.Instance != null)
         {
-            EditorGUILayout.HelpBox("进入 Play 模式后显示当前结局预测。", MessageType.None);
+            EndingResult result = EndingDeterminer.Instance.DetermineEndingPreview();
+            if (result != null && result.ending != null)
+            {
+                EditorGUILayout.LabelField("当前结局", result.ending.name);
+                EditorGUILayout.LabelField("层级", $"{result.ending.layer}");
+                EditorGUILayout.LabelField("星级", $"{result.ending.stars}");
+                EditorGUILayout.LabelField("结算分", result.finalScore.ToString("F1"));
+                EditorGUILayout.LabelField("天赋点", result.talentPoints.ToString());
+                EditorGUILayout.Space(6f);
+            }
+        }
+        else
+        {
+            EditorGUILayout.HelpBox("当前不在 Play 模式。你现在仍然可以在这里直接编辑结局文字、剧情描述和触发条件，并保存到 endings.json。", MessageType.Info);
+        }
+
+        if (endingEditorCache == null || endingEditorCache.Count == 0)
+        {
+            EditorGUILayout.HelpBox("未能读取任何结局数据。", MessageType.Warning);
             return;
         }
 
-        EndingResult result = EndingDeterminer.Instance.DetermineEnding();
-        if (result == null || result.ending == null)
+        EditorGUILayout.LabelField("搜索", EditorStyles.boldLabel);
+        using (new EditorGUILayout.HorizontalScope())
         {
-            EditorGUILayout.HelpBox("暂无结局结果。", MessageType.None);
-            return;
+            endingSearchInput = EditorGUILayout.TextField(endingSearchInput);
+            if (GUILayout.Button("清空", GUILayout.Width(60f)))
+            {
+                endingSearchInput = string.Empty;
+                GUI.FocusControl(null);
+            }
+            if (GUILayout.Button("刷新", GUILayout.Width(60f)))
+            {
+                LoadEndingEditorData(true);
+            }
         }
 
-        EditorGUILayout.LabelField("当前结局", result.ending.name);
-        EditorGUILayout.LabelField("层级", $"{result.ending.layer}");
-        EditorGUILayout.LabelField("星级", $"{result.ending.stars}");
-        EditorGUILayout.LabelField("结算分", result.finalScore.ToString("F1"));
-        EditorGUILayout.LabelField("天赋点", result.talentPoints.ToString());
         EditorGUILayout.Space(6f);
+        DrawEndingEditorPanel();
 
-        List<EndingDefinition> matches = EndingDeterminer.Instance.GetMatchingEndings(5);
-        EditorGUILayout.LabelField("候选结局", EditorStyles.boldLabel);
-        for (int i = 0; i < matches.Count; i++)
+        EditorGUILayout.Space(6f);
+        EditorGUILayout.LabelField("分类浏览", EditorStyles.boldLabel);
+
+        List<EndingDefinition> endings = endingEditorCache
+            .OrderBy(e => e.layer)
+            .ThenByDescending(e => e.stars)
+            .ThenBy(e => e.id)
+            .ToList();
+        string keyword = (endingSearchInput ?? string.Empty).Trim();
+        int visibleCount = 0;
+        var groupedEndings = new Dictionary<string, List<EndingDefinition>>(StringComparer.OrdinalIgnoreCase);
+        for (int i = 0; i < endings.Count; i++)
         {
-            EditorGUILayout.LabelField($"{i + 1}. {matches[i].name} | 层级 {matches[i].layer} | {matches[i].stars} 星");
+            EndingDefinition ending = endings[i];
+            if (!MatchesEndingKeyword(ending, keyword))
+            {
+                continue;
+            }
+
+            visibleCount++;
+            string category = GetEndingDesignCategory(ending);
+            if (!groupedEndings.TryGetValue(category, out List<EndingDefinition> layerList))
+            {
+                layerList = new List<EndingDefinition>();
+                groupedEndings[category] = layerList;
+            }
+            layerList.Add(ending);
         }
+
+        DrawEndingCategoryToolbar();
+
+        for (int categoryIndex = 0; categoryIndex < EndingCategoryOrder.Length; categoryIndex++)
+        {
+            string category = EndingCategoryOrder[categoryIndex];
+            if (!groupedEndings.TryGetValue(category, out List<EndingDefinition> layerEndings) || layerEndings.Count == 0)
+            {
+                continue;
+            }
+
+            endingCategoryFoldouts.TryGetValue(category, out bool isExpanded);
+            string categoryLabel = $"{category}  ({layerEndings.Count})";
+            isExpanded = EditorGUILayout.Foldout(isExpanded, categoryLabel, true, EditorStyles.foldoutHeader);
+            endingCategoryFoldouts[category] = isExpanded;
+
+            if (!isExpanded)
+            {
+                EditorGUILayout.Space(2f);
+                continue;
+            }
+
+            EditorGUI.indentLevel++;
+            DrawEndingStars(layerEndings);
+            EditorGUI.indentLevel--;
+            EditorGUILayout.Space(4f);
+        }
+
+        if (visibleCount == 0)
+        {
+            EditorGUILayout.HelpBox("没有匹配的结局。", MessageType.None);
+        }
+    }
+
+    private void DrawEndingStars(List<EndingDefinition> categoryEndings)
+    {
+        Dictionary<int, List<EndingDefinition>> endingsByStar = GroupEndingsByStar(categoryEndings);
+
+        for (int starIndex = 0; starIndex < EndingStarOrder.Length; starIndex++)
+        {
+            int star = EndingStarOrder[starIndex];
+            if (!endingsByStar.TryGetValue(star, out List<EndingDefinition> starEndings) || starEndings.Count == 0)
+            {
+                continue;
+            }
+
+            endingStarFoldouts.TryGetValue(star, out bool isExpanded);
+            string starLabel = $"{BuildStarLabel(star)}  ({starEndings.Count})";
+            isExpanded = EditorGUILayout.Foldout(isExpanded, starLabel, true);
+            endingStarFoldouts[star] = isExpanded;
+
+            if (!isExpanded)
+            {
+                continue;
+            }
+
+            EditorGUI.indentLevel++;
+            for (int i = 0; i < starEndings.Count; i++)
+            {
+                DrawEndingEntry(starEndings[i]);
+            }
+            EditorGUI.indentLevel--;
+        }
+    }
+
+    private void DrawEndingCategoryToolbar()
+    {
+        using (new EditorGUILayout.HorizontalScope())
+        {
+            EditorGUILayout.LabelField("分类", GUILayout.Width(36f));
+            if (GUILayout.Button("全部展开", GUILayout.Width(90f)))
+            {
+                SetAllEndingCategoryFoldouts(true);
+            }
+            if (GUILayout.Button("全部收起", GUILayout.Width(90f)))
+            {
+                SetAllEndingCategoryFoldouts(false);
+            }
+            GUILayout.Space(8f);
+            EditorGUILayout.LabelField("星级", GUILayout.Width(36f));
+            if (GUILayout.Button("全部展开", GUILayout.Width(90f)))
+            {
+                SetAllEndingStarFoldouts(true);
+            }
+            if (GUILayout.Button("全部收起", GUILayout.Width(90f)))
+            {
+                SetAllEndingStarFoldouts(false);
+            }
+            GUILayout.FlexibleSpace();
+        }
+        EditorGUILayout.Space(4f);
+    }
+
+    private void DrawEndingEditorPanel()
+    {
+        EditorGUILayout.LabelField("结局编辑器", EditorStyles.boldLabel);
+
+        if (string.IsNullOrWhiteSpace(editingEndingId))
+        {
+            EditorGUILayout.HelpBox("从下方列表点“编辑”后，可手动修改可见文字、剧情描述和触发条件。", MessageType.None);
+            return;
+        }
+
+        EndingDefinition current = FindEndingInCache(editingEndingId);
+        if (current == null)
+        {
+            EditorGUILayout.HelpBox($"未找到正在编辑的结局：{editingEndingId}", MessageType.Warning);
+            return;
+        }
+
+        EditorGUILayout.BeginVertical("box");
+        EditorGUILayout.LabelField($"{current.id} | 层级 {current.layer} | {current.stars} 星", EditorStyles.boldLabel);
+        endingEditName = EditorGUILayout.TextField("可见标题", endingEditName ?? string.Empty);
+        endingEditCgId = EditorGUILayout.TextField("CG ID", endingEditCgId ?? string.Empty);
+
+        EditorGUILayout.LabelField("剧情 / 描述");
+        endingEditDescription = EditorGUILayout.TextArea(endingEditDescription ?? string.Empty, GUILayout.MinHeight(80f));
+
+        EditorGUILayout.Space(4f);
+        EditorGUILayout.LabelField("触发条件", EditorStyles.miniBoldLabel);
+        for (int i = 0; i < endingConditionDrafts.Count; i++)
+        {
+            EndingCondition condition = endingConditionDrafts[i] ?? new EndingCondition();
+            EditorGUILayout.BeginHorizontal();
+
+            int selectedIndex = Mathf.Max(0, Array.IndexOf(EndingConditionTypeOptions, condition.type ?? string.Empty));
+            selectedIndex = EditorGUILayout.Popup(selectedIndex, EndingConditionTypeDisplayOptions, GUILayout.Width(240f));
+            condition.type = EndingConditionTypeOptions[Mathf.Clamp(selectedIndex, 0, EndingConditionTypeOptions.Length - 1)];
+
+            string valueText = EditorGUILayout.TextField(condition.value.ToString("0.##"), GUILayout.Width(100f));
+            if (float.TryParse(valueText, out float parsedValue))
+            {
+                condition.value = parsedValue;
+            }
+
+            if (GUILayout.Button("删除", GUILayout.Width(60f)))
+            {
+                endingConditionDrafts.RemoveAt(i);
+                i--;
+            }
+            else
+            {
+                endingConditionDrafts[i] = condition;
+            }
+
+            EditorGUILayout.EndHorizontal();
+        }
+
+        if (GUILayout.Button("新增条件", GUILayout.Width(100f)))
+        {
+            endingConditionDrafts.Add(new EndingCondition(
+                EndingConditionTypeOptions.Length > 0 ? EndingConditionTypeOptions[0] : EndingConditionType.AlwaysTrue.ToString(),
+                0f));
+        }
+
+        EditorGUILayout.Space(6f);
+        using (new EditorGUILayout.HorizontalScope())
+        {
+            if (GUILayout.Button("保存到 endings.json", GUILayout.Width(150f)))
+            {
+                SaveEditingEndingToAsset();
+            }
+
+            if (GUILayout.Button("重载此结局", GUILayout.Width(100f)))
+            {
+                BeginEditEnding(current);
+                endingEditorStatus = $"已重载 {current.id} 的当前文件内容。";
+            }
+
+            if (GUILayout.Button("放弃编辑", GUILayout.Width(100f)))
+            {
+                ClearEndingEditorSelection();
+                endingEditorStatus = "已取消当前结局编辑。";
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(endingEditorStatus))
+        {
+            EditorGUILayout.HelpBox(endingEditorStatus, MessageType.None);
+        }
+
+        EditorGUILayout.EndVertical();
+    }
+
+    private void SetAllEndingCategoryFoldouts(bool expanded)
+    {
+        for (int i = 0; i < EndingCategoryOrder.Length; i++)
+        {
+            endingCategoryFoldouts[EndingCategoryOrder[i]] = expanded;
+        }
+    }
+
+    private void SetAllEndingStarFoldouts(bool expanded)
+    {
+        for (int i = 0; i < EndingStarOrder.Length; i++)
+        {
+            endingStarFoldouts[EndingStarOrder[i]] = expanded;
+        }
+    }
+
+    private void DrawEndingEntry(EndingDefinition ending)
+    {
+        bool matched = IsEndingMatched(ending);
+        GUIStyle titleStyle = new GUIStyle(EditorStyles.boldLabel);
+        if (matched)
+        {
+            titleStyle.normal.textColor = new Color(0.95f, 0.78f, 0.24f);
+        }
+
+        EditorGUILayout.BeginVertical("box");
+        EditorGUILayout.LabelField($"{ending.id} | {ending.name}", titleStyle);
+        EditorGUILayout.LabelField($"层级 {ending.layer} | {GetEndingLayerText(ending.GetLayer())} | {ending.stars} 星");
+
+        if (!string.IsNullOrEmpty(ending.description))
+        {
+            EditorGUILayout.LabelField(ending.description, EditorStyles.wordWrappedLabel);
+        }
+
+        if (ending.conditions != null && ending.conditions.Count > 0)
+        {
+            EditorGUILayout.Space(2f);
+            EditorGUILayout.LabelField("条件", EditorStyles.miniBoldLabel);
+            for (int conditionIndex = 0; conditionIndex < ending.conditions.Count; conditionIndex++)
+            {
+                EndingCondition condition = ending.conditions[conditionIndex];
+                if (EditorApplication.isPlaying && EndingDeterminer.Instance != null)
+                {
+                    bool conditionMatched = EndingDeterminer.Instance.EvaluateCondition(condition);
+                    string prefix = conditionMatched ? "[满足]" : "[未满足]";
+                    EditorGUILayout.LabelField($"- {prefix} {EndingDeterminer.Instance.DescribeCondition(condition)}", EditorStyles.miniLabel);
+                }
+                else
+                {
+                    string conditionType = GetEndingConditionTypeDisplayName(condition != null ? condition.type : EndingConditionType.AlwaysTrue.ToString());
+                    float conditionValue = condition != null ? condition.value : 0f;
+                    EditorGUILayout.LabelField($"- {conditionType} | 数值 {conditionValue:0.##}", EditorStyles.miniLabel);
+                }
+            }
+        }
+
+        EditorGUILayout.Space(4f);
+        using (new EditorGUILayout.HorizontalScope())
+        {
+            if (GUILayout.Button("编辑", GUILayout.Width(80f)))
+            {
+                BeginEditEnding(ending);
+            }
+
+            GUI.enabled = EditorApplication.isPlaying && (GameEndingManager.Instance != null || EndingDeterminer.Instance != null);
+            if (GUILayout.Button("进入结局", GUILayout.Width(120f)))
+            {
+                if (GameEndingManager.Instance == null)
+                {
+                    GameObject managerObject = new GameObject("GameEndingManager");
+                    managerObject.AddComponent<GameEndingManager>();
+                }
+
+                bool success = GameEndingManager.Instance != null &&
+                               GameEndingManager.Instance.TriggerSpecificEnding(ending.id, $"ZhongshanDeck:{ending.id}");
+
+                if (success)
+                {
+                    DebugConsoleManager.Log("Ending", $"Editor window triggered ending: {ending.id} {ending.name}");
+                }
+            }
+            GUI.enabled = true;
+
+            GUILayout.FlexibleSpace();
+            string statusText = EditorApplication.isPlaying
+                ? (matched ? "当前条件已满足" : "当前条件未满足")
+                : "编辑器模式";
+            EditorGUILayout.LabelField(statusText, GUILayout.Width(120f));
+        }
+        EditorGUILayout.EndVertical();
+    }
+
+    private bool MatchesEndingKeyword(EndingDefinition ending, string keyword)
+    {
+        if (ending == null)
+        {
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(keyword))
+        {
+            return true;
+        }
+
+        StringComparison comparison = StringComparison.OrdinalIgnoreCase;
+        return (!string.IsNullOrEmpty(ending.id) && ending.id.IndexOf(keyword, comparison) >= 0)
+               || (!string.IsNullOrEmpty(ending.name) && ending.name.IndexOf(keyword, comparison) >= 0)
+               || (!string.IsNullOrEmpty(ending.description) && ending.description.IndexOf(keyword, comparison) >= 0)
+               || GetEndingDesignCategory(ending).IndexOf(keyword, comparison) >= 0
+               || ending.layer.ToString().IndexOf(keyword, comparison) >= 0
+               || ending.stars.ToString().IndexOf(keyword, comparison) >= 0
+               || GetEndingLayerText(ending.GetLayer()).IndexOf(keyword, comparison) >= 0
+               || BuildStarLabel(ending.stars).IndexOf(keyword, comparison) >= 0;
+    }
+
+    private bool IsEndingMatched(EndingDefinition ending)
+    {
+        if (ending == null || EndingDeterminer.Instance == null || !EditorApplication.isPlaying)
+        {
+            return false;
+        }
+
+        if (ending.conditions == null || ending.conditions.Count == 0)
+        {
+            return true;
+        }
+
+        for (int i = 0; i < ending.conditions.Count; i++)
+        {
+            if (!EndingDeterminer.Instance.EvaluateCondition(ending.conditions[i]))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private string GetEndingConditionTypeDisplayName(string type)
+    {
+        if (string.IsNullOrWhiteSpace(type))
+        {
+            return "未知条件";
+        }
+
+        int index = Array.IndexOf(EndingConditionTypeOptions, type);
+        if (index >= 0 && index < EndingConditionTypeDisplayOptions.Length)
+        {
+            return EndingConditionTypeDisplayOptions[index];
+        }
+
+        return type;
+    }
+
+    private string GetEndingLayerText(EndingLayer layer)
+    {
+        switch (layer)
+        {
+            case EndingLayer.ForcedEnding: return "强制";
+            case EndingLayer.PeakEnding: return "巅峰";
+            case EndingLayer.PlannedPath: return "规划内";
+            case EndingLayer.UnplannedPath: return "规划外";
+            case EndingLayer.DarkEnding: return "黑暗";
+            case EndingLayer.SpecialEnding: return "特殊";
+            case EndingLayer.NewCareer: return "新职业";
+            case EndingLayer.FallbackEnding: return "兜底";
+            default: return layer.ToString();
+        }
+    }
+
+    private string GetEndingDesignCategory(EndingDefinition ending)
+    {
+        if (ending == null || string.IsNullOrWhiteSpace(ending.id))
+        {
+            return "保底";
+        }
+
+        switch (ending.id)
+        {
+            case "END_001":
+            case "END_002":
+            case "END_003":
+            case "END_004":
+                return "特殊/强制";
+
+            case "END_005":
+            case "END_006":
+                return "巅峰";
+
+            case "END_007":
+            case "END_008":
+            case "END_009":
+            case "END_025":
+            case "END_026":
+                return "学术";
+
+            case "END_010":
+            case "END_011":
+            case "END_014":
+            case "END_032":
+                return "仕途";
+
+            case "END_012":
+            case "END_020":
+            case "END_021":
+            case "END_027":
+            case "END_028":
+            case "END_033":
+                return "创业";
+
+            case "END_013":
+            case "END_029":
+            case "END_030":
+            case "END_031":
+                return "职场";
+
+            case "END_018":
+                return "文体/特长";
+
+            case "END_015":
+                return "新兴职业/自由";
+
+            case "END_016":
+            case "END_017":
+                return "黑暗";
+
+            case "END_019":
+            case "END_022":
+            case "END_023":
+            case "END_024":
+                return "保底";
+        }
+
+        if (ending.GetLayer() == EndingLayer.ForcedEnding)
+            return "特殊/强制";
+        if (ending.GetLayer() == EndingLayer.PeakEnding)
+            return "巅峰";
+        if (ending.GetLayer() == EndingLayer.DarkEnding)
+            return "黑暗";
+        if (ending.GetLayer() == EndingLayer.FallbackEnding)
+            return "保底";
+        if (ending.GetLayer() == EndingLayer.SpecialEnding)
+            return "文体/特长";
+        if (ending.GetLayer() == EndingLayer.NewCareer)
+            return "新兴职业/自由";
+
+        return "保底";
+    }
+
+    private Dictionary<int, List<EndingDefinition>> GroupEndingsByStar(List<EndingDefinition> endings)
+    {
+        Dictionary<int, List<EndingDefinition>> grouped = new Dictionary<int, List<EndingDefinition>>();
+        if (endings == null)
+        {
+            return grouped;
+        }
+
+        for (int i = 0; i < endings.Count; i++)
+        {
+            EndingDefinition ending = endings[i];
+            int star = Mathf.Clamp(ending != null ? ending.stars : 0, 0, 7);
+            if (!grouped.TryGetValue(star, out List<EndingDefinition> starList))
+            {
+                starList = new List<EndingDefinition>();
+                grouped[star] = starList;
+            }
+
+            if (ending != null)
+            {
+                starList.Add(ending);
+            }
+        }
+
+        return grouped;
+    }
+
+    private string BuildStarLabel(int star)
+    {
+        int clampedStar = Mathf.Clamp(star, 0, 7);
+        if (clampedStar <= 0)
+        {
+            return "0 星";
+        }
+
+        return $"{clampedStar} 星  [{new string('*', clampedStar)}]";
     }
 
     private void DrawEvents()
     {
-        EditorGUILayout.LabelField("事件调试", EditorStyles.boldLabel);
-        eventIdInput = EditorGUILayout.TextField("事件 ID", eventIdInput);
-        flagInput = EditorGUILayout.TextField("标记名", flagInput);
+        EditorGUILayout.LabelField("事件管理", EditorStyles.boldLabel);
+        EditorGUILayout.HelpBox("上方是两个主界面：1) 查询某回合会判定哪些事件并增减事件；2) 查看和搜索当前已有事件。只有点击每行最右侧“编辑”才进入详细编辑。新增事件只在事件列表里。", MessageType.Info);
 
-        using (new EditorGUI.DisabledScope(!EditorApplication.isPlaying))
+        DrawRoundEventQueryPanel();
+        EditorGUILayout.Space(10f);
+        DrawEventLibraryPanel();
+        EditorGUILayout.Space(10f);
+        DrawEventAuthoringTool();
+        EditorGUILayout.Space(12f);
+        DrawEventQuickControls();
+    }
+
+    private int GetTotalRounds(int year, int semester, int round)
+    {
+        int roundsPerSemester = Mathf.Max(1, GameState.MaxRoundsPerSemester);
+        int clampedYear = Mathf.Clamp(year, 1, 4);
+        int clampedSemester = Mathf.Clamp(semester, 1, 2);
+        int clampedRound = Mathf.Clamp(round, 1, roundsPerSemester);
+        return (clampedYear - 1) * 2 * roundsPerSemester
+            + (clampedSemester - 1) * roundsPerSemester
+            + clampedRound;
+    }
+
+    private void DrawEventAuthoringTool()
+    {
+        EditorGUILayout.LabelField("事件详细编辑", EditorStyles.boldLabel);
+        EditorGUILayout.HelpBox(eventEditorModeText, MessageType.None);
+
+        if (!isCreatingNewEvent && string.IsNullOrEmpty(editingEventId))
         {
-            EditorGUILayout.BeginHorizontal();
-            if (GUILayout.Button("触发事件", GUILayout.Width(100f)) && EventScheduler.Instance != null && !string.IsNullOrWhiteSpace(eventIdInput))
-            {
-                EventScheduler.Instance.EnqueueEvent(eventIdInput.Trim());
-                DebugConsoleManager.Log("Event", $"Force trigger {eventIdInput.Trim()}");
-            }
-            if (GUILayout.Button("跳过事件", GUILayout.Width(100f)) && EventHistory.Instance != null && !string.IsNullOrWhiteSpace(eventIdInput))
-            {
-                EventHistory.Instance.RecordEvent(eventIdInput.Trim(), -1);
-                DebugConsoleManager.Log("Event", $"Skip event {eventIdInput.Trim()}");
-            }
-            EditorGUILayout.EndHorizontal();
-
-            EditorGUILayout.BeginHorizontal();
-            if (GUILayout.Button("标记设为真", GUILayout.Width(100f)) && EventHistory.Instance != null && !string.IsNullOrWhiteSpace(flagInput))
-            {
-                EventHistory.Instance.SetFlag(flagInput.Trim(), true);
-                DebugConsoleManager.Log("Event", $"Flag {flagInput.Trim()} -> true");
-            }
-            if (GUILayout.Button("标记设为假", GUILayout.Width(100f)) && EventHistory.Instance != null && !string.IsNullOrWhiteSpace(flagInput))
-            {
-                EventHistory.Instance.SetFlag(flagInput.Trim(), false);
-                DebugConsoleManager.Log("Event", $"Flag {flagInput.Trim()} -> false");
-            }
-            EditorGUILayout.EndHorizontal();
+            return;
         }
 
-        if (EditorApplication.isPlaying && EventScheduler.Instance != null)
+        eventIdInput = EditorGUILayout.TextField("事件 ID", eventIdInput);
+        eventTitleInput = EditorGUILayout.TextField("事件标题", eventTitleInput);
+        eventDescriptionInput = EditorGUILayout.TextField("事件描述", eventDescriptionInput);
+        eventTypeIndex = EditorGUILayout.Popup("事件类型", eventTypeIndex, EventTypeDisplayOptions);
+        eventPhaseIndex = EditorGUILayout.Popup("触发阶段", eventPhaseIndex, EventPhaseDisplayOptions);
+        eventPriorityInput = EditorGUILayout.IntField("优先级", eventPriorityInput);
+        eventForcedInput = EditorGUILayout.Toggle("强制触发", eventForcedInput);
+        eventRepeatableInput = EditorGUILayout.Toggle("可重复触发", eventRepeatableInput);
+
+        EditorGUILayout.Space(4f);
+        EditorGUILayout.LabelField("触发条件", EditorStyles.boldLabel);
+        eventYearTriggerInput = EditorGUILayout.IntField("学年", eventYearTriggerInput);
+        eventSemesterTriggerInput = EditorGUILayout.IntField("学期", eventSemesterTriggerInput);
+        eventRoundMinInput = EditorGUILayout.IntField("回合下限", eventRoundMinInput);
+        eventRoundMaxInput = EditorGUILayout.IntField("回合上限", eventRoundMaxInput);
+        eventSpecificRoundsInput = EditorGUILayout.TextField("指定回合", eventSpecificRoundsInput);
+        eventProbabilityInput = EditorGUILayout.Slider("触发概率", eventProbabilityInput, 0f, 1f);
+        eventTriggerBehaviorInput = EditorGUILayout.TextField("行为触发键", eventTriggerBehaviorInput);
+        eventMinMoneyInput = EditorGUILayout.IntField("最低金钱", eventMinMoneyInput);
+        eventMaxMoneyInput = EditorGUILayout.IntField("最高金钱", eventMaxMoneyInput);
+        eventMinDarknessInput = EditorGUILayout.IntField("最低黑暗值", eventMinDarknessInput);
+        DrawEventReferenceSelector("前置事件", eventRequiredEventIds, ref eventRequiredAddIndex);
+        DrawEventReferenceSelector("排除事件", eventExcludedEventIds, ref eventExcludedAddIndex);
+        DrawEventAttributeConditionEditor();
+
+        EditorGUILayout.Space(4f);
+        EditorGUILayout.LabelField("对话流", EditorStyles.boldLabel);
+        eventSpeakerInput = EditorGUILayout.TextField("说话人", eventSpeakerInput);
+        eventPortraitInput = EditorGUILayout.TextField("头像 ID", eventPortraitInput);
+        DrawDialogueLineEditor();
+
+        EditorGUILayout.Space(4f);
+        EditorGUILayout.LabelField("选项与效果", EditorStyles.boldLabel);
+        DrawChoiceEditor();
+
+        EditorGUILayout.LabelField("默认效果");
+        DrawEffectDraftList(eventDefaultEffectDrafts, "添加默认效果");
+        DrawEventReferenceSelector("事件链", eventChainEventIds, ref eventChainAddIndex);
+        EditorGUILayout.HelpBox(
+            "格式提示：\n" +
+            "指定回合：1,5,8\n" +
+            "属性条件和属性效果请直接从下拉框里选属性名，避免输错。\n" +
+            "剧情支持一句一句添加，选项支持单独增删和修改。",
+            MessageType.None);
+
+        EditorGUILayout.BeginHorizontal();
+        if (GUILayout.Button("保存草稿", GUILayout.Width(100f)))
         {
-            EditorGUILayout.Space(8f);
-            EditorGUILayout.LabelField($"已加载事件: {EventScheduler.Instance.GetLoadedEventCount()}");
-            EditorGUILayout.LabelField($"待处理队列: {EventScheduler.Instance.GetPendingEventCount()}");
+            SaveEventDraft();
+        }
+        using (new EditorGUI.DisabledScope(!EditorApplication.isPlaying || EventScheduler.Instance == null))
+        {
+            if (GUILayout.Button("注册到当前运行", GUILayout.Width(140f)))
+            {
+                RegisterDraftToRuntime();
+            }
+        }
+        if (GUILayout.Button("清空编辑器", GUILayout.Width(100f)))
+        {
+            ClearEventAuthoringInputs();
+        }
+        EditorGUILayout.EndHorizontal();
+
+        if (!string.IsNullOrEmpty(eventAuthoringStatus))
+        {
+            EditorGUILayout.HelpBox(eventAuthoringStatus, MessageType.Info);
+        }
+
+        DrawEventDraftSummary();
+        DrawEventDraftPreview();
+    }
+
+    private void DrawEventAttributeConditionEditor()
+    {
+        EditorGUILayout.Space(2f);
+        EditorGUILayout.LabelField("属性条件", EditorStyles.miniBoldLabel);
+
+        if (eventAttributeConditionDrafts.Count == 0)
+        {
+            EditorGUILayout.HelpBox("暂无属性条件。", MessageType.None);
+        }
+
+        for (int i = 0; i < eventAttributeConditionDrafts.Count; i++)
+        {
+            EventAttributeConditionDraft draft = eventAttributeConditionDrafts[i];
+            if (draft == null)
+            {
+                continue;
+            }
+
+            using (new EditorGUILayout.HorizontalScope("box"))
+            {
+                draft.attributeIndex = EditorGUILayout.Popup(Mathf.Clamp(draft.attributeIndex, 0, EventAttributeOptions.Length - 1), EventAttributeOptions, GUILayout.Width(120f));
+                draft.comparisonIndex = EditorGUILayout.Popup(Mathf.Clamp(draft.comparisonIndex, 0, EventComparisonOptions.Length - 1), EventComparisonOptions, GUILayout.Width(70f));
+                draft.value = EditorGUILayout.IntField(draft.value, GUILayout.Width(80f));
+                if (GUILayout.Button("删除", GUILayout.Width(60f)))
+                {
+                    eventAttributeConditionDrafts.RemoveAt(i);
+                    i--;
+                }
+            }
+        }
+
+        if (GUILayout.Button("添加属性条件", GUILayout.Width(120f)))
+        {
+            eventAttributeConditionDrafts.Add(new EventAttributeConditionDraft());
+        }
+    }
+
+    private void DrawEventReferenceSelector(string label, List<string> selectedIds, ref int addIndex)
+    {
+        EditorGUILayout.Space(2f);
+        EditorGUILayout.LabelField(label, EditorStyles.miniBoldLabel);
+
+        List<EventListEntry> availableEntries = GetMergedEventEntries()
+            .Where(entry => entry != null && entry.Event != null)
+            .Where(entry => !string.IsNullOrWhiteSpace(entry.Event.id))
+            .Where(entry => entry.Event.id != eventIdInput)
+            .OrderBy(entry => entry.Event.id)
+            .ToList();
+
+        List<EventListEntry> addableEntries = availableEntries
+            .Where(entry => !selectedIds.Contains(entry.Event.id))
+            .ToList();
+
+        if (selectedIds.Count == 0)
+        {
+            EditorGUILayout.HelpBox($"暂无{label}。", MessageType.None);
+        }
+        else
+        {
+            for (int i = 0; i < selectedIds.Count; i++)
+            {
+                string selectedId = selectedIds[i];
+                EventListEntry selectedEntry = availableEntries.FirstOrDefault(entry => entry.Event.id == selectedId);
+                string display = selectedEntry != null
+                    ? $"{selectedEntry.Event.id} | {selectedEntry.Event.title} | {GetEventTypeDisplayName(selectedEntry.Event.eventType)}"
+                    : selectedId;
+
+                using (new EditorGUILayout.HorizontalScope("box"))
+                {
+                    EditorGUILayout.LabelField(display);
+                    if (GUILayout.Button("移除", GUILayout.Width(60f)))
+                    {
+                        selectedIds.RemoveAt(i);
+                        i--;
+                    }
+                }
+            }
+        }
+
+        if (addableEntries.Count == 0)
+        {
+            EditorGUILayout.HelpBox($"没有可添加到{label}的事件。", MessageType.None);
+            return;
+        }
+
+        string[] options = addableEntries
+            .Select(entry => $"{entry.Event.id} | {entry.Event.title} | {GetEventTypeDisplayName(entry.Event.eventType)}")
+            .ToArray();
+        addIndex = Mathf.Clamp(addIndex, 0, Mathf.Max(0, options.Length - 1));
+
+        using (new EditorGUILayout.HorizontalScope())
+        {
+            addIndex = EditorGUILayout.Popup(addIndex, options);
+            if (GUILayout.Button("添加", GUILayout.Width(60f)))
+            {
+                string eventRefId = addableEntries[addIndex].Event.id;
+                if (!selectedIds.Contains(eventRefId))
+                {
+                    selectedIds.Add(eventRefId);
+                }
+            }
+        }
+    }
+
+    private void DrawSingleEventSelector(string label, ref string selectedEventId)
+    {
+        List<EventListEntry> availableEntries = GetMergedEventEntries()
+            .Where(entry => entry != null && entry.Event != null)
+            .Where(entry => !string.IsNullOrWhiteSpace(entry.Event.id))
+            .Where(entry => entry.Event.id != eventIdInput)
+            .OrderBy(entry => entry.Event.id)
+            .ToList();
+
+        string currentDisplay = string.IsNullOrWhiteSpace(selectedEventId)
+            ? "无"
+            : BuildEventReferenceLabel(selectedEventId, availableEntries);
+
+        EditorGUILayout.BeginHorizontal();
+        EditorGUILayout.PrefixLabel(label);
+        EditorGUILayout.LabelField(currentDisplay, EditorStyles.helpBox, GUILayout.Height(20f));
+        if (GUILayout.Button("清空", GUILayout.Width(50f)))
+        {
+            selectedEventId = string.Empty;
+        }
+        EditorGUILayout.EndHorizontal();
+
+        if (availableEntries.Count == 0)
+        {
+            EditorGUILayout.HelpBox("没有可选事件。", MessageType.None);
+            return;
+        }
+
+        int selectedIndex = 0;
+        string[] options = new string[availableEntries.Count + 1];
+        options[0] = "无";
+        for (int i = 0; i < availableEntries.Count; i++)
+        {
+            options[i + 1] = BuildEventReferenceLabel(availableEntries[i].Event.id, availableEntries);
+            if (!string.IsNullOrWhiteSpace(selectedEventId) && availableEntries[i].Event.id == selectedEventId)
+            {
+                selectedIndex = i + 1;
+            }
+        }
+
+        int nextIndex = EditorGUILayout.Popup(selectedIndex, options);
+        selectedEventId = nextIndex <= 0 ? string.Empty : availableEntries[nextIndex - 1].Event.id;
+    }
+
+    private string BuildEventReferenceLabel(string eventId, List<EventListEntry> availableEntries = null)
+    {
+        List<EventListEntry> entries = availableEntries ?? GetMergedEventEntries();
+        EventListEntry entry = entries.FirstOrDefault(item => item != null && item.Event != null && item.Event.id == eventId);
+        return entry != null
+            ? $"{entry.Event.id} | {entry.Event.title} | {GetEventTypeDisplayName(entry.Event.eventType)}"
+            : eventId;
+    }
+
+    private void DrawDialogueLineEditor()
+    {
+        EnsureEventDraftCollections();
+
+        if (eventDialogueLines.Count == 0)
+        {
+            eventDialogueLines.Add(string.Empty);
+        }
+
+        for (int i = 0; i < eventDialogueLines.Count; i++)
+        {
+            using (new EditorGUILayout.HorizontalScope("box"))
+            {
+                EditorGUILayout.LabelField($"第 {i + 1} 句", GUILayout.Width(52f));
+                eventDialogueLines[i] = EditorGUILayout.TextField(eventDialogueLines[i]);
+                using (new EditorGUI.DisabledScope(i <= 0))
+                {
+                    if (GUILayout.Button("上移", GUILayout.Width(50f)))
+                    {
+                        string current = eventDialogueLines[i];
+                        eventDialogueLines[i] = eventDialogueLines[i - 1];
+                        eventDialogueLines[i - 1] = current;
+                    }
+                }
+                using (new EditorGUI.DisabledScope(i >= eventDialogueLines.Count - 1))
+                {
+                    if (GUILayout.Button("下移", GUILayout.Width(50f)))
+                    {
+                        string current = eventDialogueLines[i];
+                        eventDialogueLines[i] = eventDialogueLines[i + 1];
+                        eventDialogueLines[i + 1] = current;
+                    }
+                }
+                if (GUILayout.Button("删除", GUILayout.Width(60f)))
+                {
+                    eventDialogueLines.RemoveAt(i);
+                    i--;
+                }
+            }
+        }
+
+        if (GUILayout.Button("添加一句对话", GUILayout.Width(120f)))
+        {
+            eventDialogueLines.Add(string.Empty);
+        }
+    }
+
+    private void DrawChoiceEditor()
+    {
+        EnsureEventDraftCollections();
+
+        if (eventChoiceDrafts.Count == 0)
+        {
+            EditorGUILayout.HelpBox("暂无选项。没有选项时事件会直接结算默认效果。", MessageType.None);
+        }
+
+        for (int i = 0; i < eventChoiceDrafts.Count; i++)
+        {
+            EventChoiceDraft draft = eventChoiceDrafts[i];
+            if (draft == null)
+            {
+                continue;
+            }
+
+            EditorGUILayout.BeginVertical("box");
+            EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.LabelField($"选项 {i + 1}", EditorStyles.miniBoldLabel);
+            if (GUILayout.Button("删除选项", GUILayout.Width(80f)))
+            {
+                eventChoiceDrafts.RemoveAt(i);
+                EditorGUILayout.EndHorizontal();
+                EditorGUILayout.EndVertical();
+                i--;
+                continue;
+            }
+            EditorGUILayout.EndHorizontal();
+
+            draft.text = EditorGUILayout.TextField("文本", draft.text);
+            DrawSingleEventSelector("后续事件", ref draft.nextEventId);
+            EditorGUILayout.LabelField("选项效果", EditorStyles.miniBoldLabel);
+            DrawEffectDraftList(draft.effects, "添加选项效果");
+            EditorGUILayout.EndVertical();
+        }
+
+        if (GUILayout.Button("添加选项", GUILayout.Width(100f)))
+        {
+            eventChoiceDrafts.Add(new EventChoiceDraft());
+        }
+    }
+
+    private void DrawEffectDraftList(List<EventEffectDraft> drafts, string addButtonLabel)
+    {
+        EnsureEventDraftCollections();
+        if (drafts == null)
+        {
+            return;
+        }
+
+        if (drafts.Count == 0)
+        {
+            EditorGUILayout.HelpBox("暂无效果。", MessageType.None);
+        }
+
+        for (int i = 0; i < drafts.Count; i++)
+        {
+            EventEffectDraft draft = drafts[i];
+            if (draft == null)
+            {
+                continue;
+            }
+
+            using (new EditorGUILayout.HorizontalScope("box"))
+            {
+                draft.effectTypeIndex = EditorGUILayout.Popup(Mathf.Clamp(draft.effectTypeIndex, 0, EventEffectTypeDisplayOptions.Length - 1), EventEffectTypeDisplayOptions, GUILayout.Width(100f));
+                string effectType = EventEffectTypeOptions[Mathf.Clamp(draft.effectTypeIndex, 0, EventEffectTypeOptions.Length - 1)];
+                if (effectType == "attribute")
+                {
+                    draft.attributeIndex = EditorGUILayout.Popup(Mathf.Clamp(draft.attributeIndex, 0, EventAttributeOptions.Length - 1), EventAttributeOptions, GUILayout.Width(120f));
+                }
+                else
+                {
+                    draft.targetText = EditorGUILayout.TextField(draft.targetText ?? string.Empty, GUILayout.Width(140f));
+                }
+
+                draft.value = EditorGUILayout.IntField(draft.value, GUILayout.Width(80f));
+                if (GUILayout.Button("删除", GUILayout.Width(60f)))
+                {
+                    drafts.RemoveAt(i);
+                    i--;
+                }
+            }
+        }
+
+        if (GUILayout.Button(addButtonLabel, GUILayout.Width(120f)))
+        {
+            drafts.Add(new EventEffectDraft());
         }
     }
 
@@ -477,6 +1845,1512 @@ public class ZhongshanDeckWindow : EditorWindow
         EditorGUILayout.LabelField("关系等级", relationship.level.ToString());
         EditorGUILayout.LabelField("上次互动", string.IsNullOrEmpty(relationship.lastInteractionActionId) ? "-" : relationship.lastInteractionActionId);
         EditorGUILayout.LabelField("连续未互动", relationship.consecutiveNoInteractionTurns.ToString());
+    }
+
+    private void DrawRoundEventQueryPanel()
+    {
+        EditorGUILayout.LabelField("一、回合事件视图", EditorStyles.boldLabel);
+        EditorGUILayout.BeginVertical("box");
+
+        EditorGUILayout.BeginHorizontal();
+        eventTimelineYearInput = EditorGUILayout.IntField("学年", eventTimelineYearInput, GUILayout.Width(180f));
+        eventTimelineSemesterInput = EditorGUILayout.IntField("学期", eventTimelineSemesterInput, GUILayout.Width(180f));
+        eventTimelineRoundInput = EditorGUILayout.IntField("回合", eventTimelineRoundInput, GUILayout.Width(180f));
+        eventTimelinePhaseIndex = EditorGUILayout.Popup("阶段", eventTimelinePhaseIndex, EventTimelinePhaseDisplayOptions, GUILayout.Width(240f));
+        if (GUILayout.Button("当前时间", GUILayout.Width(80f)) && GameState.Instance != null)
+        {
+            eventTimelineYearInput = GameState.Instance.CurrentYear;
+            eventTimelineSemesterInput = GameState.Instance.CurrentSemester;
+            eventTimelineRoundInput = GameState.Instance.CurrentRound;
+        }
+        EditorGUILayout.EndHorizontal();
+
+        List<EventListEntry> allEntries = GetMergedEventEntries();
+        List<EventListEntry> roundCandidates = GetRoundCandidates(allEntries, eventTimelineYearInput, eventTimelineSemesterInput, eventTimelineRoundInput);
+        string[] addOptions = roundCandidates.Count == 0
+            ? new[] { "没有可加入的事件" }
+            : roundCandidates.Select(entry => $"{entry.Event.id} | {entry.Event.title} | {GetEventTypeDisplayName(entry.Event.eventType)}").ToArray();
+        eventRoundAddSelectionIndex = Mathf.Clamp(eventRoundAddSelectionIndex, 0, Mathf.Max(0, addOptions.Length - 1));
+
+        EditorGUILayout.BeginHorizontal();
+        using (new EditorGUI.DisabledScope(addOptions.Length == 0))
+        {
+            eventRoundAddSelectionIndex = EditorGUILayout.Popup("加入当前回合", eventRoundAddSelectionIndex, addOptions);
+        }
+        using (new EditorGUI.DisabledScope(roundCandidates.Count == 0))
+        {
+            if (GUILayout.Button("加入", GUILayout.Width(80f)))
+            {
+                AddEventToQueriedRound(roundCandidates[eventRoundAddSelectionIndex].Event.id);
+            }
+        }
+        EditorGUILayout.EndHorizontal();
+
+        string selectedPhase = EventTimelinePhaseOptions[Mathf.Clamp(eventTimelinePhaseIndex, 0, EventTimelinePhaseOptions.Length - 1)];
+        string selectedPhaseDisplay = EventTimelinePhaseDisplayOptions[Mathf.Clamp(eventTimelinePhaseIndex, 0, EventTimelinePhaseDisplayOptions.Length - 1)];
+        List<EventListEntry> queried = allEntries
+            .Where(entry => entry.Event != null)
+            .Where(entry => selectedPhase == "All" || string.Equals(GetEventPhase(entry.Event), selectedPhase, StringComparison.Ordinal))
+            .Where(entry => MatchesTimelineWindow(entry.Event, eventTimelineYearInput, eventTimelineSemesterInput, eventTimelineRoundInput))
+            .OrderBy(entry => entry.Event.priority)
+            .ThenBy(entry => GetPrimaryRound(entry.Event.trigger))
+            .ThenBy(entry => entry.Event.id)
+            .ToList();
+
+        EditorGUILayout.HelpBox($"当前查询 Y{eventTimelineYearInput} S{eventTimelineSemesterInput} R{eventTimelineRoundInput} / {selectedPhaseDisplay}：共 {queried.Count} 条事件会进入判定。", MessageType.None);
+
+        if (queried.Count == 0)
+        {
+            EditorGUILayout.HelpBox("当前回合没有会进入判定的事件。", MessageType.None);
+        }
+        else
+        {
+            DrawGroupedEventEntries(queried, DrawRoundEventRow);
+        }
+
+        EditorGUILayout.EndVertical();
+    }
+
+    private void DrawEventLibraryPanel()
+    {
+        EditorGUILayout.LabelField("二、事件列表", EditorStyles.boldLabel);
+        EditorGUILayout.BeginVertical("box");
+        EditorGUILayout.BeginHorizontal();
+        eventLibrarySearchInput = EditorGUILayout.TextField("搜索", eventLibrarySearchInput);
+        if (GUILayout.Button("新增事件", GUILayout.Width(100f)))
+        {
+            BeginCreateEvent();
+        }
+        EditorGUILayout.EndHorizontal();
+
+        List<EventListEntry> entries = GetMergedEventEntries()
+            .Where(entry => MatchesEventSearch(entry, eventLibrarySearchInput))
+            .OrderBy(entry => entry.Event.eventType)
+            .ThenBy(entry => entry.Event.id)
+            .ToList();
+
+        EditorGUILayout.HelpBox($"当前已有事件：{entries.Count} 条。这里可以查看、搜索，并通过最右侧按钮进入详细编辑。", MessageType.None);
+
+        if (entries.Count == 0)
+        {
+            EditorGUILayout.HelpBox("没有匹配到事件。", MessageType.None);
+        }
+        else
+        {
+            DrawGroupedEventEntries(entries, DrawLibraryEventRow);
+        }
+        EditorGUILayout.EndVertical();
+    }
+
+    private void DrawEventQuickControls()
+    {
+        EditorGUILayout.LabelField("快速控制（运行时）", EditorStyles.boldLabel);
+        EditorGUILayout.BeginVertical("box");
+        eventIdInput = EditorGUILayout.TextField("事件 ID", eventIdInput);
+        flagInput = EditorGUILayout.TextField("标记名", flagInput);
+
+        using (new EditorGUI.DisabledScope(!EditorApplication.isPlaying))
+        {
+            EditorGUILayout.BeginHorizontal();
+            if (GUILayout.Button("触发事件", GUILayout.Width(100f)) && EventScheduler.Instance != null && !string.IsNullOrWhiteSpace(eventIdInput))
+            {
+                EventScheduler.Instance.EnqueueEvent(eventIdInput.Trim());
+                DebugConsoleManager.Log("Event", $"Force trigger {eventIdInput.Trim()}");
+            }
+            if (GUILayout.Button("跳过事件", GUILayout.Width(100f)) && EventHistory.Instance != null && !string.IsNullOrWhiteSpace(eventIdInput))
+            {
+                EventHistory.Instance.RecordEvent(eventIdInput.Trim(), -1);
+                DebugConsoleManager.Log("Event", $"Skip event {eventIdInput.Trim()}");
+            }
+            EditorGUILayout.EndHorizontal();
+
+            EditorGUILayout.BeginHorizontal();
+            if (GUILayout.Button("标记设为真", GUILayout.Width(100f)) && EventHistory.Instance != null && !string.IsNullOrWhiteSpace(flagInput))
+            {
+                EventHistory.Instance.SetFlag(flagInput.Trim(), true);
+                DebugConsoleManager.Log("Event", $"Flag {flagInput.Trim()} -> true");
+            }
+            if (GUILayout.Button("标记设为假", GUILayout.Width(100f)) && EventHistory.Instance != null && !string.IsNullOrWhiteSpace(flagInput))
+            {
+                EventHistory.Instance.SetFlag(flagInput.Trim(), false);
+                DebugConsoleManager.Log("Event", $"Flag {flagInput.Trim()} -> false");
+            }
+            EditorGUILayout.EndHorizontal();
+        }
+
+        if (EditorApplication.isPlaying && EventScheduler.Instance != null)
+        {
+            EditorGUILayout.Space(4f);
+            EditorGUILayout.LabelField($"已加载事件: {EventScheduler.Instance.GetLoadedEventCount()}");
+            EditorGUILayout.LabelField($"待处理队列: {EventScheduler.Instance.GetPendingEventCount()}");
+        }
+
+        EditorGUILayout.EndVertical();
+    }
+
+    private void SaveEventDraft()
+    {
+        if (!TryBuildEditorEventDefinition(out EventDefinition evt, out string error))
+        {
+            eventAuthoringStatus = error;
+            return;
+        }
+
+        string json = JsonUtility.ToJson(new EventDatabaseRoot { events = new[] { evt } }, true);
+        ZhongshanDeckToolStateBridge.SaveAuthoredEvent(evt.id, evt.title, json);
+        if (EditorApplication.isPlaying && EventScheduler.Instance != null)
+        {
+            EventScheduler.Instance.RegisterOrReplaceRuntimeEvent(CloneEvent(evt));
+        }
+        editingEventId = evt.id;
+        editingEventSource = "草稿";
+        isCreatingNewEvent = false;
+        UpdateEventEditorModeText();
+        eventAuthoringStatus = $"已保存草稿：{evt.id}";
+        Repaint();
+    }
+
+    private void LoadEventDraft()
+    {
+        if (string.IsNullOrWhiteSpace(eventIdInput))
+        {
+            eventAuthoringStatus = "请输入要载入的事件 ID";
+            return;
+        }
+
+        if (!ZhongshanDeckToolStateBridge.TryGetAuthoredEvent(eventIdInput.Trim(), out ZhongshanDeckEventEntry entry))
+        {
+            eventAuthoringStatus = $"未找到草稿：{eventIdInput.Trim()}";
+            return;
+        }
+
+        EventDatabaseRoot root = JsonUtility.FromJson<EventDatabaseRoot>(entry.json);
+        if (root == null || root.events == null || root.events.Length == 0)
+        {
+            eventAuthoringStatus = $"草稿解析失败：{eventIdInput.Trim()}";
+            return;
+        }
+
+        FillEventEditor(root.events[0]);
+        editingEventId = root.events[0].id ?? eventIdInput.Trim();
+        editingEventSource = "草稿";
+        isCreatingNewEvent = false;
+        UpdateEventEditorModeText();
+        eventAuthoringStatus = $"已载入草稿：{eventIdInput.Trim()}";
+    }
+
+    private void DeleteEventDraft()
+    {
+        if (string.IsNullOrWhiteSpace(eventIdInput))
+        {
+            eventAuthoringStatus = "请输入要删除的事件 ID";
+            return;
+        }
+
+        bool deleted = ZhongshanDeckToolStateBridge.DeleteAuthoredEvent(eventIdInput.Trim());
+        eventAuthoringStatus = deleted ? $"已删除草稿：{eventIdInput.Trim()}" : $"未找到草稿：{eventIdInput.Trim()}";
+    }
+
+    private void RegisterDraftToRuntime()
+    {
+        if (!TryBuildEditorEventDefinition(out EventDefinition evt, out string error))
+        {
+            eventAuthoringStatus = error;
+            return;
+        }
+
+        EventScheduler.Instance.RegisterOrReplaceRuntimeEvent(evt);
+        editingEventId = evt.id;
+        editingEventSource = "运行时";
+        isCreatingNewEvent = false;
+        UpdateEventEditorModeText();
+        eventAuthoringStatus = $"已注册到当前运行：{evt.id}";
+        DebugConsoleManager.Log("Event", $"Editor window registered runtime event: {evt.id}");
+    }
+
+    private void ClearEventAuthoringInputs()
+    {
+        eventIdInput = string.Empty;
+        eventTitleInput = string.Empty;
+        eventDescriptionInput = string.Empty;
+        eventTypeIndex = 0;
+        eventPhaseIndex = 0;
+        eventPriorityInput = 2;
+        eventForcedInput = false;
+        eventRepeatableInput = true;
+        eventYearTriggerInput = 0;
+        eventSemesterTriggerInput = 0;
+        eventRoundMinInput = 0;
+        eventRoundMaxInput = 0;
+        eventSpecificRoundsInput = string.Empty;
+        eventProbabilityInput = 1f;
+        eventTriggerBehaviorInput = string.Empty;
+        eventAttributeConditionDrafts.Clear();
+        eventMinMoneyInput = 0;
+        eventMaxMoneyInput = 0;
+        eventMinDarknessInput = 0;
+        eventRequiredEventIds.Clear();
+        eventExcludedEventIds.Clear();
+        eventRequiredAddIndex = 0;
+        eventExcludedAddIndex = 0;
+        eventSpeakerInput = string.Empty;
+        eventPortraitInput = string.Empty;
+        eventDialogueLines.Clear();
+        eventDialogueLines.Add(string.Empty);
+        eventDefaultEffectDrafts.Clear();
+        eventChainEventIds.Clear();
+        eventChainAddIndex = 0;
+        eventChoiceDrafts.Clear();
+
+        editingEventId = string.Empty;
+        editingEventSource = string.Empty;
+        isCreatingNewEvent = false;
+        UpdateEventEditorModeText();
+        eventAuthoringStatus = "已清空剧情编辑器";
+    }
+
+    private bool TryBuildEditorEventDefinition(out EventDefinition evt, out string error)
+    {
+        evt = null;
+        error = null;
+
+        string eventId = string.IsNullOrWhiteSpace(eventIdInput) ? string.Empty : eventIdInput.Trim();
+        if (string.IsNullOrEmpty(eventId))
+        {
+            error = "事件 ID 不能为空";
+            return false;
+        }
+
+        string title = string.IsNullOrWhiteSpace(eventTitleInput) ? string.Empty : eventTitleInput.Trim();
+        if (string.IsNullOrEmpty(title))
+        {
+            error = "事件标题不能为空";
+            return false;
+        }
+
+        EnsureEventDraftCollections();
+        string[] dialogueLines = eventDialogueLines
+            .Where(line => !string.IsNullOrWhiteSpace(line))
+            .Select(line => line.Trim())
+            .ToArray();
+        if (dialogueLines.Length == 0)
+        {
+            error = "至少填写一行对话";
+            return false;
+        }
+
+        evt = new EventDefinition
+        {
+            id = eventId,
+            eventType = EventTypeOptions[Mathf.Clamp(eventTypeIndex, 0, EventTypeOptions.Length - 1)],
+            title = title,
+            description = eventDescriptionInput?.Trim() ?? string.Empty,
+            priority = eventPriorityInput,
+            isForced = eventForcedInput,
+            isRepeatable = eventRepeatableInput,
+            trigger = new EventTriggerCondition
+            {
+                year = Mathf.Max(0, eventYearTriggerInput),
+                semester = Mathf.Max(0, eventSemesterTriggerInput),
+                roundMin = Mathf.Max(0, eventRoundMinInput),
+                roundMax = Mathf.Max(0, eventRoundMaxInput),
+                specificRounds = ParseIntList(eventSpecificRoundsInput),
+                attributeConditions = BuildAttributeConditions(),
+                minMoney = eventMinMoneyInput,
+                maxMoney = eventMaxMoneyInput,
+                affinityConditions = Array.Empty<AffinityCondition>(),
+                requiredEventIds = eventRequiredEventIds.ToArray(),
+                excludedEventIds = eventExcludedEventIds.ToArray(),
+                minDarkness = Mathf.Max(0, eventMinDarknessInput),
+                triggerBehavior = eventTriggerBehaviorInput?.Trim() ?? string.Empty,
+                triggerChance = Mathf.Clamp01(eventProbabilityInput),
+                phase = EventPhaseOptions[Mathf.Clamp(eventPhaseIndex, 0, EventPhaseOptions.Length - 1)]
+            },
+            dialogues = new[]
+            {
+                new EventDialogue
+                {
+                    speaker = eventSpeakerInput?.Trim() ?? string.Empty,
+                    lines = dialogueLines,
+                    portraitId = eventPortraitInput?.Trim() ?? string.Empty
+                }
+            },
+            choices = BuildEditorChoices(),
+            defaultEffects = BuildEventEffects(eventDefaultEffectDrafts),
+            chainEventIds = eventChainEventIds.ToArray()
+        };
+
+        return true;
+    }
+
+    private void EnsureEndingEditorDataLoaded()
+    {
+        if (endingEditorCache == null || endingEditorCache.Count == 0)
+        {
+            LoadEndingEditorData(false);
+        }
+    }
+
+    private void LoadEndingEditorData(bool preserveSelection)
+    {
+        string selection = preserveSelection ? editingEndingId : string.Empty;
+        endingEditorCache = LoadEndingDefinitionsFromAsset();
+
+        if (endingEditorCache.Count == 0)
+        {
+            ClearEndingEditorSelection();
+            endingEditorStatus = $"读取失败：{EndingsDataPath}";
+            return;
+        }
+
+        if (!string.IsNullOrWhiteSpace(selection))
+        {
+            EndingDefinition selected = FindEndingInCache(selection);
+            if (selected != null)
+            {
+                BeginEditEnding(selected);
+                return;
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(editingEndingId) && endingEditorCache.Count > 0)
+        {
+            BeginEditEnding(endingEditorCache[0]);
+        }
+    }
+
+    private List<EndingDefinition> LoadEndingDefinitionsFromAsset()
+    {
+        TextAsset textAsset = AssetDatabase.LoadAssetAtPath<TextAsset>(EndingsDataPath);
+        if (textAsset == null)
+        {
+            return new List<EndingDefinition>();
+        }
+
+        try
+        {
+            EndingDataRoot root = JsonUtility.FromJson<EndingDataRoot>(textAsset.text);
+            if (root == null || root.endings == null)
+            {
+                return new List<EndingDefinition>();
+            }
+
+            List<EndingDefinition> result = new List<EndingDefinition>(root.endings.Count);
+            for (int i = 0; i < root.endings.Count; i++)
+            {
+                if (root.endings[i] != null)
+                {
+                    result.Add(root.endings[i].Clone());
+                }
+            }
+            return result;
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"[ZhongshanDeck] 读取 endings.json 失败: {e.Message}");
+            return new List<EndingDefinition>();
+        }
+    }
+
+    private void BeginEditEnding(EndingDefinition ending)
+    {
+        if (ending == null)
+        {
+            return;
+        }
+
+        editingEndingId = ending.id ?? string.Empty;
+        endingEditName = ending.name ?? string.Empty;
+        endingEditDescription = ending.description ?? string.Empty;
+        endingEditCgId = ending.cgId ?? string.Empty;
+        endingConditionDrafts.Clear();
+
+        if (ending.conditions != null)
+        {
+            for (int i = 0; i < ending.conditions.Count; i++)
+            {
+                endingConditionDrafts.Add(ending.conditions[i] != null ? ending.conditions[i].Clone() : new EndingCondition());
+            }
+        }
+
+        if (endingConditionDrafts.Count == 0)
+        {
+            endingConditionDrafts.Add(new EndingCondition(
+                EndingConditionTypeOptions.Length > 0 ? EndingConditionTypeOptions[0] : EndingConditionType.AlwaysTrue.ToString(),
+                0f));
+        }
+
+        endingEditorStatus = $"正在编辑 {editingEndingId}";
+    }
+
+    private void ClearEndingEditorSelection()
+    {
+        editingEndingId = string.Empty;
+        endingEditName = string.Empty;
+        endingEditDescription = string.Empty;
+        endingEditCgId = string.Empty;
+        endingConditionDrafts.Clear();
+    }
+
+    private EndingDefinition FindEndingInCache(string endingId)
+    {
+        if (string.IsNullOrWhiteSpace(endingId) || endingEditorCache == null)
+        {
+            return null;
+        }
+
+        for (int i = 0; i < endingEditorCache.Count; i++)
+        {
+            EndingDefinition ending = endingEditorCache[i];
+            if (ending != null && string.Equals(ending.id, endingId, StringComparison.OrdinalIgnoreCase))
+            {
+                return ending;
+            }
+        }
+
+        return null;
+    }
+
+    private void SaveEditingEndingToAsset()
+    {
+        if (string.IsNullOrWhiteSpace(editingEndingId))
+        {
+            endingEditorStatus = "请先选择一个结局。";
+            return;
+        }
+
+        EndingDefinition target = FindEndingInCache(editingEndingId);
+        if (target == null)
+        {
+            endingEditorStatus = $"未找到结局 {editingEndingId}";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(endingEditName))
+        {
+            endingEditorStatus = "结局标题不能为空。";
+            return;
+        }
+
+        target.name = endingEditName.Trim();
+        target.description = (endingEditDescription ?? string.Empty).Trim();
+        target.cgId = (endingEditCgId ?? string.Empty).Trim();
+        target.conditions = new List<EndingCondition>();
+
+        for (int i = 0; i < endingConditionDrafts.Count; i++)
+        {
+            EndingCondition condition = endingConditionDrafts[i];
+            if (condition == null || string.IsNullOrWhiteSpace(condition.type))
+            {
+                continue;
+            }
+
+            target.conditions.Add(condition.Clone());
+        }
+
+        try
+        {
+            EndingDataRoot root = new EndingDataRoot { endings = endingEditorCache.Select(e => e != null ? e.Clone() : null).Where(e => e != null).ToList() };
+            string json = JsonUtility.ToJson(root, true);
+            File.WriteAllText(EndingsDataPath, json, new UTF8Encoding(true));
+            AssetDatabase.Refresh();
+
+            if (EditorApplication.isPlaying && EndingDeterminer.Instance != null)
+            {
+                EndingDeterminer.Instance.UpdateEndingDefinition(target);
+            }
+
+            endingEditorStatus = $"已保存 {editingEndingId} 到 endings.json";
+            BeginEditEnding(target);
+        }
+        catch (Exception e)
+        {
+            endingEditorStatus = $"保存失败: {e.Message}";
+            Debug.LogError($"[ZhongshanDeck] 保存 endings.json 失败: {e}");
+        }
+    }
+
+    private EventChoice[] BuildEditorChoices()
+    {
+        List<EventChoice> choices = new List<EventChoice>();
+        for (int i = 0; i < eventChoiceDrafts.Count; i++)
+        {
+            EventChoiceDraft draft = eventChoiceDrafts[i];
+            if (draft == null || string.IsNullOrWhiteSpace(draft.text))
+            {
+                continue;
+            }
+
+            choices.Add(new EventChoice
+            {
+                text = draft.text.Trim(),
+                effects = BuildEventEffects(draft.effects),
+                triggerEventId = string.IsNullOrWhiteSpace(draft.nextEventId) ? string.Empty : draft.nextEventId.Trim(),
+                showConditions = Array.Empty<AttributeCondition>()
+            });
+        }
+
+        return choices.ToArray();
+    }
+
+    private void FillEventEditor(EventDefinition evt)
+    {
+        if (evt == null)
+        {
+            return;
+        }
+
+        eventIdInput = evt.id ?? string.Empty;
+        eventTitleInput = evt.title ?? string.Empty;
+        eventDescriptionInput = evt.description ?? string.Empty;
+        eventTypeIndex = Mathf.Max(0, Array.IndexOf(EventTypeOptions, string.IsNullOrEmpty(evt.eventType) ? "Fixed" : evt.eventType));
+        eventPriorityInput = evt.priority;
+        eventForcedInput = evt.isForced;
+        eventRepeatableInput = evt.isRepeatable;
+
+        EventTriggerCondition trigger = evt.trigger ?? new EventTriggerCondition();
+        eventPhaseIndex = Mathf.Max(0, Array.IndexOf(EventPhaseOptions, string.IsNullOrEmpty(trigger.phase) ? "RoundStart" : trigger.phase));
+        eventYearTriggerInput = trigger.year;
+        eventSemesterTriggerInput = trigger.semester;
+        eventRoundMinInput = trigger.roundMin;
+        eventRoundMaxInput = trigger.roundMax;
+        eventSpecificRoundsInput = string.Join(",", trigger.specificRounds ?? Array.Empty<int>());
+        eventProbabilityInput = trigger.triggerChance <= 0f ? 0f : trigger.triggerChance;
+        eventTriggerBehaviorInput = trigger.triggerBehavior ?? string.Empty;
+        FillAttributeConditionDrafts(trigger.attributeConditions);
+        eventMinMoneyInput = trigger.minMoney;
+        eventMaxMoneyInput = trigger.maxMoney;
+        eventMinDarknessInput = trigger.minDarkness;
+        eventRequiredEventIds.Clear();
+        eventExcludedEventIds.Clear();
+        eventRequiredAddIndex = 0;
+        eventExcludedAddIndex = 0;
+        if (trigger.requiredEventIds != null)
+        {
+            eventRequiredEventIds.AddRange(trigger.requiredEventIds.Where(id => !string.IsNullOrWhiteSpace(id)));
+        }
+        if (trigger.excludedEventIds != null)
+        {
+            eventExcludedEventIds.AddRange(trigger.excludedEventIds.Where(id => !string.IsNullOrWhiteSpace(id)));
+        }
+
+        EventDialogue dialogue = evt.dialogues != null && evt.dialogues.Length > 0 ? evt.dialogues[0] : null;
+        eventSpeakerInput = dialogue != null ? dialogue.speaker ?? string.Empty : string.Empty;
+        eventPortraitInput = dialogue != null ? dialogue.portraitId ?? string.Empty : string.Empty;
+        eventDialogueLines.Clear();
+        if (dialogue != null && dialogue.lines != null && dialogue.lines.Length > 0)
+        {
+            for (int i = 0; i < dialogue.lines.Length; i++)
+            {
+                eventDialogueLines.Add(dialogue.lines[i] ?? string.Empty);
+            }
+        }
+        if (eventDialogueLines.Count == 0)
+        {
+            eventDialogueLines.Add(string.Empty);
+        }
+        FillEffectDrafts(eventDefaultEffectDrafts, evt.defaultEffects);
+        eventChainEventIds.Clear();
+        eventChainAddIndex = 0;
+        if (evt.chainEventIds != null)
+        {
+            eventChainEventIds.AddRange(evt.chainEventIds.Where(id => !string.IsNullOrWhiteSpace(id)));
+        }
+
+        eventChoiceDrafts.Clear();
+        if (evt.choices != null)
+        {
+            for (int i = 0; i < evt.choices.Length; i++)
+            {
+                EventChoice choice = evt.choices[i];
+                if (choice == null)
+                {
+                    continue;
+                }
+
+                EventChoiceDraft draft = new EventChoiceDraft
+                {
+                    text = choice.text ?? string.Empty,
+                    nextEventId = choice.triggerEventId ?? string.Empty
+                };
+                FillEffectDrafts(draft.effects, choice.effects);
+                eventChoiceDrafts.Add(draft);
+            }
+        }
+
+        editingEventId = evt.id ?? string.Empty;
+        editingEventSource = ResolveEventSourceLabel(evt.id);
+        isCreatingNewEvent = false;
+        UpdateEventEditorModeText();
+    }
+
+    private void BeginCreateEvent()
+    {
+        ClearEventAuthoringInputs();
+        isCreatingNewEvent = true;
+        editingEventSource = "新建事件";
+        UpdateEventEditorModeText();
+        eventAuthoringStatus = "正在新建事件";
+    }
+
+    private void UpdateEventEditorModeText()
+    {
+        if (isCreatingNewEvent)
+        {
+            eventEditorModeText = "正在新建事件。新增入口只在上方“事件列表”里。";
+            return;
+        }
+
+        if (!string.IsNullOrEmpty(editingEventId))
+        {
+            eventEditorModeText = $"正在编辑：{editingEventId}  来源：{editingEventSource}";
+            return;
+        }
+
+        eventEditorModeText = "请从上方事件列表右侧的编辑按钮进入详情编辑";
+    }
+
+    private void DrawGroupedEventEntries(List<EventListEntry> entries, Action<EventListEntry> drawRow)
+    {
+        if (entries == null || entries.Count == 0 || drawRow == null)
+        {
+            return;
+        }
+
+        for (int typeIndex = 0; typeIndex < EventTypeOptions.Length; typeIndex++)
+        {
+            string eventType = EventTypeOptions[typeIndex];
+            List<EventListEntry> group = entries
+                .Where(entry => entry != null && entry.Event != null && string.Equals(entry.Event.eventType, eventType, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            if (group.Count == 0)
+            {
+                continue;
+            }
+
+            EditorGUILayout.Space(4f);
+            EditorGUILayout.LabelField(GetEventTypeDisplayName(eventType), EditorStyles.boldLabel);
+            for (int i = 0; i < group.Count; i++)
+            {
+                drawRow(group[i]);
+            }
+        }
+    }
+
+    private void DrawSceneButtonGrid(List<string> scenePaths)
+    {
+        if (scenePaths == null || scenePaths.Count == 0)
+        {
+            EditorGUILayout.HelpBox("当前项目下没有找到 .unity 场景。", MessageType.Warning);
+            return;
+        }
+
+        for (int i = 0; i < scenePaths.Count; i += SceneJumpColumnCount)
+        {
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                for (int column = 0; column < SceneJumpColumnCount; column++)
+                {
+                    int index = i + column;
+                    if (index >= scenePaths.Count)
+                    {
+                        GUILayout.FlexibleSpace();
+                        continue;
+                    }
+
+                    string scenePath = scenePaths[index];
+                    string label = GetSceneJumpLabel(scenePath);
+                    if (GUILayout.Button(label, GUILayout.Width(220f), GUILayout.Height(42f)))
+                    {
+                        OpenSceneByPath(scenePath);
+                    }
+                }
+
+                GUILayout.FlexibleSpace();
+            }
+        }
+    }
+
+    private List<string> GetAllScenePaths()
+    {
+        string[] guids = AssetDatabase.FindAssets("t:Scene", new[] { "Assets" });
+        List<string> scenePaths = new List<string>();
+        for (int i = 0; i < guids.Length; i++)
+        {
+            string path = AssetDatabase.GUIDToAssetPath(guids[i]);
+            if (!string.IsNullOrEmpty(path) && path.EndsWith(".unity", StringComparison.OrdinalIgnoreCase))
+            {
+                scenePaths.Add(path);
+            }
+        }
+
+        scenePaths.Sort(StringComparer.OrdinalIgnoreCase);
+        return scenePaths;
+    }
+
+    private bool HasSceneAsset(string scenePath)
+    {
+        return AssetDatabase.LoadAssetAtPath<SceneAsset>(scenePath) != null;
+    }
+
+    private string GetSceneJumpLabel(string scenePath)
+    {
+        string fileName = System.IO.Path.GetFileNameWithoutExtension(scenePath);
+        string folderName = System.IO.Path.GetFileName(System.IO.Path.GetDirectoryName(scenePath));
+
+        if (string.Equals(folderName, "Scenes", StringComparison.OrdinalIgnoreCase) || string.IsNullOrEmpty(folderName))
+        {
+            return fileName;
+        }
+
+        return $"{fileName}\n({folderName})";
+    }
+
+    private string GetEventTypeDisplayName(string eventType)
+    {
+        switch (eventType)
+        {
+            case "Fixed":
+                return "固定事件";
+            case "MainStory":
+                return "主线事件";
+            case "Conditional":
+                return "条件事件";
+            case "Dark":
+                return "黑暗事件";
+            default:
+                return eventType;
+        }
+    }
+
+    private string GetEventPhaseDisplayName(string phase)
+    {
+        switch (phase)
+        {
+            case "RoundStart":
+                return "回合开始";
+            case "ActionComplete":
+                return "行动完成后";
+            case "RoundEnd":
+                return "回合结束";
+            default:
+                return string.IsNullOrWhiteSpace(phase) ? "未设置" : phase;
+        }
+    }
+
+    private void DrawRoundEventRow(EventListEntry entry)
+    {
+        EventDefinition evt = entry.Event;
+        if (evt == null)
+        {
+            return;
+        }
+
+        using (new EditorGUILayout.HorizontalScope("box"))
+        {
+            using (new EditorGUILayout.VerticalScope())
+            {
+                EditorGUILayout.LabelField($"{evt.id} | {evt.title}", EditorStyles.boldLabel);
+                EditorGUILayout.LabelField($"阶段 {GetEventPhase(evt)}    优先级 P{evt.priority}    时间 {BuildTimeWindowLabel(evt.trigger)}");
+                EditorGUILayout.LabelField($"来源 {entry.SourceLabel}");
+            }
+
+            if (GUILayout.Button("编辑", GUILayout.Width(70f)))
+            {
+                OpenEventForEdit(entry);
+            }
+
+            if (GUILayout.Button("移出本回合", GUILayout.Width(90f)))
+            {
+                RemoveEventFromQueriedRound(evt.id);
+            }
+        }
+    }
+
+    private void DrawLibraryEventRow(EventListEntry entry)
+    {
+        EventDefinition evt = entry.Event;
+        if (evt == null)
+        {
+            return;
+        }
+
+        using (new EditorGUILayout.HorizontalScope("box"))
+        {
+            using (new EditorGUILayout.VerticalScope())
+            {
+                EditorGUILayout.LabelField($"{evt.id} | {evt.title}", EditorStyles.boldLabel);
+                EditorGUILayout.LabelField($"阶段 {GetEventPhase(evt)}    时间 {BuildTimeWindowLabel(evt.trigger)}");
+                EditorGUILayout.LabelField($"来源 {entry.SourceLabel}");
+            }
+
+            if (GUILayout.Button("编辑", GUILayout.Width(70f)))
+            {
+                OpenEventForEdit(entry);
+            }
+
+            if (entry.IsDraft && GUILayout.Button("删草稿", GUILayout.Width(80f)))
+            {
+                DeleteDraftById(evt.id);
+            }
+        }
+    }
+
+    private void OpenEventForEdit(EventListEntry entry)
+    {
+        if (entry == null || entry.Event == null)
+        {
+            return;
+        }
+
+        FillEventEditor(CloneEvent(entry.Event));
+        eventAuthoringStatus = $"已载入事件：{entry.Event.id}";
+        Repaint();
+    }
+
+    private void AddEventToQueriedRound(string eventId)
+    {
+        EventListEntry entry = GetMergedEventEntries().FirstOrDefault(candidate => candidate.Event != null && candidate.Event.id == eventId);
+        if (entry == null || entry.Event == null)
+        {
+            eventAuthoringStatus = $"未找到事件：{eventId}";
+            return;
+        }
+
+        EventDefinition clone = CloneEvent(entry.Event);
+        EnsureRoundBinding(clone, eventTimelineYearInput, eventTimelineSemesterInput, eventTimelineRoundInput, GetSelectedTimelinePhase());
+        SaveEventDraftFromDefinition(clone);
+        eventAuthoringStatus = $"已将 {eventId} 加入 Y{eventTimelineYearInput} S{eventTimelineSemesterInput} R{eventTimelineRoundInput}";
+        Repaint();
+    }
+
+    private void RemoveEventFromQueriedRound(string eventId)
+    {
+        EventListEntry entry = GetMergedEventEntries().FirstOrDefault(candidate => candidate.Event != null && candidate.Event.id == eventId);
+        if (entry == null || entry.Event == null)
+        {
+            eventAuthoringStatus = $"未找到事件：{eventId}";
+            return;
+        }
+
+        EventDefinition clone = CloneEvent(entry.Event);
+        RemoveRoundBinding(clone, eventTimelineYearInput, eventTimelineSemesterInput, eventTimelineRoundInput);
+        SaveEventDraftFromDefinition(clone);
+        eventAuthoringStatus = $"已将 {eventId} 从 Y{eventTimelineYearInput} S{eventTimelineSemesterInput} R{eventTimelineRoundInput} 移出";
+        Repaint();
+    }
+
+    private void SaveEventDraftFromDefinition(EventDefinition evt)
+    {
+        if (evt == null || string.IsNullOrWhiteSpace(evt.id))
+        {
+            return;
+        }
+
+        string json = JsonUtility.ToJson(new EventDatabaseRoot { events = new[] { evt } }, true);
+        ZhongshanDeckToolStateBridge.SaveAuthoredEvent(evt.id, evt.title, json);
+        if (EditorApplication.isPlaying && EventScheduler.Instance != null)
+        {
+            EventScheduler.Instance.RegisterOrReplaceRuntimeEvent(CloneEvent(evt));
+        }
+    }
+
+    private void DeleteDraftById(string eventId)
+    {
+        if (string.IsNullOrWhiteSpace(eventId))
+        {
+            return;
+        }
+
+        bool deleted = ZhongshanDeckToolStateBridge.DeleteAuthoredEvent(eventId);
+        eventAuthoringStatus = deleted ? $"已删除草稿：{eventId}" : $"未找到草稿：{eventId}";
+        if (editingEventId == eventId)
+        {
+            editingEventId = string.Empty;
+            editingEventSource = string.Empty;
+            isCreatingNewEvent = false;
+            UpdateEventEditorModeText();
+        }
+        Repaint();
+    }
+
+    private List<EventListEntry> GetMergedEventEntries()
+    {
+        Dictionary<string, EventListEntry> merged = new Dictionary<string, EventListEntry>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (EventDefinition evt in LoadEditorResourceEvents())
+        {
+            if (evt == null || string.IsNullOrWhiteSpace(evt.id))
+            {
+                continue;
+            }
+
+            merged[evt.id] = new EventListEntry
+            {
+                Event = evt,
+                IsDraft = false,
+                SourceLabel = "资源事件"
+            };
+        }
+
+        List<ZhongshanDeckEventEntry> drafts = ZhongshanDeckToolStateBridge.GetAuthoredEvents();
+        for (int i = 0; i < drafts.Count; i++)
+        {
+            ZhongshanDeckEventEntry draft = drafts[i];
+            if (draft == null || string.IsNullOrWhiteSpace(draft.json))
+            {
+                continue;
+            }
+
+            EventDatabaseRoot root = JsonUtility.FromJson<EventDatabaseRoot>(draft.json);
+            EventDefinition evt = root != null && root.events != null && root.events.Length > 0 ? root.events[0] : null;
+            if (evt == null || string.IsNullOrWhiteSpace(evt.id))
+            {
+                continue;
+            }
+
+            merged[evt.id] = new EventListEntry
+            {
+                Event = evt,
+                IsDraft = true,
+                SourceLabel = "草稿覆盖"
+            };
+        }
+
+        if (EditorApplication.isPlaying && EventScheduler.Instance != null)
+        {
+            List<EventDefinition> runtimeEvents = EventScheduler.Instance.GetAllEventsSnapshot();
+            for (int i = 0; i < runtimeEvents.Count; i++)
+            {
+                EventDefinition evt = runtimeEvents[i];
+                if (evt == null || string.IsNullOrWhiteSpace(evt.id) || merged.ContainsKey(evt.id))
+                {
+                    continue;
+                }
+
+                merged[evt.id] = new EventListEntry
+                {
+                    Event = CloneEvent(evt),
+                    IsDraft = false,
+                    SourceLabel = "运行时"
+                };
+            }
+        }
+
+        return merged.Values.OrderBy(entry => entry.Event.id).ToList();
+    }
+
+    private List<EventDefinition> LoadEditorResourceEvents()
+    {
+        string[] assetPaths =
+        {
+            "Assets/Resources/Data/Events/main_events.json",
+            "Assets/Resources/Data/Events/fixed_events.json",
+            "Assets/Resources/Data/Events/conditional_events.json",
+            "Assets/Resources/Data/Events/dark_events.json"
+        };
+
+        List<EventDefinition> results = new List<EventDefinition>();
+        for (int i = 0; i < assetPaths.Length; i++)
+        {
+            TextAsset textAsset = AssetDatabase.LoadAssetAtPath<TextAsset>(assetPaths[i]);
+            if (textAsset == null || string.IsNullOrWhiteSpace(textAsset.text))
+            {
+                continue;
+            }
+
+            EventDatabaseRoot root = JsonUtility.FromJson<EventDatabaseRoot>(textAsset.text);
+            if (root == null || root.events == null)
+            {
+                continue;
+            }
+
+            for (int j = 0; j < root.events.Length; j++)
+            {
+                EventDefinition evt = root.events[j];
+                if (evt != null)
+                {
+                    results.Add(CloneEvent(evt));
+                }
+            }
+        }
+
+        return results;
+    }
+
+    private List<EventListEntry> GetRoundCandidates(List<EventListEntry> allEntries, int year, int semester, int round)
+    {
+        return allEntries
+            .Where(entry => entry.Event != null)
+            .Where(entry => !MatchesTimelineWindow(entry.Event, year, semester, round))
+            .OrderBy(entry => entry.Event.eventType)
+            .ThenBy(entry => entry.Event.id)
+            .ToList();
+    }
+
+    private bool MatchesEventSearch(EventListEntry entry, string keyword)
+    {
+        if (entry == null || entry.Event == null)
+        {
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(keyword))
+        {
+            return true;
+        }
+
+        string haystack = $"{entry.Event.id} {entry.Event.title} {entry.Event.eventType} {GetEventTypeDisplayName(entry.Event.eventType)} {entry.SourceLabel}".ToLowerInvariant();
+        return haystack.Contains(keyword.Trim().ToLowerInvariant());
+    }
+
+    private string ResolveEventSourceLabel(string eventId)
+    {
+        if (ZhongshanDeckToolStateBridge.TryGetAuthoredEvent(eventId, out _))
+        {
+            return "草稿";
+        }
+
+        return EditorApplication.isPlaying && EventScheduler.Instance != null && EventScheduler.Instance.GetEvent(eventId) != null
+            ? "运行时"
+            : "资源事件";
+    }
+
+    private string GetSelectedTimelinePhase()
+    {
+        string selected = EventTimelinePhaseOptions[Mathf.Clamp(eventTimelinePhaseIndex, 0, EventTimelinePhaseOptions.Length - 1)];
+        return selected == "All" ? EventPhaseOptions[0] : selected;
+    }
+
+    private string GetEventPhase(EventDefinition evt)
+    {
+        if (evt == null)
+        {
+            return "RoundStart";
+        }
+
+        if (evt.trigger != null && !string.IsNullOrWhiteSpace(evt.trigger.phase))
+        {
+            return evt.trigger.phase;
+        }
+
+        return evt.eventType == "Conditional" || evt.eventType == "Dark" ? "RoundEnd" : "RoundStart";
+    }
+
+    private bool MatchesTimelineWindow(EventDefinition evt, int year, int semester, int round)
+    {
+        if (evt == null)
+        {
+            return false;
+        }
+
+        EventTriggerCondition trigger = evt.trigger;
+        if (trigger == null)
+        {
+            return true;
+        }
+
+        if (trigger.year > 0 && trigger.year != year) return false;
+        if (trigger.semester > 0 && trigger.semester != semester) return false;
+        if (trigger.roundMin > 0 && round < trigger.roundMin) return false;
+        if (trigger.roundMax > 0 && round > trigger.roundMax) return false;
+        if (trigger.specificRounds != null && trigger.specificRounds.Length > 0 && !trigger.specificRounds.Contains(round)) return false;
+        return true;
+    }
+
+    private void EnsureRoundBinding(EventDefinition evt, int year, int semester, int round, string phase)
+    {
+        if (evt.trigger == null)
+        {
+            evt.trigger = new EventTriggerCondition();
+        }
+
+        evt.trigger.year = year;
+        evt.trigger.semester = semester;
+        evt.trigger.phase = phase;
+        evt.trigger.roundMin = 0;
+        evt.trigger.roundMax = 0;
+
+        List<int> rounds = evt.trigger.specificRounds != null ? new List<int>(evt.trigger.specificRounds) : new List<int>();
+        if (!rounds.Contains(round))
+        {
+            rounds.Add(round);
+        }
+
+        rounds.Sort();
+        evt.trigger.specificRounds = rounds.ToArray();
+    }
+
+    private void RemoveRoundBinding(EventDefinition evt, int year, int semester, int round)
+    {
+        if (evt == null || evt.trigger == null)
+        {
+            return;
+        }
+
+        if (evt.trigger.year > 0 && evt.trigger.year != year) return;
+        if (evt.trigger.semester > 0 && evt.trigger.semester != semester) return;
+
+        List<int> rounds = evt.trigger.specificRounds != null ? new List<int>(evt.trigger.specificRounds) : new List<int>();
+        rounds.RemoveAll(value => value == round);
+        evt.trigger.specificRounds = rounds.ToArray();
+    }
+
+    private string BuildTimeWindowLabel(EventTriggerCondition trigger)
+    {
+        if (trigger == null)
+        {
+            return "不限";
+        }
+
+        List<string> bits = new List<string>();
+        if (trigger.year > 0) bits.Add($"Y{trigger.year}");
+        if (trigger.semester > 0) bits.Add($"S{trigger.semester}");
+        if (trigger.specificRounds != null && trigger.specificRounds.Length > 0)
+        {
+            bits.Add($"R[{string.Join(",", trigger.specificRounds)}]");
+        }
+        else if (trigger.roundMin > 0 || trigger.roundMax > 0)
+        {
+            bits.Add($"R{trigger.roundMin}-{trigger.roundMax}");
+        }
+
+        return bits.Count == 0 ? "不限" : string.Join(" ", bits);
+    }
+
+    private int GetPrimaryRound(EventTriggerCondition trigger)
+    {
+        if (trigger == null)
+        {
+            return int.MaxValue;
+        }
+
+        if (trigger.specificRounds != null && trigger.specificRounds.Length > 0)
+        {
+            return trigger.specificRounds.Min();
+        }
+
+        return trigger.roundMin > 0 ? trigger.roundMin : int.MaxValue - 1;
+    }
+
+    private EventDefinition CloneEvent(EventDefinition evt)
+    {
+        if (evt == null)
+        {
+            return null;
+        }
+
+        string json = JsonUtility.ToJson(new EventDatabaseRoot { events = new[] { evt } });
+        EventDatabaseRoot root = JsonUtility.FromJson<EventDatabaseRoot>(json);
+        return root != null && root.events != null && root.events.Length > 0 ? root.events[0] : evt;
+    }
+
+    private void DrawEventDraftSummary()
+    {
+        List<ZhongshanDeckEventEntry> drafts = ZhongshanDeckToolStateBridge.GetAuthoredEvents();
+        EditorGUILayout.Space(8f);
+        EditorGUILayout.LabelField("已有草稿（列表入口请回到上方事件列表）", EditorStyles.boldLabel);
+
+        if (drafts.Count == 0)
+        {
+            EditorGUILayout.HelpBox("还没有剧情草稿。", MessageType.None);
+            return;
+        }
+
+        for (int i = 0; i < drafts.Count; i++)
+        {
+            ZhongshanDeckEventEntry draft = drafts[i];
+            if (draft == null)
+            {
+                continue;
+            }
+
+            using (new EditorGUILayout.HorizontalScope("box"))
+            {
+                EditorGUILayout.LabelField($"{draft.eventId} | {draft.title}");
+            }
+        }
+    }
+
+    private void DrawEventDraftPreview()
+    {
+        EditorGUILayout.Space(8f);
+        EditorGUILayout.LabelField("当前草稿预览", EditorStyles.boldLabel);
+        if (!TryBuildEditorEventDefinition(out EventDefinition evt, out string error))
+        {
+            EditorGUILayout.HelpBox(error, MessageType.None);
+            return;
+        }
+
+        StringBuilder builder = new StringBuilder();
+        builder.AppendLine($"{evt.id} | {evt.title}");
+        builder.AppendLine($"类型 {GetEventTypeDisplayName(evt.eventType)} | 阶段 {GetEventPhaseDisplayName(evt.trigger.phase)} | 优先级 {evt.priority}");
+        builder.AppendLine($"指定回合 {string.Join(",", evt.trigger.specificRounds ?? Array.Empty<int>())} | 概率 {evt.trigger.triggerChance:0.##}");
+        builder.AppendLine($"属性条件 {FormatAttributeConditions(evt.trigger.attributeConditions)}");
+        builder.AppendLine($"前置 {string.Join(",", evt.trigger.requiredEventIds ?? Array.Empty<string>())}");
+        builder.AppendLine($"排除 {string.Join(",", evt.trigger.excludedEventIds ?? Array.Empty<string>())}");
+        builder.AppendLine("对话");
+
+        if (evt.dialogues != null && evt.dialogues.Length > 0)
+        {
+            for (int i = 0; i < evt.dialogues[0].lines.Length; i++)
+            {
+                builder.AppendLine($"- {evt.dialogues[0].speaker}: {evt.dialogues[0].lines[i]}");
+            }
+        }
+
+        builder.AppendLine("选项");
+        if (evt.choices == null || evt.choices.Length == 0)
+        {
+            builder.AppendLine("- 无，走默认效果");
+        }
+        else
+        {
+            for (int i = 0; i < evt.choices.Length; i++)
+            {
+                builder.AppendLine($"- {evt.choices[i].text} => {FormatEventEffects(evt.choices[i].effects)}");
+            }
+        }
+
+        builder.AppendLine($"默认效果 {FormatEventEffects(evt.defaultEffects)}");
+        EditorGUILayout.TextArea(builder.ToString(), GUILayout.MinHeight(180f));
+    }
+
+    private string[] ParseCommaList(string input)
+    {
+        if (string.IsNullOrWhiteSpace(input))
+        {
+            return Array.Empty<string>();
+        }
+
+        string[] raw = input.Split(new[] { ',', '，' }, StringSplitOptions.RemoveEmptyEntries);
+        List<string> values = new List<string>();
+        for (int i = 0; i < raw.Length; i++)
+        {
+            string trimmed = raw[i].Trim();
+            if (!string.IsNullOrEmpty(trimmed))
+            {
+                values.Add(trimmed);
+            }
+        }
+
+        return values.ToArray();
+    }
+
+    private int[] ParseIntList(string input)
+    {
+        string[] raw = ParseCommaList(input);
+        List<int> values = new List<int>();
+        for (int i = 0; i < raw.Length; i++)
+        {
+            if (int.TryParse(raw[i], out int value))
+            {
+                values.Add(value);
+            }
+        }
+
+        return values.ToArray();
+    }
+
+    private void EnsureEventDraftCollections()
+    {
+        if (eventDialogueLines.Count == 0)
+        {
+            eventDialogueLines.Add(string.Empty);
+        }
+
+        for (int i = 0; i < eventChoiceDrafts.Count; i++)
+        {
+            if (eventChoiceDrafts[i] != null && eventChoiceDrafts[i].effects == null)
+            {
+                eventChoiceDrafts[i].effects = new List<EventEffectDraft>();
+            }
+        }
+    }
+
+    private AttributeCondition[] BuildAttributeConditions()
+    {
+        if (eventAttributeConditionDrafts.Count == 0)
+        {
+            return Array.Empty<AttributeCondition>();
+        }
+
+        List<AttributeCondition> conditions = new List<AttributeCondition>();
+        for (int i = 0; i < eventAttributeConditionDrafts.Count; i++)
+        {
+            EventAttributeConditionDraft draft = eventAttributeConditionDrafts[i];
+            if (draft == null)
+            {
+                continue;
+            }
+
+            conditions.Add(new AttributeCondition
+            {
+                attributeName = EventAttributeOptions[Mathf.Clamp(draft.attributeIndex, 0, EventAttributeOptions.Length - 1)],
+                comparison = EventComparisonOptions[Mathf.Clamp(draft.comparisonIndex, 0, EventComparisonOptions.Length - 1)],
+                value = draft.value
+            });
+        }
+
+        return conditions.ToArray();
+    }
+
+    private EventEffect[] BuildEventEffects(List<EventEffectDraft> drafts)
+    {
+        if (drafts == null || drafts.Count == 0)
+        {
+            return Array.Empty<EventEffect>();
+        }
+
+        List<EventEffect> effects = new List<EventEffect>();
+        for (int i = 0; i < drafts.Count; i++)
+        {
+            EventEffectDraft draft = drafts[i];
+            if (draft == null)
+            {
+                continue;
+            }
+
+            string type = EventEffectTypeOptions[Mathf.Clamp(draft.effectTypeIndex, 0, EventEffectTypeOptions.Length - 1)];
+            string target = type == "attribute"
+                ? EventAttributeOptions[Mathf.Clamp(draft.attributeIndex, 0, EventAttributeOptions.Length - 1)]
+                : (draft.targetText ?? string.Empty).Trim();
+
+            effects.Add(new EventEffect
+            {
+                type = type,
+                target = target,
+                value = draft.value,
+                description = BuildEffectDescription(type, target, draft.value)
+            });
+        }
+
+        return effects.ToArray();
+    }
+
+    private void FillAttributeConditionDrafts(AttributeCondition[] conditions)
+    {
+        eventAttributeConditionDrafts.Clear();
+        if (conditions == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < conditions.Length; i++)
+        {
+            AttributeCondition condition = conditions[i];
+            if (condition == null)
+            {
+                continue;
+            }
+
+            eventAttributeConditionDrafts.Add(new EventAttributeConditionDraft
+            {
+                attributeIndex = Mathf.Max(0, Array.IndexOf(EventAttributeOptions, condition.attributeName ?? string.Empty)),
+                comparisonIndex = Mathf.Max(0, Array.IndexOf(EventComparisonOptions, condition.comparison ?? string.Empty)),
+                value = condition.value
+            });
+        }
+    }
+
+    private void FillEffectDrafts(List<EventEffectDraft> drafts, EventEffect[] effects)
+    {
+        drafts.Clear();
+        if (effects == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < effects.Length; i++)
+        {
+            EventEffect effect = effects[i];
+            if (effect == null)
+            {
+                continue;
+            }
+
+            string type = string.IsNullOrWhiteSpace(effect.type) ? "attribute" : effect.type;
+            EventEffectDraft draft = new EventEffectDraft
+            {
+                effectTypeIndex = Mathf.Max(0, Array.IndexOf(EventEffectTypeOptions, type)),
+                value = effect.value
+            };
+
+            if (type == "attribute")
+            {
+                draft.attributeIndex = Mathf.Max(0, Array.IndexOf(EventAttributeOptions, effect.target ?? string.Empty));
+            }
+            else
+            {
+                draft.targetText = effect.target ?? string.Empty;
+            }
+
+            drafts.Add(draft);
+        }
+    }
+
+    private string BuildEffectDescription(string type, string target, int value)
+    {
+        switch (type)
+        {
+            case "attribute":
+                return $"{target} {(value >= 0 ? "+" : string.Empty)}{value}";
+            case "money":
+                return $"金钱 {(value >= 0 ? "+" : string.Empty)}{value}";
+            case "flag":
+                return $"标记 {target} = {(value != 0)}";
+            case "darkness":
+                return $"黑暗值 {(value >= 0 ? "+" : string.Empty)}{value}";
+            case "unlock":
+                return $"解锁 {target}";
+            default:
+                return $"{type}:{target}:{value}";
+        }
+    }
+
+    private string FormatAttributeConditions(AttributeCondition[] conditions)
+    {
+        if (conditions == null || conditions.Length == 0)
+        {
+            return "-";
+        }
+
+        List<string> items = new List<string>();
+        for (int i = 0; i < conditions.Length; i++)
+        {
+            AttributeCondition condition = conditions[i];
+            if (condition == null)
+            {
+                continue;
+            }
+
+            items.Add($"{condition.attributeName}{condition.comparison}{condition.value}");
+        }
+
+        return items.Count == 0 ? "-" : string.Join(", ", items);
+    }
+
+    private string FormatEventEffects(EventEffect[] effects)
+    {
+        if (effects == null || effects.Length == 0)
+        {
+            return "无";
+        }
+
+        List<string> items = new List<string>();
+        for (int i = 0; i < effects.Length; i++)
+        {
+            EventEffect effect = effects[i];
+            if (effect == null)
+            {
+                continue;
+            }
+
+            items.Add(BuildEffectDescription(effect.type, effect.target, effect.value));
+        }
+
+        return items.Count == 0 ? "无" : string.Join("; ", items);
     }
 
     private void DrawEconomy()
@@ -645,6 +3519,8 @@ public class ZhongshanDeckWindow : EditorWindow
 
     private void SyncRuntimeValues()
     {
+        LoadEndingEditorData(true);
+
         if (!EditorApplication.isPlaying || GameState.Instance == null)
         {
             return;

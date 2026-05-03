@@ -3,12 +3,15 @@ using UnityEngine.UI;
 using UnityEngine.SceneManagement;
 using TMPro;
 using System.Collections;
+using System.Text;
 
 /// <summary>
 /// 结局展示面板 — 纯代码动态创建，展示结局名称、星级、CG、统计数据与天赋点。
 /// </summary>
 public class EndingUI : MonoBehaviour
 {
+    private static readonly bool UseAnimatedPresentation = false;
+
     // ========== 单例 ==========
 
     /// <summary>单例实例 (场景内，不跨场景保留)</summary>
@@ -116,43 +119,143 @@ public class EndingUI : MonoBehaviour
         isShowing = true;
 
         Debug.Log($"[EndingUI] Show -> {result.ending.name} ({result.ending.id})");
+        LogHiddenEndingDetails(result, _triggerReason);
 
         // 构建 UI
         CreateCanvas();
+        CreateGuaranteedVisibleContent(result, _triggerReason);
+        ApplyProjectFonts();
 
-        var contentRoot = CreateContentRoot();
+        if (UseAnimatedPresentation)
+        {
+            PrepareAnimatedInitialState();
+            _showCoroutine = StartCoroutine(PlayShowSequence());
+        }
+        else
+        {
+            RevealAllImmediately();
+        }
+    }
+
+    private void CreateGuaranteedVisibleContent(EndingResult result, string triggerReason)
+    {
+        RectTransform root = _canvasRoot.GetComponent<RectTransform>();
+
+        GameObject panelObject = new GameObject("EndingPanel", typeof(RectTransform), typeof(Image), typeof(CanvasGroup));
+        panelObject.transform.SetParent(root, false);
+        RectTransform panelRect = panelObject.GetComponent<RectTransform>();
+        panelRect.anchorMin = new Vector2(0.14f, 0.08f);
+        panelRect.anchorMax = new Vector2(0.86f, 0.92f);
+        panelRect.offsetMin = Vector2.zero;
+        panelRect.offsetMax = Vector2.zero;
+
+        Image panelImage = panelObject.GetComponent<Image>();
+        panelImage.color = _useCollapsePresentation ? COLOR_ALERT_PANEL : new Color(0.08f, 0.08f, 0.1f, 0.96f);
+
+        _statsGroup = panelObject.GetComponent<CanvasGroup>();
+
         if (_useCollapsePresentation)
         {
-            _crisisBadgeGroup = CreateCrisisBadge(contentRoot);
+            GameObject badgeObject = new GameObject("CrisisBadge", typeof(RectTransform), typeof(Image), typeof(CanvasGroup));
+            badgeObject.transform.SetParent(panelRect, false);
+            RectTransform badgeRect = badgeObject.GetComponent<RectTransform>();
+            badgeRect.anchorMin = new Vector2(0.08f, 0.88f);
+            badgeRect.anchorMax = new Vector2(0.92f, 0.96f);
+            badgeRect.offsetMin = Vector2.zero;
+            badgeRect.offsetMax = Vector2.zero;
+            badgeObject.GetComponent<Image>().color = COLOR_ALERT_BG;
+            _crisisBadgeGroup = badgeObject.GetComponent<CanvasGroup>();
+            _crisisBadgeText = CreateText("CrisisBadgeText", badgeRect, "人生轨迹已中断", 26f,
+                COLOR_ALERT_RED, TextAlignmentOptions.Center, new Vector2(0f, 0f), new Vector2(1f, 1f));
         }
-        _titleText = CreateEndingTitle(contentRoot, result.ending.name);
-        _starsText = CreateStarDisplay(contentRoot, result.ending.stars);
-        _cgGroup = CreateCGPlaceholder(contentRoot, result.ending.cgId);
-        _descGroup = CreateDescriptionText(contentRoot, result.ending.description);
-        if (_useCollapsePresentation)
-        {
-            _statusGroup = CreateCrashStatusPanel(contentRoot, result, _triggerReason);
-        }
-        CreateSeparator(contentRoot);
-        _statsGroup = CreateStatsSummary(contentRoot, result);
-        _talentGroup = CreateTalentPointDisplay(contentRoot, result.talentPoints);
-        _buttonGroup = CreateReturnButton(contentRoot);
 
-        // 初始隐藏所有元素
-        SetAlpha(_backgroundGroup, 0f);
-        SetAlpha(_crisisBadgeGroup, 0f);
-        _titleText.color = SetAlpha(_titleText.color, 0f);
-        _starsText.color = SetAlpha(_starsText.color, 0f);
-        SetAlpha(_cgGroup, 0f);
-        SetAlpha(_descGroup, 0f);
-        SetAlpha(_statusGroup, 0f);
-        SetAlpha(_statsGroup, 0f);
-        SetAlpha(_talentGroup, 0f);
-        _talentGroup.transform.localScale = Vector3.zero;
-        SetAlpha(_buttonGroup, 0f);
+        _titleText = CreateText("EndingTitle", panelRect, result.ending != null ? result.ending.name : "结局", 56f,
+            _useCollapsePresentation ? COLOR_ALERT_RED : COLOR_GOLD, TextAlignmentOptions.Center, new Vector2(0.08f, 0.76f), new Vector2(0.92f, 0.88f));
+        _starsText = CreateText("StarText", panelRect, BuildStarRichText(result.ending != null ? result.ending.stars : 0), 42f,
+            Color.white, TextAlignmentOptions.Center, new Vector2(0.16f, 0.69f), new Vector2(0.84f, 0.77f), true);
 
-        // 启动动画序列
-        _showCoroutine = StartCoroutine(PlayShowSequence());
+        GameObject cgObject = new GameObject("CGLabelBox", typeof(RectTransform), typeof(Image), typeof(CanvasGroup));
+        cgObject.transform.SetParent(panelRect, false);
+        RectTransform cgRect = cgObject.GetComponent<RectTransform>();
+        cgRect.anchorMin = new Vector2(0.08f, 0.55f);
+        cgRect.anchorMax = new Vector2(0.92f, 0.66f);
+        cgRect.offsetMin = Vector2.zero;
+        cgRect.offsetMax = Vector2.zero;
+        cgObject.GetComponent<Image>().color = new Color(1f, 1f, 1f, 0.06f);
+        _cgGroup = cgObject.GetComponent<CanvasGroup>();
+        _cgLabel = CreateText("CGLabel", cgRect, BuildPlayerFacingSummary(result), 24f,
+            COLOR_LIGHT_GRAY, TextAlignmentOptions.Center, new Vector2(0f, 0f), new Vector2(1f, 1f));
+
+        GameObject descObject = new GameObject("DescriptionBox", typeof(RectTransform), typeof(CanvasGroup));
+        descObject.transform.SetParent(panelRect, false);
+        RectTransform descRect = descObject.GetComponent<RectTransform>();
+        descRect.anchorMin = new Vector2(0.08f, 0.37f);
+        descRect.anchorMax = new Vector2(0.92f, 0.53f);
+        descRect.offsetMin = Vector2.zero;
+        descRect.offsetMax = Vector2.zero;
+        _descGroup = descObject.GetComponent<CanvasGroup>();
+        _descText = CreateText("DescriptionText", descRect, result.ending.description ?? string.Empty, 24f,
+            COLOR_WHITE, TextAlignmentOptions.TopLeft, new Vector2(0f, 0f), new Vector2(1f, 1f));
+
+        GameObject statusObject = new GameObject("StatusBox", typeof(RectTransform), typeof(Image), typeof(CanvasGroup));
+        statusObject.transform.SetParent(panelRect, false);
+        RectTransform statusRect = statusObject.GetComponent<RectTransform>();
+        statusRect.anchorMin = new Vector2(0.08f, 0.16f);
+        statusRect.anchorMax = new Vector2(0.92f, 0.35f);
+        statusRect.offsetMin = Vector2.zero;
+        statusRect.offsetMax = Vector2.zero;
+        statusObject.GetComponent<Image>().color = new Color(1f, 1f, 1f, 0.05f);
+        _statusGroup = statusObject.GetComponent<CanvasGroup>();
+        _statusText = CreateText("StatusText", statusRect, BuildPlayerFacingReasonText(result), 20f,
+            new Color(0.95f, 0.95f, 0.92f, 1f), TextAlignmentOptions.TopLeft, new Vector2(0.03f, 0.08f), new Vector2(0.97f, 0.92f));
+
+        GameObject talentObject = new GameObject("TalentBox", typeof(RectTransform), typeof(CanvasGroup));
+        talentObject.transform.SetParent(panelRect, false);
+        RectTransform talentRect = talentObject.GetComponent<RectTransform>();
+        talentRect.anchorMin = new Vector2(0.08f, 0.08f);
+        talentRect.anchorMax = new Vector2(0.55f, 0.14f);
+        talentRect.offsetMin = Vector2.zero;
+        talentRect.offsetMax = Vector2.zero;
+        _talentGroup = talentObject.GetComponent<CanvasGroup>();
+        _talentText = CreateText("TalentText", talentRect, $"综合分 {result.finalScore:F1}   GPA {result.finalGPA:F2}   天赋点 {result.talentPoints}", 24f,
+            _useCollapsePresentation ? COLOR_ALERT_RED : COLOR_GOLD, TextAlignmentOptions.Left, new Vector2(0f, 0f), new Vector2(1f, 1f));
+
+        GameObject buttonObject = new GameObject("ReturnButton", typeof(RectTransform), typeof(Image), typeof(Button), typeof(CanvasGroup));
+        buttonObject.transform.SetParent(panelRect, false);
+        RectTransform buttonRect = buttonObject.GetComponent<RectTransform>();
+        buttonRect.anchorMin = new Vector2(0.68f, 0.06f);
+        buttonRect.anchorMax = new Vector2(0.92f, 0.14f);
+        buttonRect.offsetMin = Vector2.zero;
+        buttonRect.offsetMax = Vector2.zero;
+        buttonObject.GetComponent<Image>().color = new Color(0.2f, 0.2f, 0.2f, 0.96f);
+        _buttonGroup = buttonObject.GetComponent<CanvasGroup>();
+        _returnButton = buttonObject.GetComponent<Button>();
+        _returnButton.onClick.AddListener(OnReturnButtonClicked);
+        CreateText("ReturnButtonText", buttonRect, "返回标题", 28f, COLOR_GOLD, TextAlignmentOptions.Center, new Vector2(0f, 0f), new Vector2(1f, 1f));
+
+        Debug.Log("[EndingUI] Guaranteed visible ending panel created");
+    }
+
+    private TextMeshProUGUI CreateText(string name, RectTransform parent, string text, float fontSize, Color color,
+        TextAlignmentOptions alignment, Vector2 anchorMin, Vector2 anchorMax, bool richText = false)
+    {
+        GameObject textObject = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer));
+        textObject.transform.SetParent(parent, false);
+        RectTransform textRect = textObject.GetComponent<RectTransform>();
+        textRect.anchorMin = anchorMin;
+        textRect.anchorMax = anchorMax;
+        textRect.offsetMin = Vector2.zero;
+        textRect.offsetMax = Vector2.zero;
+
+        TextMeshProUGUI tmp = textObject.AddComponent<TextMeshProUGUI>();
+        tmp.text = text;
+        tmp.fontSize = fontSize;
+        tmp.color = color;
+        tmp.alignment = alignment;
+        tmp.enableWordWrapping = true;
+        tmp.richText = richText;
+        tmp.overflowMode = TextOverflowModes.Overflow;
+        return tmp;
     }
 
     /// <summary>
@@ -461,26 +564,26 @@ public class EndingUI : MonoBehaviour
         return group;
     }
 
-    private CanvasGroup CreateCrashStatusPanel(RectTransform parent, EndingResult result, string triggerReason)
+    private CanvasGroup CreateEndingReasonPanel(RectTransform parent, EndingResult result, string triggerReason)
     {
-        var obj = new GameObject("CrashStatusPanel");
+        var obj = new GameObject("EndingReasonPanel");
         obj.transform.SetParent(parent, false);
 
         var rect = obj.AddComponent<RectTransform>();
-        rect.sizeDelta = new Vector2(0f, 160f);
+        rect.sizeDelta = new Vector2(0f, _useCollapsePresentation ? 160f : 220f);
 
         var le = obj.AddComponent<LayoutElement>();
-        le.preferredHeight = 160f;
+        le.preferredHeight = _useCollapsePresentation ? 160f : 220f;
         le.flexibleWidth = 1f;
 
         var bg = obj.AddComponent<Image>();
-        bg.color = COLOR_ALERT_PANEL;
+        bg.color = _useCollapsePresentation ? COLOR_ALERT_PANEL : new Color(0.08f, 0.08f, 0.12f, 0.88f);
 
         var outline = obj.AddComponent<Outline>();
-        outline.effectColor = COLOR_ALERT_RED;
+        outline.effectColor = _useCollapsePresentation ? COLOR_ALERT_RED : new Color(1f, 0.85f, 0.3f, 0.55f);
         outline.effectDistance = new Vector2(2f, 2f);
 
-        var labelObj = new GameObject("CrashStatusText");
+        var labelObj = new GameObject("EndingReasonText");
         labelObj.transform.SetParent(obj.transform, false);
 
         var labelRect = labelObj.AddComponent<RectTransform>();
@@ -490,9 +593,13 @@ public class EndingUI : MonoBehaviour
         labelRect.offsetMax = new Vector2(-32f, -20f);
 
         _statusText = labelObj.AddComponent<TextMeshProUGUI>();
-        _statusText.text = BuildCrashStatusText(result, triggerReason);
-        _statusText.fontSize = 22f;
-        _statusText.color = new Color(1f, 0.9f, 0.9f, 1f);
+        _statusText.text = _useCollapsePresentation
+            ? BuildCrashStatusText(result, triggerReason)
+            : BuildEndingReasonText(result, triggerReason);
+        _statusText.fontSize = _useCollapsePresentation ? 22f : 20f;
+        _statusText.color = _useCollapsePresentation
+            ? new Color(1f, 0.9f, 0.9f, 1f)
+            : new Color(0.95f, 0.95f, 0.92f, 1f);
         _statusText.alignment = TextAlignmentOptions.TopLeft;
         _statusText.enableWordWrapping = true;
 
@@ -741,6 +848,7 @@ public class EndingUI : MonoBehaviour
     /// </summary>
     private void OnReturnButtonClicked()
     {
+        GameEndingManager.Instance?.ResetEndingState();
         Hide();
         StartupFlowSettings.SuspendTitleAutoSkipOnce();
         SceneManager.LoadScene("TitleScreen");
@@ -775,10 +883,7 @@ public class EndingUI : MonoBehaviour
         // 5. 结局文本 FadeIn (0.5s)
         yield return StartCoroutine(FadeCanvasGroup(_descGroup, 0f, 1f, 0.5f));
 
-        if (_useCollapsePresentation)
-        {
-            yield return StartCoroutine(FadeCanvasGroup(_statusGroup, 0f, 1f, 0.35f));
-        }
+        yield return StartCoroutine(FadeCanvasGroup(_statusGroup, 0f, 1f, _useCollapsePresentation ? 0.35f : 0.5f));
 
         // 6. 统计区域 FadeIn (0.5s)
         yield return StartCoroutine(FadeCanvasGroup(_statsGroup, 0f, 1f, 0.5f));
@@ -787,11 +892,47 @@ public class EndingUI : MonoBehaviour
         yield return StartCoroutine(ScaleBounceIn(_talentGroup, 0.5f));
 
         // 8. "返回标题" 按钮 FadeIn (延迟 0.5s 后)
-        yield return new WaitForSeconds(0.5f);
+        yield return WaitForSecondsUnscaled(0.5f);
         yield return StartCoroutine(FadeCanvasGroup(_buttonGroup, 0f, 1f, 0.5f));
 
         UIInputHelper.FocusSelectable(_returnButton);
         _showCoroutine = null;
+    }
+
+    private void PrepareAnimatedInitialState()
+    {
+        SetAlpha(_backgroundGroup, 0f);
+        SetAlpha(_crisisBadgeGroup, 0f);
+        _titleText.color = SetAlpha(_titleText.color, 0f);
+        _starsText.color = SetAlpha(_starsText.color, 0f);
+        SetAlpha(_cgGroup, 0f);
+        SetAlpha(_descGroup, 0f);
+        SetAlpha(_statusGroup, 0f);
+        SetAlpha(_statsGroup, 0f);
+        SetAlpha(_talentGroup, 0f);
+        _talentGroup.transform.localScale = Vector3.zero;
+        SetAlpha(_buttonGroup, 0f);
+    }
+
+    private void RevealAllImmediately()
+    {
+        SetAlpha(_backgroundGroup, 1f);
+        SetAlpha(_crisisBadgeGroup, _useCollapsePresentation ? 1f : 0f);
+        _titleText.text = _currentResult != null && _currentResult.ending != null ? _currentResult.ending.name : "结局";
+        _titleText.color = SetAlpha(_titleText.color, 1f);
+        _starsText.text = BuildStarRichText(_currentResult != null && _currentResult.ending != null ? _currentResult.ending.stars : 0);
+        _starsText.color = SetAlpha(_starsText.color, 1f);
+        SetAlpha(_cgGroup, 1f);
+        SetAlpha(_descGroup, 1f);
+        SetAlpha(_statusGroup, 1f);
+        SetAlpha(_statsGroup, 1f);
+        SetAlpha(_talentGroup, 1f);
+        _talentGroup.transform.localScale = Vector3.one;
+        SetAlpha(_buttonGroup, 1f);
+
+        UIInputHelper.FocusSelectable(_returnButton);
+        _showCoroutine = null;
+        Debug.Log("[EndingUI] 已切换为直接展示模式");
     }
 
     /// <summary>
@@ -808,7 +949,7 @@ public class EndingUI : MonoBehaviour
         for (int i = 0; i < fullText.Length; i++)
         {
             tmp.text = fullText.Substring(0, i + 1);
-            yield return new WaitForSeconds(charInterval);
+            yield return WaitForSecondsUnscaled(charInterval);
         }
     }
 
@@ -824,18 +965,10 @@ public class EndingUI : MonoBehaviour
 
         for (int lit = 0; lit <= stars; lit++)
         {
-            var sb = new System.Text.StringBuilder();
-            for (int i = 0; i < 7; i++)
-            {
-                if (i < lit)
-                    sb.Append("<color=#FFD700>★</color>");
-                else
-                    sb.Append("<color=#404040>★</color>");
-            }
-            tmp.text = sb.ToString();
+            tmp.text = BuildStarRichText(lit);
 
             if (lit < stars)
-                yield return new WaitForSeconds(interval);
+                yield return WaitForSecondsUnscaled(interval);
         }
     }
 
@@ -851,7 +984,7 @@ public class EndingUI : MonoBehaviour
 
         while (elapsed < duration)
         {
-            elapsed += Time.deltaTime;
+            elapsed += Time.unscaledDeltaTime;
             float t = Mathf.Clamp01(elapsed / duration);
             group.alpha = curve.Evaluate(t);
             yield return null;
@@ -891,7 +1024,7 @@ public class EndingUI : MonoBehaviour
 
         while (elapsed < duration)
         {
-            elapsed += Time.deltaTime;
+            elapsed += Time.unscaledDeltaTime;
             float p = Mathf.Clamp01(elapsed / duration);
             float scale = curve.Evaluate(p);
             t.localScale = new Vector3(scale, scale, 1f);
@@ -921,6 +1054,103 @@ public class EndingUI : MonoBehaviour
         return color;
     }
 
+    private void ApplyProjectFonts()
+    {
+        if (_canvasRoot == null || FontManager.Instance == null)
+        {
+            return;
+        }
+
+        TMP_Text[] texts = _canvasRoot.GetComponentsInChildren<TMP_Text>(true);
+        for (int i = 0; i < texts.Length; i++)
+        {
+            FontManager.Instance.ApplyChineseFont(texts[i]);
+            FontManager.Instance.AddChineseFallback(texts[i]);
+        }
+    }
+
+    private static WaitForSecondsRealtime WaitForSecondsUnscaled(float seconds)
+    {
+        return new WaitForSecondsRealtime(seconds);
+    }
+
+    private string BuildStarRichText(int stars)
+    {
+        int clampedStars = Mathf.Clamp(stars, 0, 7);
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < 7; i++)
+        {
+            sb.Append(i < clampedStars ? "<color=#FFD700>★</color>" : "<color=#404040>★</color>");
+        }
+
+        return sb.ToString();
+    }
+
+    private string BuildPlayerFacingSummary(EndingResult result)
+    {
+        if (result == null || result.ending == null)
+        {
+            return "结局纪要";
+        }
+
+        if (_useCollapsePresentation)
+        {
+            return "这段大学旅程在这里戛然而止。";
+        }
+
+        return $"结算分 {result.finalScore:F1}   GPA {result.finalGPA:F2}   星级 {Mathf.Clamp(result.ending.stars, 0, 7)}";
+    }
+
+    private string BuildPlayerFacingReasonText(EndingResult result)
+    {
+        if (result == null || result.ending == null)
+        {
+            return "这一周目的经历暂时无法整理成结局说明。";
+        }
+
+        if (_useCollapsePresentation)
+        {
+            return "一些关键选择已经让你失去了继续这段校园生活的资格。\n\n这一页只保留故事性的结局说明，具体触发原因、内部判定条件和调试信息会记录在日志中。";
+        }
+
+        return "这一页展示的是面向玩家的结局说明。\n\n结局内部代号、命中条件、触发入口和调试判定已移到日志，避免打断剧情体验。";
+    }
+
+    private void LogHiddenEndingDetails(EndingResult result, string triggerReason)
+    {
+        if (result == null || result.ending == null)
+        {
+            Debug.LogWarning("[EndingUI][DebugOnly] Hidden ending details unavailable because result is null.");
+            return;
+        }
+
+        StringBuilder builder = new StringBuilder();
+        builder.AppendLine("[EndingUI][DebugOnly] 以下信息不面向玩家显示");
+        builder.AppendLine($"结局ID: {result.ending.id}");
+        builder.AppendLine($"结局名称: {result.ending.name}");
+        builder.AppendLine($"CG ID: {result.ending.cgId}");
+        builder.AppendLine($"触发入口: {(string.IsNullOrWhiteSpace(triggerReason) ? "<none>" : triggerReason)}");
+        builder.AppendLine($"结局层级: {result.ending.layer} / {result.ending.GetLayer()}");
+        builder.AppendLine($"星级: {result.ending.stars}");
+        builder.AppendLine($"结算数据: GPA {result.finalGPA:F2} | 综合分 {result.finalScore:F1} | 天赋点 {result.talentPoints}");
+
+        if (result.ending.conditions != null && result.ending.conditions.Count > 0)
+        {
+            builder.AppendLine("命中条件:");
+            for (int i = 0; i < result.ending.conditions.Count; i++)
+            {
+                EndingCondition condition = result.ending.conditions[i];
+                bool matched = EndingDeterminer.Instance != null && EndingDeterminer.Instance.EvaluateCondition(condition);
+                string description = EndingDeterminer.Instance != null
+                    ? EndingDeterminer.Instance.DescribeCondition(condition)
+                    : condition.type;
+                builder.AppendLine($"- {(matched ? "[满足]" : "[未满足]")} {description}");
+            }
+        }
+
+        Debug.Log(builder.ToString().TrimEnd());
+    }
+
     private bool IsCollapseEnding(EndingResult result)
     {
         return result != null &&
@@ -937,5 +1167,41 @@ public class EndingUI : MonoBehaviour
             $"[周目状态] 学籍、经济或心理系统已不可逆失稳\n" +
             $"[最终记录] GPA {result.finalGPA:F2}  |  回合 {result.totalRounds}  |  花费 ¥{result.totalMoneySpent}\n" +
             "[恢复建议] 返回标题后重新开局，或在下一周目重建路线。";
+    }
+
+    private string BuildEndingReasonText(EndingResult result, string triggerReason)
+    {
+        if (result == null || result.ending == null)
+            return "未能生成结局解说。";
+
+        StringBuilder builder = new StringBuilder();
+        builder.AppendLine("为什么会来到这个结局");
+
+        if (!string.IsNullOrWhiteSpace(triggerReason))
+        {
+            builder.AppendLine($"触发入口：{triggerReason}");
+        }
+
+        builder.AppendLine($"结局层级：{result.ending.layer} / {result.ending.GetLayer()}");
+        builder.AppendLine($"结算概况：GPA {result.finalGPA:F2}  综合分 {result.finalScore:F1}  天赋点 {result.talentPoints}");
+
+        if (result.ending.conditions == null || result.ending.conditions.Count == 0)
+        {
+            builder.AppendLine("命中原因：这是一个无条件兜底结局。");
+            return builder.ToString().TrimEnd();
+        }
+
+        builder.AppendLine("命中条件：");
+        for (int i = 0; i < result.ending.conditions.Count; i++)
+        {
+            EndingCondition condition = result.ending.conditions[i];
+            bool matched = EndingDeterminer.Instance != null && EndingDeterminer.Instance.EvaluateCondition(condition);
+            string description = EndingDeterminer.Instance != null
+                ? EndingDeterminer.Instance.DescribeCondition(condition)
+                : condition.type;
+            builder.AppendLine($"- {(matched ? "[满足]" : "[未满足]")} {description}");
+        }
+
+        return builder.ToString().TrimEnd();
     }
 }

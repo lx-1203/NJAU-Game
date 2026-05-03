@@ -28,12 +28,51 @@ public class UIEventManager : MonoBehaviour
         InitializeAudio();
         FindAllButtons();
     }
+
+    private void Start()
+    {
+        ApplySettingsVolume();
+
+        if (SettingsManager.Instance != null)
+        {
+            SettingsManager.Instance.OnSFXVolumeChanged += HandleSfxVolumeChanged;
+        }
+    }
+
+    private void OnDestroy()
+    {
+        if (SettingsManager.Instance != null)
+        {
+            SettingsManager.Instance.OnSFXVolumeChanged -= HandleSfxVolumeChanged;
+        }
+    }
     
     private void InitializeAudio()
     {
         audioSource = gameObject.AddComponent<AudioSource>();
         audioSource.playOnAwake = false;
         audioSource.volume = 0.7f;
+    }
+
+    private void ApplySettingsVolume()
+    {
+        if (audioSource == null)
+        {
+            return;
+        }
+
+        if (SettingsManager.Instance != null && SettingsManager.Instance.CurrentSettings != null)
+        {
+            audioSource.volume = SettingsManager.Instance.CurrentSettings.GetEffectiveSFXVolume();
+        }
+    }
+
+    private void HandleSfxVolumeChanged(float volume)
+    {
+        if (audioSource != null)
+        {
+            audioSource.volume = volume;
+        }
     }
     
     private void FindAllButtons()

@@ -15,6 +15,12 @@ public class TimeModule : MonoBehaviour, IDebugModule
     private TMP_InputField semesterInput;
     private TMP_InputField roundInput;
     private TextMeshProUGUI statusText;
+    private Toggle startupOverrideToggle;
+    private TMP_InputField startupMaxRoundsInput;
+    private TMP_InputField startupYearInput;
+    private TMP_InputField startupSemesterInput;
+    private TMP_InputField startupRoundInput;
+    private TextMeshProUGUI startupStatusText;
 
     public void Init(RectTransform parent)
     {
@@ -88,19 +94,58 @@ public class TimeModule : MonoBehaviour, IDebugModule
                 StartCoroutine(AdvanceAfterDelay());
             }
         });
+
+        CreateSpacer(content, 18f);
+        CreateLabel(content, "新游戏起始时间", 20f, AccentColor, 34f);
+        startupStatusText = CreateLabel(content, "启动前配置：使用默认开局", 15f, TextColor, 28f);
+        startupOverrideToggle = CreateToggleRow(content, "启用启动前时间覆盖", StartupFlowSettings.UseStartupTimeOverride, OnStartupOverrideChanged);
+        startupMaxRoundsInput = CreateInputRow(content, "每学期回合数", StartupFlowSettings.SemesterRoundCount.ToString(), 2);
+        startupYearInput = CreateInputRow(content, "起始学年", StartupFlowSettings.StartupYear.ToString(), 1);
+        startupSemesterInput = CreateInputRow(content, "起始学期", StartupFlowSettings.StartupSemester.ToString(), 1);
+        startupRoundInput = CreateInputRow(content, "起始回合", StartupFlowSettings.StartupRound.ToString(), 1);
+
+        CreateButton(content, "保存为新游戏起始时间", () => SaveStartupTimeSettings(startupMaxRoundsInput));
+        CreateButton(content, "用当前时间写入启动配置", CaptureCurrentTimeAsStartup);
+        CreateButton(content, "清除启动前时间覆盖", ClearStartupTimeOverride);
     }
 
     public void Refresh()
     {
-        if (GameState.Instance == null)
+        if (GameState.Instance != null)
         {
-            return;
+            statusText.text = $"当前：{GameState.Instance.GetTimeDescription()} | 总回合 {GetTotalRounds(GameState.Instance.CurrentYear, GameState.Instance.CurrentSemester, GameState.Instance.CurrentRound)}";
+            yearInput.SetTextWithoutNotify(GameState.Instance.CurrentYear.ToString());
+            semesterInput.SetTextWithoutNotify(GameState.Instance.CurrentSemester.ToString());
+            roundInput.SetTextWithoutNotify(GameState.Instance.CurrentRound.ToString());
         }
 
-        statusText.text = $"当前：{GameState.Instance.GetTimeDescription()}";
-        yearInput.SetTextWithoutNotify(GameState.Instance.CurrentYear.ToString());
-        semesterInput.SetTextWithoutNotify(GameState.Instance.CurrentSemester.ToString());
-        roundInput.SetTextWithoutNotify(GameState.Instance.CurrentRound.ToString());
+        if (startupOverrideToggle != null)
+        {
+            startupOverrideToggle.SetIsOnWithoutNotify(StartupFlowSettings.UseStartupTimeOverride);
+            UpdateToggleVisual(startupOverrideToggle, StartupFlowSettings.UseStartupTimeOverride);
+        }
+
+        if (startupMaxRoundsInput != null)
+        {
+            startupMaxRoundsInput.SetTextWithoutNotify(StartupFlowSettings.SemesterRoundCount.ToString());
+        }
+
+        if (startupYearInput != null)
+        {
+            startupYearInput.SetTextWithoutNotify(StartupFlowSettings.StartupYear.ToString());
+        }
+
+        if (startupSemesterInput != null)
+        {
+            startupSemesterInput.SetTextWithoutNotify(StartupFlowSettings.StartupSemester.ToString());
+        }
+
+        if (startupRoundInput != null)
+        {
+            startupRoundInput.SetTextWithoutNotify(StartupFlowSettings.StartupRound.ToString());
+        }
+
+        RefreshStartupStatus();
     }
 
     private IEnumerator AdvanceAfterDelay()
@@ -129,6 +174,93 @@ public class TimeModule : MonoBehaviour, IDebugModule
         }
 
         return Mathf.Clamp(value, min, max);
+    }
+
+    private int GetTotalRounds(int year, int semester, int round)
+    {
+        int roundsPerSemester = Mathf.Max(1, GameState.MaxRoundsPerSemester);
+        int clampedYear = Mathf.Clamp(year, 1, 4);
+        int clampedSemester = Mathf.Clamp(semester, 1, 2);
+        int clampedRound = Mathf.Clamp(round, 1, roundsPerSemester);
+        return (clampedYear - 1) * 2 * roundsPerSemester
+            + (clampedSemester - 1) * roundsPerSemester
+            + clampedRound;
+    }
+
+    private void OnStartupOverrideChanged(bool value)
+    {
+        StartupFlowSettings.UseStartupTimeOverride = value;
+        UpdateToggleVisual(startupOverrideToggle, value);
+        RefreshStartupStatus();
+    }
+
+    private void SaveStartupTimeSettings(TMP_InputField startupMaxRoundsInput)
+    {
+        int maxRounds = ParseInput(startupMaxRoundsInput, StartupFlowSettings.SemesterRoundCount, 3, 12);
+        StartupFlowSettings.SemesterRoundCount = maxRounds;
+
+        int year = ParseInput(startupYearInput, StartupFlowSettings.StartupYear, 1, 4);
+        int semester = ParseInput(startupSemesterInput, StartupFlowSettings.StartupSemester, 1, 2);
+        int round = ParseInput(startupRoundInput, StartupFlowSettings.StartupRound, 1, StartupFlowSettings.SemesterRoundCount);
+
+        StartupFlowSettings.StartupYear = year;
+        StartupFlowSettings.StartupSemester = semester;
+        StartupFlowSettings.StartupRound = round;
+        StartupFlowSettings.UseStartupTimeOverride = startupOverrideToggle != null && startupOverrideToggle.isOn;
+
+        DebugConsoleManager.Log("Time", $"Saved startup time override: rounds={maxRounds}, Y{year} S{semester} R{round}");
+        Refresh();
+    }
+
+    private void CaptureCurrentTimeAsStartup()
+    {
+        if (GameState.Instance == null)
+        {
+            RefreshStartupStatus("当前没有运行中的 GameState，无法提取当前时间。");
+            return;
+        }
+
+        StartupFlowSettings.StartupYear = GameState.Instance.CurrentYear;
+        StartupFlowSettings.StartupSemester = GameState.Instance.CurrentSemester;
+        StartupFlowSettings.StartupRound = GameState.Instance.CurrentRound;
+        StartupFlowSettings.UseStartupTimeOverride = true;
+
+        DebugConsoleManager.Log("Time", $"Captured current time as startup override: Y{GameState.Instance.CurrentYear} S{GameState.Instance.CurrentSemester} R{GameState.Instance.CurrentRound}");
+        Refresh();
+    }
+
+    private void ClearStartupTimeOverride()
+    {
+        StartupFlowSettings.UseStartupTimeOverride = false;
+        DebugConsoleManager.Log("Time", "Cleared startup time override");
+        Refresh();
+    }
+
+    private void RefreshStartupStatus(string overrideText = null)
+    {
+        if (startupStatusText == null)
+        {
+            return;
+        }
+
+        if (!string.IsNullOrEmpty(overrideText))
+        {
+            startupStatusText.text = overrideText;
+            return;
+        }
+
+        if (!StartupFlowSettings.UseStartupTimeOverride)
+        {
+            startupStatusText.text = "启动前配置：使用默认开局";
+            return;
+        }
+
+        int year = StartupFlowSettings.StartupYear;
+        int semester = StartupFlowSettings.StartupSemester;
+        int round = StartupFlowSettings.StartupRound;
+        int month = GameState.CalculateMonth(semester, round);
+        string semesterLabel = semester == 1 ? "上" : "下";
+        startupStatusText.text = $"启动前配置：每学期{StartupFlowSettings.SemesterRoundCount}回合 | 大{year}{semesterLabel} · 回合{round} · {month}月";
     }
 
     private Transform CreateScrollableContent(RectTransform parent)
@@ -223,6 +355,65 @@ public class TimeModule : MonoBehaviour, IDebugModule
         return input;
     }
 
+    private Toggle CreateToggleRow(Transform parent, string label, bool initialValue, UnityEngine.Events.UnityAction<bool> onChanged)
+    {
+        GameObject rowObject = CreateRect($"{label}Row", parent).gameObject;
+        rowObject.AddComponent<LayoutElement>().preferredHeight = 40f;
+
+        HorizontalLayoutGroup layout = rowObject.AddComponent<HorizontalLayoutGroup>();
+        layout.spacing = 10f;
+        layout.childAlignment = TextAnchor.MiddleLeft;
+        layout.childControlWidth = false;
+        layout.childControlHeight = true;
+        layout.childForceExpandWidth = false;
+        layout.childForceExpandHeight = false;
+
+        TextMeshProUGUI labelText = CreateLabel(rowObject.transform, label, 15f, TextColor, 36f);
+        labelText.gameObject.AddComponent<LayoutElement>().preferredWidth = 220f;
+
+        GameObject toggleObject = CreateRect("Toggle", rowObject.transform).gameObject;
+        LayoutElement toggleLayout = toggleObject.AddComponent<LayoutElement>();
+        toggleLayout.preferredWidth = 56f;
+        toggleLayout.preferredHeight = 24f;
+
+        Image background = toggleObject.AddComponent<Image>();
+        Toggle toggle = toggleObject.AddComponent<Toggle>();
+        toggle.targetGraphic = background;
+
+        GameObject checkmarkObject = CreateRect("Checkmark", toggleObject.transform).gameObject;
+        RectTransform checkmarkRect = checkmarkObject.GetComponent<RectTransform>();
+        checkmarkRect.anchorMin = new Vector2(0f, 0f);
+        checkmarkRect.anchorMax = new Vector2(0f, 1f);
+        checkmarkRect.pivot = new Vector2(0f, 0.5f);
+        checkmarkRect.sizeDelta = new Vector2(24f, 0f);
+        Image checkmark = checkmarkObject.AddComponent<Image>();
+        checkmark.color = Color.white;
+        toggle.graphic = checkmark;
+        toggle.isOn = initialValue;
+        UpdateToggleVisual(toggle, initialValue);
+        toggle.onValueChanged.AddListener(value =>
+        {
+            UpdateToggleVisual(toggle, value);
+            onChanged?.Invoke(value);
+        });
+
+        return toggle;
+    }
+
+    private void UpdateToggleVisual(Toggle toggle, bool value)
+    {
+        if (toggle == null)
+        {
+            return;
+        }
+
+        Image background = toggle.targetGraphic as Image;
+        if (background != null)
+        {
+            background.color = value ? ButtonColor : FieldColor;
+        }
+    }
+
     private void CreateButton(Transform parent, string label, UnityEngine.Events.UnityAction onClick)
     {
         GameObject buttonObject = CreateRect($"Button_{label}", parent).gameObject;
@@ -242,13 +433,18 @@ public class TimeModule : MonoBehaviour, IDebugModule
     private TextMeshProUGUI CreateLabel(Transform parent, string textValue, float fontSize, Color color, float height)
     {
         GameObject textObject = CreateRect("Label", parent).gameObject;
-        textObject.AddComponent<LayoutElement>().preferredHeight = height;
+        LayoutElement layout = textObject.AddComponent<LayoutElement>();
+        float resolvedHeight = Mathf.Max(height, fontSize + 14f);
+        layout.preferredHeight = resolvedHeight;
+        layout.minHeight = resolvedHeight;
 
         TextMeshProUGUI text = textObject.AddComponent<TextMeshProUGUI>();
         text.text = textValue;
         text.fontSize = fontSize;
         text.color = color;
         text.alignment = TextAlignmentOptions.MidlineLeft;
+        text.margin = new Vector4(2f, 4f, 2f, 4f);
+        text.extraPadding = true;
 
         if (FontManager.Instance != null && FontManager.Instance.ChineseFont != null)
         {

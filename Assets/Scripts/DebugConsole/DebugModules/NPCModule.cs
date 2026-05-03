@@ -103,10 +103,10 @@ public class NPCModule : MonoBehaviour, IDebugModule
 
         GameObject block = CreatePanel($"NPC_{npc.id}", contentRoot, PanelBg);
         LayoutElement blockLayout = block.AddComponent<LayoutElement>();
-        blockLayout.preferredHeight = 294f;
+        blockLayout.preferredHeight = 268f;
 
         VerticalLayoutGroup vlg = block.AddComponent<VerticalLayoutGroup>();
-        vlg.spacing = 6f;
+        vlg.spacing = 5f;
         vlg.padding = new RectOffset(12, 12, 10, 10);
         vlg.childAlignment = TextAnchor.UpperLeft;
         vlg.childControlWidth = true;
@@ -114,11 +114,16 @@ public class NPCModule : MonoBehaviour, IDebugModule
         vlg.childForceExpandWidth = true;
         vlg.childForceExpandHeight = false;
 
-        CreateLabel(block.transform, $"{npc.displayName} [{npc.id}]", 16f, TextGold, 24f);
-        entry.metaText = CreateLabel(block.transform, string.Empty, 12f, TextGray, 38f);
+        CreateLabel(block.transform, $"{npc.displayName} [{npc.id}]", 15f, TextGold, 24f);
+        entry.metaText = CreateLabel(block.transform, string.Empty, 12f, TextGray, 34f);
+        entry.metaText.enableWordWrapping = true;
+        entry.metaText.overflowMode = TextOverflowModes.Ellipsis;
 
-        entry.affinityValueText = CreateLabel(block.transform, "好感度 0", 13f, TextWhite, 22f);
-        entry.affinitySlider = CreateSliderRow(block.transform, "Affinity", 0, 100, value =>
+        GameObject affinityHeaderRow = CreateRow(block.transform, 22f, 8f);
+        entry.affinityValueText = CreateLabel(affinityHeaderRow.transform, "好感度 0", 13f, TextWhite, 22f, 96f);
+        entry.levelText = CreateLabel(affinityHeaderRow.transform, "关系等级：-", 13f, TextWhite, 22f);
+        SetFlexibleWidth(entry.levelText.gameObject, 120f);
+        entry.affinitySlider = CreateSliderRow(block.transform, "好感", 0, 100, value =>
         {
             if (entry.suppressCallbacks || AffinitySystem.Instance == null)
                 return;
@@ -128,10 +133,11 @@ public class NPCModule : MonoBehaviour, IDebugModule
             DebugConsoleManager.Log("NPC", $"{entry.npcId} affinity -> {Mathf.RoundToInt(value)}");
         });
 
-        entry.levelText = CreateLabel(block.transform, "关系等级：-", 13f, TextWhite, 20f);
-        entry.romanceText = CreateLabel(block.transform, "恋爱状态：-", 13f, TextWhite, 20f);
-        entry.healthValueText = CreateLabel(block.transform, "健康度 70", 13f, TextWhite, 22f);
-        entry.healthSlider = CreateSliderRow(block.transform, "Health", 0, 100, value =>
+        GameObject romanceHeaderRow = CreateRow(block.transform, 22f, 8f);
+        entry.healthValueText = CreateLabel(romanceHeaderRow.transform, "健康度 70", 13f, TextWhite, 22f, 96f);
+        entry.romanceText = CreateLabel(romanceHeaderRow.transform, "恋爱状态：-", 13f, TextWhite, 22f);
+        SetFlexibleWidth(entry.romanceText.gameObject, 120f);
+        entry.healthSlider = CreateSliderRow(block.transform, "恋爱", 0, 100, value =>
         {
             if (entry.suppressCallbacks || RomanceSystem.Instance == null)
                 return;
@@ -143,7 +149,7 @@ public class NPCModule : MonoBehaviour, IDebugModule
             DebugConsoleManager.Log("NPC", $"{entry.npcId} romance health -> {Mathf.RoundToInt(value)}");
         });
 
-        GameObject cooldownRow = CreateRow(block.transform, 30f);
+        GameObject cooldownRow = CreateRow(block.transform, 28f, 6f);
         CreateLabel(cooldownRow.transform, "冷却", 13f, TextWhite, 28f, 44f);
         entry.cooldownInput = CreateInputField(cooldownRow.transform, "0", 80f, 28f);
         entry.cooldownInput.contentType = TMP_InputField.ContentType.IntegerNumber;
@@ -159,14 +165,16 @@ public class NPCModule : MonoBehaviour, IDebugModule
             DebugConsoleManager.Log("NPC", $"{entry.npcId} cooldown updated");
         });
 
-        GameObject affinityButtons = CreateRow(block.transform, 34f);
+        CreateLabel(block.transform, "好感快捷", 12f, TextGray, 18f);
+        Transform affinityButtons = CreateButtonGrid(block.transform, 5, new Vector2(0f, 32f), new Vector2(6f, 6f));
         CreateButton(affinityButtons.transform, "0", 50f, ButtonRed, () => SetAffinity(entry, 0));
         CreateButton(affinityButtons.transform, "40", 50f, ButtonBlue, () => SetAffinity(entry, 40));
         CreateButton(affinityButtons.transform, "60", 50f, ButtonBlue, () => SetAffinity(entry, 60));
         CreateButton(affinityButtons.transform, "80", 50f, ButtonGreen, () => SetAffinity(entry, 80));
         CreateButton(affinityButtons.transform, "100", 56f, ButtonGreen, () => SetAffinity(entry, 100));
 
-        GameObject romanceButtons = CreateRow(block.transform, 34f);
+        CreateLabel(block.transform, "恋爱状态", 12f, TextGray, 18f);
+        Transform romanceButtons = CreateButtonGrid(block.transform, 3, new Vector2(0f, 68f), new Vector2(6f, 6f));
         CreateButton(romanceButtons.transform, "无", 56f, ButtonBlue, () => SetRomanceState(entry, RomanceState.None));
         CreateButton(romanceButtons.transform, "心动", 56f, ButtonPurple, () => SetRomanceState(entry, RomanceState.Crushing));
         CreateButton(romanceButtons.transform, "冷却", 56f, ButtonBlue, () => SetRomanceState(entry, RomanceState.Cooldown));
@@ -174,7 +182,7 @@ public class NPCModule : MonoBehaviour, IDebugModule
         CreateButton(romanceButtons.transform, "分手", 56f, ButtonRed, () => SetRomanceState(entry, RomanceState.BrokenUp));
         CreateButton(romanceButtons.transform, "敌对", 56f, ButtonRed, () => SetRomanceState(entry, RomanceState.Hostile));
 
-        entry.memoryText = CreateLabel(block.transform, string.Empty, 12f, TextGray, 72f);
+        entry.memoryText = CreateLabel(block.transform, string.Empty, 12f, TextGray, 44f);
         entry.memoryText.enableWordWrapping = true;
         entry.memoryText.overflowMode = TextOverflowModes.Ellipsis;
 
@@ -313,12 +321,12 @@ public class NPCModule : MonoBehaviour, IDebugModule
 
     private Slider CreateSliderRow(Transform parent, string label, int min, int max, UnityEngine.Events.UnityAction<float> onChanged)
     {
-        GameObject row = CreateRow(parent, 30f);
-        CreateLabel(row.transform, label, 13f, TextWhite, 28f, 56f);
+        GameObject row = CreateRow(parent, 28f, 6f);
+        CreateLabel(row.transform, label, 13f, TextWhite, 28f, 44f);
 
         GameObject sliderObj = CreateUIElement($"{label}Slider", row.transform);
         LayoutElement sliderLayout = sliderObj.AddComponent<LayoutElement>();
-        sliderLayout.preferredHeight = 20f;
+        sliderLayout.preferredHeight = 18f;
         sliderLayout.flexibleWidth = 1f;
 
         Image bg = sliderObj.AddComponent<Image>();
@@ -328,49 +336,94 @@ public class NPCModule : MonoBehaviour, IDebugModule
         slider.minValue = min;
         slider.maxValue = max;
         slider.wholeNumbers = true;
+        slider.direction = Slider.Direction.LeftToRight;
 
         GameObject fillArea = CreateUIElement("FillArea", sliderObj.transform);
         RectTransform fillAreaRT = fillArea.GetComponent<RectTransform>();
-        fillAreaRT.anchorMin = Vector2.zero;
-        fillAreaRT.anchorMax = Vector2.one;
-        fillAreaRT.offsetMin = new Vector2(4f, 4f);
-        fillAreaRT.offsetMax = new Vector2(-4f, -4f);
+        fillAreaRT.anchorMin = new Vector2(0f, 0.5f);
+        fillAreaRT.anchorMax = new Vector2(1f, 0.5f);
+        fillAreaRT.pivot = new Vector2(0.5f, 0.5f);
+        fillAreaRT.sizeDelta = new Vector2(-16f, 8f);
+        fillAreaRT.anchoredPosition = Vector2.zero;
 
         GameObject fill = CreateUIElement("Fill", fillArea.transform);
-        StretchFull(fill.GetComponent<RectTransform>());
+        RectTransform fillRT = fill.GetComponent<RectTransform>();
+        fillRT.anchorMin = Vector2.zero;
+        fillRT.anchorMax = Vector2.one;
+        fillRT.offsetMin = Vector2.zero;
+        fillRT.offsetMax = Vector2.zero;
         Image fillImage = fill.AddComponent<Image>();
         fillImage.color = new Color(0.25f, 0.50f, 0.80f, 1.0f);
 
         GameObject handleArea = CreateUIElement("HandleArea", sliderObj.transform);
-        StretchFull(handleArea.GetComponent<RectTransform>());
+        RectTransform handleAreaRT = handleArea.GetComponent<RectTransform>();
+        handleAreaRT.anchorMin = Vector2.zero;
+        handleAreaRT.anchorMax = Vector2.one;
+        handleAreaRT.offsetMin = new Vector2(8f, 0f);
+        handleAreaRT.offsetMax = new Vector2(-8f, 0f);
 
         GameObject handle = CreateUIElement("Handle", handleArea.transform);
         RectTransform handleRT = handle.GetComponent<RectTransform>();
-        handleRT.sizeDelta = new Vector2(16f, 16f);
+        handleRT.anchorMin = new Vector2(0f, 0.5f);
+        handleRT.anchorMax = new Vector2(0f, 0.5f);
+        handleRT.pivot = new Vector2(0.5f, 0.5f);
+        handleRT.sizeDelta = new Vector2(14f, 14f);
         Image handleImage = handle.AddComponent<Image>();
         handleImage.color = Color.white;
 
-        slider.fillRect = fill.GetComponent<RectTransform>();
+        slider.fillRect = fillRT;
         slider.handleRect = handleRT;
         slider.targetGraphic = handleImage;
         slider.onValueChanged.AddListener(onChanged);
         return slider;
     }
 
-    private GameObject CreateRow(Transform parent, float height)
+    private GameObject CreateRow(Transform parent, float height, float spacing = 6f)
     {
         GameObject row = CreateUIElement("Row", parent);
         RectTransform rt = row.GetComponent<RectTransform>();
         rt.sizeDelta = new Vector2(0f, height);
 
         HorizontalLayoutGroup layout = row.AddComponent<HorizontalLayoutGroup>();
-        layout.spacing = 6f;
+        layout.spacing = spacing;
         layout.childAlignment = TextAnchor.MiddleLeft;
         layout.childControlWidth = false;
         layout.childControlHeight = true;
         layout.childForceExpandWidth = false;
         layout.childForceExpandHeight = true;
         return row;
+    }
+
+    private Transform CreateButtonGrid(Transform parent, int columns, Vector2 sizeDelta, Vector2 spacing)
+    {
+        GameObject grid = CreateUIElement("ButtonGrid", parent);
+        RectTransform rt = grid.GetComponent<RectTransform>();
+        rt.sizeDelta = sizeDelta;
+
+        LayoutElement layout = grid.AddComponent<LayoutElement>();
+        if (sizeDelta.y > 0f)
+            layout.preferredHeight = sizeDelta.y;
+
+        GridLayoutGroup gridLayout = grid.AddComponent<GridLayoutGroup>();
+        gridLayout.cellSize = new Vector2(56f, 30f);
+        gridLayout.spacing = spacing;
+        gridLayout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+        gridLayout.constraintCount = columns;
+        gridLayout.childAlignment = TextAnchor.UpperLeft;
+        return grid.transform;
+    }
+
+    private void SetFlexibleWidth(GameObject target, float minWidth)
+    {
+        if (target == null)
+            return;
+
+        LayoutElement layout = target.GetComponent<LayoutElement>();
+        if (layout == null)
+            layout = target.AddComponent<LayoutElement>();
+
+        layout.flexibleWidth = 1f;
+        layout.minWidth = minWidth;
     }
 
     private void CreateButton(Transform parent, string label, float width, Color bgColor, UnityEngine.Events.UnityAction onClick)
@@ -455,9 +508,11 @@ public class NPCModule : MonoBehaviour, IDebugModule
         tmp.text = text;
         tmp.fontSize = fontSize;
         tmp.color = color;
-        tmp.alignment = TextAlignmentOptions.Left;
+        tmp.alignment = TextAlignmentOptions.MidlineLeft;
         tmp.enableWordWrapping = false;
         tmp.overflowMode = TextOverflowModes.Ellipsis;
+        tmp.margin = new Vector4(2f, 4f, 2f, 4f);
+        tmp.extraPadding = true;
         ApplyChineseFont(tmp);
         return tmp;
     }

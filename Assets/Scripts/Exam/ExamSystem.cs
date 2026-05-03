@@ -756,6 +756,15 @@ public class ExamSystem : MonoBehaviour, IExamResultProvider, ISaveable
         }
     }
 
+    /// <summary>
+    /// 课程表等非标准入口也可登记一次有效自习。
+    /// </summary>
+    public void RegisterScheduleStudySession()
+    {
+        studyCountThisSemester++;
+        Debug.Log($"[ExamSystem] 课程表自习登记成功，本学期累计: {studyCountThisSemester}");
+    }
+
     // ========== 辅助方法 ==========
 
     /// <summary>根据课程ID查找课程定义</summary>

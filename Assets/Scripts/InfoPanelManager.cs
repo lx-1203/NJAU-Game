@@ -125,11 +125,11 @@ public class InfoPanelManager : MonoBehaviour
             ColorBlock cb = builder.tabButtons[i].colors;
             if (i == tabIndex)
             {
-                cb.normalColor = new Color(0.30f, 0.50f, 0.80f, 1.0f); // TabActiveColor
+                cb.normalColor = new Color(0.71f, 0.50f, 0.24f, 1.0f); // TabActiveColor
             }
             else
             {
-                cb.normalColor = new Color(0.15f, 0.15f, 0.20f, 1.0f); // TabInactiveColor
+                cb.normalColor = new Color(0.82f, 0.71f, 0.55f, 1.0f); // TabInactiveColor
             }
             builder.tabButtons[i].colors = cb;
         }
@@ -189,9 +189,23 @@ public class InfoPanelManager : MonoBehaviour
         // 状态值
         builder.txtStress.text = $"{pa.Stress}%";
         builder.imgStressBar.fillAmount = pa.Stress / 100f;
+        builder.txtStress.color = pa.Stress >= 80
+            ? new Color(0.78f, 0.18f, 0.14f)
+            : new Color(0.20f, 0.14f, 0.10f);
+        if (builder.txtStressMeta != null)
+        {
+            builder.txtStressMeta.text = BuildStatusMetaText("压力", pa.Stress, isInverseGood: true);
+        }
 
         builder.txtMood.text = $"{pa.Mood}%";
         builder.imgMoodBar.fillAmount = pa.Mood / 100f;
+        builder.txtMood.color = pa.Mood >= 70
+            ? new Color(0.18f, 0.45f, 0.26f)
+            : new Color(0.20f, 0.14f, 0.10f);
+        if (builder.txtMoodMeta != null)
+        {
+            builder.txtMoodMeta.text = BuildStatusMetaText("心情", pa.Mood, isInverseGood: false);
+        }
 
         // 隐性属性
         string hiddenText = $"黑暗值：{pa.Darkness}    负罪感：{pa.Guilt}    幸运：{pa.Luck}";
@@ -222,6 +236,9 @@ public class InfoPanelManager : MonoBehaviour
 
         // 经济信息
         builder.txtMoney.text = $"当前金钱：¥{gs.Money}";
+        builder.txtMoney.color = gs.Money < 0
+            ? new Color(0.78f, 0.18f, 0.14f)
+            : new Color(0.20f, 0.14f, 0.10f);
 
         string debtLevel = "正常";
         if (DebtSystem.Instance != null)
@@ -235,6 +252,9 @@ public class InfoPanelManager : MonoBehaviour
             }
         }
         builder.txtDebt.text = $"债务等级：{debtLevel}";
+        builder.txtDebt.color = debtLevel == "正常"
+            ? new Color(0.44f, 0.31f, 0.22f)
+            : new Color(0.78f, 0.24f, 0.16f);
 
         // 社团信息
         if (ClubSystem.Instance != null)
@@ -292,7 +312,7 @@ public class InfoPanelManager : MonoBehaviour
         {
             if (System.Array.IndexOf(coreAttributes, attrInfo.name) >= 0)
             {
-                AttributeBar bar = AttributeBar.Create(builder.attributeContainer);
+                AttributeBar bar = AttributeBar.Create(builder.attributeContainer, detailed: true);
                 bar.SetAttributeImmediate(attrInfo);
             }
         }
@@ -482,6 +502,10 @@ public class InfoPanelManager : MonoBehaviour
         // 好感度
         builder.txtNPCAffinity.text = $"{rel.affinity} / 100";
         builder.imgAffinityBar.fillAmount = rel.affinity / 100f;
+        if (builder.txtAffinityMeta != null)
+        {
+            builder.txtAffinityMeta.text = BuildAffinityMetaText(rel);
+        }
 
         // 关系等级
         builder.txtAffinityLevel.text = $"关系等级：{GetAffinityLevelDisplayName(rel.level)}";
@@ -581,6 +605,73 @@ public class InfoPanelManager : MonoBehaviour
             case AffinityLevel.Lover: return "恋人";
             default: return "未知";
         }
+    }
+
+    private string BuildStatusMetaText(string statusName, int value, bool isInverseGood)
+    {
+        if (isInverseGood)
+        {
+            if (value <= 20) return $"{statusName}很稳";
+            if (value < 40) return $"再降低 {value - 20} 进入稳定";
+            if (value < 60) return $"再降低 {value - 40} 回到可控";
+            if (value < 80) return $"再升高 {80 - value} 进入高压";
+            if (value < 100) return $"再升高 {100 - value} 逼近爆表";
+            return $"{statusName}已爆表";
+        }
+
+        if (value < 20) return $"再提升 {20 - value} 摆脱低迷";
+        if (value < 40) return $"再提升 {40 - value} 进入普通";
+        if (value < 70) return $"再提升 {70 - value} 进入高涨";
+        if (value < 90) return $"再提升 {90 - value} 接近最佳";
+        if (value < 100) return $"再提升 {100 - value} 达到满值";
+        return $"{statusName}已满";
+    }
+
+    private string BuildAffinityMetaText(NPCRelationshipData rel)
+    {
+        if (rel == null)
+        {
+            return string.Empty;
+        }
+
+        if (rel.romanceState == RomanceState.Dating)
+        {
+            return rel.affinity >= 100 ? "恋人关系已满" : $"距离恋人满值还差 {100 - rel.affinity}";
+        }
+
+        if (rel.affinity >= 80)
+        {
+            return rel.affinity >= 100 ? "挚友关系已满" : $"距离满值还差 {100 - rel.affinity}";
+        }
+
+        int nextThreshold = GetNextAffinityThreshold(rel.affinity, rel.romanceState);
+        if (nextThreshold <= rel.affinity)
+        {
+            return "已达到当前最高关系档";
+        }
+
+        int remaining = nextThreshold - rel.affinity;
+        string nextLevel = GetAffinityLevelDisplayName(GetNextAffinityLevel(rel.affinity, rel.romanceState));
+        return $"还差 {remaining} 进入{nextLevel}";
+    }
+
+    private int GetNextAffinityThreshold(int affinity, RomanceState romanceState)
+    {
+        if (affinity < 20) return 20;
+        if (affinity < 40) return 40;
+        if (affinity < 60) return 60;
+        if (affinity < 80) return 80;
+        if (affinity < 100 && romanceState != RomanceState.Dating) return 100;
+        return affinity;
+    }
+
+    private AffinityLevel GetNextAffinityLevel(int affinity, RomanceState romanceState)
+    {
+        if (affinity < 20) return AffinityLevel.Acquaintance;
+        if (affinity < 40) return AffinityLevel.Friend;
+        if (affinity < 60) return AffinityLevel.CloseFriend;
+        if (affinity < 80) return AffinityLevel.BestFriend;
+        return romanceState == RomanceState.Dating ? AffinityLevel.Lover : AffinityLevel.BestFriend;
     }
 
     private string GetRomanceStateDisplayName(RomanceState state)
@@ -844,6 +935,8 @@ public class InfoPanelManager : MonoBehaviour
             PlayerAttributes.Instance.OnAttributesChanged += OnAttributesChanged;
         }
 
+        AttributeGradeSettings.OnThresholdsChanged += OnAttributeGradeThresholdsChanged;
+
         if (AffinitySystem.Instance != null)
         {
             AffinitySystem.Instance.OnAffinityChanged += OnAffinityChanged;
@@ -872,6 +965,8 @@ public class InfoPanelManager : MonoBehaviour
         {
             PlayerAttributes.Instance.OnAttributesChanged -= OnAttributesChanged;
         }
+
+        AttributeGradeSettings.OnThresholdsChanged -= OnAttributeGradeThresholdsChanged;
 
         if (AffinitySystem.Instance != null)
         {
@@ -906,6 +1001,14 @@ public class InfoPanelManager : MonoBehaviour
     private void OnAttributesChanged()
     {
         if (currentTabIndex == 0 && builder.panelRoot.activeSelf)
+        {
+            RefreshPlayerInfo();
+        }
+    }
+
+    private void OnAttributeGradeThresholdsChanged()
+    {
+        if (builder != null && builder.panelRoot != null && builder.panelRoot.activeSelf && currentTabIndex == 0)
         {
             RefreshPlayerInfo();
         }

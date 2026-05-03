@@ -45,6 +45,8 @@ public class TurnManager : MonoBehaviour
         {
             Debug.LogError("[TurnManager] ActionSystem 实例不存在，无法订阅事件");
         }
+
+        StartCoroutine(BeginInitialRoundPhase());
     }
 
     // ========== 清理 ==========
@@ -89,7 +91,9 @@ public class TurnManager : MonoBehaviour
 
     /// <summary>是否正在等待考试完成</summary>
     private bool waitingForExam = false;
+    private bool waitingForSchedule = false;
     private bool isAdvanceQueued = false;
+    private string lastScheduleRoundKey = string.Empty;
 
     /// <summary>暂存的回合推进结果（考试完成后继续处理）</summary>
     private GameState.RoundAdvanceResult pendingAdvanceResult;
@@ -101,7 +105,7 @@ public class TurnManager : MonoBehaviour
     /// </summary>
     public bool RequestAdvanceRound()
     {
-        if (GameState.Instance == null || waitingForExam || isAdvanceQueued)
+        if (GameState.Instance == null || waitingForExam || waitingForSchedule || isAdvanceQueued)
         {
             return false;
         }
@@ -116,6 +120,18 @@ public class TurnManager : MonoBehaviour
         yield return new WaitForSeconds(0.5f);
         isAdvanceQueued = false;
         DoAdvanceRound();
+    }
+
+    private IEnumerator BeginInitialRoundPhase()
+    {
+        yield return null;
+
+        if (GameState.Instance == null)
+        {
+            yield break;
+        }
+
+        BeginRoundStartPhase(false);
     }
 
     /// <summary>
@@ -334,15 +350,73 @@ public class TurnManager : MonoBehaviour
             SaveManager.Instance.AutoSave();
         }
 
-        // ========== 新回合开始阶段（推进后） ==========
+        BeginRoundStartPhase(result == GameState.RoundAdvanceResult.Graduated);
+    }
 
-        // 回合开始事件检查（强制阶段：主线事件、固定事件等）
-        if (result != GameState.RoundAdvanceResult.Graduated && EventScheduler.Instance != null)
+    /// <summary>
+    /// 补考完成后的回调
+    /// </summary>
+    private void HandleMakeupCompleted()
+    {
+        Debug.Log("[TurnManager] 补考完成");
+
+        if (ExamUIManager.Instance != null)
+        {
+            ExamUIManager.Instance.OnExamUICompleted -= HandleMakeupCompleted;
+        }
+    }
+
+    private void BeginRoundStartPhase(bool isGraduated)
+    {
+        if (GameState.Instance == null)
+        {
+            return;
+        }
+
+        if (isGraduated)
+        {
+            OnGameCompleted?.Invoke();
+            return;
+        }
+
+        string roundKey = GetCurrentRoundKey();
+        if (roundKey != lastScheduleRoundKey)
+        {
+            EnsureCourseScheduleUI();
+
+            if (CourseScheduleUI.Instance != null)
+            {
+                waitingForSchedule = true;
+                lastScheduleRoundKey = roundKey;
+                CourseScheduleUI.Instance.ShowSchedule(
+                    GameState.Instance.CurrentYear,
+                    GameState.Instance.CurrentSemester,
+                    GameState.Instance.CurrentRound,
+                    HandleScheduleCompleted);
+                return;
+            }
+        }
+
+        CompleteRoundStartPhase();
+    }
+
+    private void HandleScheduleCompleted()
+    {
+        waitingForSchedule = false;
+        CompleteRoundStartPhase();
+    }
+
+    private void CompleteRoundStartPhase()
+    {
+        if (GameState.Instance == null)
+        {
+            return;
+        }
+
+        if (EventScheduler.Instance != null)
         {
             EventScheduler.Instance.CheckAndTriggerEvents(TriggerPhase.RoundStart);
         }
-
-        // ========== 补考检查（新学期第1回合） ==========
 
         if (GameState.Instance.CurrentRound == 1 && ExamSystem.Instance != null && ExamSystem.Instance.HasPendingMakeup())
         {
@@ -357,27 +431,26 @@ public class TurnManager : MonoBehaviour
             ExamSystem.Instance.StartMakeupExam(failedCourses);
         }
 
-        // ========== 证书考试自动触发 ==========
-        // CET4: 大一下学期第30回合起（每学期尝试一次）; CET6: CET4通过后; 计算机等级: 大二上起
         TryCertificateExams();
+    }
 
-        if (result == GameState.RoundAdvanceResult.Graduated)
+    private void EnsureCourseScheduleUI()
+    {
+        if (CourseScheduleUI.Instance == null)
         {
-            OnGameCompleted?.Invoke();
+            GameObject obj = new GameObject("CourseScheduleUI");
+            obj.AddComponent<CourseScheduleUI>();
         }
     }
 
-    /// <summary>
-    /// 补考完成后的回调
-    /// </summary>
-    private void HandleMakeupCompleted()
+    private string GetCurrentRoundKey()
     {
-        Debug.Log("[TurnManager] 补考完成");
-
-        if (ExamUIManager.Instance != null)
+        if (GameState.Instance == null)
         {
-            ExamUIManager.Instance.OnExamUICompleted -= HandleMakeupCompleted;
+            return string.Empty;
         }
+
+        return $"{GameState.Instance.CurrentYear}-{GameState.Instance.CurrentSemester}-{GameState.Instance.CurrentRound}";
     }
 
     // ========== 证书考试自动触发 ==========

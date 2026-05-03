@@ -99,6 +99,30 @@ public class GameEndingManager : MonoBehaviour
         return true;
     }
 
+    public bool TriggerSpecificEnding(string endingId, string reason = null)
+    {
+        if (EndingDeterminer.Instance == null)
+        {
+            Debug.LogError($"[GameEndingManager] EndingDeterminer 未初始化，无法定向触发结局: {endingId}");
+            return false;
+        }
+
+        EndingDefinition ending = EndingDeterminer.Instance.GetEndingById(endingId);
+        if (ending == null)
+        {
+            Debug.LogError($"[GameEndingManager] 未找到指定结局: {endingId}");
+            return false;
+        }
+
+        EndingResult result = EndingDeterminer.Instance.BuildResultForEnding(ending);
+        return TriggerEnding(result, reason ?? $"Debug specific ending: {endingId}");
+    }
+
+    public void ResetEndingState()
+    {
+        isEndingActive = false;
+    }
+
     private void TerminateGameplayFlowsForEnding()
     {
         if (ExamUIManager.Instance != null && ExamUIManager.Instance.IsExamActive)

@@ -62,6 +62,9 @@ public class HUDBuilder : MonoBehaviour
 
     // --- 底部中央：行动按钮 ---
     [HideInInspector] public GameObject actionButtonRow;
+    [HideInInspector] public Button btnGraduationRequirements;
+    [HideInInspector] public Button btnGrowth;
+    [HideInInspector] public Button btnInfo;
     [HideInInspector] public Button btnInventory;
     [HideInInspector] public Button btnActionToggle;
 
@@ -538,7 +541,7 @@ public class HUDBuilder : MonoBehaviour
         rt.anchorMax = new Vector2(0, 0);
         rt.pivot = new Vector2(0, 0);
         rt.anchoredPosition = new Vector2(15, 55);
-        rt.sizeDelta = new Vector2(280, 190);
+        rt.sizeDelta = new Vector2(320, 230);
 
         Image bg = characterCard.AddComponent<Image>();
         bg.color = CardBgLight;
@@ -567,7 +570,7 @@ public class HUDBuilder : MonoBehaviour
         GameObject avatarPanel = new GameObject("AvatarPanel");
         avatarPanel.transform.SetParent(characterCard.transform, false);
         RectTransform avRT = avatarPanel.AddComponent<RectTransform>();
-        avRT.sizeDelta = new Vector2(60, 170);
+        avRT.sizeDelta = new Vector2(72, 210);
 
         VerticalLayoutGroup avlg = avatarPanel.AddComponent<VerticalLayoutGroup>();
         avlg.spacing = 4f;
@@ -577,21 +580,21 @@ public class HUDBuilder : MonoBehaviour
 
         GameObject avatarObj = new GameObject("Avatar");
         avatarObj.transform.SetParent(avatarPanel.transform, false);
-        avatarObj.AddComponent<RectTransform>().sizeDelta = new Vector2(55, 55);
+        avatarObj.AddComponent<RectTransform>().sizeDelta = new Vector2(64, 64);
         characterAvatar = avatarObj.AddComponent<Image>();
         characterAvatar.color = new Color(0.75f, 0.75f, 0.80f);
 
         // 姓名 + 年级
         playerNameText = CreateTMPText("PlayerName", avatarPanel.transform, "姓名",
-            12f, TextDark, TextAlignmentOptions.Center, new Vector2(60, 18));
+            14f, TextDark, TextAlignmentOptions.Center, new Vector2(72, 22));
         playerGradeText = CreateTMPText("PlayerGrade", avatarPanel.transform, "年级",
-            11f, TextBrown, TextAlignmentOptions.Center, new Vector2(60, 16));
+            12f, TextBrown, TextAlignmentOptions.Center, new Vector2(72, 18));
 
         // 右侧：属性条区域
         GameObject attrPanel = new GameObject("AttrPanel");
         attrPanel.transform.SetParent(characterCard.transform, false);
         RectTransform apRT = attrPanel.AddComponent<RectTransform>();
-        apRT.sizeDelta = new Vector2(190, 170);
+        apRT.sizeDelta = new Vector2(220, 210);
 
         VerticalLayoutGroup avlg2 = attrPanel.AddComponent<VerticalLayoutGroup>();
         avlg2.spacing = 6f;
@@ -604,7 +607,7 @@ public class HUDBuilder : MonoBehaviour
 
         // "点击查看更多" 提示
         cardHintText = CreateTMPText("CardHint", attrPanel.transform, "点击查看更多",
-            11f, new Color(0.5f, 0.5f, 0.6f), TextAlignmentOptions.Right, new Vector2(190, 16));
+            12f, new Color(0.5f, 0.5f, 0.6f), TextAlignmentOptions.Right, new Vector2(220, 18));
 
         // 兼容旧 portraitPlaceholder
         portraitPlaceholder = characterAvatar;
@@ -645,8 +648,8 @@ public class HUDBuilder : MonoBehaviour
         rt.anchorMin = new Vector2(0.5f, 0);
         rt.anchorMax = new Vector2(0.5f, 0);
         rt.pivot = new Vector2(0.5f, 0);
-        rt.anchoredPosition = new Vector2(0, 88);
-        rt.sizeDelta = new Vector2(600, 80);
+        rt.anchoredPosition = new Vector2(0, 12);
+        rt.sizeDelta = new Vector2(900, 84);
 
         HorizontalLayoutGroup hlg = actionButtonRow.AddComponent<HorizontalLayoutGroup>();
         hlg.spacing = 12f;
@@ -657,24 +660,27 @@ public class HUDBuilder : MonoBehaviour
         hlg.childForceExpandWidth = false;
         hlg.childForceExpandHeight = false;
 
-        actionButtonRow.SetActive(false);
+        actionButtonRow.SetActive(true);
 
-        btnInventory = CreateBottomQuickButton("InventoryButton", "背包", new Vector2(-92f, 12f));
-        btnActionToggle = CreateBottomQuickButton("ActionToggleButton", "行动", new Vector2(0f, 12f));
-        btnGoOut = CreateBottomQuickButton("GoOutButton", "出校", new Vector2(92f, 12f));
+        btnGraduationRequirements = CreateBottomQuickButton(actionButtonRow.transform, "GraduationRequirementsButton", "毕业要求");
+        btnGrowth = CreateBottomQuickButton(actionButtonRow.transform, "GrowthButton", "成长");
+        btnInfo = CreateBottomQuickButton(actionButtonRow.transform, "InfoButton", "信息");
+        btnInventory = CreateBottomQuickButton(actionButtonRow.transform, "InventoryButton", "背包");
+        btnActionToggle = CreateBottomQuickButton(actionButtonRow.transform, "ActionToggleButton", "行动");
+        btnGoOut = CreateBottomQuickButton(actionButtonRow.transform, "GoOutButton", "出校");
     }
 
-    private Button CreateBottomQuickButton(string name, string label, Vector2 anchoredPosition)
+    private Button CreateBottomQuickButton(Transform parent, string name, string label)
     {
         GameObject buttonObj = new GameObject(name);
-        buttonObj.transform.SetParent(hudCanvas.transform, false);
+        buttonObj.transform.SetParent(parent, false);
 
         RectTransform buttonRT = buttonObj.AddComponent<RectTransform>();
-        buttonRT.anchorMin = new Vector2(0.5f, 0f);
-        buttonRT.anchorMax = new Vector2(0.5f, 0f);
-        buttonRT.pivot = new Vector2(0.5f, 0f);
-        buttonRT.anchoredPosition = anchoredPosition;
-        buttonRT.sizeDelta = new Vector2(76f, 76f);
+        buttonRT.sizeDelta = new Vector2(136f, 72f);
+
+        LayoutElement layout = buttonObj.AddComponent<LayoutElement>();
+        layout.preferredWidth = 136f;
+        layout.preferredHeight = 72f;
 
         Image buttonBg = buttonObj.AddComponent<Image>();
         buttonBg.color = new Color(0.95f, 0.88f, 0.72f, 0.96f);
@@ -691,7 +697,7 @@ public class HUDBuilder : MonoBehaviour
         button.colors = colors;
 
         CreateTMPText(name + "Label", buttonObj.transform, label,
-            22f, TextDark, TextAlignmentOptions.Center, new Vector2(76f, 76f));
+            20f, TextDark, TextAlignmentOptions.Center, new Vector2(128f, 72f));
 
         return button;
     }

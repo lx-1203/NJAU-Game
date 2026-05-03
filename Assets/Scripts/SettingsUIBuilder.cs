@@ -30,12 +30,12 @@ public class SettingsUIBuilder : MonoBehaviour
     private static readonly Color RowColor = new Color32(0xF3, 0xE9, 0xD3, 0xFF);
     private static readonly Color ValueBoxColor = new Color32(0xFF, 0xFC, 0xF8, 0xFF);
     private static readonly Color ValueBorderColor = new Color32(0xD9, 0xC9, 0xB3, 0xFF);
-    private static readonly Color AccentColor = new Color32(0xD8, 0x99, 0x55, 0xFF);
-    private static readonly Color AccentStrongColor = new Color32(0xF3, 0xBF, 0x57, 0xFF);
-    private static readonly Color TextPrimary = new Color32(0x6D, 0x39, 0x22, 0xFF);
-    private static readonly Color TextSecondary = new Color32(0x9D, 0x7A, 0x60, 0xFF);
-    private static readonly Color TabActiveColor = new Color32(0xFF, 0xF0, 0xB5, 0xFF);
-    private static readonly Color TabInactiveColor = new Color32(0xF2, 0xF0, 0xEB, 0xFF);
+    private static readonly Color AccentColor = new Color32(0x8E, 0x4A, 0x25, 0xFF);
+    private static readonly Color AccentStrongColor = new Color32(0xF2, 0xC3, 0x63, 0xFF);
+    private static readonly Color TextPrimary = new Color32(0x5E, 0x2C, 0x1C, 0xFF);
+    private static readonly Color TextSecondary = new Color32(0x8D, 0x6A, 0x54, 0xFF);
+    private static readonly Color TabActiveColor = new Color32(0xFF, 0xE2, 0x8C, 0xFF);
+    private static readonly Color TabInactiveColor = new Color32(0xF1, 0xE7, 0xD5, 0xFF);
     private static readonly Color SliderTrackColor = new Color32(0xE5, 0xD5, 0xBC, 0xFF);
     private static readonly Color SliderFillColor = new Color32(0xF0, 0xB6, 0x63, 0xFF);
 
@@ -63,6 +63,8 @@ public class SettingsUIBuilder : MonoBehaviour
     private TextMeshProUGUI musicVolumeValueText;
     private TextMeshProUGUI sfxVolumeValueText;
     private TextMeshProUGUI muteValueText;
+    private TextMeshProUGUI displayInfoText;
+    private TextMeshProUGUI audioInfoText;
 
     private Slider uiScaleSlider;
     private Slider masterVolumeSlider;
@@ -156,6 +158,8 @@ public class SettingsUIBuilder : MonoBehaviour
         }
 
         UIFlowGuard.EnsureEventSystem();
+        SettingsManager manager = SettingsManager.EnsureInstance();
+        manager.EnsureLoaded();
         Instance.isTitleScreen = isTitleScreenMode;
         Instance.BuildUI();
         Instance.isOpen = true;
@@ -190,13 +194,15 @@ public class SettingsUIBuilder : MonoBehaviour
             Destroy(rootCanvasObj);
         }
 
-        if (SettingsManager.Instance == null)
+        SettingsManager manager = SettingsManager.EnsureInstance();
+        manager.EnsureLoaded();
+        if (manager == null)
         {
             return;
         }
 
-        draftSettings = SettingsManager.Instance.CurrentSettings != null
-            ? SettingsManager.Instance.CurrentSettings.Clone()
+        draftSettings = manager.CurrentSettings != null
+            ? manager.CurrentSettings.Clone()
             : new SettingsData();
 
         resolutionOptions = BuildResolutionOptions(draftSettings);
@@ -337,6 +343,9 @@ public class SettingsUIBuilder : MonoBehaviour
 
         image = buttonObj.AddComponent<Image>();
         image.color = TabInactiveColor;
+        Outline outline = buttonObj.AddComponent<Outline>();
+        outline.effectColor = new Color(0.32f, 0.17f, 0.10f, 0.25f);
+        outline.effectDistance = new Vector2(1f, -1f);
 
         button = buttonObj.AddComponent<Button>();
         button.targetGraphic = image;
@@ -445,7 +454,10 @@ public class SettingsUIBuilder : MonoBehaviour
             delegate { ToggleFullscreen(); }, delegate { ToggleFullscreen(); });
         CreateSelectorRow(parent, "\u5206\u8fa8\u7387", out resolutionValueText,
             delegate { ChangeResolution(-1); }, delegate { ChangeResolution(1); });
+        CreatePresetResolutionRow(parent, "\u5e38\u7528\u5206\u8fa8\u7387",
+            new[] { "1280x720", "1600x900", "1920x1080", "2560x1440" });
         CreateSliderRow(parent, "\u754c\u9762\u7f29\u653e", 0.8f, 1.3f, out uiScaleSlider, out uiScaleValueText, OnUIScaleSliderChanged);
+        CreateInfoRow(parent, out displayInfoText);
     }
 
     private void BuildAudioPage(RectTransform parent)
@@ -456,6 +468,7 @@ public class SettingsUIBuilder : MonoBehaviour
         CreateSliderRow(parent, "\u97f3\u6548\u97f3\u91cf", 0f, 1f, out sfxVolumeSlider, out sfxVolumeValueText, OnSFXVolumeSliderChanged);
         CreateSelectorRow(parent, "\u9759\u97f3", out muteValueText,
             delegate { ToggleMute(); }, delegate { ToggleMute(); });
+        CreateInfoRow(parent, out audioInfoText);
     }
 
     private void CreateBottomBar(RectTransform parent)
@@ -472,15 +485,18 @@ public class SettingsUIBuilder : MonoBehaviour
         statusText = CreateLabel(rt, "Status", "\u672a\u4fdd\u5b58\u4fee\u6539", 20f, TextSecondary,
             new Vector2(0f, 0.5f), new Vector2(280f, 40f), new Vector2(34f, 0f), TextAlignmentOptions.Left);
 
-        Button resetButton = CreateActionButton(rt, "\u6062\u590d\u9ed8\u8ba4", new Vector2(220f, 64f), new Vector2(760f, 0f),
+        Button resetButton = CreateActionButton(rt, "\u6062\u590d\u9ed8\u8ba4", new Vector2(190f, 64f), new Vector2(690f, 0f),
             new Color32(0xF5, 0xE6, 0xC6, 0xFF), AccentColor, OnResetToDefaults);
-        Button cancelButton = CreateActionButton(rt, "\u53d6\u6d88", new Vector2(220f, 64f), new Vector2(1010f, 0f),
+        Button applyButton = CreateActionButton(rt, "\u5e94\u7528", new Vector2(190f, 64f), new Vector2(910f, 0f),
+            new Color32(0xF7, 0xED, 0xD0, 0xFF), AccentColor, ApplyWithoutClosing);
+        Button cancelButton = CreateActionButton(rt, "\u53d6\u6d88", new Vector2(190f, 64f), new Vector2(1130f, 0f),
             new Color32(0xFB, 0xF2, 0xDE, 0xFF), AccentColor, TryClose);
-        Button saveButton = CreateActionButton(rt, "\u4fdd\u5b58\u4fee\u6539", new Vector2(220f, 64f), new Vector2(1260f, 0f),
+        Button saveButton = CreateActionButton(rt, "\u4fdd\u5b58\u5e76\u5173\u95ed", new Vector2(220f, 64f), new Vector2(1350f, 0f),
             new Color32(0xFF, 0xE7, 0x84, 0xFF), new Color32(0xD1, 0x87, 0x37, 0xFF), SaveAndClose);
 
         UIInputHelper.FocusSelectable(saveButton);
         resetButton.navigation = Navigation.defaultNavigation;
+        applyButton.navigation = Navigation.defaultNavigation;
         cancelButton.navigation = Navigation.defaultNavigation;
     }
 
@@ -529,11 +545,11 @@ public class SettingsUIBuilder : MonoBehaviour
             new Vector2(0f, 0.5f), new Vector2(360f, 50f), new Vector2(46f, 0f), TextAlignmentOptions.Left).fontStyle = FontStyles.Bold;
 
         RectTransform boxRT = CreateValueBox(rowRT, new Vector2(0.76f, 0.5f), new Vector2(820f, 58f), Vector2.zero);
-        CreateArrowButton(boxRT, "Prev", "<", new Vector2(34f, 34f), new Vector2(-362f, 0f), onPrevious);
+        CreateArrowButton(boxRT, "Prev", "〈", new Vector2(40f, 40f), new Vector2(-362f, 0f), onPrevious);
         valueText = CreateLabel(boxRT, "Value", "---", 26f, TextSecondary,
             new Vector2(0.5f, 0.5f), new Vector2(560f, 42f), Vector2.zero, TextAlignmentOptions.Center);
         valueText.fontStyle = FontStyles.Bold;
-        CreateArrowButton(boxRT, "Next", ">", new Vector2(34f, 34f), new Vector2(362f, 0f), onNext);
+        CreateArrowButton(boxRT, "Next", "〉", new Vector2(40f, 40f), new Vector2(362f, 0f), onNext);
     }
 
     private void CreateSliderRow(RectTransform parent, string label, float min, float max,
@@ -582,6 +598,31 @@ public class SettingsUIBuilder : MonoBehaviour
             new Color32(0xFB, 0xF2, 0xDE, 0xFF), AccentColor, onClick);
     }
 
+    private void CreatePresetResolutionRow(RectTransform parent, string label, string[] presets)
+    {
+        GameObject row = CreateRow(parent, 104f);
+        RectTransform rowRT = row.GetComponent<RectTransform>();
+
+        CreateLabel(rowRT, "Label", label, 28f, TextPrimary,
+            new Vector2(0f, 0.5f), new Vector2(360f, 50f), new Vector2(46f, 0f), TextAlignmentOptions.Left).fontStyle = FontStyles.Bold;
+
+        RectTransform boxRT = CreateValueBox(rowRT, new Vector2(0.76f, 0.5f), new Vector2(820f, 74f), Vector2.zero);
+        HorizontalLayoutGroup layout = boxRT.gameObject.AddComponent<HorizontalLayoutGroup>();
+        layout.padding = new RectOffset(18, 18, 10, 10);
+        layout.spacing = 14f;
+        layout.childAlignment = TextAnchor.MiddleCenter;
+        layout.childControlWidth = false;
+        layout.childControlHeight = false;
+        layout.childForceExpandWidth = false;
+        layout.childForceExpandHeight = false;
+
+        for (int i = 0; i < presets.Length; i++)
+        {
+            string preset = presets[i];
+            CreatePresetButton(boxRT, preset, delegate { ApplyResolutionPreset(preset); });
+        }
+    }
+
     private GameObject CreateRow(RectTransform parent, float height)
     {
         GameObject row = CreateUI("Row", parent);
@@ -622,7 +663,11 @@ public class SettingsUIBuilder : MonoBehaviour
         rt.anchoredPosition = pos;
 
         Image image = buttonObj.AddComponent<Image>();
-        image.color = new Color(1f, 1f, 1f, 0f);
+        image.color = new Color32(0xF8, 0xF0, 0xDC, 0xD0);
+
+        Outline outline = buttonObj.AddComponent<Outline>();
+        outline.effectColor = new Color(0.38f, 0.20f, 0.10f, 0.18f);
+        outline.effectDistance = new Vector2(1f, -1f);
 
         Button button = buttonObj.AddComponent<Button>();
         button.targetGraphic = image;
@@ -693,15 +738,56 @@ public class SettingsUIBuilder : MonoBehaviour
         image.color = bgColor;
 
         Outline outline = buttonObj.AddComponent<Outline>();
-        outline.effectColor = new Color(0.81f, 0.69f, 0.45f, 0.6f);
+        outline.effectColor = new Color(0.26f, 0.16f, 0.11f, 0.28f);
+        outline.effectDistance = new Vector2(2f, -2f);
+
+        Button button = buttonObj.AddComponent<Button>();
+        button.targetGraphic = image;
+        button.onClick.AddListener(delegate { onClick?.Invoke(); });
+        ColorBlock colors = button.colors;
+        colors.normalColor = Color.white;
+        colors.highlightedColor = new Color(1f, 1f, 1f, 0.96f);
+        colors.pressedColor = new Color(0.94f, 0.90f, 0.82f, 1f);
+        colors.selectedColor = colors.highlightedColor;
+        colors.fadeDuration = 0.08f;
+        button.colors = colors;
+
+        TextMeshProUGUI text = CreateLabel(rt, "Label", label, 26f, textColor,
+            new Vector2(0.5f, 0.5f), size, Vector2.zero, TextAlignmentOptions.Center);
+        text.fontStyle = FontStyles.Bold;
+        return button;
+    }
+
+    private Button CreatePresetButton(RectTransform parent, string label, Action onClick)
+    {
+        GameObject buttonObj = CreateUI("Preset_" + label, parent);
+        RectTransform rt = buttonObj.GetComponent<RectTransform>();
+        rt.sizeDelta = new Vector2(185f, 50f);
+
+        LayoutElement layout = buttonObj.AddComponent<LayoutElement>();
+        layout.preferredWidth = 185f;
+        layout.preferredHeight = 50f;
+
+        Image image = buttonObj.AddComponent<Image>();
+        image.color = new Color32(0xF8, 0xF0, 0xDC, 0xFF);
+
+        Outline outline = buttonObj.AddComponent<Outline>();
+        outline.effectColor = new Color(0.26f, 0.16f, 0.11f, 0.24f);
         outline.effectDistance = new Vector2(1f, -1f);
 
         Button button = buttonObj.AddComponent<Button>();
         button.targetGraphic = image;
         button.onClick.AddListener(delegate { onClick?.Invoke(); });
+        ColorBlock colors = button.colors;
+        colors.normalColor = Color.white;
+        colors.highlightedColor = new Color(1f, 1f, 1f, 0.96f);
+        colors.pressedColor = new Color(0.94f, 0.90f, 0.82f, 1f);
+        colors.selectedColor = colors.highlightedColor;
+        colors.fadeDuration = 0.08f;
+        button.colors = colors;
 
-        TextMeshProUGUI text = CreateLabel(rt, "Label", label, 26f, textColor,
-            new Vector2(0.5f, 0.5f), size, Vector2.zero, TextAlignmentOptions.Center);
+        TextMeshProUGUI text = CreateLabel(rt, "Label", label, 22f, AccentColor,
+            new Vector2(0.5f, 0.5f), new Vector2(170f, 40f), Vector2.zero, TextAlignmentOptions.Center);
         text.fontStyle = FontStyles.Bold;
         return button;
     }
@@ -754,13 +840,15 @@ public class SettingsUIBuilder : MonoBehaviour
         if (fastForwardValueText != null) fastForwardValueText.text = draftSettings.GetFastForwardSpeedLabel();
         if (dialogueSkipHelpText != null) dialogueSkipHelpText.text = GetDialogueSkipHelpText();
         if (dialogueHistoryValueText != null) dialogueHistoryValueText.text = GetDialogueHistoryLabel();
-        if (fullscreenValueText != null) fullscreenValueText.text = draftSettings.fullscreen ? "\u5f00\u542f" : "\u5173\u95ed";
-        if (resolutionValueText != null) resolutionValueText.text = draftSettings.GetResolutionLabel();
-        if (uiScaleValueText != null) uiScaleValueText.text = Mathf.RoundToInt(draftSettings.uiScale * 100f) + "%";
-        if (masterVolumeValueText != null) masterVolumeValueText.text = Mathf.RoundToInt(draftSettings.masterVolume * 100f) + "%";
-        if (musicVolumeValueText != null) musicVolumeValueText.text = Mathf.RoundToInt(draftSettings.musicVolume * 100f) + "%";
-        if (sfxVolumeValueText != null) sfxVolumeValueText.text = Mathf.RoundToInt(draftSettings.sfxVolume * 100f) + "%";
-        if (muteValueText != null) muteValueText.text = draftSettings.isMuted ? "\u5f00\u542f" : "\u5173\u95ed";
+        if (fullscreenValueText != null) fullscreenValueText.text = draftSettings.GetFullscreenLabel();
+        if (resolutionValueText != null) resolutionValueText.text = draftSettings.GetResolutionDisplayLabel();
+        if (uiScaleValueText != null) uiScaleValueText.text = draftSettings.GetUIScaleLabel();
+        if (masterVolumeValueText != null) masterVolumeValueText.text = SettingsData.FormatVolumeLabel(draftSettings.masterVolume);
+        if (musicVolumeValueText != null) musicVolumeValueText.text = SettingsData.FormatVolumeLabel(draftSettings.musicVolume);
+        if (sfxVolumeValueText != null) sfxVolumeValueText.text = SettingsData.FormatVolumeLabel(draftSettings.sfxVolume);
+        if (muteValueText != null) muteValueText.text = draftSettings.isMuted ? "\u5df2\u9759\u97f3" : "\u672a\u9759\u97f3";
+        if (displayInfoText != null) displayInfoText.text = GetDisplayInfoText();
+        if (audioInfoText != null) audioInfoText.text = GetAudioInfoText();
 
         if (uiScaleSlider != null) uiScaleSlider.SetValueWithoutNotify(draftSettings.uiScale);
         if (masterVolumeSlider != null) masterVolumeSlider.SetValueWithoutNotify(draftSettings.masterVolume);
@@ -820,6 +908,17 @@ public class SettingsUIBuilder : MonoBehaviour
 
         SettingsManager.Instance.SaveAndApply(draftSettings.Clone());
         HideSettings();
+    }
+
+    private void ApplyWithoutClosing()
+    {
+        if (SettingsManager.Instance == null || draftSettings == null)
+        {
+            return;
+        }
+
+        SettingsManager.Instance.SaveAndApply(draftSettings.Clone());
+        RefreshAllUI();
     }
 
     private void OnResetToDefaults()
@@ -891,6 +990,12 @@ public class SettingsUIBuilder : MonoBehaviour
         RefreshAllUI();
     }
 
+    private void ApplyResolutionPreset(string label)
+    {
+        ApplyResolutionLabel(label);
+        RefreshAllUI();
+    }
+
     private void ApplyResolutionLabel(string value)
     {
         string[] parts = value.Split('x');
@@ -936,6 +1041,26 @@ public class SettingsUIBuilder : MonoBehaviour
     {
         draftSettings.isMuted = !draftSettings.isMuted;
         RefreshAllUI();
+    }
+
+    private string GetDisplayInfoText()
+    {
+        string currentResolution = Screen.width + "x" + Screen.height;
+        return "\u5f53\u524d\u5c4f\u5e55\uFF1A" + currentResolution
+            + "    \u76ee\u6807\u8bbe\u7f6e\uFF1A" + draftSettings.GetResolutionLabel()
+            + "    \u6a21\u5f0f\uFF1A" + draftSettings.GetFullscreenLabel()
+            + "    \u754c\u9762\u7f29\u653e\uFF1A" + draftSettings.GetUIScaleLabel()
+            + "\n\u63d0\u793a\uFF1A\u5206\u8fa8\u7387\u3001\u5168\u5c4f\u548c UI \u7f29\u653e\u5728\u70b9\u51fb\u201c\u5e94\u7528\u201d\u6216\u201c\u4fdd\u5b58\u5e76\u5173\u95ed\u201d\u540e\u7acb\u5373\u751f\u6548\u3002";
+    }
+
+    private string GetAudioInfoText()
+    {
+        float music = draftSettings.GetEffectiveMusicVolume();
+        float sfx = draftSettings.GetEffectiveSFXVolume();
+        return "\u5b9e\u9645\u8f93\u51fa\uFF1A BGM " + SettingsData.FormatVolumeLabel(music)
+            + "    SFX " + SettingsData.FormatVolumeLabel(sfx)
+            + "    \u4e3b\u97f3\u91cf " + SettingsData.FormatVolumeLabel(draftSettings.GetEffectiveMasterVolume())
+            + "\n\u63d0\u793a\uFF1A\u4e3b\u97f3\u91cf\u4f1a\u540c\u65f6\u5f71\u54cd BGM \u4e0e\u97f3\u6548\uFF0C\u9759\u97f3\u4f1a\u76f4\u63a5\u5173\u95ed\u6240\u6709\u8f93\u51fa\u3002";
     }
 
     private string GetDialogueSkipHelpText()

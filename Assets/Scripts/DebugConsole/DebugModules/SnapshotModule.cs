@@ -217,7 +217,10 @@ public class SnapshotModule : MonoBehaviour, IDebugModule
     private TextMeshProUGUI CreateLabel(Transform parent, string textValue, float fontSize, Color color, float height)
     {
         GameObject textObject = CreateRect("Label", parent).gameObject;
-        textObject.AddComponent<LayoutElement>().preferredHeight = height;
+        LayoutElement layout = textObject.AddComponent<LayoutElement>();
+        float resolvedHeight = Mathf.Max(height, fontSize + 14f);
+        layout.preferredHeight = resolvedHeight;
+        layout.minHeight = resolvedHeight;
 
         TextMeshProUGUI text = textObject.AddComponent<TextMeshProUGUI>();
         text.text = textValue;
@@ -225,6 +228,8 @@ public class SnapshotModule : MonoBehaviour, IDebugModule
         text.color = color;
         text.alignment = TextAlignmentOptions.MidlineLeft;
         text.enableWordWrapping = false;
+        text.margin = new Vector4(2f, 4f, 2f, 4f);
+        text.extraPadding = true;
 
         if (FontManager.Instance != null && FontManager.Instance.ChineseFont != null)
         {

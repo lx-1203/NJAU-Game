@@ -20,15 +20,17 @@ public class NPCController : MonoBehaviour
     private bool playerInRange;
     private GameObject interactionHint;
     private float hintBobTime;
+    private Vector3? visualScaleOverride;
 
     public string NpcId => npcId;
     public string NPCName => npcData != null ? npcData.displayName : string.Empty;
     public bool IsPlayerInRange => playerInRange;
 
-    public void Initialize(NPCData data)
+    public void Initialize(NPCData data, Vector3? scaleOverride = null)
     {
         npcId = data.id;
         npcData = data;
+        visualScaleOverride = scaleOverride;
 
         spriteRenderer = GetComponent<SpriteRenderer>();
         clickCollider = GetComponent<BoxCollider2D>();
@@ -85,12 +87,19 @@ public class NPCController : MonoBehaviour
         spriteRenderer.sprite = npcSprite;
         spriteRenderer.color = Color.white;
 
-        float targetHeight = 3f;
-        float spriteHeight = npcSprite.bounds.size.y;
-        if (spriteHeight > 0f)
+        if (visualScaleOverride.HasValue)
         {
-            float scale = targetHeight / spriteHeight;
-            transform.localScale = new Vector3(scale, scale, 1f);
+            transform.localScale = visualScaleOverride.Value;
+        }
+        else
+        {
+            float targetHeight = 3f;
+            float spriteHeight = npcSprite.bounds.size.y;
+            if (spriteHeight > 0f)
+            {
+                float scale = targetHeight / spriteHeight;
+                transform.localScale = new Vector3(scale, scale, 1f);
+            }
         }
     }
 
@@ -112,6 +121,8 @@ public class NPCController : MonoBehaviour
             clickCollider.size = new Vector2(1.2f, 2.8f);
             clickCollider.offset = new Vector2(0f, 1.4f);
         }
+
+        clickCollider.isTrigger = true;
     }
 
     private void CreateInteractionHint()
