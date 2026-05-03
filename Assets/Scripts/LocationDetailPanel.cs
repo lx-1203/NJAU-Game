@@ -323,7 +323,7 @@ public class LocationDetailPanel
 
         if (!LocationManager.Instance.CanMoveTo(currentTargetLocation))
         {
-            Debug.Log("[LocationDetailPanel] 行动点不足，无法移动");
+            Debug.Log($"[LocationDetailPanel] Cannot navigate to {currentTargetLocation}; already there or target is unavailable.");
             // 抖动效果需要 MonoBehaviour 协程，此处简单跳过
             return;
         }
