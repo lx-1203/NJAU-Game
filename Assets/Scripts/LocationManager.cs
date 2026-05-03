@@ -351,6 +351,7 @@ public class LocationManager : MonoBehaviour
     public bool CanMoveTo(LocationId target)
     {
         if (GameState.Instance == null) return false;
+        if (!locationDefs.ContainsKey(target)) return false;
 
         LocationId current = GameState.Instance.CurrentLocation;
         return current != target;
@@ -363,7 +364,14 @@ public class LocationManager : MonoBehaviour
     {
         if (!CanMoveTo(target))
         {
-            Debug.LogWarning($"[LocationManager] 无法移动到 {target}");
+            string reason = GameState.Instance == null
+                ? "GameState missing"
+                : !locationDefs.ContainsKey(target)
+                    ? "unknown target"
+                    : GameState.Instance.CurrentLocation == target
+                        ? "already at target"
+                        : "blocked";
+            Debug.LogWarning($"[LocationManager] Cannot move to {target}: {reason}");
             return false;
         }
 

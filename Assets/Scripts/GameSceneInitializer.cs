@@ -61,9 +61,6 @@ public class GameSceneInitializer : MonoBehaviour
         SetupRomanceBridge();
         SetupNPCManager();
 
-        // 挂载区域检测器到玩家（走路自动切换地点）
-        SetupLocationZoneDetector();
-
         // 校园新闻系统（依赖 PlayerAttributes, AffinitySystem, NPCDatabase, ClubSystem）
         SetupNewsSystem();
 
@@ -333,11 +330,9 @@ public class GameSceneInitializer : MonoBehaviour
 
     private void SetupLocationZoneDetector()
     {
-        GameObject player = GameObject.FindGameObjectWithTag("Player");
-        if (player != null && player.GetComponent<LocationZoneDetector>() == null)
-        {
-            player.AddComponent<LocationZoneDetector>();
-        }
+        // Locations are intentionally changed only through the campus map.
+        // Keeping this detector attached would let horizontal movement rewrite
+        // GameState.CurrentLocation and make map navigation fail intermittently.
     }
 
     private void EnsureEventSystem()
