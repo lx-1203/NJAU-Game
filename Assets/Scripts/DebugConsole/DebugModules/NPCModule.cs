@@ -16,6 +16,7 @@ public class NPCModule : MonoBehaviour, IDebugModule
     private static readonly Color ButtonRed = new Color(0.60f, 0.20f, 0.20f, 1.0f);
     private static readonly Color ButtonPurple = new Color(0.48f, 0.28f, 0.62f, 1.0f);
     private static readonly Color ButtonPink = new Color(0.72f, 0.32f, 0.48f, 1.0f);
+    private static readonly Sprite SliderHandleSprite = Resources.GetBuiltinResource<Sprite>("UI/Skin/Knob.psd");
 
     private readonly List<NPCUIEntry> npcEntries = new List<NPCUIEntry>();
     private Transform contentRoot;
@@ -367,9 +368,11 @@ public class NPCModule : MonoBehaviour, IDebugModule
         handleRT.anchorMin = new Vector2(0f, 0.5f);
         handleRT.anchorMax = new Vector2(0f, 0.5f);
         handleRT.pivot = new Vector2(0.5f, 0.5f);
-        handleRT.sizeDelta = new Vector2(14f, 14f);
+        handleRT.sizeDelta = new Vector2(12f, 12f);
         Image handleImage = handle.AddComponent<Image>();
         handleImage.color = Color.white;
+        handleImage.sprite = SliderHandleSprite;
+        handleImage.type = Image.Type.Sliced;
 
         slider.fillRect = fillRT;
         slider.handleRect = handleRT;

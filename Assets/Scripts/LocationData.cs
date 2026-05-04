@@ -15,7 +15,7 @@ public enum LocationId
     Playground,       // 操场
     Store,            // 教超
     ExpressStation,   // 快递站
-    TakeoutStation    // 外卖站
+    TakeoutStation    // 体育馆
 }
 
 // ========== 地点定义 ==========

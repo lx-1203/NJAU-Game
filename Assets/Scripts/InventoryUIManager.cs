@@ -95,7 +95,7 @@ public class InventoryUIManager : MonoBehaviour
 
     private void Update()
     {
-        if (Input.GetKeyDown(KeyCode.I))
+        if (HotkeyManager.IsPressed(HotkeyActionId.ToggleInventory))
         {
             TogglePanel();
         }
@@ -128,6 +128,7 @@ public class InventoryUIManager : MonoBehaviour
             return;
         }
 
+        if (!UIFlowGuard.PrepareForExclusiveWindow(UIFlowGuard.WindowInventory)) return;
         frameObject.SetActive(true);
         panelRoot.SetActive(true);
         overlayObject.SetActive(true);

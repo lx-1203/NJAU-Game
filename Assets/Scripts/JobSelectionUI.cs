@@ -283,6 +283,7 @@ public class JobSelectionUI : MonoBehaviour
     // ================== 逻辑更新 ==================
     public void Show()
     {
+        if (!UIFlowGuard.PrepareForExclusiveWindow(UIFlowGuard.WindowJobSelection)) return;
         canvasObj.SetActive(true);
         SwitchTab(isShowingInternship); // 刷新当前tab内容
     }

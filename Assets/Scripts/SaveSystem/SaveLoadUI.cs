@@ -80,6 +80,8 @@ public class SaveLoadUI : MonoBehaviour
     /// <param name="isSaveMode">true=存档模式, false=读档模式</param>
     public static void Show(bool isSaveMode)
     {
+        if (!UIFlowGuard.PrepareForExclusiveWindow(UIFlowGuard.WindowSaveLoad)) return;
+
         // 避免重复创建
         SaveLoadUI existing = FindObjectOfType<SaveLoadUI>();
         if (existing != null)

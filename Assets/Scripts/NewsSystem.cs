@@ -50,6 +50,27 @@ public class NewsItem
         this.title = title;
         this.content = content;
     }
+
+    public NewsItem Clone()
+    {
+        return new NewsItem
+        {
+            id = id,
+            type = type,
+            title = title,
+            content = content,
+            author = author,
+            anonymousId = anonymousId,
+            likes = likes,
+            hotValue = hotValue,
+            hotTag = hotTag,
+            targetYear = targetYear,
+            targetSemester = targetSemester,
+            targetRound = targetRound,
+            seriesId = seriesId,
+            seriesOrder = seriesOrder
+        };
+    }
 }
 
 #endregion
@@ -125,6 +146,7 @@ public class NewsSystem : MonoBehaviour
         if (isShowing) return;
         if (GameState.Instance == null) return;
 
+        if (!UIFlowGuard.PrepareForExclusiveWindow(UIFlowGuard.WindowNews)) return;
         EnsureEventSystem();
 
         int year = GameState.Instance.CurrentYear;
@@ -134,6 +156,11 @@ public class NewsSystem : MonoBehaviour
         List<NewsItem> news = GenerateNewsForRound(year, semester, round);
         BuildNewsUI(news, year, semester, round);
         isShowing = true;
+    }
+
+    public List<NewsItem> BuildEditableNewsForRound(int year, int semester, int round, bool ignoreOverride = false)
+    {
+        return GenerateNewsForRound(year, semester, round, !ignoreOverride);
     }
 
     /// <summary>
@@ -189,6 +216,30 @@ public class NewsSystem : MonoBehaviour
 
     private List<NewsItem> GenerateNewsForRound(int year, int semester, int round)
     {
+        return GenerateNewsForRound(year, semester, round, true);
+    }
+
+    private List<NewsItem> GenerateNewsForRound(int year, int semester, int round, bool useOverride)
+    {
+        if (useOverride &&
+            ZhongshanDeckToolStateBridge.TryGetMonthlyNewsOverride(year, semester, round, out ZhongshanDeckNewsRoundEntry overrideEntry) &&
+            overrideEntry != null &&
+            overrideEntry.items != null &&
+            overrideEntry.items.Count > 0)
+        {
+            List<NewsItem> overrideNews = new List<NewsItem>(overrideEntry.items.Count);
+            for (int i = 0; i < overrideEntry.items.Count; i++)
+            {
+                NewsItem item = overrideEntry.items[i];
+                if (item != null)
+                {
+                    overrideNews.Add(item.Clone());
+                }
+            }
+
+            return overrideNews;
+        }
+
         List<NewsItem> news = new List<NewsItem>();
 
         // 1. 头条（固定1条）

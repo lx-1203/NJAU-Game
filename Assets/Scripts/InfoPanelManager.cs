@@ -87,6 +87,7 @@ public class InfoPanelManager : MonoBehaviour
             return;
         }
 
+        if (!UIFlowGuard.PrepareForExclusiveWindow(UIFlowGuard.WindowInfoPanel)) return;
         builder.panelRoot.SetActive(true);
         builder.overlayObj.SetActive(true);
 

@@ -88,6 +88,7 @@ public class ShopUIBuilder : MonoBehaviour
     {
         if (shopPanel == null) return;
 
+        if (!UIFlowGuard.PrepareForExclusiveWindow(UIFlowGuard.WindowShop)) return;
         shopPanel.SetActive(true);
         RefreshBalance();
         SelectCategory("food");

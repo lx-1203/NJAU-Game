@@ -249,9 +249,10 @@ public class LocationSceneBuilder : MonoBehaviour
                 CreateRect("ParcelStackB", parent, new Vector3(centerX + 3.25f, -2.65f, -0.5f), new Vector2(0.9f, 0.7f), palette.trim, 14);
                 break;
             case LocationId.TakeoutStation:
-                CreateBuilding(parent, centerX, -1.65f, 5.8f, 3.4f, palette.primary, palette.trim, 12, 3, 1);
-                CreateRect("PickupShelter", parent, new Vector3(centerX + 2.9f, -2.55f, -0.5f), new Vector2(2.1f, 1.9f), palette.accent, 14);
-                CreateRect("PickupRoof", parent, new Vector3(centerX + 2.9f, -1.55f, -0.5f), new Vector2(2.5f, 0.25f), palette.trim, 15);
+                CreateBuilding(parent, centerX, -1.15f, 6.8f, 4.4f, palette.primary, palette.trim, 12, 4, 2);
+                CreateRect("GymEntrance", parent, new Vector3(centerX, -2.95f, -0.5f), new Vector2(1.3f, 1.7f), palette.accent, 14);
+                CreateRect("GymBanner", parent, new Vector3(centerX, 1.2f, -0.5f), new Vector2(4.8f, 0.35f), palette.accent, 14);
+                CreateRect("ScoreBoard", parent, new Vector3(centerX + 2.25f, -0.95f, -0.5f), new Vector2(1.2f, 0.9f), palette.trim, 14);
                 break;
         }
     }
@@ -282,7 +283,7 @@ public class LocationSceneBuilder : MonoBehaviour
         label.transform.position = new Vector3(location.worldCenterX, 2.75f, -1f);
 
         TextMeshPro text = label.AddComponent<TextMeshPro>();
-        text.text = location.id.ToString();
+        text.text = string.IsNullOrEmpty(location.displayName) ? location.id.ToString() : location.displayName;
         text.alignment = TextAlignmentOptions.Center;
         text.fontSize = 4.2f;
         text.color = palette.label;
@@ -365,7 +366,7 @@ public class LocationSceneBuilder : MonoBehaviour
             case LocationId.ExpressStation:
                 return new ScenePalette(new Color(0.75f, 0.82f, 0.88f), new Color(0.67f, 0.67f, 0.62f), new Color(0.47f, 0.47f, 0.42f), new Color(0.29f, 0.29f, 0.27f), new Color(0.85f, 0.55f, 0.25f), new Color(0.12f, 0.12f, 0.1f));
             case LocationId.TakeoutStation:
-                return new ScenePalette(new Color(0.79f, 0.86f, 0.9f), new Color(0.69f, 0.77f, 0.65f), new Color(0.44f, 0.48f, 0.45f), new Color(0.23f, 0.28f, 0.25f), new Color(0.32f, 0.7f, 0.48f), new Color(0.08f, 0.15f, 0.11f));
+                return new ScenePalette(new Color(0.73f, 0.84f, 0.94f), new Color(0.76f, 0.8f, 0.85f), new Color(0.46f, 0.56f, 0.68f), new Color(0.23f, 0.29f, 0.36f), new Color(0.92f, 0.56f, 0.28f), new Color(0.09f, 0.12f, 0.16f));
             default:
                 return new ScenePalette(new Color(0.74f, 0.84f, 0.9f), new Color(0.75f, 0.75f, 0.7f), new Color(0.45f, 0.48f, 0.5f), new Color(0.25f, 0.28f, 0.3f), new Color(0.75f, 0.65f, 0.45f), Color.black);
         }

@@ -54,6 +54,7 @@ public class ZhongshanDeckWindow : EditorWindow
         SceneJump,
         Attributes,
         Time,
+        News,
         Endings,
         Events,
         NPC,
@@ -65,7 +66,7 @@ public class ZhongshanDeckWindow : EditorWindow
 
     private static readonly string[] TabLabels =
     {
-        "总览", "场景跳转", "属性", "时间", "结局", "事件", "NPC", "经济", "公式", "快照", "日志"
+        "总览", "场景跳转", "属性", "时间", "新闻", "结局", "事件", "NPC", "经济", "公式", "快照", "日志"
     };
 
     private static readonly (string Label, string Key, int Min, int Max)[] AttributeDefs =
@@ -146,6 +147,11 @@ public class ZhongshanDeckWindow : EditorWindow
     private string editingEventSource = string.Empty;
     private bool isCreatingNewEvent;
     private string snapshotNameInput = string.Empty;
+    private int newsYearInput = 1;
+    private int newsSemesterInput = 1;
+    private int newsRoundInput = 1;
+    private string newsEditorStatus = string.Empty;
+    private readonly List<NewsItem> editingNewsItems = new List<NewsItem>();
     private string npcIdInput = string.Empty;
     private int npcAffinityValue;
     private int npcHealthValue = 70;
@@ -299,6 +305,7 @@ public class ZhongshanDeckWindow : EditorWindow
             case Tab.SceneJump: DrawSceneJump(); break;
             case Tab.Attributes: DrawAttributes(); break;
             case Tab.Time: DrawTime(); break;
+            case Tab.News: DrawNews(); break;
             case Tab.Endings: DrawEndings(); break;
             case Tab.Events: DrawEvents(); break;
             case Tab.NPC: DrawNPC(); break;
@@ -401,6 +408,7 @@ public class ZhongshanDeckWindow : EditorWindow
         }
         if (GUILayout.Button("属性", GUILayout.Width(70f))) currentTab = Tab.Attributes;
         if (GUILayout.Button("时间", GUILayout.Width(70f))) currentTab = Tab.Time;
+        if (GUILayout.Button("新闻", GUILayout.Width(70f))) currentTab = Tab.News;
         if (GUILayout.Button("事件", GUILayout.Width(70f))) currentTab = Tab.Events;
         if (GUILayout.Button("NPC", GUILayout.Width(70f))) currentTab = Tab.NPC;
         if (GUILayout.Button("快照", GUILayout.Width(70f))) currentTab = Tab.Snapshots;
@@ -3428,6 +3436,417 @@ public class ZhongshanDeckWindow : EditorWindow
         EditorGUILayout.HelpBox(string.IsNullOrEmpty(formulaResult) ? "计算结果会显示在这里。" : formulaResult, MessageType.None);
     }
 
+    private void DrawNews()
+    {
+        EditorGUILayout.LabelField("每月新闻编辑", EditorStyles.boldLabel);
+        EditorGUILayout.HelpBox("这里维护的是“月度新闻覆盖稿”。保存后，游戏运行到该学年/学期/回合时，会优先使用这里的新闻内容。", MessageType.Info);
+
+        using (new EditorGUILayout.HorizontalScope())
+        {
+            newsYearInput = EditorGUILayout.IntField("学年", newsYearInput, GUILayout.Width(170f));
+            newsSemesterInput = EditorGUILayout.IntField("学期", newsSemesterInput, GUILayout.Width(170f));
+            newsRoundInput = EditorGUILayout.IntField("回合", newsRoundInput, GUILayout.Width(170f));
+        }
+
+        newsYearInput = Mathf.Clamp(newsYearInput, 1, 4);
+        newsSemesterInput = Mathf.Clamp(newsSemesterInput, 1, 2);
+        newsRoundInput = Mathf.Clamp(newsRoundInput, 1, 5);
+
+        using (new EditorGUILayout.HorizontalScope())
+        {
+            if (GUILayout.Button("使用当前时间", GUILayout.Width(120f)))
+            {
+                UseCurrentNewsTime();
+                LoadMonthlyNewsOverrideOrGenerate();
+            }
+
+            if (GUILayout.Button("载入草稿", GUILayout.Width(100f)))
+            {
+                LoadMonthlyNewsOverrideOrGenerate();
+            }
+
+            if (GUILayout.Button("导入默认稿", GUILayout.Width(100f)))
+            {
+                ImportGeneratedNewsForEditor();
+            }
+
+            if (GUILayout.Button("新增条目", GUILayout.Width(100f)))
+            {
+                editingNewsItems.Add(new NewsItem(NewsType.Headline, "新头条", "请填写本月新闻内容。"));
+            }
+        }
+
+        using (new EditorGUILayout.HorizontalScope())
+        {
+            if (GUILayout.Button("保存本月覆盖", GUILayout.Width(120f)))
+            {
+                SaveMonthlyNewsOverride();
+            }
+
+            if (GUILayout.Button("删除本月覆盖", GUILayout.Width(120f)))
+            {
+                DeleteMonthlyNewsOverride();
+            }
+        }
+
+        DrawNewsRoundPicker();
+
+        if (!string.IsNullOrEmpty(newsEditorStatus))
+        {
+            EditorGUILayout.HelpBox(newsEditorStatus, MessageType.None);
+        }
+
+        if (editingNewsItems.Count == 0)
+        {
+            EditorGUILayout.HelpBox("当前没有新闻条目。可以先“载入草稿”或“导入默认稿”。", MessageType.None);
+            return;
+        }
+
+        DrawNewsVisualPreview();
+
+        for (int i = 0; i < editingNewsItems.Count; i++)
+        {
+            DrawNewsItemEditor(i);
+        }
+    }
+
+    private void DrawNewsItemEditor(int index)
+    {
+        if (index < 0 || index >= editingNewsItems.Count)
+        {
+            return;
+        }
+
+        NewsItem item = editingNewsItems[index] ?? new NewsItem();
+        editingNewsItems[index] = item;
+
+        using (new EditorGUILayout.VerticalScope("box"))
+        {
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                EditorGUILayout.LabelField($"条目 {index + 1}", EditorStyles.boldLabel, GUILayout.Width(60f));
+                item.type = (NewsType)EditorGUILayout.EnumPopup(item.type, GUILayout.Width(120f));
+                GUI.enabled = index > 0;
+                if (GUILayout.Button("上移", GUILayout.Width(60f)))
+                {
+                    MoveNewsItem(index, -1);
+                    return;
+                }
+                GUI.enabled = index < editingNewsItems.Count - 1;
+                if (GUILayout.Button("下移", GUILayout.Width(60f)))
+                {
+                    MoveNewsItem(index, 1);
+                    return;
+                }
+                GUI.enabled = true;
+                GUILayout.FlexibleSpace();
+                if (GUILayout.Button("删除", GUILayout.Width(70f)))
+                {
+                    editingNewsItems.RemoveAt(index);
+                    return;
+                }
+            }
+
+            item.title = EditorGUILayout.TextField("标题", item.title ?? string.Empty);
+            EditorGUILayout.LabelField("内容");
+            item.content = EditorGUILayout.TextArea(item.content ?? string.Empty, GUILayout.MinHeight(72f));
+
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                item.author = EditorGUILayout.TextField("作者", item.author ?? string.Empty);
+                item.anonymousId = EditorGUILayout.TextField("匿名ID", item.anonymousId ?? string.Empty);
+            }
+
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                item.hotTag = EditorGUILayout.TextField("热搜标签", item.hotTag ?? string.Empty);
+                item.hotValue = EditorGUILayout.FloatField("热度", item.hotValue);
+                item.likes = EditorGUILayout.IntField("点赞", item.likes);
+            }
+
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                item.seriesId = EditorGUILayout.TextField("连载ID", item.seriesId ?? string.Empty);
+                item.seriesOrder = EditorGUILayout.IntField("连载序号", item.seriesOrder);
+            }
+        }
+    }
+
+    private void DrawNewsVisualPreview()
+    {
+        EditorGUILayout.Space(4f);
+        EditorGUILayout.LabelField("排版预览", EditorStyles.boldLabel);
+        EditorGUILayout.HelpBox("下面是接近游戏里“校园新闻”呈现方式的可视化预览。编辑条目顺序会直接影响最终版面顺序。", MessageType.None);
+
+        using (new EditorGUILayout.VerticalScope("box"))
+        {
+            for (int i = 0; i < editingNewsItems.Count; i++)
+            {
+                NewsItem item = editingNewsItems[i];
+                if (item == null)
+                {
+                    continue;
+                }
+
+                GUIStyle headerStyle = new GUIStyle(EditorStyles.boldLabel)
+                {
+                    fontSize = item.type == NewsType.Headline ? 14 : 12,
+                    wordWrap = true
+                };
+                GUIStyle bodyStyle = new GUIStyle(EditorStyles.wordWrappedLabel)
+                {
+                    richText = true
+                };
+
+                using (new EditorGUILayout.VerticalScope("helpbox"))
+                {
+                    EditorGUILayout.LabelField($"{i + 1}. {GetNewsTypeDisplayName(item.type)}", EditorStyles.miniBoldLabel);
+
+                    if (!string.IsNullOrWhiteSpace(item.title))
+                    {
+                        EditorGUILayout.LabelField(item.title, headerStyle);
+                    }
+
+                    EditorGUILayout.LabelField(string.IsNullOrWhiteSpace(item.content) ? "暂无内容" : item.content, bodyStyle, GUILayout.MinHeight(32f));
+
+                    string meta = BuildNewsPreviewMeta(item);
+                    if (!string.IsNullOrWhiteSpace(meta))
+                    {
+                        EditorGUILayout.LabelField(meta, EditorStyles.centeredGreyMiniLabel);
+                    }
+                }
+            }
+        }
+    }
+
+    private void DrawNewsRoundPicker()
+    {
+        EditorGUILayout.Space(4f);
+        EditorGUILayout.LabelField("点选回合", EditorStyles.boldLabel);
+        EditorGUILayout.HelpBox("金色=当前选中，绿色=已有覆盖稿，蓝色=当前游戏回合。", MessageType.None);
+
+        for (int year = 1; year <= 4; year++)
+        {
+            EditorGUILayout.LabelField($"大{ToChineseYear(year)}", EditorStyles.miniBoldLabel);
+            for (int semester = 1; semester <= 2; semester++)
+            {
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    GUILayout.Label(semester == 1 ? "上" : "下", GUILayout.Width(24f));
+                    for (int round = 1; round <= 5; round++)
+                    {
+                        Color oldColor = GUI.backgroundColor;
+                        GUI.backgroundColor = GetNewsRoundButtonColor(year, semester, round);
+                        if (GUILayout.Button($"R{round}", GUILayout.Width(48f)))
+                        {
+                            newsYearInput = year;
+                            newsSemesterInput = semester;
+                            newsRoundInput = round;
+                            LoadMonthlyNewsOverrideOrGenerate();
+                        }
+                        GUI.backgroundColor = oldColor;
+                    }
+                }
+            }
+        }
+    }
+
+    private void UseCurrentNewsTime()
+    {
+        if (EditorApplication.isPlaying && GameState.Instance != null)
+        {
+            newsYearInput = GameState.Instance.CurrentYear;
+            newsSemesterInput = GameState.Instance.CurrentSemester;
+            newsRoundInput = GameState.Instance.CurrentRound;
+            return;
+        }
+
+        newsEditorStatus = "当前不在 Play 模式，已保留你手动填写的学年/学期/回合。";
+    }
+
+    private void LoadMonthlyNewsOverrideOrGenerate()
+    {
+        if (ZhongshanDeckToolStateBridge.TryGetMonthlyNewsOverride(newsYearInput, newsSemesterInput, newsRoundInput, out ZhongshanDeckNewsRoundEntry entry) &&
+            entry != null &&
+            entry.items != null &&
+            entry.items.Count > 0)
+        {
+            editingNewsItems.Clear();
+            for (int i = 0; i < entry.items.Count; i++)
+            {
+                NewsItem item = entry.items[i];
+                if (item != null)
+                {
+                    editingNewsItems.Add(item.Clone());
+                }
+            }
+
+            newsEditorStatus = $"已载入 Y{newsYearInput} S{newsSemesterInput} R{newsRoundInput} 的新闻覆盖稿。";
+            return;
+        }
+
+        ImportGeneratedNewsForEditor();
+    }
+
+    private void ImportGeneratedNewsForEditor()
+    {
+        editingNewsItems.Clear();
+
+        if (EditorApplication.isPlaying && NewsSystem.Instance != null)
+        {
+            List<NewsItem> generated = NewsSystem.Instance.BuildEditableNewsForRound(newsYearInput, newsSemesterInput, newsRoundInput, true);
+            for (int i = 0; i < generated.Count; i++)
+            {
+                NewsItem item = generated[i];
+                if (item != null)
+                {
+                    editingNewsItems.Add(item.Clone());
+                }
+            }
+
+            newsEditorStatus = $"已导入 Y{newsYearInput} S{newsSemesterInput} R{newsRoundInput} 的默认生成稿。";
+            return;
+        }
+
+        editingNewsItems.Add(new NewsItem(NewsType.Headline, "新头条", "请填写本月头条。"));
+        editingNewsItems.Add(new NewsItem(NewsType.Notice, "【通知】", "请填写本月通知。"));
+        newsEditorStatus = "当前不在 Play 模式，无法读取运行时生成稿；已创建基础模板。";
+    }
+
+    private void SaveMonthlyNewsOverride()
+    {
+        List<NewsItem> items = new List<NewsItem>();
+        for (int i = 0; i < editingNewsItems.Count; i++)
+        {
+            NewsItem item = editingNewsItems[i];
+            if (item == null)
+            {
+                continue;
+            }
+
+            if (string.IsNullOrWhiteSpace(item.title) && string.IsNullOrWhiteSpace(item.content))
+            {
+                continue;
+            }
+
+            items.Add(item.Clone());
+        }
+
+        if (items.Count == 0)
+        {
+            newsEditorStatus = "至少保留一条有标题或内容的新闻再保存。";
+            return;
+        }
+
+        ZhongshanDeckToolStateBridge.SaveMonthlyNewsOverride(new ZhongshanDeckNewsRoundEntry
+        {
+            year = newsYearInput,
+            semester = newsSemesterInput,
+            round = newsRoundInput,
+            items = items
+        });
+
+        newsEditorStatus = $"已保存 Y{newsYearInput} S{newsSemesterInput} R{newsRoundInput} 的新闻覆盖稿，共 {items.Count} 条。";
+    }
+
+    private void DeleteMonthlyNewsOverride()
+    {
+        bool deleted = ZhongshanDeckToolStateBridge.DeleteMonthlyNewsOverride(newsYearInput, newsSemesterInput, newsRoundInput);
+        if (!deleted)
+        {
+            newsEditorStatus = "该月份还没有保存过覆盖稿。";
+            return;
+        }
+
+        ImportGeneratedNewsForEditor();
+        newsEditorStatus = $"已删除 Y{newsYearInput} S{newsSemesterInput} R{newsRoundInput} 的新闻覆盖稿。";
+    }
+
+    private Color GetNewsRoundButtonColor(int year, int semester, int round)
+    {
+        bool isSelected = newsYearInput == year && newsSemesterInput == semester && newsRoundInput == round;
+        bool isCurrent = EditorApplication.isPlaying &&
+                         GameState.Instance != null &&
+                         GameState.Instance.CurrentYear == year &&
+                         GameState.Instance.CurrentSemester == semester &&
+                         GameState.Instance.CurrentRound == round;
+        bool hasOverride = ZhongshanDeckToolStateBridge.TryGetMonthlyNewsOverride(year, semester, round, out _);
+
+        if (isSelected) return new Color(0.85f, 0.63f, 0.18f, 1f);
+        if (hasOverride) return new Color(0.25f, 0.56f, 0.36f, 1f);
+        if (isCurrent) return new Color(0.28f, 0.46f, 0.76f, 1f);
+        return new Color(0.78f, 0.78f, 0.78f, 1f);
+    }
+
+    private string ToChineseYear(int year)
+    {
+        switch (year)
+        {
+            case 1: return "一";
+            case 2: return "二";
+            case 3: return "三";
+            case 4: return "四";
+            default: return year.ToString();
+        }
+    }
+
+    private void MoveNewsItem(int index, int direction)
+    {
+        int targetIndex = Mathf.Clamp(index + direction, 0, editingNewsItems.Count - 1);
+        if (targetIndex == index)
+        {
+            return;
+        }
+
+        NewsItem item = editingNewsItems[index];
+        editingNewsItems.RemoveAt(index);
+        editingNewsItems.Insert(targetIndex, item);
+    }
+
+    private string GetNewsTypeDisplayName(NewsType type)
+    {
+        switch (type)
+        {
+            case NewsType.Headline: return "头条";
+            case NewsType.Trending: return "热搜";
+            case NewsType.Gossip: return "树洞";
+            case NewsType.Notice: return "通知";
+            case NewsType.Ad: return "推广";
+            default: return "新闻";
+        }
+    }
+
+    private string BuildNewsPreviewMeta(NewsItem item)
+    {
+        List<string> parts = new List<string>();
+        if (!string.IsNullOrWhiteSpace(item.author))
+        {
+            parts.Add(item.author);
+        }
+        if (!string.IsNullOrWhiteSpace(item.anonymousId))
+        {
+            parts.Add(item.anonymousId);
+        }
+        if (item.likes > 0)
+        {
+            parts.Add($"{item.likes}赞");
+        }
+        if (item.hotValue > 0f)
+        {
+            parts.Add($"{item.hotValue:0.0}万");
+        }
+        if (!string.IsNullOrWhiteSpace(item.hotTag))
+        {
+            parts.Add($"标签 {item.hotTag}");
+        }
+        if (!string.IsNullOrWhiteSpace(item.seriesId))
+        {
+            parts.Add($"连载 {item.seriesId}#{item.seriesOrder}");
+        }
+
+        return string.Join("  |  ", parts);
+    }
+
     private void DrawSnapshots()
     {
         EditorGUILayout.LabelField("快照", EditorStyles.boldLabel);
@@ -3529,6 +3948,9 @@ public class ZhongshanDeckWindow : EditorWindow
         yearInput = GameState.Instance.CurrentYear;
         semesterInput = GameState.Instance.CurrentSemester;
         roundInput = GameState.Instance.CurrentRound;
+        newsYearInput = GameState.Instance.CurrentYear;
+        newsSemesterInput = GameState.Instance.CurrentSemester;
+        newsRoundInput = GameState.Instance.CurrentRound;
         moneyInput = GameState.Instance.Money;
 
         foreach (var item in AttributeDefs)

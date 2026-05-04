@@ -39,12 +39,16 @@ public class ZhongshanDeckToolState : ScriptableObject
     [Header("Authored Events")]
     public List<ZhongshanDeckEventEntry> authoredEvents = new List<ZhongshanDeckEventEntry>();
 
+    [Header("Monthly News Overrides")]
+    public List<ZhongshanDeckNewsRoundEntry> monthlyNewsOverrides = new List<ZhongshanDeckNewsRoundEntry>();
+
     public void EnsureInitialized()
     {
         defaultPlayerName ??= "Teat";
         defaultPlayerMajor ??= "\u751f\u7269\u79d1\u5b66\u4e13\u4e1a";
         snapshots ??= new List<ZhongshanDeckSnapshotEntry>();
         authoredEvents ??= new List<ZhongshanDeckEventEntry>();
+        monthlyNewsOverrides ??= new List<ZhongshanDeckNewsRoundEntry>();
         stepIndex = Mathf.Clamp(stepIndex, 0, 3);
         defaultPlayerGender = Mathf.Clamp(defaultPlayerGender, 0, 1);
         semesterRoundCount = Mathf.Clamp(semesterRoundCount, 3, 12);
@@ -79,4 +83,13 @@ public class ZhongshanDeckEventEntry
     public string title;
     [TextArea(8, 30)]
     public string json;
+}
+
+[Serializable]
+public class ZhongshanDeckNewsRoundEntry
+{
+    public int year = 1;
+    public int semester = 1;
+    public int round = 1;
+    public List<NewsItem> items = new List<NewsItem>();
 }

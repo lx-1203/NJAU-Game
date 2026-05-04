@@ -33,7 +33,7 @@ public class DebugConsoleManager : MonoBehaviour
 
     private void Update()
     {
-        if (Input.GetKey(KeyCode.LeftControl) && Input.GetKey(KeyCode.LeftShift) && Input.GetKeyDown(KeyCode.D))
+        if (HotkeyManager.IsPressed(HotkeyActionId.ToggleDebugConsole))
         {
             Toggle();
             return;

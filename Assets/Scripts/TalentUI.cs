@@ -50,6 +50,7 @@ public class TalentUI : MonoBehaviour
     public void ShowPanel()
     {
         if (talentCanvas != null) return; // 已打开
+        if (!UIFlowGuard.PrepareForExclusiveWindow(UIFlowGuard.WindowTalent)) return;
         BuildUI();
         RefreshAll();
     }

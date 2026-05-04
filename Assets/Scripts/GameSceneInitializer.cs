@@ -58,6 +58,7 @@ public class GameSceneInitializer : MonoBehaviour
         SetupNPCEventHub();
         SetupNPCDatabase();
         SetupAffinitySystem();
+        ApplyNewGamePlusInheritanceIfNeeded();
         SetupRomanceBridge();
         SetupNPCManager();
 
@@ -314,6 +315,21 @@ public class GameSceneInitializer : MonoBehaviour
             GameObject obj = new GameObject("AffinitySystem");
             obj.AddComponent<AffinitySystem>();
         }
+    }
+
+    private void ApplyNewGamePlusInheritanceIfNeeded()
+    {
+        if (SaveManager.PendingLoadData != null)
+        {
+            return;
+        }
+
+        if (NewGamePlusManager.Instance == null || !NewGamePlusManager.Instance.HasNewGamePlusData)
+        {
+            return;
+        }
+
+        NewGamePlusManager.Instance.ApplyInheritance();
     }
 
     private void SetupRomanceBridge()

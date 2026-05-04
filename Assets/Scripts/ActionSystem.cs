@@ -76,7 +76,7 @@ public class ActionSystem : MonoBehaviour
         {
             id = "attend_class",
             displayName = "上课",
-            actionPointCost = 2,
+            actionPointCost = 1,
             moneyCost = 0,
             endsRound = false,
             isGlobal = false,

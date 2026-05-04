@@ -84,6 +84,7 @@ public class ExamUIManager : MonoBehaviour
         }
 
         Debug.Log($"[ExamUIManager] 开始考试序列，共 {courses.Length} 门课");
+        if (!UIFlowGuard.PrepareForExclusiveWindow(UIFlowGuard.WindowExam)) return;
 
         examCourses = courses;
         currentExamType = examType;

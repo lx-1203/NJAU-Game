@@ -46,6 +46,8 @@ public static class SceneLoader
             return;
         }
 
+        UIFlowGuard.CleanupBlockingUI();
+
         // 记录目标场景名称
         TargetSceneName = sceneName;
         Debug.Log($"[SceneLoader] 准备加载场景: {sceneName}，进入加载界面...");
@@ -65,6 +67,8 @@ public static class SceneLoader
             Debug.LogError("[SceneLoader] 目标场景名称不能为空！");
             return;
         }
+
+        UIFlowGuard.CleanupBlockingUI();
 
         Debug.Log($"[SceneLoader] 直接加载场景: {sceneName}");
         SceneManager.LoadScene(sceneName);

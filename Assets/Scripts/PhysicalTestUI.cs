@@ -130,6 +130,8 @@ public class PhysicalTestUI : MonoBehaviour
 
     public void Show()
     {
+        if (!UIFlowGuard.PrepareForExclusiveWindow(UIFlowGuard.WindowPhysicalTest)) return;
+
         // 刷新体魄显示
         if (ptCanvasObj != null) ptCanvasObj.SetActive(true);
 

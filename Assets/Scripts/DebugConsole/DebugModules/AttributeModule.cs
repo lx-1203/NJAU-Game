@@ -42,6 +42,7 @@ public class AttributeModule : MonoBehaviour, IDebugModule
     private static readonly Color SliderBackgroundColor = new Color(0.14f, 0.14f, 0.2f, 0.95f);
     private static readonly Color SliderFillColor = new Color(0.28f, 0.55f, 0.86f, 1f);
     private static readonly Color ButtonColor = new Color(0.22f, 0.42f, 0.72f, 1f);
+    private static readonly Sprite SliderHandleSprite = Resources.GetBuiltinResource<Sprite>("UI/Skin/Knob.psd");
 
     private static readonly AttributeDefinition[] Definitions =
     {
@@ -415,9 +416,11 @@ public class AttributeModule : MonoBehaviour, IDebugModule
         handleRect.anchorMin = new Vector2(0f, 0.5f);
         handleRect.anchorMax = new Vector2(0f, 0.5f);
         handleRect.pivot = new Vector2(0.5f, 0.5f);
-        handleRect.sizeDelta = new Vector2(18f, 20f);
+        handleRect.sizeDelta = new Vector2(14f, 14f);
         Image handleImage = handle.AddComponent<Image>();
         handleImage.color = Color.white;
+        handleImage.sprite = SliderHandleSprite;
+        handleImage.type = Image.Type.Sliced;
         slider.handleRect = handleRect;
         slider.targetGraphic = handleImage;
 

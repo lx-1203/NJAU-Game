@@ -26,6 +26,7 @@ public class HUDManager : MonoBehaviour
     private Button actionMenuCloseButton;
     private TextMeshProUGUI actionMenuTitleText;
     private bool isActionRowExpanded;
+    private bool pendingRoundNews;
 
     // ========== 社团面板 ==========
     private ClubPanelManager clubPanelManager;
@@ -106,6 +107,10 @@ public class HUDManager : MonoBehaviour
 
         RefreshAll();
         RefreshQuestPanel();
+        if (SettingsManager.Instance != null)
+        {
+            SettingsManager.Instance.OnSettingsChanged += HandleSettingsChanged;
+        }
         StartCoroutine(PlayEntryAnimation());
         StartCoroutine(ShowInitialNews());
     }
@@ -129,6 +134,11 @@ public class HUDManager : MonoBehaviour
 
     private void Update()
     {
+        if (pendingRoundNews && CanShowRoundNewsNow())
+        {
+            TryShowPendingRoundNews();
+        }
+
         if (IsActionMenuOpen)
         {
             if (PauseMenuUI.ShouldBlockUnderlyingEscape())
@@ -136,7 +146,7 @@ public class HUDManager : MonoBehaviour
                 return;
             }
 
-            if (Input.GetKeyDown(KeyCode.Alpha1) || Input.GetKeyDown(KeyCode.Escape))
+            if (HotkeyManager.IsPressed(HotkeyActionId.ToggleActionMenu) || Input.GetKeyDown(KeyCode.Escape))
             {
                 CloseActionMenu();
             }
@@ -148,19 +158,19 @@ public class HUDManager : MonoBehaviour
             return;
         }
 
-        if (Input.GetKeyDown(KeyCode.Tab))
+        if (HotkeyManager.IsPressed(HotkeyActionId.ToggleInfoPanel))
         {
             ToggleInfoPanel();
         }
-        else if (Input.GetKeyDown(KeyCode.I))
+        else if (HotkeyManager.IsPressed(HotkeyActionId.ToggleInventory))
         {
             ToggleInventoryPanel();
         }
-        else if (Input.GetKeyDown(KeyCode.Alpha1))
+        else if (HotkeyManager.IsPressed(HotkeyActionId.ToggleActionMenu))
         {
             ToggleActionMenu();
         }
-        else if (Input.GetKeyDown(KeyCode.Alpha2))
+        else if (HotkeyManager.IsPressed(HotkeyActionId.ToggleTalentPanel))
         {
             ToggleTalentPanel();
         }
@@ -386,7 +396,10 @@ public class HUDManager : MonoBehaviour
             ExamSystem.Instance.OnExamCompleted += OnExamCompleted;
 
         if (TurnManager.Instance != null)
+        {
             TurnManager.Instance.OnRoundAdvanced += OnRoundAdvanced;
+            TurnManager.Instance.OnRoundStartPhaseCompleted += OnRoundStartPhaseCompleted;
+        }
 
         if (NPCEventHub.Instance != null)
             NPCEventHub.Instance.OnSocialInteractionFeedback += OnSocialFeedback;
@@ -432,7 +445,11 @@ public class HUDManager : MonoBehaviour
         if (gameState != null) gameState.OnStateChanged -= RefreshTopBar;
         if (playerAttributes != null) playerAttributes.OnAttributesChanged -= RefreshAttributes;
         AttributeGradeSettings.OnThresholdsChanged -= RefreshAttributes;
-        if (TurnManager.Instance != null) TurnManager.Instance.OnRoundAdvanced -= OnRoundAdvanced;
+        if (TurnManager.Instance != null)
+        {
+            TurnManager.Instance.OnRoundAdvanced -= OnRoundAdvanced;
+            TurnManager.Instance.OnRoundStartPhaseCompleted -= OnRoundStartPhaseCompleted;
+        }
         if (NPCEventHub.Instance != null) NPCEventHub.Instance.OnSocialInteractionFeedback -= OnSocialFeedback;
         if (LocationManager.Instance != null) LocationManager.Instance.OnLocationChanged -= OnLocationChangedHandler;
         if (DebtSystem.Instance != null) DebtSystem.Instance.OnDebtLevelChanged -= OnDebtLevelChanged;
@@ -457,7 +474,16 @@ public class HUDManager : MonoBehaviour
             MissionSystem.Instance.OnMissionFailed -= OnMissionStateChanged;
         }
         if (SaveManager.Instance != null) SaveManager.Instance.OnLoadCompleted -= OnSaveLoaded;
+        if (SettingsManager.Instance != null) SettingsManager.Instance.OnSettingsChanged -= HandleSettingsChanged;
         if (campusMapUI != null) campusMapUI.Destroy();
+    }
+
+    private void HandleSettingsChanged(SettingsData settings)
+    {
+        if (builder != null)
+        {
+            builder.RefreshHotkeyHints();
+        }
     }
 
     private bool CanProcessHotkeys()
@@ -923,7 +949,7 @@ public class HUDManager : MonoBehaviour
 
         float ratio = max > 0 ? (float)current / max : 0;
         builder.apBarFill.fillAmount = ratio;
-        builder.apText.text = $"{current}";
+        builder.apText.text = $"{current} 行动点";
 
         // AP不足时变色
         if (ratio <= 0.2f)
@@ -1853,7 +1879,7 @@ public class HUDManager : MonoBehaviour
         {
             case GameState.RoundAdvanceResult.NextRound:
                 Debug.Log($"[HUD] 新回合开始 — {gameState.GetTimeDescription()}");
-                ShowRoundNews();
+                pendingRoundNews = true;
                 break;
             case GameState.RoundAdvanceResult.NextSemester:
                 Debug.Log($"[HUD] 新学期开始 — {gameState.GetTimeDescription()}");
@@ -1873,14 +1899,76 @@ public class HUDManager : MonoBehaviour
         RefreshBottomBar();
     }
 
+    private void OnRoundStartPhaseCompleted()
+    {
+        if (!pendingRoundNews)
+        {
+            return;
+        }
+
+        TryShowPendingRoundNews();
+    }
+
     private void ShowRoundNews()
     {
         if (NewsSystem.Instance == null) return;
+        if (CourseScheduleUI.Instance != null && CourseScheduleUI.Instance.IsOpen)
+        {
+            pendingRoundNews = true;
+            return;
+        }
 
         UIFlowGuard.CleanupBlockingUI();
         SetActionButtonsInteractable(false);
+        NewsSystem.Instance.OnNewsDismissed -= OnNewsDismissed;
         NewsSystem.Instance.OnNewsDismissed += OnNewsDismissed;
         NewsSystem.Instance.ShowNews();
+    }
+
+    private void TryShowPendingRoundNews()
+    {
+        if (!pendingRoundNews)
+        {
+            return;
+        }
+
+        if (!CanShowRoundNewsNow())
+        {
+            return;
+        }
+
+        pendingRoundNews = false;
+        ShowRoundNews();
+    }
+
+    private bool CanShowRoundNewsNow()
+    {
+        if (NewsSystem.Instance == null)
+        {
+            return false;
+        }
+
+        if (NewsSystem.Instance.IsShowing)
+        {
+            return false;
+        }
+
+        if (CourseScheduleUI.Instance != null && CourseScheduleUI.Instance.IsOpen)
+        {
+            return false;
+        }
+
+        if (DialogueSystem.Instance != null && DialogueSystem.Instance.IsDialogueActive)
+        {
+            return false;
+        }
+
+        if (EventExecutor.Instance != null && EventExecutor.Instance.IsExecuting)
+        {
+            return false;
+        }
+
+        return true;
     }
 
     private void OnNewsDismissed()
@@ -1946,8 +2034,19 @@ public class HUDManager : MonoBehaviour
 
     private void OnGameEventCompleted(EventDefinition evt)
     {
+        if (pendingRoundNews)
+        {
+            Debug.Log($"[HUD] 游戏事件完成: {evt.id}，检查是否补弹回合新闻");
+            TryShowPendingRoundNews();
+        }
+
         if (EventScheduler.Instance == null || !EventScheduler.Instance.HasPendingEvents())
         {
+            if (pendingRoundNews || (NewsSystem.Instance != null && NewsSystem.Instance.IsShowing))
+            {
+                return;
+            }
+
             Debug.Log($"[HUD] 游戏事件完成: {evt.id}，恢复行动按钮");
             SetActionButtonsInteractable(true);
         }
@@ -1970,6 +2069,12 @@ public class HUDManager : MonoBehaviour
     private IEnumerator ShowInitialNews()
     {
         yield return new WaitForSeconds(1.5f);
+
+        while (!CanShowRoundNewsNow())
+        {
+            yield return null;
+        }
+
         ShowRoundNews();
     }
 

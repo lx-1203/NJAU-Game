@@ -181,6 +181,113 @@ public static class ZhongshanDeckToolStateBridge
         return false;
     }
 
+    public static bool TryGetMonthlyNewsOverride(int year, int semester, int round, out ZhongshanDeckNewsRoundEntry entry)
+    {
+        ZhongshanDeckToolState state = GetState();
+        for (int i = 0; i < state.monthlyNewsOverrides.Count; i++)
+        {
+            ZhongshanDeckNewsRoundEntry current = state.monthlyNewsOverrides[i];
+            if (current != null &&
+                current.year == year &&
+                current.semester == semester &&
+                current.round == round)
+            {
+                entry = CloneNewsRoundEntry(current);
+                return true;
+            }
+        }
+
+        entry = null;
+        return false;
+    }
+
+    public static List<ZhongshanDeckNewsRoundEntry> GetMonthlyNewsOverrides()
+    {
+        ZhongshanDeckToolState state = GetState();
+        List<ZhongshanDeckNewsRoundEntry> copies = new List<ZhongshanDeckNewsRoundEntry>();
+        for (int i = 0; i < state.monthlyNewsOverrides.Count; i++)
+        {
+            ZhongshanDeckNewsRoundEntry current = state.monthlyNewsOverrides[i];
+            if (current != null)
+            {
+                copies.Add(CloneNewsRoundEntry(current));
+            }
+        }
+
+        return copies;
+    }
+
+    public static void SaveMonthlyNewsOverride(ZhongshanDeckNewsRoundEntry entry)
+    {
+        if (entry == null)
+        {
+            return;
+        }
+
+        ZhongshanDeckToolState state = GetState();
+        for (int i = 0; i < state.monthlyNewsOverrides.Count; i++)
+        {
+            ZhongshanDeckNewsRoundEntry current = state.monthlyNewsOverrides[i];
+            if (current != null &&
+                current.year == entry.year &&
+                current.semester == entry.semester &&
+                current.round == entry.round)
+            {
+                state.monthlyNewsOverrides[i] = CloneNewsRoundEntry(entry);
+                SaveState();
+                return;
+            }
+        }
+
+        state.monthlyNewsOverrides.Add(CloneNewsRoundEntry(entry));
+        SaveState();
+    }
+
+    public static bool DeleteMonthlyNewsOverride(int year, int semester, int round)
+    {
+        ZhongshanDeckToolState state = GetState();
+        for (int i = 0; i < state.monthlyNewsOverrides.Count; i++)
+        {
+            ZhongshanDeckNewsRoundEntry current = state.monthlyNewsOverrides[i];
+            if (current != null &&
+                current.year == year &&
+                current.semester == semester &&
+                current.round == round)
+            {
+                state.monthlyNewsOverrides.RemoveAt(i);
+                SaveState();
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static ZhongshanDeckNewsRoundEntry CloneNewsRoundEntry(ZhongshanDeckNewsRoundEntry source)
+    {
+        ZhongshanDeckNewsRoundEntry clone = new ZhongshanDeckNewsRoundEntry
+        {
+            year = source != null ? source.year : 1,
+            semester = source != null ? source.semester : 1,
+            round = source != null ? source.round : 1,
+            items = new List<NewsItem>()
+        };
+
+        if (source?.items != null)
+        {
+            for (int i = 0; i < source.items.Count; i++)
+            {
+                NewsItem item = source.items[i];
+                if (item != null)
+                {
+                    clone.items.Add(item.Clone());
+                }
+            }
+        }
+
+        return clone;
+    }
+
     public static void SaveState()
     {
         ZhongshanDeckToolState state = GetState();

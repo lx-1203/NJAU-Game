@@ -13,7 +13,8 @@ public class SettingsUIBuilder : MonoBehaviour
     {
         Gameplay,
         Display,
-        Audio
+        Audio,
+        Hotkeys
     }
 
     public static SettingsUIBuilder Instance { get; private set; }
@@ -65,6 +66,7 @@ public class SettingsUIBuilder : MonoBehaviour
     private TextMeshProUGUI muteValueText;
     private TextMeshProUGUI displayInfoText;
     private TextMeshProUGUI audioInfoText;
+    private TextMeshProUGUI hotkeyInfoText;
 
     private Slider uiScaleSlider;
     private Slider masterVolumeSlider;
@@ -74,21 +76,29 @@ public class SettingsUIBuilder : MonoBehaviour
     private Button gameplayTabButton;
     private Button displayTabButton;
     private Button audioTabButton;
+    private Button hotkeyTabButton;
     private Image gameplayTabImage;
     private Image displayTabImage;
     private Image audioTabImage;
+    private Image hotkeyTabImage;
     private TextMeshProUGUI gameplayTabText;
     private TextMeshProUGUI displayTabText;
     private TextMeshProUGUI audioTabText;
+    private TextMeshProUGUI hotkeyTabText;
 
     private GameObject gameplayPage;
     private GameObject displayPage;
     private GameObject audioPage;
+    private GameObject hotkeyPage;
 
     private GameObject confirmDialogCanvasObj;
     private Action confirmDialogConfirmAction;
     private Action confirmDialogCancelAction;
     private Button confirmDialogConfirmButton;
+    private readonly Dictionary<HotkeyActionId, TextMeshProUGUI> hotkeyValueTexts = new Dictionary<HotkeyActionId, TextMeshProUGUI>();
+    private bool isCapturingHotkey;
+    private HotkeyActionId pendingHotkeyAction;
+    private string hotkeyFeedbackMessage;
 
     private void Awake()
     {
@@ -130,6 +140,12 @@ public class SettingsUIBuilder : MonoBehaviour
             return;
         }
 
+        if (isCapturingHotkey)
+        {
+            HandleHotkeyCaptureInput();
+            return;
+        }
+
         if (PauseMenuUI.ShouldBlockUnderlyingEscape())
         {
             return;
@@ -157,6 +173,7 @@ public class SettingsUIBuilder : MonoBehaviour
             obj.AddComponent<SettingsUIBuilder>();
         }
 
+        if (!UIFlowGuard.PrepareForExclusiveWindow(UIFlowGuard.WindowSettings)) return;
         UIFlowGuard.EnsureEventSystem();
         SettingsManager manager = SettingsManager.EnsureInstance();
         manager.EnsureLoaded();
@@ -173,6 +190,7 @@ public class SettingsUIBuilder : MonoBehaviour
         }
 
         Instance.isOpen = false;
+        Instance.isCapturingHotkey = false;
         Instance.ClearConfirmDialog();
 
         if (Instance.rootCanvasObj != null)
@@ -308,7 +326,7 @@ public class SettingsUIBuilder : MonoBehaviour
         CreateLabel(parent, "TitleIcon", "\u8bbe\u7f6e", 52f, new Color32(0x88, 0x7B, 0xE3, 0xFF),
             new Vector2(0f, 1f), new Vector2(240f, 72f), new Vector2(-54f, 24f), TextAlignmentOptions.Left);
 
-        CreateLabel(parent, "TitleWrench", "\u2699", 30f, AccentColor,
+        CreateLabel(parent, "TitleWrench", "\u8c03", 30f, AccentColor,
             new Vector2(0f, 1f), new Vector2(52f, 52f), new Vector2(-115f, -6f), TextAlignmentOptions.Center);
     }
 
@@ -318,7 +336,7 @@ public class SettingsUIBuilder : MonoBehaviour
         tabsRoot.anchorMin = new Vector2(1f, 1f);
         tabsRoot.anchorMax = new Vector2(1f, 1f);
         tabsRoot.pivot = new Vector2(1f, 1f);
-        tabsRoot.sizeDelta = new Vector2(600f, 74f);
+        tabsRoot.sizeDelta = new Vector2(760f, 74f);
         tabsRoot.anchoredPosition = new Vector2(-62f, 34f);
 
         HorizontalLayoutGroup layout = tabsRoot.gameObject.AddComponent<HorizontalLayoutGroup>();
@@ -332,6 +350,7 @@ public class SettingsUIBuilder : MonoBehaviour
         CreateTabButton(tabsRoot, "\u6e38\u620f", SettingsTab.Gameplay, out gameplayTabButton, out gameplayTabImage, out gameplayTabText);
         CreateTabButton(tabsRoot, "\u56fe\u50cf", SettingsTab.Display, out displayTabButton, out displayTabImage, out displayTabText);
         CreateTabButton(tabsRoot, "\u97f3\u9891", SettingsTab.Audio, out audioTabButton, out audioTabImage, out audioTabText);
+        CreateTabButton(tabsRoot, "\u5feb\u6377\u952e", SettingsTab.Hotkeys, out hotkeyTabButton, out hotkeyTabImage, out hotkeyTabText);
     }
 
     private void CreateTabButton(RectTransform parent, string label, SettingsTab tab,
@@ -364,26 +383,49 @@ public class SettingsUIBuilder : MonoBehaviour
         contentRoot.offsetMin = new Vector2(22f, 102f);
         contentRoot.offsetMax = new Vector2(-12f, -102f);
 
-        GameObject scrollView = CreateUI("ScrollView", contentRoot);
-        RectTransform scrollRT = scrollView.GetComponent<RectTransform>();
+        RectTransform gameplayContent;
+        RectTransform displayContent;
+        RectTransform audioContent;
+        RectTransform hotkeyContent;
+
+        gameplayPage = CreateScrollablePage(contentRoot, "GameplayPage", out gameplayContent);
+        displayPage = CreateScrollablePage(contentRoot, "DisplayPage", out displayContent);
+        audioPage = CreateScrollablePage(contentRoot, "AudioPage", out audioContent);
+        hotkeyPage = CreateScrollablePage(contentRoot, "HotkeyPage", out hotkeyContent);
+
+        BuildGameplayPage(gameplayContent);
+        BuildDisplayPage(displayContent);
+        BuildAudioPage(audioContent);
+        BuildHotkeyPage(hotkeyContent);
+    }
+
+    private GameObject CreateScrollablePage(RectTransform parent, string name, out RectTransform contentRT)
+    {
+        GameObject page = CreateUI(name, parent);
+        Stretch(page);
+
+        GameObject scrollView = CreateUI("ScrollView", page.GetComponent<RectTransform>());
         Stretch(scrollView);
 
         ScrollRect scrollRect = scrollView.AddComponent<ScrollRect>();
         scrollRect.horizontal = false;
         scrollRect.vertical = true;
         scrollRect.movementType = ScrollRect.MovementType.Clamped;
+        scrollRect.scrollSensitivity = 30f;
 
-        GameObject viewport = CreateUI("Viewport", scrollRT);
+        GameObject viewport = CreateUI("Viewport", scrollView.GetComponent<RectTransform>());
         Stretch(viewport);
-        viewport.AddComponent<Image>().color = new Color(1f, 1f, 1f, 0f);
+        Image viewportImage = viewport.AddComponent<Image>();
+        viewportImage.color = new Color(1f, 1f, 1f, 0.004f);
         viewport.AddComponent<Mask>().showMaskGraphic = false;
 
         GameObject content = CreateUI("Content", viewport.GetComponent<RectTransform>());
-        RectTransform contentRT = content.GetComponent<RectTransform>();
+        contentRT = content.GetComponent<RectTransform>();
         contentRT.anchorMin = new Vector2(0f, 1f);
         contentRT.anchorMax = new Vector2(1f, 1f);
         contentRT.pivot = new Vector2(0.5f, 1f);
-        contentRT.sizeDelta = new Vector2(0f, 0f);
+        contentRT.anchoredPosition = Vector2.zero;
+        contentRT.sizeDelta = Vector2.zero;
 
         VerticalLayoutGroup layout = content.AddComponent<VerticalLayoutGroup>();
         layout.spacing = 20f;
@@ -400,29 +442,6 @@ public class SettingsUIBuilder : MonoBehaviour
         scrollRect.viewport = viewport.GetComponent<RectTransform>();
         scrollRect.content = contentRT;
 
-        gameplayPage = CreatePage(contentRT);
-        displayPage = CreatePage(contentRT);
-        audioPage = CreatePage(contentRT);
-
-        BuildGameplayPage(gameplayPage.GetComponent<RectTransform>());
-        BuildDisplayPage(displayPage.GetComponent<RectTransform>());
-        BuildAudioPage(audioPage.GetComponent<RectTransform>());
-    }
-
-    private GameObject CreatePage(RectTransform parent)
-    {
-        GameObject page = CreateUI("Page", parent);
-        VerticalLayoutGroup layout = page.AddComponent<VerticalLayoutGroup>();
-        layout.spacing = 20f;
-        layout.padding = new RectOffset(0, 0, 0, 0);
-        layout.childAlignment = TextAnchor.UpperLeft;
-        layout.childControlWidth = true;
-        layout.childControlHeight = false;
-        layout.childForceExpandWidth = true;
-        layout.childForceExpandHeight = false;
-
-        ContentSizeFitter fitter = page.AddComponent<ContentSizeFitter>();
-        fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
         return page;
     }
 
@@ -469,6 +488,22 @@ public class SettingsUIBuilder : MonoBehaviour
         CreateSelectorRow(parent, "\u9759\u97f3", out muteValueText,
             delegate { ToggleMute(); }, delegate { ToggleMute(); });
         CreateInfoRow(parent, out audioInfoText);
+    }
+
+    private void BuildHotkeyPage(RectTransform parent)
+    {
+        CreateSectionHeader(parent, "\u9762\u677f\u5feb\u6377\u952e");
+        CreateHotkeyBindingRow(parent, HotkeyActionId.OpenSettings);
+        CreateHotkeyBindingRow(parent, HotkeyActionId.ToggleInfoPanel);
+        CreateHotkeyBindingRow(parent, HotkeyActionId.ToggleInventory);
+        CreateHotkeyBindingRow(parent, HotkeyActionId.ToggleActionMenu);
+        CreateHotkeyBindingRow(parent, HotkeyActionId.ToggleTalentPanel);
+        CreateHotkeyBindingRow(parent, HotkeyActionId.ToggleMissionPanel);
+
+        CreateSectionHeader(parent, "\u5f00\u53d1\u8c03\u8bd5");
+        CreateHotkeyBindingRow(parent, HotkeyActionId.ToggleDebugConsole);
+
+        CreateInfoRow(parent, out hotkeyInfoText);
     }
 
     private void CreateBottomBar(RectTransform parent)
@@ -796,6 +831,7 @@ public class SettingsUIBuilder : MonoBehaviour
     {
         currentTab = tab;
         UpdateTabVisuals();
+        ForceRefreshLayout();
     }
 
     private void UpdateTabVisuals()
@@ -803,14 +839,17 @@ public class SettingsUIBuilder : MonoBehaviour
         bool gameplayActive = currentTab == SettingsTab.Gameplay;
         bool displayActive = currentTab == SettingsTab.Display;
         bool audioActive = currentTab == SettingsTab.Audio;
+        bool hotkeyActive = currentTab == SettingsTab.Hotkeys;
 
         if (gameplayPage != null) gameplayPage.SetActive(gameplayActive);
         if (displayPage != null) displayPage.SetActive(displayActive);
         if (audioPage != null) audioPage.SetActive(audioActive);
+        if (hotkeyPage != null) hotkeyPage.SetActive(hotkeyActive);
 
         ApplyTabState(gameplayTabImage, gameplayTabText, gameplayActive);
         ApplyTabState(displayTabImage, displayTabText, displayActive);
         ApplyTabState(audioTabImage, audioTabText, audioActive);
+        ApplyTabState(hotkeyTabImage, hotkeyTabText, hotkeyActive);
     }
 
     private void ApplyTabState(Image image, TextMeshProUGUI text, bool active)
@@ -849,6 +888,21 @@ public class SettingsUIBuilder : MonoBehaviour
         if (muteValueText != null) muteValueText.text = draftSettings.isMuted ? "\u5df2\u9759\u97f3" : "\u672a\u9759\u97f3";
         if (displayInfoText != null) displayInfoText.text = GetDisplayInfoText();
         if (audioInfoText != null) audioInfoText.text = GetAudioInfoText();
+        if (hotkeyInfoText != null) hotkeyInfoText.text = GetHotkeyInfoText();
+
+        foreach (HotkeyActionId action in HotkeyManager.GetConfigurableActions())
+        {
+            if (hotkeyValueTexts.TryGetValue(action, out TextMeshProUGUI hotkeyText) && hotkeyText != null)
+            {
+                string value = HotkeyManager.GetDisplayString(draftSettings, action);
+                if (isCapturingHotkey && pendingHotkeyAction == action)
+                {
+                    value = "\u8bf7\u6309\u65b0\u7ec4\u5408\u952e...";
+                }
+
+                hotkeyText.text = value;
+            }
+        }
 
         if (uiScaleSlider != null) uiScaleSlider.SetValueWithoutNotify(draftSettings.uiScale);
         if (masterVolumeSlider != null) masterVolumeSlider.SetValueWithoutNotify(draftSettings.masterVolume);
@@ -862,6 +916,26 @@ public class SettingsUIBuilder : MonoBehaviour
         }
 
         UpdateTabVisuals();
+        ForceRefreshLayout();
+    }
+
+    private void ForceRefreshLayout()
+    {
+        Canvas.ForceUpdateCanvases();
+
+        if (rootCanvasObj == null)
+        {
+            return;
+        }
+
+        RectTransform[] rects = rootCanvasObj.GetComponentsInChildren<RectTransform>(true);
+        for (int i = 0; i < rects.Length; i++)
+        {
+            if (rects[i] != null)
+            {
+                LayoutRebuilder.ForceRebuildLayoutImmediate(rects[i]);
+            }
+        }
     }
 
     private bool HasUnsavedChanges()
@@ -884,7 +958,14 @@ public class SettingsUIBuilder : MonoBehaviour
             || current.language != draftSettings.language
             || current.autoPlayInterval != draftSettings.autoPlayInterval
             || current.skipMode != draftSettings.skipMode
-            || current.fastForwardSpeed != draftSettings.fastForwardSpeed;
+            || current.fastForwardSpeed != draftSettings.fastForwardSpeed
+            || !HotkeyManager.AreEqual(current.openSettingsHotkey, draftSettings.openSettingsHotkey)
+            || !HotkeyManager.AreEqual(current.toggleInfoHotkey, draftSettings.toggleInfoHotkey)
+            || !HotkeyManager.AreEqual(current.toggleInventoryHotkey, draftSettings.toggleInventoryHotkey)
+            || !HotkeyManager.AreEqual(current.toggleActionMenuHotkey, draftSettings.toggleActionMenuHotkey)
+            || !HotkeyManager.AreEqual(current.toggleTalentHotkey, draftSettings.toggleTalentHotkey)
+            || !HotkeyManager.AreEqual(current.toggleMissionHotkey, draftSettings.toggleMissionHotkey)
+            || !HotkeyManager.AreEqual(current.toggleDebugConsoleHotkey, draftSettings.toggleDebugConsoleHotkey);
     }
 
     private void TryClose()
@@ -925,6 +1006,7 @@ public class SettingsUIBuilder : MonoBehaviour
     {
         CreateConfirmDialog("\u786e\u5b9a\u6062\u590d\u4e3a\u9ed8\u8ba4\u8bbe\u7f6e\u5417\uff1f", delegate
         {
+            CancelHotkeyCapture(false);
             if (draftSettings == null)
             {
                 draftSettings = new SettingsData();
@@ -1063,6 +1145,22 @@ public class SettingsUIBuilder : MonoBehaviour
             + "\n\u63d0\u793a\uFF1A\u4e3b\u97f3\u91cf\u4f1a\u540c\u65f6\u5f71\u54cd BGM \u4e0e\u97f3\u6548\uFF0C\u9759\u97f3\u4f1a\u76f4\u63a5\u5173\u95ed\u6240\u6709\u8f93\u51fa\u3002";
     }
 
+    private string GetHotkeyInfoText()
+    {
+        if (isCapturingHotkey)
+        {
+            return "\u6b63\u5728\u4e3a\u300c" + HotkeyManager.GetActionLabel(pendingHotkeyAction)
+                + "\u300d\u7b49\u5f85\u65b0\u5feb\u6377\u952e\uff1a\u76f4\u63a5\u6309\u4e0b\u76ee\u6807\u6309\u952e\u7ec4\u5408\uff0cEsc \u53d6\u6d88\uff0cBackspace \u6e05\u7a7a\u7ed1\u5b9a\u3002";
+        }
+
+        if (!string.IsNullOrEmpty(hotkeyFeedbackMessage))
+        {
+            return hotkeyFeedbackMessage;
+        }
+
+        return "\u63d0\u793a\uff1a\u652f\u6301 Ctrl / Shift / Alt + \u4e3b\u952e\u7684\u7ec4\u5408\u3002\u4fee\u6539\u540e\u9700\u70b9\u51fb\u201c\u5e94\u7528\u201d\u6216\u201c\u4fdd\u5b58\u5e76\u5173\u95ed\u201d\u624d\u4f1a\u751f\u6548\u3002";
+    }
+
     private string GetDialogueSkipHelpText()
     {
         string ruleText = draftSettings != null && draftSettings.skipMode == 1
@@ -1091,6 +1189,73 @@ public class SettingsUIBuilder : MonoBehaviour
         });
     }
 
+    private void BeginHotkeyCapture(HotkeyActionId action)
+    {
+        hotkeyFeedbackMessage = string.Empty;
+        isCapturingHotkey = true;
+        pendingHotkeyAction = action;
+        RefreshAllUI();
+    }
+
+    private void CancelHotkeyCapture(bool refresh = true)
+    {
+        isCapturingHotkey = false;
+        if (refresh)
+        {
+            RefreshAllUI();
+        }
+    }
+
+    private void HandleHotkeyCaptureInput()
+    {
+        if (Input.GetKeyDown(KeyCode.Escape))
+        {
+            CancelHotkeyCapture();
+            return;
+        }
+
+        if (Input.GetKeyDown(KeyCode.Backspace))
+        {
+            HotkeyManager.SetBinding(draftSettings, pendingHotkeyAction, new HotkeyBinding(KeyCode.None));
+            hotkeyFeedbackMessage = "\u5df2\u6e05\u7a7a\u300c" + HotkeyManager.GetActionLabel(pendingHotkeyAction) + "\u300d\u7684\u7ed1\u5b9a\u3002";
+            CancelHotkeyCapture();
+            return;
+        }
+
+        if (!HotkeyManager.TryGetRebindInput(out HotkeyBinding binding))
+        {
+            return;
+        }
+
+        IReadOnlyList<HotkeyActionId> actions = HotkeyManager.GetConfigurableActions();
+        for (int i = 0; i < actions.Count; i++)
+        {
+            HotkeyActionId action = actions[i];
+            if (action == pendingHotkeyAction)
+            {
+                continue;
+            }
+
+            if (HotkeyManager.AreEqual(HotkeyManager.GetBinding(draftSettings, action), binding))
+            {
+                hotkeyFeedbackMessage = "\u51b2\u7a81\uff1a\u300c" + HotkeyManager.GetActionLabel(action) + "\u300d\u5df2\u4f7f\u7528 " + binding.ToDisplayString() + "\u3002";
+                CancelHotkeyCapture(false);
+                RefreshAllUI();
+                return;
+            }
+        }
+
+        HotkeyManager.SetBinding(draftSettings, pendingHotkeyAction, binding);
+        hotkeyFeedbackMessage = "\u5df2\u5c06\u300c" + HotkeyManager.GetActionLabel(pendingHotkeyAction) + "\u300d\u8bbe\u4e3a " + binding.ToDisplayString() + "\u3002";
+        CancelHotkeyCapture();
+    }
+
+    private void ResetHotkeyToDefault(HotkeyActionId action)
+    {
+        HotkeyManager.SetBinding(draftSettings, action, HotkeyManager.GetDefaultBinding(action));
+        RefreshAllUI();
+    }
+
     private int WrapIndex(int index, int count)
     {
         if (count <= 0)
@@ -1109,6 +1274,26 @@ public class SettingsUIBuilder : MonoBehaviour
         }
 
         return index;
+    }
+
+    private void CreateHotkeyBindingRow(RectTransform parent, HotkeyActionId action)
+    {
+        GameObject row = CreateRow(parent, 92f);
+        RectTransform rowRT = row.GetComponent<RectTransform>();
+
+        CreateLabel(rowRT, "Label", HotkeyManager.GetActionLabel(action), 28f, TextPrimary,
+            new Vector2(0f, 0.5f), new Vector2(360f, 50f), new Vector2(46f, 0f), TextAlignmentOptions.Left).fontStyle = FontStyles.Bold;
+
+        RectTransform boxRT = CreateValueBox(rowRT, new Vector2(0.54f, 0.5f), new Vector2(520f, 58f), Vector2.zero);
+        TextMeshProUGUI valueText = CreateLabel(boxRT, "Value", "---", 24f, TextSecondary,
+            new Vector2(0.5f, 0.5f), new Vector2(460f, 42f), Vector2.zero, TextAlignmentOptions.Center);
+        valueText.fontStyle = FontStyles.Bold;
+        hotkeyValueTexts[action] = valueText;
+
+        CreateActionButton(rowRT, "\u4fee\u6539", new Vector2(140f, 56f), new Vector2(1140f, 0f),
+            new Color32(0xFB, 0xF2, 0xDE, 0xFF), AccentColor, delegate { BeginHotkeyCapture(action); });
+        CreateActionButton(rowRT, "\u9ed8\u8ba4", new Vector2(140f, 56f), new Vector2(1302f, 0f),
+            new Color32(0xF5, 0xE6, 0xC6, 0xFF), AccentColor, delegate { ResetHotkeyToDefault(action); });
     }
 
     private List<string> BuildResolutionOptions(SettingsData data)

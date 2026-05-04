@@ -30,6 +30,8 @@ public class CharacterCreationUI : MonoBehaviour
     private static readonly Color InputBgColor = new Color(0.2f, 0.2f, 0.25f, 1f);
     private static readonly Color ButtonColor = new Color(0.2f, 0.6f, 0.3f, 1f);
 
+    public bool IsOpen => canvasObj != null;
+
     public static void ApplyPendingCharacter(string playerName, int playerGender, string playerMajor)
     {
         PendingPlayerName = string.IsNullOrWhiteSpace(playerName) ? StartupFlowSettings.DefaultPlayerName : playerName.Trim();
@@ -72,6 +74,20 @@ public class CharacterCreationUI : MonoBehaviour
         DontDestroyOnLoad(gameObject);
     }
 
+    private void OnDestroy()
+    {
+        if (canvasObj != null)
+        {
+            Destroy(canvasObj);
+            canvasObj = null;
+        }
+
+        if (Instance == this)
+        {
+            Instance = null;
+        }
+    }
+
     public void Show()
     {
         UIFlowGuard.EnsureEventSystem();
@@ -79,6 +95,15 @@ public class CharacterCreationUI : MonoBehaviour
             return;
 
         BuildUI();
+    }
+
+    public void ForceClose()
+    {
+        if (canvasObj != null)
+        {
+            Destroy(canvasObj);
+            canvasObj = null;
+        }
     }
 
     private void BuildUI()

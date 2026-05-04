@@ -1552,10 +1552,10 @@ public class TitleScreenManager : MonoBehaviour
         badge.rectTransform.offsetMax = new Vector2(-10f, 0f);
         badge.fontStyle = FontStyles.Bold;
 
-        TextMeshProUGUI lockIcon = CreateTMPBlock(rect, "Lock", entry.IsUnlocked ? "" : "???", 28f, new Color(0.82f, 0.82f, 0.78f, 1f), TextAlignmentOptions.Center);
+        TextMeshProUGUI lockIcon = CreateTMPBlock(rect, "Lock", entry.IsUnlocked ? string.Empty : "未解锁", 28f, new Color(0.82f, 0.82f, 0.78f, 0.95f), TextAlignmentOptions.Center);
         StretchFull(lockIcon.rectTransform);
 
-        TextMeshProUGUI title = CreateTMPBlock(rect, "Title", entry.IsUnlocked ? entry.Title : "???", 22f, entry.IsUnlocked ? TutorialTextColor : new Color(0.92f, 0.92f, 0.92f, 0.95f), TextAlignmentOptions.Right);
+        TextMeshProUGUI title = CreateTMPBlock(rect, "Title", entry.IsUnlocked ? entry.Title : "？？？", 22f, entry.IsUnlocked ? TutorialTextColor : new Color(0.92f, 0.92f, 0.92f, 0.95f), TextAlignmentOptions.Right);
         title.rectTransform.anchorMin = new Vector2(0f, 0f);
         title.rectTransform.anchorMax = new Vector2(1f, 0.28f);
         title.rectTransform.offsetMin = new Vector2(10f, 8f);
@@ -1595,10 +1595,10 @@ public class TitleScreenManager : MonoBehaviour
         }
 
         gallerySectionTitle.text = galleryCategories[currentGalleryCategoryIndex].Name;
-        galleryPreviewTitle.text = entry.IsUnlocked ? entry.Title : "???";
-        galleryPreviewSubtitle.text = entry.IsUnlocked ? entry.Subtitle : "未解锁";
-        galleryPreviewDescription.text = entry.IsUnlocked ? entry.Description : "达成对应结局后，这里会显示完整的CG与结局说明。";
-        galleryOpenButton.interactable = entry.IsUnlocked;
+        galleryPreviewTitle.text = entry.IsUnlocked ? entry.Title : "？？？";
+        galleryPreviewSubtitle.text = entry.Subtitle;
+        galleryPreviewDescription.text = entry.Description;
+        galleryOpenButton.interactable = true;
         SetGalleryImage(galleryPreviewImage, galleryPreviewImageLabel, entry);
 
         int unlocked = 0;
@@ -1622,7 +1622,7 @@ public class TitleScreenManager : MonoBehaviour
     private void OpenSelectedGalleryEntry()
     {
         GalleryEntry entry = GetSelectedGalleryEntry();
-        if (entry == null || !entry.IsUnlocked)
+        if (entry == null)
         {
             return;
         }
@@ -1632,7 +1632,7 @@ public class TitleScreenManager : MonoBehaviour
         galleryViewerGroup.alpha = 1f;
         galleryViewerGroup.interactable = true;
         galleryViewerGroup.blocksRaycasts = true;
-        galleryViewerTitle.text = entry.Title;
+        galleryViewerTitle.text = entry.IsUnlocked ? entry.Title : "？？？";
         galleryViewerSubtitle.text = entry.Subtitle;
         galleryViewerDescription.text = entry.Description;
         SetGalleryImage(galleryViewerImage, galleryViewerImageLabel, entry);
@@ -1711,7 +1711,7 @@ public class TitleScreenManager : MonoBehaviour
             : null;
         image.sprite = sprite;
         image.color = sprite != null ? Color.white : new Color(0.16f, 0.16f, 0.16f, 0.98f);
-        label.text = sprite != null ? string.Empty : (entry.IsUnlocked ? "CG 已解锁" : "???");
+        label.text = sprite != null ? string.Empty : (entry.IsUnlocked ? "CG 已解锁" : "未解锁");
     }
 
     private static HashSet<string> LoadGallerySet(string key)
@@ -2227,6 +2227,7 @@ public class TitleScreenManager : MonoBehaviour
             CharacterCreationUI.Instance.OnCreationComplete -= HandleCharacterCreationComplete;
         }
 
+        GameplaySessionReset.ResetForFreshGame();
         BeginGameTransition(playOpeningStoryOnNewGame && !StartupFlowSettings.SkipOpeningStory);
     }
 

@@ -22,6 +22,13 @@ public class SettingsData
     public int autoPlayInterval = 1; // 0=short, 1=normal, 2=long
     public int skipMode = 0;         // 0=all dialogue, 1=read-only
     public int fastForwardSpeed = 2; // 0=x4, 1=x10, 2=x20, 3=x30
+    public HotkeyBinding openSettingsHotkey = new HotkeyBinding(KeyCode.F1);
+    public HotkeyBinding toggleInfoHotkey = new HotkeyBinding(KeyCode.Tab);
+    public HotkeyBinding toggleInventoryHotkey = new HotkeyBinding(KeyCode.I);
+    public HotkeyBinding toggleActionMenuHotkey = new HotkeyBinding(KeyCode.Alpha1);
+    public HotkeyBinding toggleTalentHotkey = new HotkeyBinding(KeyCode.Alpha2);
+    public HotkeyBinding toggleMissionHotkey = new HotkeyBinding(KeyCode.J);
+    public HotkeyBinding toggleDebugConsoleHotkey = new HotkeyBinding(KeyCode.D, true, true);
 
     public float GetEffectiveMasterVolume()
     {
@@ -56,6 +63,13 @@ public class SettingsData
         autoPlayInterval = 1;
         skipMode = 0;
         fastForwardSpeed = 2;
+        openSettingsHotkey = HotkeyManager.GetDefaultBinding(HotkeyActionId.OpenSettings);
+        toggleInfoHotkey = HotkeyManager.GetDefaultBinding(HotkeyActionId.ToggleInfoPanel);
+        toggleInventoryHotkey = HotkeyManager.GetDefaultBinding(HotkeyActionId.ToggleInventory);
+        toggleActionMenuHotkey = HotkeyManager.GetDefaultBinding(HotkeyActionId.ToggleActionMenu);
+        toggleTalentHotkey = HotkeyManager.GetDefaultBinding(HotkeyActionId.ToggleTalentPanel);
+        toggleMissionHotkey = HotkeyManager.GetDefaultBinding(HotkeyActionId.ToggleMissionPanel);
+        toggleDebugConsoleHotkey = HotkeyManager.GetDefaultBinding(HotkeyActionId.ToggleDebugConsole);
     }
 
     public SettingsData Clone()

@@ -31,6 +31,13 @@ public class SettingsManager : MonoBehaviour
     private const string KeyAutoPlayInterval = KeyPrefix + "AutoPlayInterval";
     private const string KeySkipMode = KeyPrefix + "SkipMode";
     private const string KeyFastForwardSpeed = KeyPrefix + "FastForwardSpeed";
+    private const string KeyOpenSettingsHotkey = KeyPrefix + "OpenSettingsHotkey";
+    private const string KeyToggleInfoHotkey = KeyPrefix + "ToggleInfoHotkey";
+    private const string KeyToggleInventoryHotkey = KeyPrefix + "ToggleInventoryHotkey";
+    private const string KeyToggleActionMenuHotkey = KeyPrefix + "ToggleActionMenuHotkey";
+    private const string KeyToggleTalentHotkey = KeyPrefix + "ToggleTalentHotkey";
+    private const string KeyToggleMissionHotkey = KeyPrefix + "ToggleMissionHotkey";
+    private const string KeyToggleDebugConsoleHotkey = KeyPrefix + "ToggleDebugConsoleHotkey";
     private readonly Dictionary<int, Vector2> canvasReferenceCache = new Dictionary<int, Vector2>();
     private int lastUIScaleRefreshFrame = -999;
 
@@ -65,7 +72,7 @@ public class SettingsManager : MonoBehaviour
 
     private void Update()
     {
-        if (!Input.GetKeyDown(KeyCode.F1))
+        if (!HotkeyManager.IsPressed(HotkeyActionId.OpenSettings))
         {
             return;
         }
@@ -122,6 +129,13 @@ public class SettingsManager : MonoBehaviour
         PlayerPrefs.SetInt(KeyAutoPlayInterval, settings.autoPlayInterval);
         PlayerPrefs.SetInt(KeySkipMode, settings.skipMode);
         PlayerPrefs.SetInt(KeyFastForwardSpeed, settings.fastForwardSpeed);
+        SaveHotkeyBinding(KeyOpenSettingsHotkey, settings.openSettingsHotkey);
+        SaveHotkeyBinding(KeyToggleInfoHotkey, settings.toggleInfoHotkey);
+        SaveHotkeyBinding(KeyToggleInventoryHotkey, settings.toggleInventoryHotkey);
+        SaveHotkeyBinding(KeyToggleActionMenuHotkey, settings.toggleActionMenuHotkey);
+        SaveHotkeyBinding(KeyToggleTalentHotkey, settings.toggleTalentHotkey);
+        SaveHotkeyBinding(KeyToggleMissionHotkey, settings.toggleMissionHotkey);
+        SaveHotkeyBinding(KeyToggleDebugConsoleHotkey, settings.toggleDebugConsoleHotkey);
 
         PlayerPrefs.Save();
         Debug.Log("[SettingsManager] 设置已保存");
@@ -146,6 +160,13 @@ public class SettingsManager : MonoBehaviour
         data.autoPlayInterval = PlayerPrefs.GetInt(KeyAutoPlayInterval, 1);
         data.skipMode = PlayerPrefs.GetInt(KeySkipMode, 0);
         data.fastForwardSpeed = PlayerPrefs.GetInt(KeyFastForwardSpeed, 2);
+        data.openSettingsHotkey = LoadHotkeyBinding(KeyOpenSettingsHotkey, HotkeyActionId.OpenSettings);
+        data.toggleInfoHotkey = LoadHotkeyBinding(KeyToggleInfoHotkey, HotkeyActionId.ToggleInfoPanel);
+        data.toggleInventoryHotkey = LoadHotkeyBinding(KeyToggleInventoryHotkey, HotkeyActionId.ToggleInventory);
+        data.toggleActionMenuHotkey = LoadHotkeyBinding(KeyToggleActionMenuHotkey, HotkeyActionId.ToggleActionMenu);
+        data.toggleTalentHotkey = LoadHotkeyBinding(KeyToggleTalentHotkey, HotkeyActionId.ToggleTalentPanel);
+        data.toggleMissionHotkey = LoadHotkeyBinding(KeyToggleMissionHotkey, HotkeyActionId.ToggleMissionPanel);
+        data.toggleDebugConsoleHotkey = LoadHotkeyBinding(KeyToggleDebugConsoleHotkey, HotkeyActionId.ToggleDebugConsole);
 
         CurrentSettings = Sanitize(data);
         Debug.Log("[SettingsManager] 设置已加载");
@@ -214,6 +235,13 @@ public class SettingsManager : MonoBehaviour
         settings.autoPlayInterval = Mathf.Clamp(settings.autoPlayInterval, 0, 2);
         settings.skipMode = Mathf.Clamp(settings.skipMode, 0, 1);
         settings.fastForwardSpeed = Mathf.Clamp(settings.fastForwardSpeed, 0, 3);
+        settings.openSettingsHotkey = SanitizeHotkey(settings.openSettingsHotkey, HotkeyActionId.OpenSettings);
+        settings.toggleInfoHotkey = SanitizeHotkey(settings.toggleInfoHotkey, HotkeyActionId.ToggleInfoPanel);
+        settings.toggleInventoryHotkey = SanitizeHotkey(settings.toggleInventoryHotkey, HotkeyActionId.ToggleInventory);
+        settings.toggleActionMenuHotkey = SanitizeHotkey(settings.toggleActionMenuHotkey, HotkeyActionId.ToggleActionMenu);
+        settings.toggleTalentHotkey = SanitizeHotkey(settings.toggleTalentHotkey, HotkeyActionId.ToggleTalentPanel);
+        settings.toggleMissionHotkey = SanitizeHotkey(settings.toggleMissionHotkey, HotkeyActionId.ToggleMissionPanel);
+        settings.toggleDebugConsoleHotkey = SanitizeHotkey(settings.toggleDebugConsoleHotkey, HotkeyActionId.ToggleDebugConsole);
 
         if (settings.resolutionWidth <= 0 || settings.resolutionHeight <= 0)
         {
@@ -301,5 +329,46 @@ public class SettingsManager : MonoBehaviour
         }
 
         lastUIScaleRefreshFrame = Time.frameCount;
+    }
+
+    private void SaveHotkeyBinding(string key, HotkeyBinding binding)
+    {
+        PlayerPrefs.SetString(key, JsonUtility.ToJson(binding));
+    }
+
+    private HotkeyBinding LoadHotkeyBinding(string key, HotkeyActionId action)
+    {
+        if (!PlayerPrefs.HasKey(key))
+        {
+            return HotkeyManager.GetDefaultBinding(action);
+        }
+
+        string json = PlayerPrefs.GetString(key, string.Empty);
+        if (string.IsNullOrEmpty(json))
+        {
+            return HotkeyManager.GetDefaultBinding(action);
+        }
+
+        try
+        {
+            HotkeyBinding binding = JsonUtility.FromJson<HotkeyBinding>(json);
+            return binding;
+        }
+        catch
+        {
+            return HotkeyManager.GetDefaultBinding(action);
+        }
+    }
+
+    private HotkeyBinding SanitizeHotkey(HotkeyBinding binding, HotkeyActionId action)
+    {
+        if (binding.key == KeyCode.LeftControl || binding.key == KeyCode.RightControl
+            || binding.key == KeyCode.LeftShift || binding.key == KeyCode.RightShift
+            || binding.key == KeyCode.LeftAlt || binding.key == KeyCode.RightAlt)
+        {
+            return HotkeyManager.GetDefaultBinding(action);
+        }
+
+        return binding;
     }
 }

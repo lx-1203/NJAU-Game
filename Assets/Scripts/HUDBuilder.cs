@@ -71,6 +71,11 @@ public class HUDBuilder : MonoBehaviour
     // --- 底部右下：快捷键提示 + 功能按钮 ---
     [HideInInspector] public GameObject hotkeyPanel;
     [HideInInspector] public Button btnFeature;                // 右下角功能按钮（关注新同学→社交）
+    [HideInInspector] public TextMeshProUGUI hotkeyInfoText;
+    [HideInInspector] public TextMeshProUGUI hotkeyInventoryText;
+    [HideInInspector] public TextMeshProUGUI hotkeyActionText;
+    [HideInInspector] public TextMeshProUGUI hotkeyTalentText;
+    [HideInInspector] public TextMeshProUGUI hotkeyMenuText;
 
     // --- 旧接口兼容（HUDManager 引用） ---
     [HideInInspector] public TextMeshProUGUI timeText;
@@ -301,15 +306,14 @@ public class HUDBuilder : MonoBehaviour
         iconRT.anchorMax = new Vector2(0, 0.5f);
         iconRT.pivot = new Vector2(1, 0.5f);
         iconRT.anchoredPosition = new Vector2(-8, 0);
-        iconRT.sizeDelta = new Vector2(30, 30);
+        iconRT.sizeDelta = new Vector2(42, 30);
         apIcon = iconObj.AddComponent<Image>();
         apIcon.color = APBarYellow;
-        // 闪电符号
-        CreateTMPText("LightningSymbol", iconObj.transform, "AP",
-            20f, TextDark, TextAlignmentOptions.Center, new Vector2(30, 30));
+        CreateTMPText("LightningSymbol", iconObj.transform, "行",
+            18f, TextDark, TextAlignmentOptions.Center, new Vector2(42, 30));
 
-        // AP 数值文本（中央叠加）
-        apText = CreateTMPText("APText", apContainer.transform, "20",
+        // 行动点数值文本（中央叠加）
+        apText = CreateTMPText("APText", apContainer.transform, "20 行动点",
             22f, TextDark, TextAlignmentOptions.Center, new Vector2(300, 40));
         StretchToParent(apText.rectTransform);
         apText.fontStyle = FontStyles.Bold;
@@ -716,7 +720,7 @@ public class HUDBuilder : MonoBehaviour
         rt.anchorMax = new Vector2(1, 0);
         rt.pivot = new Vector2(1, 0);
         rt.anchoredPosition = new Vector2(-18, 96);
-        rt.sizeDelta = new Vector2(430, 32);
+        rt.sizeDelta = new Vector2(640, 32);
 
         Image bg = hotkeyPanel.AddComponent<Image>();
         bg.color = HotkeyBg;
@@ -730,11 +734,12 @@ public class HUDBuilder : MonoBehaviour
         hlg.childForceExpandWidth = false;
         hlg.childForceExpandHeight = true;
 
-        CreateHotkeyLabel(hotkeyPanel.transform, "Tab", "信息");
-        CreateHotkeyLabel(hotkeyPanel.transform, "I", "背包");
-        CreateHotkeyLabel(hotkeyPanel.transform, "1", "行动");
-        CreateHotkeyLabel(hotkeyPanel.transform, "2", "成长");
-        CreateHotkeyLabel(hotkeyPanel.transform, "Esc", "菜单");
+        hotkeyInfoText = CreateHotkeyLabel(hotkeyPanel.transform, HotkeyActionId.ToggleInfoPanel, "信息");
+        hotkeyInventoryText = CreateHotkeyLabel(hotkeyPanel.transform, HotkeyActionId.ToggleInventory, "背包");
+        hotkeyActionText = CreateHotkeyLabel(hotkeyPanel.transform, HotkeyActionId.ToggleActionMenu, "行动");
+        hotkeyTalentText = CreateHotkeyLabel(hotkeyPanel.transform, HotkeyActionId.ToggleTalentPanel, "成长");
+        hotkeyMenuText = CreateHotkeyLabel(hotkeyPanel.transform, HotkeyActionId.OpenSettings, "设置");
+        RefreshHotkeyHints();
 
         // 右下功能按钮
         GameObject featureObj = new GameObject("FeatureButton");
@@ -774,11 +779,32 @@ public class HUDBuilder : MonoBehaviour
         btnSocial = btnFeature;
     }
 
-    private void CreateHotkeyLabel(Transform parent, string key, string label)
+    public void RefreshHotkeyHints()
     {
-        GameObject obj = new GameObject("Hotkey_" + key);
+        RefreshHotkeyLabel(hotkeyInfoText, HotkeyActionId.ToggleInfoPanel);
+        RefreshHotkeyLabel(hotkeyInventoryText, HotkeyActionId.ToggleInventory);
+        RefreshHotkeyLabel(hotkeyActionText, HotkeyActionId.ToggleActionMenu);
+        RefreshHotkeyLabel(hotkeyTalentText, HotkeyActionId.ToggleTalentPanel);
+        RefreshHotkeyLabel(hotkeyMenuText, HotkeyActionId.OpenSettings);
+    }
+
+    private void RefreshHotkeyLabel(TextMeshProUGUI text, HotkeyActionId action)
+    {
+        if (text == null)
+        {
+            return;
+        }
+
+        SettingsData settings = SettingsManager.Instance != null ? SettingsManager.Instance.CurrentSettings : null;
+        string keyText = HotkeyManager.GetDisplayString(settings, action);
+        text.text = string.IsNullOrEmpty(keyText) ? "-" : keyText;
+    }
+
+    private TextMeshProUGUI CreateHotkeyLabel(Transform parent, HotkeyActionId action, string label)
+    {
+        GameObject obj = new GameObject("Hotkey_" + action);
         obj.transform.SetParent(parent, false);
-        obj.AddComponent<RectTransform>().sizeDelta = new Vector2(70, 24);
+        obj.AddComponent<RectTransform>().sizeDelta = new Vector2(108, 24);
 
         HorizontalLayoutGroup hlg = obj.AddComponent<HorizontalLayoutGroup>();
         hlg.spacing = 3f;
@@ -789,15 +815,16 @@ public class HUDBuilder : MonoBehaviour
         // Key 背景
         GameObject keyObj = new GameObject("Key");
         keyObj.transform.SetParent(obj.transform, false);
-        keyObj.AddComponent<RectTransform>().sizeDelta = new Vector2(30, 20);
+        keyObj.AddComponent<RectTransform>().sizeDelta = new Vector2(58, 20);
         Image keyBg = keyObj.AddComponent<Image>();
         keyBg.color = new Color(0.35f, 0.35f, 0.40f, 0.9f);
-        CreateTMPText("KeyText", keyObj.transform, key,
-            11f, TextWhite, TextAlignmentOptions.Center, new Vector2(30, 20));
+        TextMeshProUGUI keyText = CreateTMPText("KeyText", keyObj.transform, HotkeyManager.GetDisplayString(SettingsManager.Instance != null ? SettingsManager.Instance.CurrentSettings : null, action),
+            11f, TextWhite, TextAlignmentOptions.Center, new Vector2(58, 20));
 
         // Label
         CreateTMPText("LabelText", obj.transform, label,
-            13f, new Color(0.75f, 0.75f, 0.80f), TextAlignmentOptions.Left, new Vector2(36, 24));
+            13f, new Color(0.75f, 0.75f, 0.80f), TextAlignmentOptions.Left, new Vector2(46, 24));
+        return keyText;
     }
 
     // ====================================================================

@@ -31,6 +31,7 @@ public class LocationManager : MonoBehaviour
         { "教超", LocationId.Store },
         { "快递站", LocationId.ExpressStation },
         { "外卖站", LocationId.TakeoutStation },
+        { "体育馆", LocationId.TakeoutStation },
         { "社团活动室", LocationId.TeachingBuilding },
         { "实验室", LocationId.TeachingBuilding },
         { "校门口", LocationId.TakeoutStation },
@@ -152,14 +153,14 @@ public class LocationManager : MonoBehaviour
             worldCenterX: 177f, worldMinX: 165f, worldMaxX: 190f
         ));
 
-        // 外卖站
+        // 体育馆
         Register(new LocationDefinition(
             LocationId.TakeoutStation,
-            "外卖站", "点外卖的取餐点。懒得去食堂时的救星。",
-            "🛵", new Vector2(0.65f, 0.15f),
-            new string[] { "order_takeout" },
+            "体育馆", "室内运动和球类活动的主要场所。适合在这里系统锻炼。",
+            "🏟", new Vector2(0.65f, 0.15f),
+            new string[] { "exercise" },
             new LocationId[] { LocationId.ExpressStation, LocationId.Dormitory },
-            "全天开放",
+            "06:00-22:00",
             worldCenterX: 202f, worldMinX: 190f, worldMaxX: 215f
         ));
     }

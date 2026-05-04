@@ -107,6 +107,7 @@ public class SemesterSummaryUI : MonoBehaviour
             return;
         }
 
+        if (!UIFlowGuard.PrepareForExclusiveWindow(UIFlowGuard.WindowSemesterSummary)) return;
         currentData = data;
         isShowing = true;
 

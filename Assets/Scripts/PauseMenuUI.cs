@@ -64,11 +64,8 @@ public class PauseMenuUI : MonoBehaviour
             return;
         }
 
-        if (CanOpenPauseFromCurrentState())
-        {
-            MarkEscapeHandledThisFrame();
-            Open();
-        }
+        MarkEscapeHandledThisFrame();
+        Open(forceOpen: true);
     }
 
     private void OnDestroy()
@@ -91,10 +88,22 @@ public class PauseMenuUI : MonoBehaviour
 
     public void Open()
     {
-        // 避免在其他高层UI打开时弹出
+        Open(forceOpen: false);
+    }
+
+    public void Open(bool forceOpen)
+    {
         if (isOpen) return;
 
-        if (!CanOpenPauseFromCurrentState()) return;
+        if (forceOpen)
+        {
+            UIFlowGuard.CleanupBlockingUIExcept(UIFlowGuard.WindowPauseMenu);
+        }
+        else
+        {
+            if (!CanOpenPauseFromCurrentState()) return;
+            if (!UIFlowGuard.PrepareForExclusiveWindow(UIFlowGuard.WindowPauseMenu)) return;
+        }
 
         isOpen = true;
         Time.timeScale = 0f;
@@ -130,13 +139,13 @@ public class PauseMenuUI : MonoBehaviour
 
     public static bool TryOpenFromEscape()
     {
-        if (Instance == null || Instance.isOpen || !CanOpenPauseFromCurrentState())
+        if (Instance == null || Instance.isOpen)
         {
             return false;
         }
 
         MarkEscapeHandledThisFrame();
-        Instance.Open();
+        Instance.Open(forceOpen: true);
         return true;
     }
 
@@ -177,10 +186,6 @@ public class PauseMenuUI : MonoBehaviour
 
     private static bool CanOpenPauseFromCurrentState()
     {
-        if (ConfirmDialogUI.Instance != null && ConfirmDialogUI.Instance.IsOpen) return false;
-        if (PhysicalTestUI.Instance != null && PhysicalTestUI.Instance.IsOpen) return false;
-        if (ExamUIManager.Instance != null && ExamUIManager.Instance.IsExamActive) return false;
-
         return true;
     }
 

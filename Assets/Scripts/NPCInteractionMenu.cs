@@ -87,6 +87,8 @@ public class NPCInteractionMenu : MonoBehaviour
     /// </summary>
     public void ShowForNPC(string npcId)
     {
+        if (!UIFlowGuard.PrepareForExclusiveWindow(UIFlowGuard.WindowNpcInteraction)) return;
+
         if (npcId == null)
         {
             // NPC 列表选择模式

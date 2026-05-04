@@ -18,7 +18,7 @@ Supported names:
 - `Library`
 - `Playground`
 - `ExpressStation`
-- `TakeoutStation`
+- `TakeoutStation` (当前游戏内显示为“体育馆”)
 
 If this prefab exists, it replaces the generated placeholder for that location.
 Place the prefab's visual root around local X = 0; it will be spawned at that

@@ -26,6 +26,9 @@ public class TurnManager : MonoBehaviour
     /// <summary>回合推进完成后触发</summary>
     public event Action<GameState.RoundAdvanceResult> OnRoundAdvanced;
 
+    /// <summary>新回合开始阶段完成后触发（课表/开场阻塞 UI 结束后）。</summary>
+    public event Action OnRoundStartPhaseCompleted;
+
     /// <summary>游戏结束（毕业）时触发</summary>
     public event Action OnGameCompleted;
 
@@ -432,6 +435,7 @@ public class TurnManager : MonoBehaviour
         }
 
         TryCertificateExams();
+        OnRoundStartPhaseCompleted?.Invoke();
     }
 
     private void EnsureCourseScheduleUI()

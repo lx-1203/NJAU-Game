@@ -11,7 +11,7 @@ public class NPCManagerEditor : Editor
         EditorGUILayout.Space();
         EditorGUILayout.LabelField("Scene Anchor Workflow", EditorStyles.boldLabel);
         EditorGUILayout.HelpBox(
-            "Use LocationSceneController preview location + NPCManager preview time slot to show editable NPC anchors in Scene view. Move or scale those NPC objects directly, and runtime NPC placement will reuse them.",
+            "Use LocationSceneController preview location plus NPCManager preview time slot to show editable NPC anchors in Scene view. By default, the preview time slot now follows the startup action points so the editor preview matches a fresh game start. Move or scale those NPC objects directly, and runtime NPC placement will reuse them.",
             MessageType.Info);
 
         NPCManager manager = (NPCManager)target;

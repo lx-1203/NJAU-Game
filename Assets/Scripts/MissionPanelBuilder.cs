@@ -34,8 +34,8 @@ public class MissionPanelBuilder : MonoBehaviour
 
     private void Update()
     {
-        // 按J键打开/关闭任务面板
-        if (Input.GetKeyDown(KeyCode.J))
+        // 快捷键打开/关闭任务面板
+        if (HotkeyManager.IsPressed(HotkeyActionId.ToggleMissionPanel))
         {
             if (isOpen)
             {
@@ -178,6 +178,7 @@ public class MissionPanelBuilder : MonoBehaviour
             return;
         }
 
+        if (!UIFlowGuard.PrepareForExclusiveWindow(UIFlowGuard.WindowMissionPanel)) return;
         canvas.gameObject.SetActive(true);
         isOpen = true;
         RefreshPanel();

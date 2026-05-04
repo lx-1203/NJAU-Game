@@ -41,6 +41,7 @@ public class DebugConsoleUI : MonoBehaviour
     {
         "属性",
         "时间",
+        "新闻",
         "结局",
         "事件",
         "NPC",
@@ -80,6 +81,7 @@ public class DebugConsoleUI : MonoBehaviour
 
     private AttributeModule attributeModule;
     private TimeModule timeModule;
+    private NewsModule newsModule;
     private EndingSimModule endingSimModule;
     private EventModule eventModule;
     private NPCModule npcModule;
@@ -393,6 +395,7 @@ public class DebugConsoleUI : MonoBehaviour
     {
         attributeModule = CreateModulePanel<AttributeModule>("AttributePanel");
         timeModule = CreateModulePanel<TimeModule>("TimePanel");
+        newsModule = CreateModulePanel<NewsModule>("NewsPanel");
         endingSimModule = CreateModulePanel<EndingSimModule>("EndingPanel");
         eventModule = CreateModulePanel<EventModule>("EventPanel");
         npcModule = CreateModulePanel<NPCModule>("NPCPanel");
@@ -461,13 +464,14 @@ public class DebugConsoleUI : MonoBehaviour
         {
             case 0: attributeModule?.Refresh(); break;
             case 1: timeModule?.Refresh(); break;
-            case 2: endingSimModule?.Refresh(); break;
-            case 3: eventModule?.Refresh(); break;
-            case 4: npcModule?.Refresh(); break;
-            case 5: economyModule?.Refresh(); break;
-            case 6: formulaModule?.Refresh(); break;
-            case 7: snapshotModule?.Refresh(); break;
-            case 8: logModule?.Refresh(); break;
+            case 2: newsModule?.Refresh(); break;
+            case 3: endingSimModule?.Refresh(); break;
+            case 4: eventModule?.Refresh(); break;
+            case 5: npcModule?.Refresh(); break;
+            case 6: economyModule?.Refresh(); break;
+            case 7: formulaModule?.Refresh(); break;
+            case 8: snapshotModule?.Refresh(); break;
+            case 9: logModule?.Refresh(); break;
         }
     }
 

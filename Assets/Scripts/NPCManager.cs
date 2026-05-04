@@ -28,6 +28,7 @@ public class NPCManager : MonoBehaviour
 
     [Header("Editor Preview")]
     [SerializeField] private bool previewInEditMode = true;
+    [SerializeField] private bool syncPreviewTimeSlotWithStartupState = true;
     [SerializeField] private TimeSlot previewTimeSlot = TimeSlot.Evening;
 #if UNITY_EDITOR
     private bool editorRefreshQueued;
@@ -313,6 +314,7 @@ public class NPCManager : MonoBehaviour
         }
 
         int previewPlayerGender = Mathf.Clamp(StartupFlowSettings.DefaultPlayerGender, 0, 1);
+        TimeSlot activePreviewTimeSlot = ResolveEditorPreviewTimeSlot();
         Transform anchorRoot = GetOrCreateSceneAnchorRoot();
         HashSet<string> visibleAnchorKeys = new HashSet<string>();
         List<NPCData> visibleNpcs = new List<NPCData>();
@@ -328,7 +330,7 @@ public class NPCManager : MonoBehaviour
             for (int j = 0; j < npc.schedule.Length; j++)
             {
                 NPCScheduleEntry entry = npc.schedule[j];
-                if (entry == null || !System.Enum.TryParse(entry.timeSlot, true, out TimeSlot slot) || slot != previewTimeSlot)
+                if (entry == null || !System.Enum.TryParse(entry.timeSlot, true, out TimeSlot slot) || slot != activePreviewTimeSlot)
                 {
                     continue;
                 }
@@ -355,8 +357,8 @@ public class NPCManager : MonoBehaviour
             Vector3 defaultPosition = new Vector3(x, spawnY, 0f);
 
             bool created;
-            NPCSceneAnchor anchor = GetOrCreateSceneAnchor(anchorRoot, npc.id, profile.locationId, previewTimeSlot, out created);
-            visibleAnchorKeys.Add(BuildAnchorKey(npc.id, profile.locationId, previewTimeSlot));
+            NPCSceneAnchor anchor = GetOrCreateSceneAnchor(anchorRoot, npc.id, profile.locationId, activePreviewTimeSlot, out created);
+            visibleAnchorKeys.Add(BuildAnchorKey(npc.id, profile.locationId, activePreviewTimeSlot));
 
             if (created)
             {
@@ -368,7 +370,20 @@ public class NPCManager : MonoBehaviour
             anchor.ApplyPreviewVisual(npc);
         }
 
-        SetAnchorPreviewVisibility(true, profile.locationId, previewTimeSlot, visibleAnchorKeys);
+        SetAnchorPreviewVisibility(true, profile.locationId, activePreviewTimeSlot, visibleAnchorKeys);
+    }
+
+    private TimeSlot ResolveEditorPreviewTimeSlot()
+    {
+        if (!syncPreviewTimeSlotWithStartupState)
+        {
+            return previewTimeSlot;
+        }
+
+        int startupActionPoints = Mathf.Max(0, StartupFlowSettings.InitialActionPoints);
+        if (startupActionPoints >= 4) return TimeSlot.Morning;
+        if (startupActionPoints >= 2) return TimeSlot.Afternoon;
+        return TimeSlot.Evening;
     }
 
     private void QueueEditorPreviewRefresh()

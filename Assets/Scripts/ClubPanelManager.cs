@@ -74,6 +74,7 @@ public class ClubPanelManager : MonoBehaviour
     {
         if (builder == null || builder.panelRoot == null) return;
 
+        if (!UIFlowGuard.PrepareForExclusiveWindow(UIFlowGuard.WindowClubPanel)) return;
         builder.panelRoot.SetActive(true);
 
         // 同时显示遮罩

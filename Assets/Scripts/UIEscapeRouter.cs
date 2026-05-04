@@ -10,11 +10,11 @@ public class UIEscapeRouter : MonoBehaviour
             return;
         }
 
-        if (UIBackActionRouter.TryHandleBackAction())
+        if (PauseMenuUI.Instance != null && !PauseMenuUI.Instance.IsOpen && PauseMenuUI.TryOpenFromEscape())
         {
             return;
         }
 
-        PauseMenuUI.TryOpenFromEscape();
+        UIBackActionRouter.TryHandleBackAction();
     }
 }
