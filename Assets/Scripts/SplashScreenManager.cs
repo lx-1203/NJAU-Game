@@ -203,6 +203,7 @@ public class SplashScreenManager : MonoBehaviour
         videoFailed = true;
         Debug.LogWarning("[SplashScreen] Video source: " + resolvedVideoPath);
         Debug.LogWarning("[SplashScreen] 视频播放失败: " + message);
+        ShowSplashNotification("启动视频播放失败", "开场视频没有成功播放，系统将直接进入后续 Logo 流程。");
     }
 
     #endregion
@@ -295,6 +296,7 @@ public class SplashScreenManager : MonoBehaviour
             if (!videoFinished && !videoFailed)
             {
                 Debug.LogWarning("[SplashScreen] 视频播放超时，继续后续流程");
+                ShowSplashNotification("启动视频超时", "开场视频等待时间过长，系统已自动跳到后续流程。");
             }
 
             videoPlayer.Stop();
@@ -302,6 +304,7 @@ public class SplashScreenManager : MonoBehaviour
         else
         {
             Debug.LogWarning("[SplashScreen] 视频未成功播放，直接进入 Logo 流程");
+            ShowSplashNotification("跳过启动视频", "没有成功准备好启动视频，系统将直接进入 Logo 流程。");
             canSkip = true;
             skipEnabledTime = Time.time + MIN_VIEW_TIME;
         }
@@ -421,6 +424,7 @@ public class SplashScreenManager : MonoBehaviour
         else
         {
             Debug.LogWarning("[SplashScreen] 未设置下一场景！");
+            ShowSplashNotification("无法继续启动", "没有设置下一个场景名称，启动流程暂时停在这里。");
         }
     }
 
@@ -468,6 +472,7 @@ public class SplashScreenManager : MonoBehaviour
         }
 
         Debug.LogWarning("[SplashScreen] No startup video found in StreamingAssets.");
+        ShowSplashNotification("未找到启动视频", "没有找到开场视频资源，系统会直接进入 Logo 流程。");
     }
 
     private string[] GetVideoCandidates()
@@ -489,6 +494,14 @@ public class SplashScreenManager : MonoBehaviour
         return fileName.Equals(alternateFileName, StringComparison.OrdinalIgnoreCase)
             ? new[] { fileName }
             : new[] { fileName, alternateFileName };
+    }
+
+    private void ShowSplashNotification(string title, string message)
+    {
+        if (MissionUI.Instance != null)
+        {
+            MissionUI.Instance.ShowSystemNotification(title, message, new Color(0.82f, 0.38f, 0.30f), 3f);
+        }
     }
 
     #endregion

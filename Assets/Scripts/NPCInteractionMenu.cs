@@ -87,7 +87,11 @@ public class NPCInteractionMenu : MonoBehaviour
     /// </summary>
     public void ShowForNPC(string npcId)
     {
-        if (!UIFlowGuard.PrepareForExclusiveWindow(UIFlowGuard.WindowNpcInteraction)) return;
+        if (!UIFlowGuard.PrepareForExclusiveWindow(UIFlowGuard.WindowNpcInteraction))
+        {
+            ShowSystemNotification("互动菜单未打开", "当前还有其他关键界面占用操作，先处理完再来和角色互动吧。", new Color(0.82f, 0.38f, 0.30f), 2.8f);
+            return;
+        }
 
         if (npcId == null)
         {
@@ -100,9 +104,11 @@ public class NPCInteractionMenu : MonoBehaviour
             ShowNPCActions(npcId);
         }
 
+        isMenuOpen = true;
         maskObj.SetActive(true);
         menuPanel.SetActive(true);
-        isMenuOpen = true;
+        UITransitionUtility.Show(this, maskObj, Vector2.zero, 1f, 0.18f);
+        UITransitionUtility.Show(this, menuPanel, new Vector2(0f, 26f), 0.985f, 0.22f);
     }
 
     /// <summary>
@@ -110,10 +116,17 @@ public class NPCInteractionMenu : MonoBehaviour
     /// </summary>
     public void CloseMenu()
     {
-        if (menuPanel != null) menuPanel.SetActive(false);
-        if (maskObj != null) maskObj.SetActive(false);
         isMenuOpen = false;
         currentNpcId = null;
+        if (maskObj != null)
+        {
+            UITransitionUtility.Hide(this, maskObj, Vector2.zero, 1f, 0.14f);
+        }
+
+        if (menuPanel != null)
+        {
+            UITransitionUtility.Hide(this, menuPanel, new Vector2(0f, 18f), 0.99f, 0.16f);
+        }
     }
 
     // ====================================================================
@@ -139,6 +152,7 @@ public class NPCInteractionMenu : MonoBehaviour
         Button maskBtn = maskObj.AddComponent<Button>();
         maskBtn.transition = Selectable.Transition.None;
         maskBtn.onClick.AddListener(CloseMenu);
+        UITransitionUtility.EnsureCanvasGroup(maskObj);
 
         // ===== 中央面板 =====
         menuPanel = new GameObject("InteractionMenuPanel");
@@ -153,6 +167,7 @@ public class NPCInteractionMenu : MonoBehaviour
 
         Image panelBg = menuPanel.AddComponent<Image>();
         panelBg.color = PanelBg;
+        UITransitionUtility.EnsureCanvasGroup(menuPanel);
 
         // 面板垂直布局
         VerticalLayoutGroup vlg = menuPanel.AddComponent<VerticalLayoutGroup>();
@@ -332,6 +347,7 @@ public class NPCInteractionMenu : MonoBehaviour
         if (NPCDatabase.Instance == null)
         {
             Debug.LogWarning("[NPCInteractionMenu] NPCDatabase 未初始化");
+            CreateInfoLabel("角色资料还在整理中，稍后再来看看吧。");
             return;
         }
 
@@ -359,7 +375,7 @@ public class NPCInteractionMenu : MonoBehaviour
 
         if (visibleNPCs.Count == 0)
         {
-            CreateInfoLabel("当前地点没有可互动的NPC");
+            CreateInfoLabel("这个时段这里还没有人停留。\n先去别的地点转转，或等下一轮再回来看看。");
             return;
         }
 
@@ -396,6 +412,7 @@ public class NPCInteractionMenu : MonoBehaviour
         if (NPCDatabase.Instance == null || AffinitySystem.Instance == null)
         {
             Debug.LogWarning("[NPCInteractionMenu] 系统未就绪");
+            CreateInfoLabel("社交系统还没准备好，稍后再试一次。");
             return;
         }
 
@@ -403,6 +420,7 @@ public class NPCInteractionMenu : MonoBehaviour
         if (npcData == null)
         {
             Debug.LogWarning($"[NPCInteractionMenu] 未找到NPC: {npcId}");
+            CreateInfoLabel("没能找到这位角色的数据，换一个目标试试。");
             return;
         }
 
@@ -453,7 +471,7 @@ public class NPCInteractionMenu : MonoBehaviour
 
         if (!hasGeneralAction)
         {
-            CreateInfoLabel("当前没有更多可用社交行动");
+            CreateInfoLabel("这位角色当前没有更多可执行的互动了。\n可以先聊天、提升好感，或等行动点恢复后再来。");
         }
 
         // ===== 恋爱系统按钮 =====
@@ -572,7 +590,11 @@ public class NPCInteractionMenu : MonoBehaviour
     /// </summary>
     private void AddRomanceButtons(string npcId)
     {
-        if (RomanceSystem.Instance == null) return;
+        if (RomanceSystem.Instance == null)
+        {
+            CreateRomanceInfoLabel("恋爱系统暂时未就绪");
+            return;
+        }
 
         RomanceState state = RomanceSystem.Instance.GetRomanceState(npcId);
 
@@ -726,6 +748,7 @@ public class NPCInteractionMenu : MonoBehaviour
         if (ConfessionSystem.Instance == null)
         {
             Debug.LogWarning("[NPCInteractionMenu] ConfessionSystem 未初始化");
+            ShowSystemNotification("互动未完成", "恋爱系统暂时没有准备好，这次无法继续。", new Color(0.82f, 0.38f, 0.30f), 2.8f);
             return;
         }
 
@@ -748,6 +771,7 @@ public class NPCInteractionMenu : MonoBehaviour
             if (!GameState.Instance.ConsumeActionPoint(1))
             {
                 Debug.Log("[NPCInteractionMenu] 行动点不足，无法约会");
+                ShowSystemNotification("无法约会", "剩余行动点不够，先完成回合内其他安排吧。", new Color(0.82f, 0.38f, 0.30f), 2.8f);
                 return;
             }
         }
@@ -763,6 +787,11 @@ public class NPCInteractionMenu : MonoBehaviour
         }
 
         Debug.Log($"[NPCInteractionMenu] {npcId} 约会完成！健康度+10，心情+5");
+        ShowSystemNotification(
+            "约会完成",
+            BuildDateSummary(npcId),
+            new Color(0.82f, 0.44f, 0.68f),
+            3.2f);
 
         // 关闭菜单
         CloseMenu();
@@ -775,12 +804,14 @@ public class NPCInteractionMenu : MonoBehaviour
     {
         if (DialogueSystem.Instance == null)
         {
+            ShowSystemNotification("对话未开始", "对话系统暂时没有准备好，这次还不能继续交流。", new Color(0.82f, 0.38f, 0.30f), 2.8f);
             return;
         }
 
         NPCData npcData = NPCDatabase.Instance != null ? NPCDatabase.Instance.GetNPC(npcId) : null;
         if (npcData == null)
         {
+            ShowSystemNotification("对话未开始", "没有找到这位角色的对话资料，换个人聊聊吧。", new Color(0.82f, 0.38f, 0.30f), 2.8f);
             return;
         }
 
@@ -843,7 +874,11 @@ public class NPCInteractionMenu : MonoBehaviour
     /// <summary>分手按钮点击回调</summary>
     private void OnBreakupClicked(string npcId)
     {
-        if (RomanceSystem.Instance == null) return;
+        if (RomanceSystem.Instance == null)
+        {
+            ShowSystemNotification("关系未变更", "恋爱系统暂时没有准备好，这次无法处理分手。", new Color(0.82f, 0.38f, 0.30f), 2.8f);
+            return;
+        }
 
         // 直接执行分手（不弹确认窗，保持代码简洁）
         RomanceSystem.Instance.TriggerPlayerBreakup(npcId);
@@ -856,6 +891,11 @@ public class NPCInteractionMenu : MonoBehaviour
         }
 
         Debug.Log($"[NPCInteractionMenu] 玩家主动与 {displayName} 分手");
+        ShowSystemNotification(
+            "关系结束",
+            $"{displayName} 的恋爱关系已结束。\n心情-10，压力+5，后续还需要经历一段冷却期。",
+            new Color(0.78f, 0.32f, 0.32f),
+            3.4f);
 
         // 关闭菜单
         CloseMenu();
@@ -872,7 +912,11 @@ public class NPCInteractionMenu : MonoBehaviour
     private void TriggerDateDialogue(string npcId)
 
     {
-        if (DialogueSystem.Instance == null) return;
+        if (DialogueSystem.Instance == null)
+        {
+            ShowSystemNotification("约会已完成", "约会结果已经结算，但对话演出暂时没有成功载入。", new Color(0.86f, 0.62f, 0.24f), 2.8f);
+            return;
+        }
 
         // 尝试加载 JSON 对话
         string dialogueId = $"{npcId}_date";
@@ -974,14 +1018,28 @@ public class NPCInteractionMenu : MonoBehaviour
 
     private void OnSocialActionClicked(string npcId, string actionId)
     {
-        if (AffinitySystem.Instance == null) return;
+        if (AffinitySystem.Instance == null)
+        {
+            ShowSystemNotification("互动未完成", "社交系统暂时没有准备好，这次无法结算互动结果。", new Color(0.82f, 0.38f, 0.30f), 2.8f);
+            return;
+        }
+
+        NPCData npcData = NPCDatabase.Instance != null ? NPCDatabase.Instance.GetNPC(npcId) : null;
+        SocialActionDefinition actionDef = NPCDatabase.Instance != null ? NPCDatabase.Instance.GetSocialAction(actionId) : null;
+        if (npcData == null || actionDef == null)
+        {
+            ShowSystemNotification("互动未完成", "这次社交行动没有成功载入，换个目标再试试。", new Color(0.82f, 0.38f, 0.30f), 2.8f);
+            return;
+        }
+
+        if (!CanExecuteSocialAction(npcId, actionDef, out string failReason))
+        {
+            ShowSystemNotification("无法互动", failReason, new Color(0.82f, 0.38f, 0.30f), 2.8f);
+            return;
+        }
 
         // 执行互动
         int delta = AffinitySystem.Instance.ExecuteInteraction(npcId, actionId);
-
-        // 获取 NPC 数据
-        NPCData npcData = NPCDatabase.Instance != null ? NPCDatabase.Instance.GetNPC(npcId) : null;
-        SocialActionDefinition actionDef = NPCDatabase.Instance != null ? NPCDatabase.Instance.GetSocialAction(actionId) : null;
 
         // 通过 NPCEventHub 发布对话请求
         if (NPCEventHub.Instance != null && npcData != null)
@@ -1007,8 +1065,132 @@ public class NPCInteractionMenu : MonoBehaviour
             NPCEventHub.Instance.RaiseSocialFeedback(npcId, actionDisplayName, delta);
         }
 
+        ShowSystemNotification(
+            actionDef.displayName,
+            BuildSocialActionSummary(npcData, actionDef, delta),
+            delta >= 0 ? new Color(0.28f, 0.72f, 0.86f) : new Color(0.84f, 0.46f, 0.32f),
+            3.1f);
+
         // 关闭菜单
         CloseMenu();
+    }
+
+    private bool CanExecuteSocialAction(string npcId, SocialActionDefinition actionDef, out string failReason)
+    {
+        failReason = "这次互动暂时无法执行。";
+        if (actionDef == null)
+        {
+            failReason = "社交动作资料缺失，稍后再试。";
+            return false;
+        }
+
+        if (AffinitySystem.Instance == null)
+        {
+            failReason = "社交系统还没准备好。";
+            return false;
+        }
+
+        NPCRelationshipData rel = AffinitySystem.Instance.GetRelationship(npcId);
+        if ((int)rel.level < (int)actionDef.GetMinAffinityLevel())
+        {
+            failReason = $"关系还不够近，需要先达到“{GetLevelDisplayName(actionDef.GetMinAffinityLevel())}”。";
+            return false;
+        }
+
+        GameState gs = GameState.Instance;
+        if (gs != null && gs.ActionPoints < actionDef.actionPointCost)
+        {
+            failReason = $"行动点不足，需要 {actionDef.actionPointCost} AP。";
+            return false;
+        }
+
+        if (gs != null && gs.Money < actionDef.moneyCost)
+        {
+            failReason = $"当前资金不够，这次互动需要 ¥{actionDef.moneyCost}。";
+            return false;
+        }
+
+        return true;
+    }
+
+    private string BuildSocialActionSummary(NPCData npcData, SocialActionDefinition actionDef, int affinityDelta)
+    {
+        List<string> parts = new List<string>();
+        string targetName = npcData != null ? npcData.displayName : "对方";
+        parts.Add($"你和 {targetName} 完成了“{actionDef.displayName}”。");
+
+        string affinityText = affinityDelta >= 0 ? $"好感+{affinityDelta}" : $"好感{affinityDelta}";
+        parts.Add(affinityText);
+
+        if (actionDef.actionPointCost > 0)
+        {
+            parts.Add($"AP-{actionDef.actionPointCost}");
+        }
+
+        if (actionDef.moneyCost > 0)
+        {
+            parts.Add($"花费¥{actionDef.moneyCost}");
+        }
+
+        string effectSummary = BuildAttributeEffectSummary(actionDef.attributeEffects);
+        if (!string.IsNullOrEmpty(effectSummary))
+        {
+            parts.Add(effectSummary);
+        }
+
+        return string.Join("，", parts);
+    }
+
+    private string BuildDateSummary(string npcId)
+    {
+        string displayName = GetNPCDisplayName(npcId);
+        int health = RomanceSystem.Instance != null ? RomanceSystem.Instance.GetRomanceHealth(npcId) : 0;
+        return $"{displayName} 的约会顺利收尾。\n恋爱健康度+10，心情+5，当前健康度 {health}/100。";
+    }
+
+    private string BuildAttributeEffectSummary(AttributeEffect[] effects)
+    {
+        if (effects == null || effects.Length == 0)
+        {
+            return string.Empty;
+        }
+
+        List<string> parts = new List<string>();
+        for (int i = 0; i < effects.Length; i++)
+        {
+            AttributeEffect effect = effects[i];
+            if (effect == null || string.IsNullOrEmpty(effect.attributeName) || effect.amount == 0)
+            {
+                continue;
+            }
+
+            string sign = effect.amount >= 0 ? "+" : string.Empty;
+            parts.Add($"{effect.attributeName}{sign}{effect.amount}");
+        }
+
+        return parts.Count > 0 ? string.Join("，", parts) : string.Empty;
+    }
+
+    private string GetNPCDisplayName(string npcId)
+    {
+        if (NPCDatabase.Instance != null)
+        {
+            NPCData npcData = NPCDatabase.Instance.GetNPC(npcId);
+            if (npcData != null)
+            {
+                return npcData.displayName;
+            }
+        }
+
+        return "对方";
+    }
+
+    private void ShowSystemNotification(string title, string message, Color color, float duration)
+    {
+        if (MissionUI.Instance != null)
+        {
+            MissionUI.Instance.ShowSystemNotification(title, message, color, duration);
+        }
     }
 
     // ====================================================================

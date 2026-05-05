@@ -4,7 +4,7 @@
       "id": "CE_001",
       "eventType": "Conditional",
       "title": "奖学金通知",
-      "description": "你的努力终于得到了回报！学校发来了奖学金通知。",
+      "description": "你的努力终于得到了回报，辅导员把一则正式通知转到了你的手机上。",
       "priority": 2,
       "isForced": false,
       "isRepeatable": false,
@@ -13,6 +13,7 @@
         "semester": 0,
         "roundMin": 0,
         "roundMax": 0,
+        "specificRounds": [],
         "attributeConditions": [
           { "attributeName": "学力", "comparison": ">=", "value": 50 }
         ],
@@ -21,16 +22,19 @@
         "affinityConditions": [],
         "requiredEventIds": [],
         "excludedEventIds": [],
+        "requiredFlags": [],
+        "excludedFlags": [ "scholarship_received" ],
         "minDarkness": 0,
         "triggerBehavior": "",
+        "triggerChance": 1,
         "phase": "RoundEnd"
       },
       "dialogues": [
         {
           "speaker": "班主任",
           "lines": [
-            "恭喜你！你的学习成绩优秀，获得了本学期的奖学金。",
-            "希望你再接再厉，继续保持！"
+            "奖学金名单刚下来，你在里面。",
+            "这次是你自己一点点把结果挣出来的。"
           ],
           "portraitId": ""
         }
@@ -41,7 +45,1549 @@
         { "type": "attribute", "target": "心情", "value": 15, "description": "心情 +15" },
         { "type": "flag", "target": "scholarship_received", "value": 1, "description": "获得奖学金标记" }
       ],
-      "chainEventIds": []
+      "chainEventIds": [],
+      "presentation": {
+        "sceneKey": "scholarship_notice",
+        "sceneDisplayName": "奖学金通知",
+        "locationId": "TeachingBuilding",
+        "backgroundResourcePath": "",
+        "protagonistPortraitResourcePath": "",
+        "npcPortraitResourcePath": "",
+        "backgroundSlotName": "BG_Notice_Office",
+        "protagonistSlotName": "PC_Notice_Default",
+        "npcSlotName": "NPC_HomeroomTeacher_Notice"
+      }
+    },
+    {
+      "id": "CE_101",
+      "eventType": "Conditional",
+      "title": "军训后的加练认可",
+      "description": "你在操场上的认真没有白费，教官记住了你。",
+      "priority": 2,
+      "isForced": false,
+      "isRepeatable": false,
+      "trigger": {
+        "year": 1,
+        "semester": 1,
+        "roundMin": 1,
+        "roundMax": 2,
+        "specificRounds": [],
+        "attributeConditions": [],
+        "minMoney": 0,
+        "maxMoney": 0,
+        "affinityConditions": [],
+        "requiredEventIds": [ "ME_001" ],
+        "excludedEventIds": [],
+        "requiredFlags": [ "military_training_diligent" ],
+        "excludedFlags": [ "ce_101_done" ],
+        "minDarkness": 0,
+        "triggerBehavior": "",
+        "triggerChance": 1,
+        "phase": "RoundEnd"
+      },
+      "dialogues": [
+        {
+          "speaker": "教官",
+          "lines": [
+            "今天最后一组动作，你站得最稳。",
+            "别把这种劲头只用在军训上，到了大学照样能撑起很多事。"
+          ],
+          "portraitId": ""
+        }
+      ],
+      "choices": [],
+      "defaultEffects": [
+        { "type": "attribute", "target": "领导力", "value": 2, "description": "领导力 +2" },
+        { "type": "attribute", "target": "体魄", "value": 2, "description": "体魄 +2" },
+        { "type": "flag", "target": "ce_101_done", "value": 1, "description": "军训认可事件完成" }
+      ],
+      "chainEventIds": [],
+      "presentation": {
+        "sceneKey": "training_recognition",
+        "sceneDisplayName": "操场边的短谈",
+        "locationId": "Playground",
+        "backgroundResourcePath": "",
+        "protagonistPortraitResourcePath": "",
+        "npcPortraitResourcePath": "",
+        "backgroundSlotName": "BG_Training_Dusk",
+        "protagonistSlotName": "PC_Training_Dusk",
+        "npcSlotName": "NPC_Instructor_Dusk"
+      }
+    },
+    {
+      "id": "CE_102",
+      "eventType": "Conditional",
+      "title": "划水被点名",
+      "description": "你以为没人注意，但教官比你想的更会记人。",
+      "priority": 2,
+      "isForced": false,
+      "isRepeatable": false,
+      "trigger": {
+        "year": 1,
+        "semester": 1,
+        "roundMin": 1,
+        "roundMax": 2,
+        "specificRounds": [],
+        "attributeConditions": [],
+        "minMoney": 0,
+        "maxMoney": 0,
+        "affinityConditions": [],
+        "requiredEventIds": [ "ME_001" ],
+        "excludedEventIds": [],
+        "requiredFlags": [ "military_training_slack" ],
+        "excludedFlags": [ "ce_102_done" ],
+        "minDarkness": 0,
+        "triggerBehavior": "",
+        "triggerChance": 1,
+        "phase": "RoundEnd"
+      },
+      "dialogues": [
+        {
+          "speaker": "教官",
+          "lines": [
+            "别以为站在队尾就不会被看见。",
+            "今天少站的那一会儿，明天全都给我补回来。"
+          ],
+          "portraitId": ""
+        }
+      ],
+      "choices": [],
+      "defaultEffects": [
+        { "type": "attribute", "target": "压力", "value": 6, "description": "压力 +6" },
+        { "type": "attribute", "target": "心情", "value": -3, "description": "心情 -3" },
+        { "type": "flag", "target": "ce_102_done", "value": 1, "description": "划水被点名事件完成" }
+      ],
+      "chainEventIds": [],
+      "presentation": {
+        "sceneKey": "training_warning",
+        "sceneDisplayName": "加练名单",
+        "locationId": "Playground",
+        "backgroundResourcePath": "",
+        "protagonistPortraitResourcePath": "",
+        "npcPortraitResourcePath": "",
+        "backgroundSlotName": "BG_Training_Warning",
+        "protagonistSlotName": "PC_Training_Warning",
+        "npcSlotName": "NPC_Instructor_Warning"
+      }
+    },
+    {
+      "id": "CE_103",
+      "eventType": "Conditional",
+      "title": "同学主动来搭话",
+      "description": "你在军训时伸出的手，让别人记住了你不是只顾自己的人。",
+      "priority": 2,
+      "isForced": false,
+      "isRepeatable": false,
+      "trigger": {
+        "year": 1,
+        "semester": 1,
+        "roundMin": 1,
+        "roundMax": 2,
+        "specificRounds": [],
+        "attributeConditions": [],
+        "minMoney": 0,
+        "maxMoney": 0,
+        "affinityConditions": [],
+        "requiredEventIds": [ "ME_001" ],
+        "excludedEventIds": [],
+        "requiredFlags": [ "military_training_helper" ],
+        "excludedFlags": [ "ce_103_done" ],
+        "minDarkness": 0,
+        "triggerBehavior": "",
+        "triggerChance": 1,
+        "phase": "RoundEnd"
+      },
+      "dialogues": [
+        {
+          "speaker": "同学",
+          "lines": [
+            "刚才要不是你扶了一把，我真要在操场上栽下去了。",
+            "以后一起去食堂吗？感觉跟你待着挺安心的。"
+          ],
+          "portraitId": ""
+        }
+      ],
+      "choices": [],
+      "defaultEffects": [
+        { "type": "attribute", "target": "魅力", "value": 2, "description": "魅力 +2" },
+        { "type": "attribute", "target": "心情", "value": 4, "description": "心情 +4" },
+        { "type": "flag", "target": "ce_103_done", "value": 1, "description": "军训结识同学事件完成" }
+      ],
+      "chainEventIds": [],
+      "presentation": {
+        "sceneKey": "training_friendship_seed",
+        "sceneDisplayName": "操场边的感谢",
+        "locationId": "Playground",
+        "backgroundResourcePath": "",
+        "protagonistPortraitResourcePath": "",
+        "npcPortraitResourcePath": "",
+        "backgroundSlotName": "BG_Training_Friendship",
+        "protagonistSlotName": "PC_Training_Friendship",
+        "npcSlotName": "NPC_Student_Friendship"
+      }
+    },
+    {
+      "id": "CE_104",
+      "eventType": "Conditional",
+      "title": "竞选发言后的余温",
+      "description": "你站上讲台之后，班里对你的印象开始成形。",
+      "priority": 2,
+      "isForced": false,
+      "isRepeatable": false,
+      "trigger": {
+        "year": 1,
+        "semester": 1,
+        "roundMin": 2,
+        "roundMax": 3,
+        "specificRounds": [],
+        "attributeConditions": [],
+        "minMoney": 0,
+        "maxMoney": 0,
+        "affinityConditions": [],
+        "requiredEventIds": [ "ME_002" ],
+        "excludedEventIds": [],
+        "requiredFlags": [ "class_committee_candidate" ],
+        "excludedFlags": [ "ce_104_done" ],
+        "minDarkness": 0,
+        "triggerBehavior": "",
+        "triggerChance": 1,
+        "phase": "RoundEnd"
+      },
+      "dialogues": [
+        {
+          "speaker": "旁白",
+          "lines": [
+            "发言结束后，教室里有人开始记你的名字。",
+            "不管结果如何，你已经把自己放到了被看见的位置上。"
+          ],
+          "portraitId": ""
+        }
+      ],
+      "choices": [],
+      "defaultEffects": [
+        { "type": "attribute", "target": "领导力", "value": 2, "description": "领导力 +2" },
+        { "type": "attribute", "target": "魅力", "value": 1, "description": "魅力 +1" },
+        { "type": "flag", "target": "ce_104_done", "value": 1, "description": "竞选余温事件完成" }
+      ],
+      "chainEventIds": [],
+      "presentation": {
+        "sceneKey": "committee_speech_afterglow",
+        "sceneDisplayName": "班会后的教室",
+        "locationId": "TeachingBuilding",
+        "backgroundResourcePath": "",
+        "protagonistPortraitResourcePath": "",
+        "npcPortraitResourcePath": "",
+        "backgroundSlotName": "BG_Classroom_AfterMeeting",
+        "protagonistSlotName": "PC_CommitteeSpeech",
+        "npcSlotName": "NPC_Classroom_Audience"
+      }
+    },
+    {
+      "id": "CE_105",
+      "eventType": "Conditional",
+      "title": "低调旁观的收获",
+      "description": "你没有站上去，但也因此看清了很多人说话和做事的方式。",
+      "priority": 2,
+      "isForced": false,
+      "isRepeatable": false,
+      "trigger": {
+        "year": 1,
+        "semester": 1,
+        "roundMin": 2,
+        "roundMax": 3,
+        "specificRounds": [],
+        "attributeConditions": [],
+        "minMoney": 0,
+        "maxMoney": 0,
+        "affinityConditions": [],
+        "requiredEventIds": [ "ME_002" ],
+        "excludedEventIds": [],
+        "requiredFlags": [ "class_committee_low_profile" ],
+        "excludedFlags": [ "ce_105_done" ],
+        "minDarkness": 0,
+        "triggerBehavior": "",
+        "triggerChance": 1,
+        "phase": "RoundEnd"
+      },
+      "dialogues": [
+        {
+          "speaker": "旁白",
+          "lines": [
+            "你坐在下面，反而更容易看到谁在真诚，谁只是在表演。",
+            "这份旁观让你悄悄长出了一点判断人的能力。"
+          ],
+          "portraitId": ""
+        }
+      ],
+      "choices": [],
+      "defaultEffects": [
+        { "type": "attribute", "target": "领导力", "value": 1, "description": "领导力 +1" },
+        { "type": "attribute", "target": "心情", "value": 2, "description": "心情 +2" },
+        { "type": "flag", "target": "ce_105_done", "value": 1, "description": "低调旁观事件完成" }
+      ],
+      "chainEventIds": [],
+      "presentation": {
+        "sceneKey": "committee_observer_path",
+        "sceneDisplayName": "班会结束后的空座位",
+        "locationId": "TeachingBuilding",
+        "backgroundResourcePath": "",
+        "protagonistPortraitResourcePath": "",
+        "npcPortraitResourcePath": "",
+        "backgroundSlotName": "BG_Classroom_Observer",
+        "protagonistSlotName": "PC_Observer_Path",
+        "npcSlotName": "NPC_Classmates_Observer"
+      }
+    },
+    {
+      "id": "CE_106",
+      "eventType": "Conditional",
+      "title": "拉票的人脉回声",
+      "description": "你没有直接去争位置，但在联系和协调里积累了别的东西。",
+      "priority": 2,
+      "isForced": false,
+      "isRepeatable": false,
+      "trigger": {
+        "year": 1,
+        "semester": 1,
+        "roundMin": 2,
+        "roundMax": 3,
+        "specificRounds": [],
+        "attributeConditions": [],
+        "minMoney": 0,
+        "maxMoney": 0,
+        "affinityConditions": [],
+        "requiredEventIds": [ "ME_002" ],
+        "excludedEventIds": [],
+        "requiredFlags": [ "class_committee_helper" ],
+        "excludedFlags": [ "ce_106_done" ],
+        "minDarkness": 0,
+        "triggerBehavior": "",
+        "triggerChance": 1,
+        "phase": "RoundEnd"
+      },
+      "dialogues": [
+        {
+          "speaker": "旁白",
+          "lines": [
+            "你在同学之间来回奔走，消息传得比你想的还快。",
+            "有人开始把你当作一个可靠的联络点。"
+          ],
+          "portraitId": ""
+        }
+      ],
+      "choices": [],
+      "defaultEffects": [
+        { "type": "attribute", "target": "魅力", "value": 2, "description": "魅力 +2" },
+        { "type": "attribute", "target": "领导力", "value": 1, "description": "领导力 +1" },
+        { "type": "flag", "target": "ce_106_done", "value": 1, "description": "拉票协助事件完成" }
+      ],
+      "chainEventIds": [],
+      "presentation": {
+        "sceneKey": "committee_helper_path",
+        "sceneDisplayName": "走廊里的拉票",
+        "locationId": "TeachingBuilding",
+        "backgroundResourcePath": "",
+        "protagonistPortraitResourcePath": "",
+        "npcPortraitResourcePath": "",
+        "backgroundSlotName": "BG_Corridor_Campaign",
+        "protagonistSlotName": "PC_Campaign_Helper",
+        "npcSlotName": "NPC_Classmates_Campaign"
+      }
+    },
+    {
+      "id": "CE_201",
+      "eventType": "Conditional",
+      "title": "闭馆前的硬刷",
+      "description": "你把自己钉在桌前，直到图书馆管理员开始一排排关灯。",
+      "priority": 2,
+      "isForced": false,
+      "isRepeatable": false,
+      "trigger": {
+        "year": 1,
+        "semester": 1,
+        "roundMin": 3,
+        "roundMax": 4,
+        "specificRounds": [],
+        "attributeConditions": [],
+        "minMoney": 0,
+        "maxMoney": 0,
+        "affinityConditions": [],
+        "requiredEventIds": [ "ME_003" ],
+        "excludedEventIds": [],
+        "requiredFlags": [ "midterm_focus_track" ],
+        "excludedFlags": [ "ce_201_done" ],
+        "minDarkness": 0,
+        "triggerBehavior": "",
+        "triggerChance": 1,
+        "phase": "RoundEnd"
+      },
+      "dialogues": [
+        {
+          "speaker": "图书馆管理员",
+          "lines": [
+            "同学，要闭馆了，最后一排也该收书了。",
+            "你这几天总坐在这里，别把自己逼得太狠。"
+          ],
+          "portraitId": ""
+        },
+        {
+          "speaker": "旁白",
+          "lines": [
+            "你合上写满批注的纸页，才发现窗外已经彻底黑了。",
+            "疲惫是真的，但那种一点点把题目啃开的踏实感也是真的。"
+          ],
+          "portraitId": ""
+        }
+      ],
+      "choices": [],
+      "defaultEffects": [
+        { "type": "attribute", "target": "学力", "value": 4, "description": "学力 +4" },
+        { "type": "attribute", "target": "压力", "value": 4, "description": "压力 +4" },
+        { "type": "attribute", "target": "领导力", "value": 1, "description": "领导力 +1" },
+        { "type": "flag", "target": "ce_201_done", "value": 1, "description": "硬刷备考事件完成" }
+      ],
+      "chainEventIds": [],
+      "presentation": {
+        "sceneKey": "midterm_focus_library",
+        "sceneDisplayName": "图书馆闭馆前",
+        "locationId": "Library",
+        "backgroundResourcePath": "",
+        "protagonistPortraitResourcePath": "",
+        "npcPortraitResourcePath": "",
+        "backgroundSlotName": "BG_Library_ClosingTime",
+        "protagonistSlotName": "PC_Library_Study",
+        "npcSlotName": "NPC_Librarian_ClosingTime"
+      }
+    },
+    {
+      "id": "CE_202",
+      "eventType": "Conditional",
+      "title": "抱团复习的小插曲",
+      "description": "复习小组不只是共享答案，也会把每个人的紧张和松动放大出来。",
+      "priority": 2,
+      "isForced": false,
+      "isRepeatable": false,
+      "trigger": {
+        "year": 1,
+        "semester": 1,
+        "roundMin": 3,
+        "roundMax": 4,
+        "specificRounds": [],
+        "attributeConditions": [],
+        "minMoney": 0,
+        "maxMoney": 0,
+        "affinityConditions": [],
+        "requiredEventIds": [ "ME_003" ],
+        "excludedEventIds": [],
+        "requiredFlags": [ "midterm_group_track" ],
+        "excludedFlags": [ "ce_202_done" ],
+        "minDarkness": 0,
+        "triggerBehavior": "",
+        "triggerChance": 1,
+        "phase": "RoundEnd"
+      },
+      "dialogues": [
+        {
+          "speaker": "室友",
+          "lines": [
+            "你刚刚讲那道题的时候，大家居然真的都听懂了。",
+            "本来快要散掉的气氛，又被你拽回来了。"
+          ],
+          "portraitId": ""
+        },
+        {
+          "speaker": "旁白",
+          "lines": [
+            "你忽然意识到，复习不只是把知识讲清楚，也是把一群快慌掉的人重新稳住。",
+            "这种被需要的感觉，让疲惫都变得没那么难扛。"
+          ],
+          "portraitId": ""
+        }
+      ],
+      "choices": [],
+      "defaultEffects": [
+        { "type": "attribute", "target": "学力", "value": 2, "description": "学力 +2" },
+        { "type": "attribute", "target": "魅力", "value": 3, "description": "魅力 +3" },
+        { "type": "attribute", "target": "领导力", "value": 2, "description": "领导力 +2" },
+        { "type": "flag", "target": "ce_202_done", "value": 1, "description": "抱团复习事件完成" }
+      ],
+      "chainEventIds": [],
+      "presentation": {
+        "sceneKey": "midterm_group_dorm",
+        "sceneDisplayName": "宿舍夜谈复习",
+        "locationId": "Dormitory",
+        "backgroundResourcePath": "",
+        "protagonistPortraitResourcePath": "",
+        "npcPortraitResourcePath": "",
+        "backgroundSlotName": "BG_Dorm_GroupStudy_Night",
+        "protagonistSlotName": "PC_GroupStudy_Default",
+        "npcSlotName": "NPC_Roommates_GroupStudy"
+      }
+    },
+    {
+      "id": "CE_203",
+      "eventType": "Conditional",
+      "title": "临场路线的意外线索",
+      "description": "你没有把自己逼进死胡同，反而在松弛里捡到了一点真正有用的东西。",
+      "priority": 2,
+      "isForced": false,
+      "isRepeatable": false,
+      "trigger": {
+        "year": 1,
+        "semester": 1,
+        "roundMin": 3,
+        "roundMax": 4,
+        "specificRounds": [],
+        "attributeConditions": [],
+        "minMoney": 0,
+        "maxMoney": 0,
+        "affinityConditions": [],
+        "requiredEventIds": [ "ME_003" ],
+        "excludedEventIds": [],
+        "requiredFlags": [ "midterm_lucky_track" ],
+        "excludedFlags": [ "ce_203_done" ],
+        "minDarkness": 0,
+        "triggerBehavior": "",
+        "triggerChance": 1,
+        "phase": "RoundEnd"
+      },
+      "dialogues": [
+        {
+          "speaker": "旁白",
+          "lines": [
+            "你只是顺手翻了翻往年资料，却刚好看到了老师常出的那类题型。",
+            "原来所谓运气，很多时候只是你没有把自己困住。"
+          ],
+          "portraitId": ""
+        }
+      ],
+      "choices": [],
+      "defaultEffects": [
+        { "type": "attribute", "target": "幸运", "value": 3, "description": "幸运 +3" },
+        { "type": "attribute", "target": "心情", "value": 3, "description": "心情 +3" },
+        { "type": "attribute", "target": "学力", "value": 2, "description": "学力 +2" },
+        { "type": "flag", "target": "ce_203_done", "value": 1, "description": "临场备考事件完成" }
+      ],
+      "chainEventIds": [],
+      "presentation": {
+        "sceneKey": "midterm_lucky_hint",
+        "sceneDisplayName": "考前偶得",
+        "locationId": "Dormitory",
+        "backgroundResourcePath": "",
+        "protagonistPortraitResourcePath": "",
+        "npcPortraitResourcePath": "",
+        "backgroundSlotName": "BG_Dorm_PreExam_Hint",
+        "protagonistSlotName": "PC_PreExam_Lucky",
+        "npcSlotName": "NPC_InnerVoice_LuckyHint"
+      }
+    },
+    {
+      "id": "CE_301",
+      "eventType": "Conditional",
+      "title": "硬刷没有白熬",
+      "description": "你把自己压到极限换来的，不只是及格线，而是一种终于踩实地面的感觉。",
+      "priority": 2,
+      "isForced": false,
+      "isRepeatable": false,
+      "trigger": {
+        "year": 1,
+        "semester": 1,
+        "roundMin": 3,
+        "roundMax": 4,
+        "specificRounds": [],
+        "attributeConditions": [],
+        "minMoney": 0,
+        "maxMoney": 0,
+        "affinityConditions": [],
+        "requiredEventIds": [ "ME_003" ],
+        "excludedEventIds": [],
+        "requiredFlags": [ "midterm_focus_track", "midterm_exam_completed", "midterm_exam_all_passed" ],
+        "excludedFlags": [ "ce_301_done" ],
+        "minDarkness": 0,
+        "triggerBehavior": "",
+        "triggerChance": 1,
+        "phase": "RoundEnd"
+      },
+      "dialogues": [
+        {
+          "speaker": "旁白",
+          "lines": [
+            "成绩出来那一刻，你第一反应不是兴奋，而是终于能把肩膀放下来。",
+            "那些闭馆前还在硬撑的夜晚，至少没有白熬。"
+          ],
+          "portraitId": ""
+        }
+      ],
+      "choices": [],
+      "defaultEffects": [
+        { "type": "attribute", "target": "学力", "value": 2, "description": "学力 +2" },
+        { "type": "attribute", "target": "心情", "value": 3, "description": "心情 +3" },
+        { "type": "flag", "target": "ce_301_done", "value": 1, "description": "硬刷路线期中回报已结算" }
+      ],
+      "chainEventIds": [],
+      "presentation": {
+        "sceneKey": "midterm_focus_result_pass",
+        "sceneDisplayName": "成绩页亮起",
+        "locationId": "Dormitory",
+        "backgroundResourcePath": "",
+        "protagonistPortraitResourcePath": "",
+        "npcPortraitResourcePath": "",
+        "backgroundSlotName": "BG_Dorm_GradeScreen_Glow",
+        "protagonistSlotName": "PC_GradeScreen_Relief",
+        "npcSlotName": "NPC_InnerVoice_ResultPass"
+      }
+    },
+    {
+      "id": "CE_302",
+      "eventType": "Conditional",
+      "title": "复习小组撑住了",
+      "description": "这次通过的，不只是成绩，还有你和别人一起把局面稳住的能力。",
+      "priority": 2,
+      "isForced": false,
+      "isRepeatable": false,
+      "trigger": {
+        "year": 1,
+        "semester": 1,
+        "roundMin": 3,
+        "roundMax": 4,
+        "specificRounds": [],
+        "attributeConditions": [],
+        "minMoney": 0,
+        "maxMoney": 0,
+        "affinityConditions": [],
+        "requiredEventIds": [ "ME_003" ],
+        "excludedEventIds": [],
+        "requiredFlags": [ "midterm_group_track", "midterm_exam_completed", "midterm_exam_all_passed" ],
+        "excludedFlags": [ "ce_302_done" ],
+        "minDarkness": 0,
+        "triggerBehavior": "",
+        "triggerChance": 1,
+        "phase": "RoundEnd"
+      },
+      "dialogues": [
+        {
+          "speaker": "室友",
+          "lines": [
+            "过了，居然大家都过了。",
+            "那几晚要不是你一直拽着节奏，我们估计早就散掉了。"
+          ],
+          "portraitId": ""
+        }
+      ],
+      "choices": [],
+      "defaultEffects": [
+        { "type": "attribute", "target": "魅力", "value": 2, "description": "魅力 +2" },
+        { "type": "attribute", "target": "领导力", "value": 2, "description": "领导力 +2" },
+        { "type": "flag", "target": "ce_302_done", "value": 1, "description": "抱团路线期中回报已结算" }
+      ],
+      "chainEventIds": [],
+      "presentation": {
+        "sceneKey": "midterm_group_result_pass",
+        "sceneDisplayName": "宿舍里的报喜声",
+        "locationId": "Dormitory",
+        "backgroundResourcePath": "",
+        "protagonistPortraitResourcePath": "",
+        "npcPortraitResourcePath": "",
+        "backgroundSlotName": "BG_Dorm_Result_Celebration",
+        "protagonistSlotName": "PC_Group_ResultPass",
+        "npcSlotName": "NPC_Roommates_ResultPass"
+      }
+    },
+    {
+      "id": "CE_303",
+      "eventType": "Conditional",
+      "title": "临场发挥接住了你",
+      "description": "你没有把自己逼死，反而在真正上场时把那口气稳住了。",
+      "priority": 2,
+      "isForced": false,
+      "isRepeatable": false,
+      "trigger": {
+        "year": 1,
+        "semester": 1,
+        "roundMin": 3,
+        "roundMax": 4,
+        "specificRounds": [],
+        "attributeConditions": [],
+        "minMoney": 0,
+        "maxMoney": 0,
+        "affinityConditions": [],
+        "requiredEventIds": [ "ME_003" ],
+        "excludedEventIds": [],
+        "requiredFlags": [ "midterm_lucky_track", "midterm_exam_completed", "midterm_exam_all_passed" ],
+        "excludedFlags": [ "ce_303_done" ],
+        "minDarkness": 0,
+        "triggerBehavior": "",
+        "triggerChance": 1,
+        "phase": "RoundEnd"
+      },
+      "dialogues": [
+        {
+          "speaker": "旁白",
+          "lines": [
+            "考场里那点临机应变，真的把你送过了线。",
+            "你第一次明白，稳住心态本身也可以是一种实力。"
+          ],
+          "portraitId": ""
+        }
+      ],
+      "choices": [],
+      "defaultEffects": [
+        { "type": "attribute", "target": "幸运", "value": 2, "description": "幸运 +2" },
+        { "type": "attribute", "target": "心情", "value": 4, "description": "心情 +4" },
+        { "type": "flag", "target": "ce_303_done", "value": 1, "description": "临场路线期中回报已结算" }
+      ],
+      "chainEventIds": [],
+      "presentation": {
+        "sceneKey": "midterm_lucky_result_pass",
+        "sceneDisplayName": "考后长廊",
+        "locationId": "TeachingBuilding",
+        "backgroundResourcePath": "",
+        "protagonistPortraitResourcePath": "",
+        "npcPortraitResourcePath": "",
+        "backgroundSlotName": "BG_Corridor_Result_Breeze",
+        "protagonistSlotName": "PC_Result_LuckyRelief",
+        "npcSlotName": "NPC_InnerVoice_LuckyRelief"
+      }
+    },
+    {
+      "id": "CE_304",
+      "eventType": "Conditional",
+      "title": "硬刷后的失衡",
+      "description": "你确实拼了命，但有些题和有些状态，不是靠熬就一定能换来答案。",
+      "priority": 2,
+      "isForced": false,
+      "isRepeatable": false,
+      "trigger": {
+        "year": 1,
+        "semester": 1,
+        "roundMin": 3,
+        "roundMax": 4,
+        "specificRounds": [],
+        "attributeConditions": [],
+        "minMoney": 0,
+        "maxMoney": 0,
+        "affinityConditions": [],
+        "requiredEventIds": [ "ME_003" ],
+        "excludedEventIds": [],
+        "requiredFlags": [ "midterm_focus_track", "midterm_exam_completed", "midterm_exam_has_fail" ],
+        "excludedFlags": [ "ce_304_done" ],
+        "minDarkness": 0,
+        "triggerBehavior": "",
+        "triggerChance": 1,
+        "phase": "RoundEnd"
+      },
+      "dialogues": [
+        {
+          "speaker": "旁白",
+          "lines": [
+            "分数跳出来的时候，你甚至没立刻眨眼。",
+            "原来把自己逼到极限，也不一定能换来想要的结果。"
+          ],
+          "portraitId": ""
+        }
+      ],
+      "choices": [],
+      "defaultEffects": [
+        { "type": "attribute", "target": "压力", "value": 4, "description": "压力 +4" },
+        { "type": "attribute", "target": "领导力", "value": 1, "description": "领导力 +1" },
+        { "type": "flag", "target": "ce_304_done", "value": 1, "description": "硬刷路线失利反馈已结算" }
+      ],
+      "chainEventIds": [],
+      "presentation": {
+        "sceneKey": "midterm_focus_result_fail",
+        "sceneDisplayName": "屏幕前的沉默",
+        "locationId": "Dormitory",
+        "backgroundResourcePath": "",
+        "protagonistPortraitResourcePath": "",
+        "npcPortraitResourcePath": "",
+        "backgroundSlotName": "BG_Dorm_Result_Silence",
+        "protagonistSlotName": "PC_Result_FocusFail",
+        "npcSlotName": "NPC_InnerVoice_FocusFail"
+      }
+    },
+    {
+      "id": "CE_305",
+      "eventType": "Conditional",
+      "title": "抱团也没兜住所有人",
+      "description": "你们撑过了几个夜晚，却没能让每个人都从考试里安稳落地。",
+      "priority": 2,
+      "isForced": false,
+      "isRepeatable": false,
+      "trigger": {
+        "year": 1,
+        "semester": 1,
+        "roundMin": 3,
+        "roundMax": 4,
+        "specificRounds": [],
+        "attributeConditions": [],
+        "minMoney": 0,
+        "maxMoney": 0,
+        "affinityConditions": [],
+        "requiredEventIds": [ "ME_003" ],
+        "excludedEventIds": [],
+        "requiredFlags": [ "midterm_group_track", "midterm_exam_completed", "midterm_exam_has_fail" ],
+        "excludedFlags": [ "ce_305_done" ],
+        "minDarkness": 0,
+        "triggerBehavior": "",
+        "triggerChance": 1,
+        "phase": "RoundEnd"
+      },
+      "dialogues": [
+        {
+          "speaker": "室友",
+          "lines": [
+            "别太怪自己了，大家本来也都不是站在同一条起跑线。",
+            "可你还是会忍不住想，如果当时再多讲一点会不会不一样。"
+          ],
+          "portraitId": ""
+        }
+      ],
+      "choices": [],
+      "defaultEffects": [
+        { "type": "attribute", "target": "压力", "value": 2, "description": "压力 +2" },
+        { "type": "attribute", "target": "魅力", "value": 1, "description": "魅力 +1" },
+        { "type": "flag", "target": "ce_305_done", "value": 1, "description": "抱团路线失利反馈已结算" }
+      ],
+      "chainEventIds": [],
+      "presentation": {
+        "sceneKey": "midterm_group_result_fail",
+        "sceneDisplayName": "成绩出来后的宿舍",
+        "locationId": "Dormitory",
+        "backgroundResourcePath": "",
+        "protagonistPortraitResourcePath": "",
+        "npcPortraitResourcePath": "",
+        "backgroundSlotName": "BG_Dorm_Result_LowLight",
+        "protagonistSlotName": "PC_Group_ResultFail",
+        "npcSlotName": "NPC_Roommates_ResultFail"
+      }
+    },
+    {
+      "id": "CE_306",
+      "eventType": "Conditional",
+      "title": "侥幸没完全站在你这边",
+      "description": "临场心态帮了你一部分，但运气终究不能替你把每一道题都写完。",
+      "priority": 2,
+      "isForced": false,
+      "isRepeatable": false,
+      "trigger": {
+        "year": 1,
+        "semester": 1,
+        "roundMin": 3,
+        "roundMax": 4,
+        "specificRounds": [],
+        "attributeConditions": [],
+        "minMoney": 0,
+        "maxMoney": 0,
+        "affinityConditions": [],
+        "requiredEventIds": [ "ME_003" ],
+        "excludedEventIds": [],
+        "requiredFlags": [ "midterm_lucky_track", "midterm_exam_completed", "midterm_exam_has_fail" ],
+        "excludedFlags": [ "ce_306_done" ],
+        "minDarkness": 0,
+        "triggerBehavior": "",
+        "triggerChance": 1,
+        "phase": "RoundEnd"
+      },
+      "dialogues": [
+        {
+          "speaker": "旁白",
+          "lines": [
+            "你不是没想过会翻车，只是没想到那一瞬间会来得这么具体。",
+            "心态能救急，却不会平白替你补上所有空白。"
+          ],
+          "portraitId": ""
+        }
+      ],
+      "choices": [],
+      "defaultEffects": [
+        { "type": "attribute", "target": "压力", "value": 3, "description": "压力 +3" },
+        { "type": "attribute", "target": "幸运", "value": -1, "description": "幸运 -1" },
+        { "type": "flag", "target": "ce_306_done", "value": 1, "description": "临场路线失利反馈已结算" }
+      ],
+      "chainEventIds": [],
+      "presentation": {
+        "sceneKey": "midterm_lucky_result_fail",
+        "sceneDisplayName": "考后楼梯间",
+        "locationId": "TeachingBuilding",
+        "backgroundResourcePath": "",
+        "protagonistPortraitResourcePath": "",
+        "npcPortraitResourcePath": "",
+        "backgroundSlotName": "BG_Stairwell_Result_Fail",
+        "protagonistSlotName": "PC_Result_LuckyFail",
+        "npcSlotName": "NPC_InnerVoice_LuckyFail"
+      }
+    },
+    {
+      "id": "CE_401",
+      "eventType": "Conditional",
+      "title": "冲绩点的人拿到了回报",
+      "description": "你最后那口咬得很狠，也终于在成绩单上看到了痕迹。",
+      "priority": 2,
+      "isForced": false,
+      "isRepeatable": false,
+      "trigger": {
+        "year": 1,
+        "semester": 1,
+        "roundMin": 5,
+        "roundMax": 5,
+        "specificRounds": [],
+        "attributeConditions": [],
+        "minMoney": 0,
+        "maxMoney": 0,
+        "affinityConditions": [],
+        "requiredEventIds": [ "ME_004" ],
+        "excludedEventIds": [],
+        "requiredFlags": [ "final_exam_cram_track", "final_exam_completed", "final_exam_honors" ],
+        "excludedFlags": [ "ce_401_done" ],
+        "minDarkness": 0,
+        "triggerBehavior": "",
+        "triggerChance": 1,
+        "phase": "RoundEnd"
+      },
+      "dialogues": [
+        {
+          "speaker": "旁白",
+          "lines": [
+            "绩点跳到那个数字时，你甚至盯着屏幕多看了两秒。",
+            "这一学期至少有一件事，被你硬生生做成了。"
+          ],
+          "portraitId": ""
+        }
+      ],
+      "choices": [],
+      "defaultEffects": [
+        { "type": "attribute", "target": "学力", "value": 3, "description": "学力 +3" },
+        { "type": "attribute", "target": "心情", "value": 5, "description": "心情 +5" },
+        { "type": "flag", "target": "ce_401_done", "value": 1, "description": "冲绩点路线高绩点反馈已结算" }
+      ],
+      "chainEventIds": [],
+      "presentation": {
+        "sceneKey": "final_cram_honors",
+        "sceneDisplayName": "成绩单上的亮色",
+        "locationId": "Dormitory",
+        "backgroundResourcePath": "",
+        "protagonistPortraitResourcePath": "",
+        "npcPortraitResourcePath": "",
+        "backgroundSlotName": "BG_Final_Result_Honors",
+        "protagonistSlotName": "PC_Final_Honors",
+        "npcSlotName": "NPC_InnerVoice_FinalHonors"
+      }
+    },
+    {
+      "id": "CE_402",
+      "eventType": "Conditional",
+      "title": "稳住状态也稳住了成绩",
+      "description": "你没有把自己榨干，但也没有让自己掉下去。",
+      "priority": 2,
+      "isForced": false,
+      "isRepeatable": false,
+      "trigger": {
+        "year": 1,
+        "semester": 1,
+        "roundMin": 5,
+        "roundMax": 5,
+        "specificRounds": [],
+        "attributeConditions": [],
+        "minMoney": 0,
+        "maxMoney": 0,
+        "affinityConditions": [],
+        "requiredEventIds": [ "ME_004" ],
+        "excludedEventIds": [],
+        "requiredFlags": [ "final_exam_balance_track", "final_exam_completed", "final_exam_all_passed" ],
+        "excludedFlags": [ "ce_402_done" ],
+        "minDarkness": 0,
+        "triggerBehavior": "",
+        "triggerChance": 1,
+        "phase": "RoundEnd"
+      },
+      "dialogues": [
+        {
+          "speaker": "室友",
+          "lines": [
+            "你这学期最厉害的地方，不是某一次爆种，是一直没让自己崩掉。",
+            "能稳住，其实比看上去难多了。"
+          ],
+          "portraitId": ""
+        }
+      ],
+      "choices": [],
+      "defaultEffects": [
+        { "type": "attribute", "target": "心情", "value": 4, "description": "心情 +4" },
+        { "type": "attribute", "target": "领导力", "value": 1, "description": "领导力 +1" },
+        { "type": "flag", "target": "ce_402_done", "value": 1, "description": "平衡路线反馈已结算" }
+      ],
+      "chainEventIds": [],
+      "presentation": {
+        "sceneKey": "final_balance_pass",
+        "sceneDisplayName": "熄灯前的放松",
+        "locationId": "Dormitory",
+        "backgroundResourcePath": "",
+        "protagonistPortraitResourcePath": "",
+        "npcPortraitResourcePath": "",
+        "backgroundSlotName": "BG_Dorm_Final_Relax",
+        "protagonistSlotName": "PC_Final_Balance",
+        "npcSlotName": "NPC_Roommate_FinalBalance"
+      }
+    },
+    {
+      "id": "CE_403",
+      "eventType": "Conditional",
+      "title": "双线推进的回音",
+      "description": "你一边顾课程，一边顾证书，虽然累，但也因此打开了更多后手。",
+      "priority": 2,
+      "isForced": false,
+      "isRepeatable": false,
+      "trigger": {
+        "year": 1,
+        "semester": 1,
+        "roundMin": 5,
+        "roundMax": 5,
+        "specificRounds": [],
+        "attributeConditions": [],
+        "minMoney": 0,
+        "maxMoney": 0,
+        "affinityConditions": [],
+        "requiredEventIds": [ "ME_004" ],
+        "excludedEventIds": [],
+        "requiredFlags": [ "final_exam_certificate_track", "final_exam_completed", "final_exam_all_passed" ],
+        "excludedFlags": [ "ce_403_done" ],
+        "minDarkness": 0,
+        "triggerBehavior": "",
+        "triggerChance": 1,
+        "phase": "RoundEnd"
+      },
+      "dialogues": [
+        {
+          "speaker": "旁白",
+          "lines": [
+            "成绩和证书不一定会在同一天给你答案，但你已经能看见路正在变宽。",
+            "这学期的疲惫，开始有了可以兑换的形状。"
+          ],
+          "portraitId": ""
+        }
+      ],
+      "choices": [],
+      "defaultEffects": [
+        { "type": "attribute", "target": "领导力", "value": 2, "description": "领导力 +2" },
+        { "type": "attribute", "target": "魅力", "value": 1, "description": "魅力 +1" },
+        { "type": "flag", "target": "ce_403_done", "value": 1, "description": "课程证书双线反馈已结算" }
+      ],
+      "chainEventIds": [],
+      "presentation": {
+        "sceneKey": "final_dual_track_pass",
+        "sceneDisplayName": "学期结束后的清单",
+        "locationId": "Dormitory",
+        "backgroundResourcePath": "",
+        "protagonistPortraitResourcePath": "",
+        "npcPortraitResourcePath": "",
+        "backgroundSlotName": "BG_Final_Checklist",
+        "protagonistSlotName": "PC_Final_DualTrack",
+        "npcSlotName": "NPC_InnerVoice_DualTrack"
+      }
+    },
+    {
+      "id": "CE_404",
+      "eventType": "Conditional",
+      "title": "冲绩点把自己冲疼了",
+      "description": "你不是没拼，只是这个学期的回报还不足以覆盖消耗。",
+      "priority": 2,
+      "isForced": false,
+      "isRepeatable": false,
+      "trigger": {
+        "year": 1,
+        "semester": 1,
+        "roundMin": 5,
+        "roundMax": 5,
+        "specificRounds": [],
+        "attributeConditions": [],
+        "minMoney": 0,
+        "maxMoney": 0,
+        "affinityConditions": [],
+        "requiredEventIds": [ "ME_004" ],
+        "excludedEventIds": [],
+        "requiredFlags": [ "final_exam_cram_track", "final_exam_completed", "final_exam_has_fail" ],
+        "excludedFlags": [ "ce_404_done" ],
+        "minDarkness": 0,
+        "triggerBehavior": "",
+        "triggerChance": 1,
+        "phase": "RoundEnd"
+      },
+      "dialogues": [
+        {
+          "speaker": "旁白",
+          "lines": [
+            "你确实用力了，可成绩单还是把缺口明明白白摊在了面前。",
+            "这一刻最难的，不是失望，而是要不要继续相信努力本身。"
+          ],
+          "portraitId": ""
+        }
+      ],
+      "choices": [],
+      "defaultEffects": [
+        { "type": "attribute", "target": "压力", "value": 5, "description": "压力 +5" },
+        { "type": "attribute", "target": "领导力", "value": 1, "description": "领导力 +1" },
+        { "type": "flag", "target": "ce_404_done", "value": 1, "description": "冲绩点路线受挫反馈已结算" }
+      ],
+      "chainEventIds": [],
+      "presentation": {
+        "sceneKey": "final_cram_fail",
+        "sceneDisplayName": "成绩页前的停顿",
+        "locationId": "Dormitory",
+        "backgroundResourcePath": "",
+        "protagonistPortraitResourcePath": "",
+        "npcPortraitResourcePath": "",
+        "backgroundSlotName": "BG_Final_Result_Stall",
+        "protagonistSlotName": "PC_Final_CramFail",
+        "npcSlotName": "NPC_InnerVoice_FinalFail"
+      }
+    },
+    {
+      "id": "CE_405",
+      "eventType": "Conditional",
+      "title": "稳状态不等于没代价",
+      "description": "你护住了自己，但有些成绩上的缺口，也确实留了下来。",
+      "priority": 2,
+      "isForced": false,
+      "isRepeatable": false,
+      "trigger": {
+        "year": 1,
+        "semester": 1,
+        "roundMin": 5,
+        "roundMax": 5,
+        "specificRounds": [],
+        "attributeConditions": [],
+        "minMoney": 0,
+        "maxMoney": 0,
+        "affinityConditions": [],
+        "requiredEventIds": [ "ME_004" ],
+        "excludedEventIds": [],
+        "requiredFlags": [ "final_exam_balance_track", "final_exam_completed", "final_exam_has_fail" ],
+        "excludedFlags": [ "ce_405_done" ],
+        "minDarkness": 0,
+        "triggerBehavior": "",
+        "triggerChance": 1,
+        "phase": "RoundEnd"
+      },
+      "dialogues": [
+        {
+          "speaker": "室友",
+          "lines": [
+            "别急着给自己判死刑，状态能保住，后面就还有翻盘空间。",
+            "只是现在，你得先承认这学期并不完美。"
+          ],
+          "portraitId": ""
+        }
+      ],
+      "choices": [],
+      "defaultEffects": [
+        { "type": "attribute", "target": "心情", "value": -2, "description": "心情 -2" },
+        { "type": "attribute", "target": "压力", "value": 2, "description": "压力 +2" },
+        { "type": "flag", "target": "ce_405_done", "value": 1, "description": "平衡路线受挫反馈已结算" }
+      ],
+      "chainEventIds": [],
+      "presentation": {
+        "sceneKey": "final_balance_fail",
+        "sceneDisplayName": "宿舍床边的复盘",
+        "locationId": "Dormitory",
+        "backgroundResourcePath": "",
+        "protagonistPortraitResourcePath": "",
+        "npcPortraitResourcePath": "",
+        "backgroundSlotName": "BG_Dorm_Final_Reflection",
+        "protagonistSlotName": "PC_Final_BalanceFail",
+        "npcSlotName": "NPC_Roommate_FinalReflection"
+      }
+    },
+    {
+      "id": "CE_406",
+      "eventType": "Conditional",
+      "title": "双线拉满后的透支感",
+      "description": "你试着什么都抓住，结果是成果有一点，疲惫更多一点。",
+      "priority": 2,
+      "isForced": false,
+      "isRepeatable": false,
+      "trigger": {
+        "year": 1,
+        "semester": 1,
+        "roundMin": 5,
+        "roundMax": 5,
+        "specificRounds": [],
+        "attributeConditions": [],
+        "minMoney": 0,
+        "maxMoney": 0,
+        "affinityConditions": [],
+        "requiredEventIds": [ "ME_004" ],
+        "excludedEventIds": [],
+        "requiredFlags": [ "final_exam_certificate_track", "final_exam_completed", "final_exam_has_fail" ],
+        "excludedFlags": [ "ce_406_done" ],
+        "minDarkness": 0,
+        "triggerBehavior": "",
+        "triggerChance": 1,
+        "phase": "RoundEnd"
+      },
+      "dialogues": [
+        {
+          "speaker": "旁白",
+          "lines": [
+            "你把课程、证书、计划和野心全压在一起，最后却先看见了自己的疲惫。",
+            "不是路线错了，只是你还没学会怎么在有限回合里分配自己。"
+          ],
+          "portraitId": ""
+        }
+      ],
+      "choices": [],
+      "defaultEffects": [
+        { "type": "attribute", "target": "压力", "value": 4, "description": "压力 +4" },
+        { "type": "attribute", "target": "领导力", "value": 1, "description": "领导力 +1" },
+        { "type": "flag", "target": "ce_406_done", "value": 1, "description": "双线路线受挫反馈已结算" }
+      ],
+      "chainEventIds": [],
+      "presentation": {
+        "sceneKey": "final_dual_track_fail",
+        "sceneDisplayName": "清单写满后的夜里",
+        "locationId": "Dormitory",
+        "backgroundResourcePath": "",
+        "protagonistPortraitResourcePath": "",
+        "npcPortraitResourcePath": "",
+        "backgroundSlotName": "BG_Final_List_Overload",
+        "protagonistSlotName": "PC_Final_DualTrackFail",
+        "npcSlotName": "NPC_InnerVoice_DualTrackFail"
+      }
+    },
+    {
+      "id": "CE_501",
+      "eventType": "Conditional",
+      "title": "四级通过后的松气",
+      "description": "那张成绩截图没有多华丽，但它足够让你在这个学期里第一次觉得自己真的追上了什么。",
+      "priority": 2,
+      "isForced": false,
+      "isRepeatable": false,
+      "trigger": {
+        "year": 0,
+        "semester": 0,
+        "roundMin": 0,
+        "roundMax": 0,
+        "specificRounds": [],
+        "attributeConditions": [],
+        "minMoney": 0,
+        "maxMoney": 0,
+        "affinityConditions": [],
+        "requiredEventIds": [],
+        "excludedEventIds": [],
+        "requiredFlags": [ "cet4_passed" ],
+        "excludedFlags": [ "ce_501_done" ],
+        "minDarkness": 0,
+        "triggerBehavior": "",
+        "triggerChance": 1,
+        "phase": "RoundEnd"
+      },
+      "dialogues": [
+        {
+          "speaker": "旁白",
+          "lines": [
+            "四级成绩跳出来的时候，你下意识先看了一眼总分，才敢慢慢把气呼出来。",
+            "有些门槛一旦跨过去，连走路都会轻一点。"
+          ],
+          "portraitId": ""
+        }
+      ],
+      "choices": [],
+      "defaultEffects": [
+        { "type": "attribute", "target": "心情", "value": 5, "description": "心情 +5" },
+        { "type": "attribute", "target": "领导力", "value": 1, "description": "领导力 +1" },
+        { "type": "flag", "target": "ce_501_done", "value": 1, "description": "四级通过反馈已结算" }
+      ],
+      "chainEventIds": [],
+      "presentation": {
+        "sceneKey": "cet4_pass_result",
+        "sceneDisplayName": "四级成绩页",
+        "locationId": "Dormitory",
+        "backgroundResourcePath": "",
+        "protagonistPortraitResourcePath": "",
+        "npcPortraitResourcePath": "",
+        "backgroundSlotName": "BG_CET4_Result",
+        "protagonistSlotName": "PC_CET4_Pass",
+        "npcSlotName": "NPC_InnerVoice_CET4Pass"
+      }
+    },
+    {
+      "id": "CE_502",
+      "eventType": "Conditional",
+      "title": "四级失手后的重排",
+      "description": "没过并不体面，但它逼着你第一次认真想，英语这件事之后到底要怎么补。",
+      "priority": 2,
+      "isForced": false,
+      "isRepeatable": false,
+      "trigger": {
+        "year": 0,
+        "semester": 0,
+        "roundMin": 0,
+        "roundMax": 0,
+        "specificRounds": [],
+        "attributeConditions": [],
+        "minMoney": 0,
+        "maxMoney": 0,
+        "affinityConditions": [],
+        "requiredEventIds": [],
+        "excludedEventIds": [],
+        "requiredFlags": [ "cet4_failed_latest" ],
+        "excludedFlags": [ "ce_502_done", "cet4_passed" ],
+        "minDarkness": 0,
+        "triggerBehavior": "",
+        "triggerChance": 1,
+        "phase": "RoundEnd"
+      },
+      "dialogues": [
+        {
+          "speaker": "旁白",
+          "lines": [
+            "差的那几分并不多，但就是那几分，让你突然明白“下次再说”也会有代价。",
+            "你得把英语这件事，从可拖延的杂项，挪到真正的计划里了。"
+          ],
+          "portraitId": ""
+        }
+      ],
+      "choices": [],
+      "defaultEffects": [
+        { "type": "attribute", "target": "压力", "value": 3, "description": "压力 +3" },
+        { "type": "attribute", "target": "学力", "value": 1, "description": "学力 +1" },
+        { "type": "flag", "target": "ce_502_done", "value": 1, "description": "四级失利反馈已结算" }
+      ],
+      "chainEventIds": [],
+      "presentation": {
+        "sceneKey": "cet4_fail_result",
+        "sceneDisplayName": "四级成绩页",
+        "locationId": "Dormitory",
+        "backgroundResourcePath": "",
+        "protagonistPortraitResourcePath": "",
+        "npcPortraitResourcePath": "",
+        "backgroundSlotName": "BG_CET4_Result_Fail",
+        "protagonistSlotName": "PC_CET4_Fail",
+        "npcSlotName": "NPC_InnerVoice_CET4Fail"
+      }
+    },
+    {
+      "id": "CE_503",
+      "eventType": "Conditional",
+      "title": "六级通过后的视野变化",
+      "description": "六级通过不像四级那样只是过门槛，它更像是在提醒你，有些路是真的在慢慢往前开。",
+      "priority": 2,
+      "isForced": false,
+      "isRepeatable": false,
+      "trigger": {
+        "year": 0,
+        "semester": 0,
+        "roundMin": 0,
+        "roundMax": 0,
+        "specificRounds": [],
+        "attributeConditions": [],
+        "minMoney": 0,
+        "maxMoney": 0,
+        "affinityConditions": [],
+        "requiredEventIds": [],
+        "excludedEventIds": [],
+        "requiredFlags": [ "cet6_passed" ],
+        "excludedFlags": [ "ce_503_done" ],
+        "minDarkness": 0,
+        "triggerBehavior": "",
+        "triggerChance": 1,
+        "phase": "RoundEnd"
+      },
+      "dialogues": [
+        {
+          "speaker": "旁白",
+          "lines": [
+            "六级那一栏被点亮的时候，你终于有种“自己在往更远的地方够”的实感。",
+            "成绩本身只是数字，但它替你打开的是别的可能。"
+          ],
+          "portraitId": ""
+        }
+      ],
+      "choices": [],
+      "defaultEffects": [
+        { "type": "attribute", "target": "学力", "value": 2, "description": "学力 +2" },
+        { "type": "attribute", "target": "心情", "value": 4, "description": "心情 +4" },
+        { "type": "flag", "target": "ce_503_done", "value": 1, "description": "六级通过反馈已结算" }
+      ],
+      "chainEventIds": [],
+      "presentation": {
+        "sceneKey": "cet6_pass_result",
+        "sceneDisplayName": "六级成绩页",
+        "locationId": "Dormitory",
+        "backgroundResourcePath": "",
+        "protagonistPortraitResourcePath": "",
+        "npcPortraitResourcePath": "",
+        "backgroundSlotName": "BG_CET6_Result",
+        "protagonistSlotName": "PC_CET6_Pass",
+        "npcSlotName": "NPC_InnerVoice_CET6Pass"
+      }
+    },
+    {
+      "id": "CE_504",
+      "eventType": "Conditional",
+      "title": "计算机等级证书到手",
+      "description": "这张证书没有戏剧性，但它让你清楚看到，自己正在一点点把将来的简历补厚。",
+      "priority": 2,
+      "isForced": false,
+      "isRepeatable": false,
+      "trigger": {
+        "year": 0,
+        "semester": 0,
+        "roundMin": 0,
+        "roundMax": 0,
+        "specificRounds": [],
+        "attributeConditions": [],
+        "minMoney": 0,
+        "maxMoney": 0,
+        "affinityConditions": [],
+        "requiredEventIds": [],
+        "excludedEventIds": [],
+        "requiredFlags": [ "computer_level_passed" ],
+        "excludedFlags": [ "ce_504_done" ],
+        "minDarkness": 0,
+        "triggerBehavior": "",
+        "triggerChance": 1,
+        "phase": "RoundEnd"
+      },
+      "dialogues": [
+        {
+          "speaker": "旁白",
+          "lines": [
+            "通过通知并没有让你立刻热血沸腾，但你知道，这种稳稳补上的一块也很重要。",
+            "有些前路，就是靠一张张不起眼的证明慢慢铺出来的。"
+          ],
+          "portraitId": ""
+        }
+      ],
+      "choices": [],
+      "defaultEffects": [
+        { "type": "attribute", "target": "领导力", "value": 1, "description": "领导力 +1" },
+        { "type": "attribute", "target": "心情", "value": 3, "description": "心情 +3" },
+        { "type": "flag", "target": "ce_504_done", "value": 1, "description": "计算机等级通过反馈已结算" }
+      ],
+      "chainEventIds": [],
+      "presentation": {
+        "sceneKey": "computer_level_pass_result",
+        "sceneDisplayName": "证书成绩页",
+        "locationId": "Dormitory",
+        "backgroundResourcePath": "",
+        "protagonistPortraitResourcePath": "",
+        "npcPortraitResourcePath": "",
+        "backgroundSlotName": "BG_ComputerCert_Result",
+        "protagonistSlotName": "PC_ComputerCert_Pass",
+        "npcSlotName": "NPC_InnerVoice_ComputerPass"
+      }
+    },
+    {
+      "id": "CE_505",
+      "eventType": "Conditional",
+      "title": "补考通过后的续命感",
+      "description": "那门压在心上的课终于被挪开了一点，你整个人都像是重新喘上了气。",
+      "priority": 2,
+      "isForced": false,
+      "isRepeatable": false,
+      "trigger": {
+        "year": 0,
+        "semester": 0,
+        "roundMin": 0,
+        "roundMax": 0,
+        "specificRounds": [],
+        "attributeConditions": [],
+        "minMoney": 0,
+        "maxMoney": 0,
+        "affinityConditions": [],
+        "requiredEventIds": [],
+        "excludedEventIds": [],
+        "requiredFlags": [ "makeup_exam_passed_any" ],
+        "excludedFlags": [ "ce_505_done" ],
+        "minDarkness": 0,
+        "triggerBehavior": "",
+        "triggerChance": 1,
+        "phase": "RoundEnd"
+      },
+      "dialogues": [
+        {
+          "speaker": "旁白",
+          "lines": [
+            "补考通过不算漂亮，但它足够真实地把你从悬边往回拽了一把。",
+            "你忽然觉得，原来有些局面真的还来得及补。"
+          ],
+          "portraitId": ""
+        }
+      ],
+      "choices": [],
+      "defaultEffects": [
+        { "type": "attribute", "target": "心情", "value": 4, "description": "心情 +4" },
+        { "type": "attribute", "target": "压力", "value": -2, "description": "压力 -2" },
+        { "type": "flag", "target": "ce_505_done", "value": 1, "description": "补考通过反馈已结算" }
+      ],
+      "chainEventIds": [],
+      "presentation": {
+        "sceneKey": "makeup_pass_result",
+        "sceneDisplayName": "补考成绩页",
+        "locationId": "Dormitory",
+        "backgroundResourcePath": "",
+        "protagonistPortraitResourcePath": "",
+        "npcPortraitResourcePath": "",
+        "backgroundSlotName": "BG_Makeup_Result_Pass",
+        "protagonistSlotName": "PC_Makeup_Pass",
+        "npcSlotName": "NPC_InnerVoice_MakeupPass"
+      }
+    },
+    {
+      "id": "CE_506",
+      "eventType": "Conditional",
+      "title": "补考没兜住的坠感",
+      "description": "这次没补上去的，不只是成绩，还有你原本以为还能拖住的那口气。",
+      "priority": 2,
+      "isForced": false,
+      "isRepeatable": false,
+      "trigger": {
+        "year": 0,
+        "semester": 0,
+        "roundMin": 0,
+        "roundMax": 0,
+        "specificRounds": [],
+        "attributeConditions": [],
+        "minMoney": 0,
+        "maxMoney": 0,
+        "affinityConditions": [],
+        "requiredEventIds": [],
+        "excludedEventIds": [],
+        "requiredFlags": [ "makeup_exam_failed_any" ],
+        "excludedFlags": [ "ce_506_done" ],
+        "minDarkness": 0,
+        "triggerBehavior": "",
+        "triggerChance": 1,
+        "phase": "RoundEnd"
+      },
+      "dialogues": [
+        {
+          "speaker": "旁白",
+          "lines": [
+            "补考成绩出来的时候，你没有立刻关页面，只是看着它发了一会儿呆。",
+            "有些后果一旦追上来，就会逼你不得不重新安排接下来的每一步。"
+          ],
+          "portraitId": ""
+        }
+      ],
+      "choices": [],
+      "defaultEffects": [
+        { "type": "attribute", "target": "压力", "value": 5, "description": "压力 +5" },
+        { "type": "attribute", "target": "心情", "value": -3, "description": "心情 -3" },
+        { "type": "flag", "target": "ce_506_done", "value": 1, "description": "补考失利反馈已结算" }
+      ],
+      "chainEventIds": [],
+      "presentation": {
+        "sceneKey": "makeup_fail_result",
+        "sceneDisplayName": "补考成绩页",
+        "locationId": "Dormitory",
+        "backgroundResourcePath": "",
+        "protagonistPortraitResourcePath": "",
+        "npcPortraitResourcePath": "",
+        "backgroundSlotName": "BG_Makeup_Result_Fail",
+        "protagonistSlotName": "PC_Makeup_Fail",
+        "npcSlotName": "NPC_InnerVoice_MakeupFail"
+      }
     }
   ]
 }

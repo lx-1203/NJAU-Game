@@ -508,6 +508,16 @@ public class HUDManager : MonoBehaviour
             return false;
         }
 
+        if (ExamUIManager.Instance != null && ExamUIManager.Instance.IsExamActive)
+        {
+            return false;
+        }
+
+        if (GameEndingManager.Instance != null && GameEndingManager.Instance.IsEndingActive)
+        {
+            return false;
+        }
+
         if (CourseScheduleUI.Instance != null && CourseScheduleUI.Instance.IsOpen)
         {
             return false;
@@ -1337,6 +1347,17 @@ public class HUDManager : MonoBehaviour
     {
         Debug.Log($"[HUDManager] 收到考试完成事件，学期 GPA={semesterGPA.gpa:F2}");
         RefreshGPA();
+
+        if (MissionUI.Instance != null && semesterGPA != null)
+        {
+            string message = semesterGPA.failedCount > 0
+                ? $"本学期 GPA {semesterGPA.gpa:F2}，挂科 {semesterGPA.failedCount} 门。下学期开学将先处理补考。"
+                : $"本学期 GPA {semesterGPA.gpa:F2}，所有课程顺利通过。";
+            Color color = semesterGPA.failedCount > 0
+                ? new Color(0.85f, 0.34f, 0.24f)
+                : new Color(0.22f, 0.72f, 0.34f);
+            MissionUI.Instance.ShowSystemNotification("考试结算", message, color, 3.6f);
+        }
     }
 
     public void RefreshAttributes()
@@ -1564,6 +1585,33 @@ public class HUDManager : MonoBehaviour
                     builder.npcInteractionMenu.ShowForNPC(null);
                 });
             dynamicActionButtons.Add(socialButton);
+        }
+
+        if (JobSelectionUI.Instance != null)
+        {
+            bool internshipUnlocked = JobSystem.Instance != null && JobSystem.Instance.IsInternshipUnlocked();
+            bool sideHustleUnlocked = JobSystem.Instance != null && JobSystem.Instance.IsSideHustleUnlocked();
+            if (internshipUnlocked || sideHustleUnlocked)
+            {
+                string detail = internshipUnlocked && sideHustleUnlocked
+                    ? "安排一次实习或副业，换取收入与成长"
+                    : internshipUnlocked
+                        ? "实习已解锁，可投入更多时间换取更高收益"
+                        : "副业已解锁，可接短活补贴生活费";
+
+                Button jobButton = CreateActionMenuCommandEntry(
+                    actionMenuContent,
+                    "职",
+                    "兼职 / 实习",
+                    detail,
+                    "前往",
+                    () =>
+                    {
+                        CloseActionMenu();
+                        JobSelectionUI.Instance.Show();
+                    });
+                dynamicActionButtons.Add(jobButton);
+            }
         }
 
     }
@@ -1807,6 +1855,14 @@ public class HUDManager : MonoBehaviour
         if (ActionSystem.Instance == null || !ActionSystem.Instance.CanExecuteAction(actionId))
         {
             Debug.Log($"[HUD] 无法执行行动: {actionId}");
+            if (MissionUI.Instance != null && ActionSystem.Instance != null)
+            {
+                string reason = ActionSystem.Instance.GetActionBlockReason(actionId);
+                if (!string.IsNullOrEmpty(reason))
+                {
+                    MissionUI.Instance.ShowSystemNotification("无法执行行动", reason, new Color(0.82f, 0.38f, 0.30f), 2.8f);
+                }
+            }
             StartCoroutine(ShakeButtonCoroutine(button));
             return;
         }
@@ -1842,12 +1898,24 @@ public class HUDManager : MonoBehaviour
         if (!ActionIdMap.TryGetValue(actionName, out string actionId))
         {
             Debug.LogWarning($"[HUD] 未知行动名称: {actionName}");
+            if (MissionUI.Instance != null)
+            {
+                MissionUI.Instance.ShowSystemNotification("行动按钮异常", $"按钮“{actionName}”没有找到对应的行动定义，这次点击不会生效。", new Color(0.82f, 0.38f, 0.30f), 2.8f);
+            }
             return;
         }
 
         if (ActionSystem.Instance == null || !ActionSystem.Instance.CanExecuteAction(actionId))
         {
             Debug.Log($"[HUD] 无法执行行动: {actionName}（行动点或金钱不足）");
+            if (MissionUI.Instance != null && ActionSystem.Instance != null)
+            {
+                string reason = ActionSystem.Instance.GetActionBlockReason(actionId);
+                if (!string.IsNullOrEmpty(reason))
+                {
+                    MissionUI.Instance.ShowSystemNotification("无法执行行动", reason, new Color(0.82f, 0.38f, 0.30f), 2.8f);
+                }
+            }
             StartCoroutine(ShakeButtonCoroutine(button));
             return;
         }
@@ -1954,6 +2022,16 @@ public class HUDManager : MonoBehaviour
         }
 
         if (CourseScheduleUI.Instance != null && CourseScheduleUI.Instance.IsOpen)
+        {
+            return false;
+        }
+
+        if (ExamUIManager.Instance != null && ExamUIManager.Instance.IsExamActive)
+        {
+            return false;
+        }
+
+        if (GameEndingManager.Instance != null && GameEndingManager.Instance.IsEndingActive)
         {
             return false;
         }

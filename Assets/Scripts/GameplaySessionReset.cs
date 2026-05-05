@@ -57,6 +57,7 @@ public static class GameplaySessionReset
     {
         UIFlowGuard.CleanupBlockingUI();
         SaveManager.PendingLoadData = null;
+        SaveManager.PendingLoadSlot = -1;
 
         MonoBehaviour[] behaviours = UnityEngine.Object.FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None);
         HashSet<GameObject> targets = new HashSet<GameObject>();

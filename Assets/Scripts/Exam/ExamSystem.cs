@@ -38,6 +38,8 @@ public class ExamSystem : MonoBehaviour, IExamResultProvider, ISaveable
 
     [Header("自习追踪")]
     private int studyCountThisSemester = 0;
+    private Dictionary<string, int> subjectStudyCountsThisSemester = new Dictionary<string, int>();
+    private Dictionary<string, int> focusedCourseStudyCountsThisSemester = new Dictionary<string, int>();
 
     [Header("证书考试状态")]
     private bool cet4Passed = false;
@@ -46,6 +48,7 @@ public class ExamSystem : MonoBehaviour, IExamResultProvider, ISaveable
 
     [Header("期中考试结果")]
     private List<ExamResult> lastMidtermResults = new List<ExamResult>();
+    private readonly HashSet<string> notifiedExamIssues = new HashSet<string>();
 
     // ========== 题库索引 ==========
 
@@ -81,12 +84,22 @@ public class ExamSystem : MonoBehaviour, IExamResultProvider, ISaveable
         if (courseJson != null)
         {
             courseScheduleData = JsonUtility.FromJson<CourseScheduleData>(courseJson.text);
-            Debug.Log($"[ExamSystem] 课程表加载成功，共 {courseScheduleData.courses.Count} 门课程");
+            if (courseScheduleData == null || courseScheduleData.courses == null)
+            {
+                Debug.LogError("[ExamSystem] 课程表解析结果为空，改用空课程表兜底");
+                courseScheduleData = new CourseScheduleData { courses = new List<CourseDefinition>() };
+                ShowExamNotificationOnce("invalid-course-schedule", "课程表异常", "课程表文件存在，但内容没有成功解析，考试系统会先按空课程表继续。");
+            }
+            else
+            {
+                Debug.Log($"[ExamSystem] 课程表加载成功，共 {courseScheduleData.courses.Count} 门课程");
+            }
         }
         else
         {
             Debug.LogError("[ExamSystem] 无法加载课程表: Resources/ExamData/course_schedule.json");
             courseScheduleData = new CourseScheduleData { courses = new List<CourseDefinition>() };
+            ShowExamNotificationOnce("missing-course-schedule", "课程表缺失", "课程表资源没有加载成功，考试系统会以空课程状态继续运行。");
         }
 
         // 加载题库
@@ -94,15 +107,25 @@ public class ExamSystem : MonoBehaviour, IExamResultProvider, ISaveable
         if (questionJson != null)
         {
             questionBankData = JsonUtility.FromJson<QuestionBankData>(questionJson.text);
-            Debug.Log($"[ExamSystem] 题库加载成功，共 {questionBankData.questionGroups.Count} 组题目");
+            if (questionBankData == null || questionBankData.questionGroups == null)
+            {
+                Debug.LogError("[ExamSystem] 题库解析结果为空，改用空题库兜底");
+                questionBankData = new QuestionBankData { questionGroups = new List<QuestionGroup>() };
+                ShowExamNotificationOnce("invalid-question-bank", "题库异常", "考试题库文件存在，但内容没有成功解析，系统会用默认题目继续。");
+            }
+            else
+            {
+                Debug.Log($"[ExamSystem] 题库加载成功，共 {questionBankData.questionGroups.Count} 组题目");
 
-            // 建立科目索引
-            BuildSubjectIndex();
+                // 建立科目索引
+                BuildSubjectIndex();
+            }
         }
         else
         {
             Debug.LogError("[ExamSystem] 无法加载题库: Resources/ExamData/question_bank.json");
             questionBankData = new QuestionBankData { questionGroups = new List<QuestionGroup>() };
+            ShowExamNotificationOnce("missing-question-bank", "题库缺失", "考试题库没有加载成功，系统会使用默认题目兜底。");
         }
 
         dataLoaded = true;
@@ -159,13 +182,15 @@ public class ExamSystem : MonoBehaviour, IExamResultProvider, ISaveable
     /// </summary>
     public QuestionGroup GetRandomQuestionGroup(string subjectTag)
     {
-        if (!questionsBySubject.ContainsKey(subjectTag) || questionsBySubject[subjectTag].Count == 0)
+        string normalizedTag = NormalizeSubjectTag(subjectTag);
+        if (!questionsBySubject.ContainsKey(normalizedTag) || questionsBySubject[normalizedTag].Count == 0)
         {
             Debug.LogWarning($"[ExamSystem] 科目 '{subjectTag}' 无可用题组，使用默认题目");
-            return CreateDefaultQuestionGroup(subjectTag);
+            ShowExamNotificationOnce($"default-question:{normalizedTag}", "题库不足", $"{subjectTag} 暂时没有可用题组，本次考试会改用默认题目继续。", new Color(0.86f, 0.62f, 0.24f), 3f);
+            return CreateDefaultQuestionGroup(normalizedTag);
         }
 
-        List<QuestionGroup> groups = questionsBySubject[subjectTag];
+        List<QuestionGroup> groups = questionsBySubject[normalizedTag];
         int randomIndex = UnityEngine.Random.Range(0, groups.Count);
         return groups[randomIndex];
     }
@@ -217,13 +242,32 @@ public class ExamSystem : MonoBehaviour, IExamResultProvider, ISaveable
     /// <returns>通过率 0.05 ~ 0.99</returns>
     public float CalculatePassRate(ExamType examType, int correctCount, int totalQuestions)
     {
+        return CalculatePassRate(examType, null, correctCount, totalQuestions);
+    }
+
+    public float CalculatePassRate(ExamType examType, CourseDefinition course, int correctCount, int totalQuestions)
+    {
         // 1. 基础通过率（根据考试类型）
         float baseRate = GetBaseRate(examType);
+        float examBaseRate = baseRate;
 
         // 2. 自习修正: +10% per study action (封顶3次 = +30%)
         int cappedStudyCount = Mathf.Min(studyCountThisSemester, 3);
         float studyBonus = cappedStudyCount * 0.10f;
         baseRate += studyBonus;
+
+        float subjectFocusBonus = 0f;
+        float courseFocusBonus = 0f;
+        float makeupRecoveryBonus = 0f;
+        if (course != null)
+        {
+            int subjectStudyCount = GetSubjectStudyCount(course.subjectTag);
+            int focusedCourseStudyCount = GetFocusedCourseStudyCount(course.id);
+            subjectFocusBonus = Mathf.Min(subjectStudyCount, 2) * 0.05f;
+            courseFocusBonus = Mathf.Min(focusedCourseStudyCount, 2) * 0.03f;
+            makeupRecoveryBonus = GetMakeupRecoveryBonus(examType, course.id, focusedCourseStudyCount);
+            baseRate += subjectFocusBonus + courseFocusBonus + makeupRecoveryBonus;
+        }
 
         // 3. 答题修正
         float answerModifier = 0f;
@@ -253,7 +297,10 @@ public class ExamSystem : MonoBehaviour, IExamResultProvider, ISaveable
         // 6. Clamp
         finalRate = Mathf.Clamp(finalRate, 0.05f, 0.99f);
 
-        Debug.Log($"[ExamSystem] 通过率计算: 基础={baseRate:P0} 自习={studyBonus:P0} " +
+        string focusSummary = course == null
+            ? "专项=0%"
+            : $"专项={subjectFocusBonus + courseFocusBonus + makeupRecoveryBonus:P0} (科目={subjectFocusBonus:P0}, 课程={courseFocusBonus:P0}, 补考={makeupRecoveryBonus:P0})";
+        Debug.Log($"[ExamSystem] 通过率计算: 基础={examBaseRate:P0} 自习={studyBonus:P0} {focusSummary} " +
                   $"答题={answerModifier:P0} 属性={attrModifier:P0} 最终={finalRate:P0}");
 
         return finalRate;
@@ -312,6 +359,7 @@ public class ExamSystem : MonoBehaviour, IExamResultProvider, ISaveable
         if (courses.Length == 0)
         {
             Debug.LogWarning($"[ExamSystem] 该学期无课程，跳过考试");
+            ShowExamNotification("本学期无期末考试", "这一学期没有排入课程，系统将直接完成学期结算。", new Color(0.36f, 0.64f, 0.92f), 3f);
             FinalizeSemesterExam(year, semester);
             return;
         }
@@ -324,6 +372,7 @@ public class ExamSystem : MonoBehaviour, IExamResultProvider, ISaveable
         else
         {
             Debug.LogWarning("[ExamSystem] ExamUIManager 不存在，自动生成考试结果");
+            ShowExamNotificationOnce("missing-exam-ui-final", "考试界面未就绪", "期末考试界面没有成功初始化，系统将自动生成本学期考试结果。");
             AutoGenerateResults(courses, ExamType.Final);
             FinalizeSemesterExam(year, semester);
         }
@@ -346,6 +395,7 @@ public class ExamSystem : MonoBehaviour, IExamResultProvider, ISaveable
         if (allCourses.Length == 0)
         {
             Debug.LogWarning($"[ExamSystem] 该学期无课程，跳过期中考试");
+            ShowExamNotification("本学期无期中考试", "这一学期没有可考课程，期中考试环节会自动跳过。", new Color(0.36f, 0.64f, 0.92f), 3f);
             FinalizeMidtermExam();
             return;
         }
@@ -368,6 +418,7 @@ public class ExamSystem : MonoBehaviour, IExamResultProvider, ISaveable
         else
         {
             Debug.LogWarning("[ExamSystem] ExamUIManager 不存在，自动生成期中考试结果");
+            ShowExamNotificationOnce("missing-exam-ui-midterm", "考试界面未就绪", "期中考试界面没有成功初始化，系统将自动生成本次考试结果。");
             AutoGenerateResults(midtermCourses, ExamType.Midterm);
             FinalizeMidtermExam();
         }
@@ -392,6 +443,7 @@ public class ExamSystem : MonoBehaviour, IExamResultProvider, ISaveable
         }
 
         Debug.Log($"[ExamSystem] 期中考试结算完成: 通过={passCount}门 不及格={failCount}门 (不影响GPA)");
+        UpdateMidtermEventFlags(passCount, failCount);
 
         // 注意：不调用 OnExamCompleted，不重置 studyCountThisSemester
         // 期中成绩独立记录，不影响学期 GPA 和自习计数
@@ -408,6 +460,7 @@ public class ExamSystem : MonoBehaviour, IExamResultProvider, ISaveable
         if (cet4Passed)
         {
             Debug.Log("[ExamSystem] CET4 已通过，无需再考");
+            ShowExamNotification("无需重考四级", "你已经拿到 CET4 成绩，本次不需要再次报名。", new Color(0.36f, 0.64f, 0.92f), 2.8f);
             return;
         }
 
@@ -424,12 +477,14 @@ public class ExamSystem : MonoBehaviour, IExamResultProvider, ISaveable
         if (!cet4Passed)
         {
             Debug.LogWarning("[ExamSystem] CET6 需要先通过 CET4");
+            ShowExamNotification("无法报名六级", "英语六级需要先通过 CET4，先把四级证书拿下来吧。", new Color(0.82f, 0.38f, 0.30f), 2.8f);
             return;
         }
 
         if (cet6Passed)
         {
             Debug.Log("[ExamSystem] CET6 已通过，无需再考");
+            ShowExamNotification("无需重考六级", "你已经拿到 CET6 成绩，本次不需要再次报名。", new Color(0.36f, 0.64f, 0.92f), 2.8f);
             return;
         }
 
@@ -446,6 +501,7 @@ public class ExamSystem : MonoBehaviour, IExamResultProvider, ISaveable
         if (computerLevelPassed)
         {
             Debug.Log("[ExamSystem] 计算机等级考试已通过，无需再考");
+            ShowExamNotification("无需重考计算机等级", "这项证书你已经拿到，本次不需要再次报名。", new Color(0.36f, 0.64f, 0.92f), 2.8f);
             return;
         }
 
@@ -479,6 +535,7 @@ public class ExamSystem : MonoBehaviour, IExamResultProvider, ISaveable
         else
         {
             Debug.LogWarning("[ExamSystem] ExamUIManager 不存在，自动生成证书考试结果");
+            ShowExamNotificationOnce($"missing-exam-ui-cert:{examType}", "考试界面未就绪", $"{courseName} 的考试界面没有成功初始化，系统将自动生成本次成绩。");
             AutoGenerateResults(courses, examType);
             FinalizeCertificateExam(examType);
         }
@@ -499,14 +556,17 @@ public class ExamSystem : MonoBehaviour, IExamResultProvider, ISaveable
                 case ExamType.CET4:
                     if (passed) cet4Passed = true;
                     Debug.Log($"[ExamSystem] CET4 {(passed ? "通过" : "未通过")} 分数={result.score}");
+                    UpdateCertificateExamFlags("cet4", passed);
                     break;
                 case ExamType.CET6:
                     if (passed) cet6Passed = true;
                     Debug.Log($"[ExamSystem] CET6 {(passed ? "通过" : "未通过")} 分数={result.score}");
+                    UpdateCertificateExamFlags("cet6", passed);
                     break;
                 case ExamType.ComputerLevel:
                     if (passed) computerLevelPassed = true;
                     Debug.Log($"[ExamSystem] 计算机等级考试 {(passed ? "通过" : "未通过")} 分数={result.score}");
+                    UpdateCertificateExamFlags("computer_level", passed);
                     break;
             }
         }
@@ -599,8 +659,11 @@ public class ExamSystem : MonoBehaviour, IExamResultProvider, ISaveable
 
         // 重置本学期自习计数
         studyCountThisSemester = 0;
+        subjectStudyCountsThisSemester.Clear();
+        focusedCourseStudyCountsThisSemester.Clear();
 
         Debug.Log($"[ExamSystem] 学期结算完成: GPA={semGPA:F2} 累积GPA={sgpa.cumulativeGPA:F2} 挂科={sgpa.failedCount}门");
+        UpdateFinalExamEventFlags(sgpa);
 
         // 触发事件
         OnExamCompleted?.Invoke(sgpa);
@@ -609,13 +672,21 @@ public class ExamSystem : MonoBehaviour, IExamResultProvider, ISaveable
     /// <summary>
     /// 处理补考结果 —— 更新挂科记录并回写学期GPA历史
     /// </summary>
+    public void FinalizeMakeupExam()
+    {
+        ProcessMakeupResults();
+    }
+
     private void ProcessMakeupResults()
     {
+        bool hasPassedMakeup = false;
+        bool hasFailedMakeup = false;
         for (int i = 0; i < currentSemesterResults.Count; i++)
         {
             ExamResult makeup = currentSemesterResults[i];
             if (makeup.score >= 60)
             {
+                hasPassedMakeup = true;
                 // 补考通过，从挂科列表中移除
                 failedCourses.RemoveAll(f => f.courseId == makeup.courseId);
 
@@ -626,9 +697,96 @@ public class ExamSystem : MonoBehaviour, IExamResultProvider, ISaveable
             }
             else
             {
+                hasFailedMakeup = true;
                 Debug.Log($"[ExamSystem] 补考未通过: {makeup.courseName}");
             }
         }
+
+        UpdateMakeupExamFlags(hasPassedMakeup, hasFailedMakeup);
+    }
+
+    private void UpdateMidtermEventFlags(int passCount, int failCount)
+    {
+        EventHistory history = EventHistory.Instance;
+        GameState gameState = GameState.Instance;
+        if (history == null || gameState == null)
+        {
+            return;
+        }
+
+        string prefix = $"midterm_exam_y{gameState.CurrentYear}_s{gameState.CurrentSemester}";
+        bool allPassed = passCount > 0 && failCount == 0;
+        bool hasFail = failCount > 0;
+
+        history.SetFlag("midterm_exam_completed", true);
+        history.SetFlag("midterm_exam_all_passed", allPassed);
+        history.SetFlag("midterm_exam_has_fail", hasFail);
+        history.SetFlag($"{prefix}_completed", true);
+        history.SetFlag($"{prefix}_all_passed", allPassed);
+        history.SetFlag($"{prefix}_has_fail", hasFail);
+    }
+
+    private void UpdateFinalExamEventFlags(SemesterGPA sgpa)
+    {
+        EventHistory history = EventHistory.Instance;
+        GameState gameState = GameState.Instance;
+        if (history == null || gameState == null || sgpa == null)
+        {
+            return;
+        }
+
+        string prefix = $"final_exam_y{gameState.CurrentYear}_s{gameState.CurrentSemester}";
+        bool allPassed = sgpa.results != null && sgpa.results.Count > 0 && sgpa.failedCount == 0;
+        bool hasFail = sgpa.failedCount > 0;
+        bool honors = sgpa.gpa >= 3.5f;
+        bool probationRisk = sgpa.failedCount >= 2 || sgpa.gpa < 2f;
+
+        history.SetFlag("final_exam_completed", true);
+        history.SetFlag("final_exam_all_passed", allPassed);
+        history.SetFlag("final_exam_has_fail", hasFail);
+        history.SetFlag("final_exam_honors", honors);
+        history.SetFlag("final_exam_probation_risk", probationRisk);
+        history.SetFlag($"{prefix}_completed", true);
+        history.SetFlag($"{prefix}_all_passed", allPassed);
+        history.SetFlag($"{prefix}_has_fail", hasFail);
+        history.SetFlag($"{prefix}_honors", honors);
+        history.SetFlag($"{prefix}_probation_risk", probationRisk);
+    }
+
+    private void UpdateCertificateExamFlags(string examKey, bool passed)
+    {
+        EventHistory history = EventHistory.Instance;
+        GameState gameState = GameState.Instance;
+        if (history == null || gameState == null || string.IsNullOrWhiteSpace(examKey))
+        {
+            return;
+        }
+
+        string prefix = $"{examKey}_exam_y{gameState.CurrentYear}_s{gameState.CurrentSemester}";
+        history.SetFlag($"{examKey}_passed", passed);
+        history.SetFlag($"{examKey}_failed_latest", !passed);
+        history.SetFlag($"{prefix}_completed", true);
+        history.SetFlag($"{prefix}_passed", passed);
+        history.SetFlag($"{prefix}_failed", !passed);
+    }
+
+    private void UpdateMakeupExamFlags(bool hasPassedMakeup, bool hasFailedMakeup)
+    {
+        EventHistory history = EventHistory.Instance;
+        GameState gameState = GameState.Instance;
+        if (history == null || gameState == null)
+        {
+            return;
+        }
+
+        string prefix = $"makeup_exam_y{gameState.CurrentYear}_s{gameState.CurrentSemester}";
+        bool completed = hasPassedMakeup || hasFailedMakeup;
+        history.SetFlag("makeup_exam_completed", completed);
+        history.SetFlag("makeup_exam_passed_any", hasPassedMakeup);
+        history.SetFlag("makeup_exam_failed_any", hasFailedMakeup);
+        history.SetFlag($"{prefix}_completed", completed);
+        history.SetFlag($"{prefix}_passed_any", hasPassedMakeup);
+        history.SetFlag($"{prefix}_failed_any", hasFailedMakeup);
     }
 
     /// <summary>
@@ -765,6 +923,46 @@ public class ExamSystem : MonoBehaviour, IExamResultProvider, ISaveable
         Debug.Log($"[ExamSystem] 课程表自习登记成功，本学期累计: {studyCountThisSemester}");
     }
 
+    public void RegisterScheduleStudySession(CourseDefinition course)
+    {
+        RegisterScheduleStudySession();
+        RegisterFocusedStudyCourse(course);
+    }
+
+    public void RegisterFocusedStudyCourse(CourseDefinition course)
+    {
+        if (course == null)
+        {
+            return;
+        }
+
+        IncrementStudyCounter(subjectStudyCountsThisSemester, course.subjectTag);
+        IncrementStudyCounter(focusedCourseStudyCountsThisSemester, course.id);
+
+        Debug.Log($"[ExamSystem] 课程表专项自习：{course.courseName} / {course.subjectTag}，科目累计 {GetSubjectStudyCount(course.subjectTag)}，课程累计 {GetFocusedCourseStudyCount(course.id)}");
+    }
+
+    public int GetSubjectStudyCount(string subjectTag)
+    {
+        if (string.IsNullOrEmpty(subjectTag))
+        {
+            return 0;
+        }
+
+        string normalizedTag = NormalizeSubjectTag(subjectTag);
+        return subjectStudyCountsThisSemester.TryGetValue(normalizedTag, out int count) ? count : 0;
+    }
+
+    public int GetFocusedCourseStudyCount(string courseId)
+    {
+        if (string.IsNullOrEmpty(courseId))
+        {
+            return 0;
+        }
+
+        return focusedCourseStudyCountsThisSemester.TryGetValue(courseId, out int count) ? count : 0;
+    }
+
     // ========== 辅助方法 ==========
 
     /// <summary>根据课程ID查找课程定义</summary>
@@ -786,7 +984,7 @@ public class ExamSystem : MonoBehaviour, IExamResultProvider, ISaveable
         for (int i = 0; i < courses.Length; i++)
         {
             CourseDefinition course = courses[i];
-            float passRate = CalculatePassRate(examType, UnityEngine.Random.Range(0, 4), 3);
+            float passRate = CalculatePassRate(examType, course, UnityEngine.Random.Range(0, 4), 3);
             int score = CalculateScore(passRate);
 
             ExamResult result = new ExamResult
@@ -794,13 +992,17 @@ public class ExamSystem : MonoBehaviour, IExamResultProvider, ISaveable
                 courseId = course.id,
                 courseName = course.courseName,
                 credits = course.credits,
+                subjectTag = course.subjectTag,
                 score = score,
                 gradePoint = GPACalculator.ScoreToGradePoint(score),
                 correctCount = 0,
                 cheated = false,
                 cheatCaught = false,
-                examType = examType
+                examType = examType,
+                passRateEstimate = passRate
             };
+            result.prepSummary = BuildExamPreparationSummary(course);
+            result.resultSummary = BuildExamResultSummary(result);
 
             currentSemesterResults.Add(result);
         }
@@ -889,6 +1091,8 @@ public class ExamSystem : MonoBehaviour, IExamResultProvider, ISaveable
         data.semesterGPAHistory = new List<SemesterGPA>(semesterGPAHistory);
         data.failedCourses = new List<ExamResult>(failedCourses);
         data.studyCountThisSemester = studyCountThisSemester;
+        data.subjectStudyCountsThisSemester = ToPairList(subjectStudyCountsThisSemester);
+        data.focusedCourseStudyCountsThisSemester = ToPairList(focusedCourseStudyCountsThisSemester);
         data.cet4Passed = cet4Passed;
         data.cet6Passed = cet6Passed;
         data.computerLevelPassed = computerLevelPassed;
@@ -900,9 +1104,213 @@ public class ExamSystem : MonoBehaviour, IExamResultProvider, ISaveable
         semesterGPAHistory = data.semesterGPAHistory ?? new List<SemesterGPA>();
         failedCourses = data.failedCourses ?? new List<ExamResult>();
         studyCountThisSemester = data.studyCountThisSemester;
+        subjectStudyCountsThisSemester = FromPairList(data.subjectStudyCountsThisSemester);
+        focusedCourseStudyCountsThisSemester = FromPairList(data.focusedCourseStudyCountsThisSemester);
         cet4Passed = data.cet4Passed;
         cet6Passed = data.cet6Passed;
         computerLevelPassed = data.computerLevelPassed;
         lastMidtermResults = data.lastMidtermResults ?? new List<ExamResult>();
+    }
+
+    private void IncrementStudyCounter(Dictionary<string, int> dictionary, string key)
+    {
+        if (dictionary == null || string.IsNullOrEmpty(key))
+        {
+            return;
+        }
+
+        string normalizedKey = NormalizeSubjectTag(key);
+        dictionary[normalizedKey] = dictionary.TryGetValue(normalizedKey, out int count) ? count + 1 : 1;
+    }
+
+    public string BuildExamPreparationSummary(CourseDefinition course)
+    {
+        return BuildExamPreparationSummary(course, ExamType.Final);
+    }
+
+    public string BuildExamPreparationSummary(CourseDefinition course, ExamType examType)
+    {
+        if (course == null)
+        {
+            return "这次按当前角色状态与现场答题表现直接结算。";
+        }
+
+        int semesterStudyCount = Mathf.Min(studyCountThisSemester, 3);
+        int subjectStudyCount = GetSubjectStudyCount(course.subjectTag);
+        int focusedCourseStudyCount = GetFocusedCourseStudyCount(course.id);
+
+        List<string> parts = new List<string>();
+        if (semesterStudyCount > 0)
+        {
+            parts.Add($"本学期已自习 {studyCountThisSemester} 次");
+        }
+        if (subjectStudyCount > 0)
+        {
+            parts.Add($"{NormalizeSubjectDisplayTag(course.subjectTag)}专项 {subjectStudyCount} 次");
+        }
+        if (focusedCourseStudyCount > 0)
+        {
+            parts.Add($"《{course.courseName}》定向补习 {focusedCourseStudyCount} 次");
+        }
+        float makeupRecoveryBonus = GetMakeupRecoveryBonus(examType, course.id, focusedCourseStudyCount);
+        if (makeupRecoveryBonus > 0f)
+        {
+            parts.Add($"补考专项加成 {Mathf.RoundToInt(makeupRecoveryBonus * 100f)}%");
+        }
+
+        if (parts.Count == 0)
+        {
+            return "这门课基本靠平时积累，临场发挥会更重要。";
+        }
+
+        return string.Join("，", parts) + "。";
+    }
+
+    public string BuildExamResultSummary(ExamResult result)
+    {
+        if (result == null)
+        {
+            return "本次成绩数据不完整。";
+        }
+
+        if (result.cheatCaught)
+        {
+            return "作弊被抓，本科直接判 0 分。";
+        }
+
+        string performance = result.correctCount switch
+        {
+            >= 3 => "答题手感很好",
+            2 => "答题状态稳定",
+            1 => "只抓住了一部分题点",
+            _ => "现场发挥偏弱"
+        };
+
+        if (result.score >= 90)
+        {
+            return $"{performance}，这门课拿到了漂亮的高分。";
+        }
+
+        if (result.score >= 60)
+        {
+            return $"{performance}，顺利过线。";
+        }
+
+        string weakness = result.correctCount <= 1 ? "知识点没站稳" : "运气和状态都差了点";
+        return $"{performance}，但{weakness}，这门课挂了。";
+    }
+
+    private List<StringIntPair> ToPairList(Dictionary<string, int> dictionary)
+    {
+        List<StringIntPair> pairs = new List<StringIntPair>();
+        if (dictionary == null)
+        {
+            return pairs;
+        }
+
+        foreach (KeyValuePair<string, int> entry in dictionary)
+        {
+            if (!string.IsNullOrEmpty(entry.Key))
+            {
+                pairs.Add(new StringIntPair(entry.Key, entry.Value));
+            }
+        }
+
+        return pairs;
+    }
+
+    private Dictionary<string, int> FromPairList(List<StringIntPair> pairs)
+    {
+        Dictionary<string, int> result = new Dictionary<string, int>();
+        if (pairs == null)
+        {
+            return result;
+        }
+
+        for (int i = 0; i < pairs.Count; i++)
+        {
+            StringIntPair pair = pairs[i];
+            if (pair != null && !string.IsNullOrEmpty(pair.key))
+            {
+                result[pair.key] = Mathf.Max(0, pair.value);
+            }
+        }
+
+        return result;
+    }
+
+    private string NormalizeSubjectTag(string subjectTag)
+    {
+        if (string.IsNullOrEmpty(subjectTag))
+        {
+            return string.Empty;
+        }
+
+        return subjectTag switch
+        {
+            "computer" => "cs",
+            _ => subjectTag
+        };
+    }
+
+    private string NormalizeSubjectDisplayTag(string subjectTag)
+    {
+        return NormalizeSubjectTag(subjectTag) switch
+        {
+            "math" => "数学",
+            "english" => "英语",
+            "politics" => "思政",
+            "cs" => "计算机",
+            "pe" => "体育",
+            "history" => "历史",
+            "physics" => "物理",
+            "economics" => "经济",
+            "management" => "管理",
+            "literature" => "文学",
+            "law" => "法学",
+            "chemistry" => "化学",
+            _ => "综合"
+        };
+    }
+
+    private float GetMakeupRecoveryBonus(ExamType examType, string courseId, int focusedCourseStudyCount)
+    {
+        if (examType != ExamType.Makeup || string.IsNullOrEmpty(courseId))
+        {
+            return 0f;
+        }
+
+        bool isPendingMakeup = failedCourses.Exists(f => f != null && f.courseId == courseId);
+        if (!isPendingMakeup)
+        {
+            return 0f;
+        }
+
+        float bonus = 0.07f;
+        if (focusedCourseStudyCount > 0)
+        {
+            bonus += 0.03f;
+        }
+
+        return bonus;
+    }
+
+    private void ShowExamNotification(string title, string message, Color color, float duration = 3f)
+    {
+        if (MissionUI.Instance != null)
+        {
+            MissionUI.Instance.ShowSystemNotification(title, message, color, duration);
+        }
+    }
+
+    private void ShowExamNotificationOnce(string key, string title, string message, Color? color = null, float duration = 3f)
+    {
+        if (notifiedExamIssues.Contains(key))
+        {
+            return;
+        }
+
+        notifiedExamIssues.Add(key);
+        ShowExamNotification(title, message, color ?? new Color(0.82f, 0.38f, 0.30f), duration);
     }
 }

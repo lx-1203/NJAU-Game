@@ -80,6 +80,10 @@ public class LoadingScreenManager : MonoBehaviour
         {
             Debug.LogWarning("[LoadingScreenManager] No target scene specified. Falling back to TitleScreen.");
             targetScene = "TitleScreen";
+            if (loadingScreenUI != null)
+            {
+                loadingScreenUI.SetStatusMessage("正在返回标题界面...", "这次没有收到有效目标场景，系统已自动回退到标题界面。");
+            }
         }
 
         resolvedTargetSceneName = targetScene;
@@ -179,6 +183,12 @@ public class LoadingScreenManager : MonoBehaviour
         if (targetSceneLoadOperation == null)
         {
             Debug.LogError($"[LoadingScreenManager] Failed to create async load operation for scene: {sceneName}");
+            if (loadingScreenUI != null)
+            {
+                loadingScreenUI.SetStatusMessage("加载启动失败", "目标场景暂时无法预加载，系统将尝试直接进入。");
+            }
+            resolvedTargetSceneName = sceneName;
+            JumpToTargetScene();
             isLoading = false;
             yield break;
         }
@@ -281,6 +291,10 @@ public class LoadingScreenManager : MonoBehaviour
         }
 
         Debug.LogWarning("[LoadingScreenManager] No prepared async operation found. Falling back to direct scene load.");
+        if (loadingScreenUI != null)
+        {
+            loadingScreenUI.SetStatusMessage("正在直接进入场景...", "预加载状态已丢失，系统改为直接加载。");
+        }
         waitingForTargetSceneActivation = true;
         SceneManager.LoadScene(resolvedTargetSceneName);
     }

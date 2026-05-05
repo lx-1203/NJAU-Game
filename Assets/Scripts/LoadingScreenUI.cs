@@ -240,6 +240,19 @@ public class LoadingScreenUI : MonoBehaviour
         return skipButton;
     }
 
+    public void SetStatusMessage(string tipMessage, string detailMessage = null)
+    {
+        if (tipText != null && !string.IsNullOrEmpty(tipMessage))
+        {
+            tipText.text = tipMessage;
+        }
+
+        if (gameTipText != null && !string.IsNullOrEmpty(detailMessage))
+        {
+            gameTipText.text = detailMessage;
+        }
+    }
+
     #endregion
 
     #region UI 初始化

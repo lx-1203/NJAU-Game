@@ -46,6 +46,7 @@ public class DialogueSystem : MonoBehaviour, IDialogueTrigger, ISaveable
 
     private DialogueState currentState = DialogueState.Idle;
     private DialogueUIBuilder uiBuilder;
+    private EventPresentationController eventPresentationController;
 
     private DialogueData currentDialogueData;
     private Dictionary<string, DialogueNode> nodeMap;
@@ -80,6 +81,8 @@ public class DialogueSystem : MonoBehaviour, IDialogueTrigger, ISaveable
         Instance = this;
         uiBuilder = gameObject.AddComponent<DialogueUIBuilder>();
         uiBuilder.BuildDialogueUI();
+        eventPresentationController = gameObject.AddComponent<EventPresentationController>();
+        eventPresentationController.EnsureBuilt();
         if (uiBuilder.previousButton != null)
         {
             uiBuilder.previousButton.onClick.RemoveAllListeners();
@@ -132,6 +135,7 @@ public class DialogueSystem : MonoBehaviour, IDialogueTrigger, ISaveable
         if (IsDialogueActive)
         {
             Debug.LogWarning("[DialogueSystem] A dialogue is already playing.");
+            ShowDialogueNotification("对话进行中", "当前还有对话没有结束。", new Color(0.86f, 0.62f, 0.24f), 2.5f);
             return;
         }
 
@@ -139,12 +143,14 @@ public class DialogueSystem : MonoBehaviour, IDialogueTrigger, ISaveable
         if (data == null)
         {
             Debug.LogWarning($"[DialogueSystem] Dialogue not found: {dialogueId}");
+            ShowDialogueNotification("对话未找到", $"编号为 {dialogueId} 的对话数据暂时不存在。", new Color(0.82f, 0.38f, 0.30f), 2.8f);
             return;
         }
 
         if (data.nodes == null || data.nodes.Length == 0)
         {
             Debug.LogWarning($"[DialogueSystem] Dialogue has no nodes: {dialogueId}");
+            ShowDialogueNotification("对话为空", $"“{dialogueId}”还没有可播放内容。", new Color(0.82f, 0.38f, 0.30f), 2.8f);
             return;
         }
 
@@ -174,6 +180,7 @@ public class DialogueSystem : MonoBehaviour, IDialogueTrigger, ISaveable
         if (IsDialogueActive)
         {
             Debug.LogWarning("[DialogueSystem] A dialogue is already playing.");
+            ShowDialogueNotification("对话进行中", "当前还有对话没有结束。", new Color(0.86f, 0.62f, 0.24f), 2.5f);
             return;
         }
 
@@ -205,6 +212,29 @@ public class DialogueSystem : MonoBehaviour, IDialogueTrigger, ISaveable
     public void SetTextSpeed(float speed)
     {
         textSpeed = Mathf.Max(0.001f, speed);
+    }
+
+    public void ApplyEventPresentation(EventPresentationDefinition presentation, string fallbackSpeaker, string fallbackPortraitId)
+    {
+        if (eventPresentationController == null)
+        {
+            eventPresentationController = gameObject.GetComponent<EventPresentationController>();
+            if (eventPresentationController == null)
+            {
+                eventPresentationController = gameObject.AddComponent<EventPresentationController>();
+            }
+        }
+
+        eventPresentationController.EnsureBuilt();
+        eventPresentationController.Show(presentation, fallbackSpeaker, fallbackPortraitId);
+    }
+
+    public void ClearEventPresentation()
+    {
+        if (eventPresentationController != null)
+        {
+            eventPresentationController.Hide();
+        }
     }
 
     public void DebugStepBackOneLine()
@@ -390,6 +420,7 @@ public class DialogueSystem : MonoBehaviour, IDialogueTrigger, ISaveable
         if (nodeMap == null || !nodeMap.TryGetValue(nodeId, out DialogueNode node))
         {
             Debug.LogError($"[DialogueSystem] Missing node: {nodeId}");
+            ShowDialogueNotification("对话中断", $"对话节点 {nodeId} 缺失，当前对话已结束。", new Color(0.82f, 0.38f, 0.30f), 3f);
             EndDialogue();
             return;
         }
@@ -702,6 +733,7 @@ public class DialogueSystem : MonoBehaviour, IDialogueTrigger, ISaveable
                     break;
                 default:
                     Debug.LogWarning($"[DialogueSystem] Unknown effect type: {effect.type}");
+                    ShowDialogueNotification("对话效果未识别", $"检测到未识别的效果类型：{effect.type}。", new Color(0.82f, 0.38f, 0.30f), 3f);
                     break;
             }
         }
@@ -908,6 +940,14 @@ public class DialogueSystem : MonoBehaviour, IDialogueTrigger, ISaveable
         if (uiBuilder.previousButtonText != null)
         {
             uiBuilder.previousButtonText.text = CanStepBack ? "Previous" : "Previous";
+        }
+    }
+
+    private void ShowDialogueNotification(string title, string message, Color color, float duration)
+    {
+        if (MissionUI.Instance != null)
+        {
+            MissionUI.Instance.ShowSystemNotification(title, message, color, duration);
         }
     }
 }

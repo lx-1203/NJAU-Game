@@ -365,14 +365,9 @@ public class LocationManager : MonoBehaviour
     {
         if (!CanMoveTo(target))
         {
-            string reason = GameState.Instance == null
-                ? "GameState missing"
-                : !locationDefs.ContainsKey(target)
-                    ? "unknown target"
-                    : GameState.Instance.CurrentLocation == target
-                        ? "already at target"
-                        : "blocked";
+            string reason = GetMoveBlockReason(target);
             Debug.LogWarning($"[LocationManager] Cannot move to {target}: {reason}");
+            ShowLocationNotification("无法前往", reason, new Color(0.82f, 0.38f, 0.30f), 2.8f);
             return false;
         }
 
@@ -406,6 +401,7 @@ public class LocationManager : MonoBehaviour
         if (player == null)
         {
             Debug.LogWarning("[LocationManager] PlayerController and Player tag not found, cannot teleport player after map navigation.");
+            ShowLocationNotification("场景定位失败", "地点已经切换，但角色落点没有同步成功，重新移动一次通常可以恢复。", new Color(0.86f, 0.62f, 0.24f), 3f);
             return;
         }
 
@@ -425,5 +421,27 @@ public class LocationManager : MonoBehaviour
     private void OnRoundAdvanced(GameState.RoundAdvanceResult result)
     {
         Debug.Log("[LocationManager] 回合推进，刷新地点状态");
+    }
+
+    public string GetMoveBlockReason(LocationId target)
+    {
+        if (GameState.Instance == null)
+            return "当前核心状态还没准备好，暂时不能切换地点。";
+
+        if (!locationDefs.ContainsKey(target))
+            return "目标地点数据没有成功载入，这次导航无法完成。";
+
+        if (GameState.Instance.CurrentLocation == target)
+            return $"你已经在{GetLocation(target)?.displayName ?? "该地点"}了。";
+
+        return "这次导航没有通过校验，请稍后再试一次。";
+    }
+
+    private void ShowLocationNotification(string title, string message, Color color, float duration)
+    {
+        if (MissionUI.Instance != null)
+        {
+            MissionUI.Instance.ShowSystemNotification(title, message, color, duration);
+        }
     }
 }

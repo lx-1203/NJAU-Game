@@ -1,6 +1,150 @@
 {
   "events": [
     {
+      "id": "DE_002",
+      "eventType": "Dark",
+      "title": "作弊后的余波",
+      "description": "作弊的念头和现实后果都在你的心里留下了痕迹。",
+      "priority": 0,
+      "isForced": false,
+      "isRepeatable": false,
+      "trigger": {
+        "year": 0,
+        "semester": 0,
+        "roundMin": 0,
+        "roundMax": 0,
+        "attributeConditions": [],
+        "minMoney": 0,
+        "maxMoney": 0,
+        "affinityConditions": [],
+        "requiredEventIds": [],
+        "excludedEventIds": [],
+        "requiredFlags": [],
+        "excludedFlags": [ "de_002_done" ],
+        "minDarkness": 0,
+        "triggerBehavior": "cheat",
+        "triggerChance": 1,
+        "phase": "RoundEnd"
+      },
+      "dialogues": [
+        {
+          "speaker": "内心",
+          "lines": [
+            "那一瞬间的侥幸过去后，你的心却没完全安静下来。",
+            "无论有没有被发现，你都清楚自己已经跨过了一道线。"
+          ],
+          "portraitId": ""
+        }
+      ],
+      "choices": [
+        {
+          "text": "下次绝不能再这样",
+          "effects": [
+            { "type": "attribute", "target": "领导力", "value": 1, "description": "领导力 +1" },
+            { "type": "attribute", "target": "压力", "value": 2, "description": "压力 +2" },
+            { "type": "flag", "target": "de_002_done", "value": 1, "description": "作弊余波事件完成" }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "先把眼前这关过了再说",
+          "effects": [
+            { "type": "darkness", "target": "", "value": 5, "description": "黑暗值 +5" },
+            { "type": "flag", "target": "cheat_rationalized", "value": 1, "description": "留下自我合理化痕迹" },
+            { "type": "flag", "target": "de_002_done", "value": 1, "description": "作弊余波事件完成" }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        }
+      ],
+      "defaultEffects": [],
+      "chainEventIds": [],
+      "presentation": {
+        "sceneKey": "cheat_aftermath",
+        "sceneDisplayName": "考试后的走廊",
+        "locationId": "TeachingBuilding",
+        "backgroundResourcePath": "",
+        "protagonistPortraitResourcePath": "",
+        "npcPortraitResourcePath": "",
+        "backgroundSlotName": "BG_Exam_Corridor_Aftermath",
+        "protagonistSlotName": "PC_Cheat_Aftermath",
+        "npcSlotName": "NPC_InnerVoice_Cheat"
+      }
+    },
+    {
+      "id": "DE_003",
+      "eventType": "Dark",
+      "title": "网贷广告",
+      "description": "资金压力把你推到了一个危险的入口前。",
+      "priority": 0,
+      "isForced": false,
+      "isRepeatable": false,
+      "trigger": {
+        "year": 0,
+        "semester": 0,
+        "roundMin": 0,
+        "roundMax": 0,
+        "attributeConditions": [],
+        "minMoney": 0,
+        "maxMoney": 0,
+        "affinityConditions": [],
+        "requiredEventIds": [],
+        "excludedEventIds": [],
+        "requiredFlags": [],
+        "excludedFlags": [ "de_003_done" ],
+        "minDarkness": 0,
+        "triggerBehavior": "loan",
+        "triggerChance": 1,
+        "phase": "RoundEnd"
+      },
+      "dialogues": [
+        {
+          "speaker": "系统",
+          "lines": [
+            "你的手机弹出一条广告：\"急用钱？大学生专享，秒批秒到账。\"",
+            "你盯着那条消息看了很久，知道自己正站在某个危险边缘。"
+          ],
+          "portraitId": ""
+        }
+      ],
+      "choices": [
+        {
+          "text": "先记下来，也许以后会用到",
+          "effects": [
+            { "type": "darkness", "target": "", "value": 8, "description": "黑暗值 +8" },
+            { "type": "flag", "target": "loan_contact_saved", "value": 1, "description": "保存了网贷联系方式" },
+            { "type": "flag", "target": "de_003_done", "value": 1, "description": "网贷广告事件完成" }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "立刻删掉，告诉自己不能碰",
+          "effects": [
+            { "type": "attribute", "target": "压力", "value": 3, "description": "压力 +3" },
+            { "type": "attribute", "target": "领导力", "value": 2, "description": "领导力 +2" },
+            { "type": "flag", "target": "de_003_done", "value": 1, "description": "网贷广告事件完成" }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        }
+      ],
+      "defaultEffects": [],
+      "chainEventIds": [],
+      "presentation": {
+        "sceneKey": "loan_ad_popup",
+        "sceneDisplayName": "深夜手机屏幕",
+        "locationId": "Dormitory",
+        "backgroundResourcePath": "",
+        "protagonistPortraitResourcePath": "",
+        "npcPortraitResourcePath": "",
+        "backgroundSlotName": "BG_Dorm_Night_PhoneGlow",
+        "protagonistSlotName": "PC_Loan_Dilemma",
+        "npcSlotName": "NPC_System_LoanAd"
+      }
+    },
+    {
       "id": "DE_001",
       "eventType": "Dark",
       "title": "作弊诱惑",
@@ -22,8 +166,11 @@
         "affinityConditions": [],
         "requiredEventIds": [],
         "excludedEventIds": [],
+        "requiredFlags": [],
+        "excludedFlags": [ "de_001_done" ],
         "minDarkness": 0,
         "triggerBehavior": "",
+        "triggerChance": 1,
         "phase": "RoundEnd"
       },
       "dialogues": [
@@ -43,7 +190,8 @@
             { "type": "attribute", "target": "学力", "value": 10, "description": "学力 +10（临时）" },
             { "type": "attribute", "target": "压力", "value": -20, "description": "压力 -20" },
             { "type": "darkness", "target": "", "value": 15, "description": "黑暗值 +15" },
-            { "type": "flag", "target": "has_cheated", "value": 1, "description": "作弊标记" }
+            { "type": "flag", "target": "has_cheated", "value": 1, "description": "作弊标记" },
+            { "type": "flag", "target": "de_001_done", "value": 1, "description": "作弊诱惑事件完成" }
           ],
           "triggerEventId": "",
           "showConditions": []
@@ -53,14 +201,26 @@
           "effects": [
             { "type": "attribute", "target": "压力", "value": 5, "description": "压力 +5" },
             { "type": "attribute", "target": "心情", "value": -5, "description": "心情 -5" },
-            { "type": "attribute", "target": "领导力", "value": 2, "description": "领导力 +2（正义感）" }
+            { "type": "attribute", "target": "领导力", "value": 2, "description": "领导力 +2（正义感）" },
+            { "type": "flag", "target": "de_001_done", "value": 1, "description": "作弊诱惑事件完成" }
           ],
           "triggerEventId": "",
           "showConditions": []
         }
       ],
       "defaultEffects": [],
-      "chainEventIds": []
+      "chainEventIds": [],
+      "presentation": {
+        "sceneKey": "cheat_temptation",
+        "sceneDisplayName": "考场前排",
+        "locationId": "TeachingBuilding",
+        "backgroundResourcePath": "",
+        "protagonistPortraitResourcePath": "",
+        "npcPortraitResourcePath": "",
+        "backgroundSlotName": "BG_Examroom_Temptation",
+        "protagonistSlotName": "PC_Cheat_Temptation",
+        "npcSlotName": "NPC_Shadowed_Classmate"
+      }
     }
   ]
 }

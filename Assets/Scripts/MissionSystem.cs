@@ -19,6 +19,7 @@ public class MissionSystem : MonoBehaviour, ISaveable
     public event Action<MissionDefinition> OnMissionFailed;
 
     private Dictionary<string, MissionDefinition> allMissions = new Dictionary<string, MissionDefinition>();
+    private HashSet<string> availableMissionIds = new HashSet<string>();
     private Dictionary<string, MissionRuntimeData> activeMissions = new Dictionary<string, MissionRuntimeData>();
     private HashSet<string> completedMissionIds = new HashSet<string>();
     private HashSet<string> failedMissionIds = new HashSet<string>();
@@ -37,6 +38,7 @@ public class MissionSystem : MonoBehaviour, ISaveable
     {
         LoadMissions();
         SubscribeToEvents();
+        RefreshMissionState();
     }
 
     private void OnDestroy()
@@ -53,6 +55,7 @@ public class MissionSystem : MonoBehaviour, ISaveable
         if (jsonFile == null)
         {
             Debug.LogWarning("[MissionSystem] missions.json not found in Resources/Data/");
+            ShowMissionNotification("任务系统未就绪", "没有找到任务配置文件，这一轮将先不生成任务。", new Color(0.82f, 0.38f, 0.30f), 3f);
             return;
         }
 
@@ -68,6 +71,7 @@ public class MissionSystem : MonoBehaviour, ISaveable
         catch (Exception e)
         {
             Debug.LogError($"[MissionSystem] Failed to parse missions.json: {e.Message}");
+            ShowMissionNotification("任务加载失败", "任务配置解析失败，这一轮将暂时跳过任务系统。", new Color(0.82f, 0.38f, 0.30f), 3f);
         }
     }
 
@@ -142,16 +146,28 @@ public class MissionSystem : MonoBehaviour, ISaveable
         }
     }
 
+    public void RefreshMissionState()
+    {
+        CheckMissionTriggers();
+        CheckAllObjectives();
+    }
+
     /// <summary>
     /// 检查任务触发条件
     /// </summary>
     private void CheckMissionTriggers(GameState.RoundAdvanceResult result)
+    {
+        CheckMissionTriggers();
+    }
+
+    private void CheckMissionTriggers()
     {
         foreach (var mission in allMissions.Values)
         {
             // 跳过已完成/失败/进行中的任务
             if (completedMissionIds.Contains(mission.missionId) ||
                 failedMissionIds.Contains(mission.missionId) ||
+                availableMissionIds.Contains(mission.missionId) ||
                 activeMissions.ContainsKey(mission.missionId))
             {
                 continue;
@@ -194,13 +210,23 @@ public class MissionSystem : MonoBehaviour, ISaveable
     /// </summary>
     private bool EvaluateCondition(MissionTriggerCondition condition)
     {
+        if (condition == null)
+        {
+            return true;
+        }
+
+        if (GameState.Instance == null)
+        {
+            return false;
+        }
+
         switch (condition.conditionType)
         {
             case "Round":
-                return CompareValue(GameState.Instance.CurrentRound, condition.minValue, condition.comparisonOperator);
+                return CompareValue(GetOverallRoundIndex(), condition.minValue, condition.comparisonOperator);
 
             case "Semester":
-                return CompareValue(GameState.Instance.CurrentSemester, condition.minValue, condition.comparisonOperator);
+                return CompareValue(GetOverallSemesterIndex(), condition.minValue, condition.comparisonOperator);
 
             case "Attribute":
                 int attrValue = GetAttributeValue(condition.targetId);
@@ -210,11 +236,19 @@ public class MissionSystem : MonoBehaviour, ISaveable
                 return CompareValue(GameState.Instance.Money, condition.minValue, condition.comparisonOperator);
 
             case "NPCAffinity":
+                if (AffinitySystem.Instance == null)
+                {
+                    return false;
+                }
                 var rel = AffinitySystem.Instance.GetRelationship(condition.targetId);
                 int affinity = rel != null ? rel.affinity : 0;
                 return CompareValue(affinity, condition.minValue, condition.comparisonOperator);
 
             case "Event":
+                if (EventHistory.Instance == null)
+                {
+                    return false;
+                }
                 return EventHistory.Instance.HasTriggered(condition.targetId);
 
             default:
@@ -240,6 +274,11 @@ public class MissionSystem : MonoBehaviour, ISaveable
     private int GetAttributeValue(string attributeName)
     {
         var attrs = PlayerAttributes.Instance;
+        if (attrs == null)
+        {
+            return 0;
+        }
+
         switch (attributeName)
         {
             case "Study": return attrs.Study;
@@ -260,7 +299,13 @@ public class MissionSystem : MonoBehaviour, ISaveable
     /// </summary>
     private void UnlockMission(MissionDefinition mission)
     {
+        if (mission == null || availableMissionIds.Contains(mission.missionId) || activeMissions.ContainsKey(mission.missionId))
+        {
+            return;
+        }
+
         Debug.Log($"[MissionSystem] Mission unlocked: {mission.missionName}");
+        availableMissionIds.Add(mission.missionId);
         OnMissionUnlocked?.Invoke(mission);
 
         if (mission.autoAccept)
@@ -277,22 +322,49 @@ public class MissionSystem : MonoBehaviour, ISaveable
         if (!allMissions.TryGetValue(missionId, out var mission))
         {
             Debug.LogWarning($"[MissionSystem] Mission not found: {missionId}");
+            ShowMissionNotification("无法接取任务", "没有找到这条任务数据。", new Color(0.82f, 0.38f, 0.30f), 2.8f);
             return false;
         }
 
         if (activeMissions.ContainsKey(missionId))
         {
             Debug.LogWarning($"[MissionSystem] Mission already active: {missionId}");
+            ShowMissionNotification("任务已在进行中", $"“{mission.missionName}”已经在追踪列表里了。", new Color(0.86f, 0.62f, 0.24f), 2.6f);
+            return false;
+        }
+
+        if (completedMissionIds.Contains(missionId) || failedMissionIds.Contains(missionId))
+        {
+            return false;
+        }
+
+        if (!mission.autoAccept && !availableMissionIds.Contains(missionId))
+        {
+            Debug.LogWarning($"[MissionSystem] Mission not unlocked yet: {missionId}");
+            ShowMissionNotification("暂时无法接取", $"“{mission.missionName}”还没有正式解锁。", new Color(0.82f, 0.38f, 0.30f), 2.8f);
             return false;
         }
 
         var runtimeData = new MissionRuntimeData(mission);
         runtimeData.status = MissionStatus.Active;
-        runtimeData.acceptedRound = GameState.Instance.CurrentRound;
+        runtimeData.acceptedRound = GetOverallRoundIndex();
+        availableMissionIds.Remove(missionId);
         activeMissions[missionId] = runtimeData;
+
+        SyncMissionObjectives(missionId, runtimeData, mission);
 
         Debug.Log($"[MissionSystem] Mission accepted: {mission.missionName}");
         OnMissionAccepted?.Invoke(mission);
+        ShowMissionNotification(
+            "任务开始",
+            BuildMissionAcceptedSummary(mission),
+            new Color(0.28f, 0.72f, 0.86f),
+            3f);
+
+        if (runtimeData.objectives.All(o => o.isCompleted))
+        {
+            CompleteMission(missionId);
+        }
 
         return true;
     }
@@ -335,21 +407,7 @@ public class MissionSystem : MonoBehaviour, ISaveable
             var runtimeData = kvp.Value;
             var definition = allMissions[missionId];
 
-            foreach (var objective in runtimeData.objectives)
-            {
-                if (objective.isCompleted) continue;
-
-                int currentValue = GetObjectiveCurrentValue(objective);
-                if (currentValue != objective.currentValue)
-                {
-                    objective.currentValue = currentValue;
-                    if (objective.currentValue >= objective.targetValue)
-                    {
-                        objective.isCompleted = true;
-                    }
-                    OnObjectiveUpdated?.Invoke(definition, objective);
-                }
-            }
+            SyncMissionObjectives(missionId, runtimeData, definition);
 
             // 检查任务是否完成
             if (runtimeData.objectives.All(o => o.isCompleted))
@@ -359,15 +417,48 @@ public class MissionSystem : MonoBehaviour, ISaveable
         }
     }
 
+    private void SyncMissionObjectives(string missionId, MissionRuntimeData runtimeData, MissionDefinition definition)
+    {
+        if (runtimeData == null || definition == null || runtimeData.objectives == null)
+        {
+            return;
+        }
+
+        foreach (var objective in runtimeData.objectives)
+        {
+            if (objective == null || objective.isCompleted) continue;
+
+            int currentValue = GetObjectiveCurrentValue(objective);
+            bool stateChanged = currentValue != objective.currentValue;
+
+            objective.currentValue = currentValue;
+            if (objective.currentValue >= objective.targetValue)
+            {
+                objective.isCompleted = true;
+                stateChanged = true;
+            }
+
+            if (stateChanged)
+            {
+                OnObjectiveUpdated?.Invoke(definition, objective);
+            }
+        }
+    }
+
     private int GetObjectiveCurrentValue(MissionObjective objective)
     {
+        if (objective == null || GameState.Instance == null)
+        {
+            return 0;
+        }
+
         switch (objective.type)
         {
             case MissionObjectiveType.ReachRound:
-                return GameState.Instance.CurrentRound;
+                return GetOverallRoundIndex();
 
             case MissionObjectiveType.ReachSemester:
-                return GameState.Instance.CurrentSemester;
+                return GetOverallSemesterIndex();
 
             case MissionObjectiveType.AttributeThreshold:
                 return GetAttributeValue(objective.targetId);
@@ -376,8 +467,31 @@ public class MissionSystem : MonoBehaviour, ISaveable
                 return GameState.Instance.Money;
 
             case MissionObjectiveType.NPCAffinityThreshold:
+                if (AffinitySystem.Instance == null)
+                {
+                    return 0;
+                }
                 var r = AffinitySystem.Instance.GetRelationship(objective.targetId);
                 return r != null ? r.affinity : 0;
+
+            case MissionObjectiveType.JoinClub:
+                if (ClubSystem.Instance == null)
+                {
+                    return objective.currentValue;
+                }
+
+                if (string.IsNullOrEmpty(objective.targetId))
+                {
+                    return ClubSystem.Instance.GetJoinedClubs().Count;
+                }
+
+                return ClubSystem.Instance.GetMembership(objective.targetId) != null ? 1 : 0;
+
+            case MissionObjectiveType.PassExam:
+                return GetPassedExamCount(objective.targetId);
+
+            case MissionObjectiveType.CompleteEvent:
+                return GetCompletedEventCount(objective.targetId);
 
             default:
                 return objective.currentValue;
@@ -400,6 +514,11 @@ public class MissionSystem : MonoBehaviour, ISaveable
 
         Debug.Log($"[MissionSystem] Mission completed: {definition.missionName}");
         OnMissionCompleted?.Invoke(definition);
+        ShowMissionNotification(
+            "任务完成",
+            BuildMissionRewardSummary(definition),
+            new Color(0.30f, 0.80f, 0.42f),
+            3.4f);
     }
 
     /// <summary>
@@ -414,7 +533,14 @@ public class MissionSystem : MonoBehaviour, ISaveable
             switch (reward.type)
             {
                 case MissionRewardType.Money:
-                    EconomyManager.Instance.Earn(reward.value, TransactionRecord.TransactionType.OtherIncome, "任务奖励");
+                    if (EconomyManager.Instance != null)
+                    {
+                        EconomyManager.Instance.Earn(reward.value, TransactionRecord.TransactionType.OtherIncome, "任务奖励");
+                    }
+                    else if (GameState.Instance != null)
+                    {
+                        GameState.Instance.AddMoney(reward.value);
+                    }
                     break;
 
                 case MissionRewardType.Attribute:
@@ -422,7 +548,17 @@ public class MissionSystem : MonoBehaviour, ISaveable
                     break;
 
                 case MissionRewardType.Unlock:
-                    EventHistory.Instance.SetFlag(reward.targetId, true);
+                    if (EventHistory.Instance != null && !string.IsNullOrEmpty(reward.targetId))
+                    {
+                        EventHistory.Instance.SetFlag(reward.targetId, true);
+                    }
+                    break;
+
+                case MissionRewardType.Item:
+                    if (InventorySystem.Instance != null && !string.IsNullOrEmpty(reward.targetId))
+                    {
+                        InventorySystem.Instance.AddItem(reward.targetId, Mathf.Max(1, reward.value));
+                    }
                     break;
             }
         }
@@ -431,6 +567,11 @@ public class MissionSystem : MonoBehaviour, ISaveable
     private void ModifyAttribute(string attributeName, int value)
     {
         var attrs = PlayerAttributes.Instance;
+        if (attrs == null)
+        {
+            return;
+        }
+
         switch (attributeName)
         {
             case "Study": attrs.Study += value; break;
@@ -458,7 +599,7 @@ public class MissionSystem : MonoBehaviour, ISaveable
 
             if (definition.timeLimit > 0)
             {
-                int elapsedRounds = GameState.Instance.CurrentRound - runtimeData.acceptedRound;
+                int elapsedRounds = GetOverallRoundIndex() - runtimeData.acceptedRound;
                 if (elapsedRounds >= definition.timeLimit)
                 {
                     FailMission(missionId);
@@ -482,6 +623,13 @@ public class MissionSystem : MonoBehaviour, ISaveable
 
         Debug.Log($"[MissionSystem] Mission failed: {definition.missionName}");
         OnMissionFailed?.Invoke(definition);
+        ShowMissionNotification(
+            "任务失败",
+            definition.timeLimit > 0
+                ? $"“{definition.missionName}”未能在时限内完成。"
+                : $"“{definition.missionName}”已从进行中列表移出。",
+            new Color(0.82f, 0.38f, 0.30f),
+            3f);
     }
 
     /// <summary>
@@ -495,6 +643,7 @@ public class MissionSystem : MonoBehaviour, ISaveable
         if (!definition.canAbandon)
         {
             Debug.LogWarning($"[MissionSystem] Cannot abandon mission: {definition.missionName}");
+            ShowMissionNotification("无法放弃任务", $"“{definition.missionName}”属于不可放弃任务。", new Color(0.82f, 0.38f, 0.30f), 2.8f);
             return false;
         }
 
@@ -570,15 +719,158 @@ public class MissionSystem : MonoBehaviour, ISaveable
         }
     }
 
+    private int GetOverallSemesterIndex()
+    {
+        if (GameState.Instance == null)
+        {
+            return 0;
+        }
+
+        return (GameState.Instance.CurrentYear - 1) * 2 + GameState.Instance.CurrentSemester;
+    }
+
+    private int GetOverallRoundIndex()
+    {
+        if (GameState.Instance == null)
+        {
+            return 0;
+        }
+
+        return (GetOverallSemesterIndex() - 1) * GameState.MaxRoundsPerSemester + GameState.Instance.CurrentRound;
+    }
+
+    private int GetPassedExamCount(string targetId)
+    {
+        if (ExamSystem.Instance == null || string.IsNullOrEmpty(targetId))
+        {
+            return 0;
+        }
+
+        switch (targetId)
+        {
+            case "CERT_CET4":
+            case "cet4":
+                return ExamSystem.Instance.IsCET4Passed ? 1 : 0;
+            case "CERT_CET6":
+            case "cet6":
+                return ExamSystem.Instance.IsCET6Passed ? 1 : 0;
+            case "CERT_COMPUTER":
+            case "computer_level":
+                return ExamSystem.Instance.IsComputerLevelPassed ? 1 : 0;
+        }
+
+        ExamResult[] allResults = ExamSystem.Instance.GetAllResults();
+        int passedCount = 0;
+        for (int i = 0; i < allResults.Length; i++)
+        {
+            ExamResult result = allResults[i];
+            if (result != null && result.courseId == targetId && result.score >= 60)
+            {
+                passedCount++;
+            }
+        }
+
+        return passedCount;
+    }
+
+    private int GetCompletedEventCount(string targetId)
+    {
+        if (EventHistory.Instance == null || string.IsNullOrEmpty(targetId))
+        {
+            return 0;
+        }
+
+        return EventHistory.Instance.GetTriggerCount(targetId);
+    }
+
+    private string BuildMissionAcceptedSummary(MissionDefinition mission)
+    {
+        if (mission == null)
+        {
+            return "新的目标已经加入追踪列表。";
+        }
+
+        string objectiveText = mission.objectives != null && mission.objectives.Count > 0
+            ? $"目标数 {mission.objectives.Count}"
+            : "任务目标已记录";
+        return $"“{mission.missionName}”已加入追踪。\n{objectiveText}，记得随时查看任务面板。";
+    }
+
+    private string BuildMissionRewardSummary(MissionDefinition mission)
+    {
+        if (mission == null)
+        {
+            return "任务奖励已经发放。";
+        }
+
+        List<string> rewardParts = new List<string>();
+        if (mission.rewards != null)
+        {
+            for (int i = 0; i < mission.rewards.Count; i++)
+            {
+                MissionReward reward = mission.rewards[i];
+                if (reward == null)
+                {
+                    continue;
+                }
+
+                switch (reward.type)
+                {
+                    case MissionRewardType.Money:
+                        rewardParts.Add($"金钱+{reward.value}");
+                        break;
+                    case MissionRewardType.Attribute:
+                        rewardParts.Add($"{reward.targetId}+{reward.value}");
+                        break;
+                    case MissionRewardType.Unlock:
+                        rewardParts.Add($"解锁：{reward.targetId}");
+                        break;
+                    case MissionRewardType.Item:
+                        rewardParts.Add($"物品：{reward.targetId} x{Mathf.Max(1, reward.value)}");
+                        break;
+                }
+            }
+        }
+
+        string rewardSummary = rewardParts.Count > 0 ? string.Join("，", rewardParts) : "奖励已结算";
+        return $"“{mission.missionName}”已完成。\n{rewardSummary}";
+    }
+
+    private void ShowMissionNotification(string title, string message, Color color, float duration)
+    {
+        if (MissionUI.Instance != null)
+        {
+            MissionUI.Instance.ShowSystemNotification(title, message, color, duration);
+        }
+    }
+
     // 查询接口
     public List<MissionDefinition> GetActiveMissions()
     {
         return activeMissions.Keys.Select(id => allMissions[id]).ToList();
     }
 
+    public List<MissionDefinition> GetAvailableMissions()
+    {
+        return availableMissionIds
+            .Where(id => allMissions.ContainsKey(id))
+            .Select(id => allMissions[id])
+            .OrderBy(mission => mission.priority)
+            .ToList();
+    }
+
     public List<MissionDefinition> GetCompletedMissions()
     {
         return completedMissionIds.Select(id => allMissions[id]).ToList();
+    }
+
+    public List<MissionDefinition> GetFailedMissions()
+    {
+        return failedMissionIds
+            .Where(id => allMissions.ContainsKey(id))
+            .Select(id => allMissions[id])
+            .OrderBy(mission => mission.priority)
+            .ToList();
     }
 
     public MissionRuntimeData GetMissionRuntimeData(string missionId)
@@ -596,6 +888,7 @@ public class MissionSystem : MonoBehaviour, ISaveable
     {
         saveData.missionData = new MissionSaveData
         {
+            availableMissionIds = availableMissionIds.ToList(),
             activeMissions = activeMissions.Values.ToList(),
             completedMissionIds = completedMissionIds.ToList(),
             failedMissionIds = failedMissionIds.ToList()
@@ -607,9 +900,18 @@ public class MissionSystem : MonoBehaviour, ISaveable
         if (saveData.missionData == null) return;
         saveData.missionData.EnsureInitialized();
 
+        availableMissionIds.Clear();
         activeMissions.Clear();
         completedMissionIds.Clear();
         failedMissionIds.Clear();
+
+        foreach (var id in saveData.missionData.availableMissionIds)
+        {
+            if (!string.IsNullOrEmpty(id))
+            {
+                availableMissionIds.Add(id);
+            }
+        }
 
         foreach (var data in saveData.missionData.activeMissions)
         {

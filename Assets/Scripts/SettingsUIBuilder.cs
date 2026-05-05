@@ -41,10 +41,13 @@ public class SettingsUIBuilder : MonoBehaviour
     private static readonly Color SliderFillColor = new Color32(0xF0, 0xB6, 0x63, 0xFF);
 
     private GameObject rootCanvasObj;
+    private GameObject overlayRoot;
+    private GameObject bookPanelRoot;
     private Canvas canvas;
     private bool isOpen;
     private bool isTitleScreen;
     private SettingsTab currentTab = SettingsTab.Gameplay;
+    private GameObject currentPage;
 
     private SettingsData draftSettings;
     private List<string> resolutionOptions = new List<string>();
@@ -173,13 +176,23 @@ public class SettingsUIBuilder : MonoBehaviour
             obj.AddComponent<SettingsUIBuilder>();
         }
 
-        if (!UIFlowGuard.PrepareForExclusiveWindow(UIFlowGuard.WindowSettings)) return;
+        if (!UIFlowGuard.PrepareForExclusiveWindow(UIFlowGuard.WindowSettings))
+        {
+            Instance.ShowSettingsNotification("设置未打开", "当前还有其他关键界面占用操作，先处理完再调整设置。", new Color(0.82f, 0.38f, 0.30f), 2.8f);
+            return;
+        }
         UIFlowGuard.EnsureEventSystem();
         SettingsManager manager = SettingsManager.EnsureInstance();
+        if (manager == null)
+        {
+            Instance.ShowSettingsNotification("设置未打开", "设置系统暂时没有成功初始化，这次无法打开设置面板。", new Color(0.82f, 0.38f, 0.30f), 2.8f);
+            return;
+        }
+
         manager.EnsureLoaded();
         Instance.isTitleScreen = isTitleScreenMode;
         Instance.BuildUI();
-        Instance.isOpen = true;
+        Instance.isOpen = Instance.rootCanvasObj != null;
     }
 
     public static void HideSettings()
@@ -192,12 +205,7 @@ public class SettingsUIBuilder : MonoBehaviour
         Instance.isOpen = false;
         Instance.isCapturingHotkey = false;
         Instance.ClearConfirmDialog();
-
-        if (Instance.rootCanvasObj != null)
-        {
-            Destroy(Instance.rootCanvasObj);
-            Instance.rootCanvasObj = null;
-        }
+        Instance.HideAnimated();
     }
 
     public bool IsOpen
@@ -213,11 +221,13 @@ public class SettingsUIBuilder : MonoBehaviour
         }
 
         SettingsManager manager = SettingsManager.EnsureInstance();
-        manager.EnsureLoaded();
         if (manager == null)
         {
+            ShowSettingsNotification("设置界面异常", "设置系统暂时没有成功初始化，这次无法构建设置面板。", new Color(0.82f, 0.38f, 0.30f), 2.8f);
             return;
         }
+
+        manager.EnsureLoaded();
 
         draftSettings = manager.CurrentSettings != null
             ? manager.CurrentSettings.Clone()
@@ -240,13 +250,13 @@ public class SettingsUIBuilder : MonoBehaviour
         rootCanvasObj.AddComponent<GraphicRaycaster>();
         RectTransform canvasRT = rootCanvasObj.GetComponent<RectTransform>();
 
-        GameObject overlay = CreateUI("Overlay", canvasRT);
-        Stretch(overlay);
-        Image overlayImage = overlay.AddComponent<Image>();
+        overlayRoot = CreateUI("Overlay", canvasRT);
+        Stretch(overlayRoot);
+        Image overlayImage = overlayRoot.AddComponent<Image>();
         overlayImage.color = OverlayColor;
         overlayImage.raycastTarget = true;
 
-        Button overlayButton = overlay.AddComponent<Button>();
+        Button overlayButton = overlayRoot.AddComponent<Button>();
         overlayButton.onClick.AddListener(TryClose);
         ColorBlock overlayColors = overlayButton.colors;
         overlayColors.normalColor = Color.white;
@@ -261,21 +271,28 @@ public class SettingsUIBuilder : MonoBehaviour
         CreateContentArea(panelRT);
         CreateBottomBar(panelRT);
 
+        UITransitionUtility.EnsureCanvasGroup(overlayRoot);
+        UITransitionUtility.EnsureCanvasGroup(bookPanelRoot);
+        UITransitionUtility.Show(this, overlayRoot, Vector2.zero, 1f, 0.18f);
+        UITransitionUtility.Show(this, bookPanelRoot, new Vector2(0f, 28f), 0.985f, 0.22f);
+
         RefreshAllUI();
+        currentPage = GetPageForTab(currentTab);
+        SetVisiblePageImmediate(currentPage);
     }
 
     private RectTransform CreateBookPanel(RectTransform parent)
     {
-        GameObject panel = CreateUI("BookPanel", parent);
-        RectTransform panelRT = panel.GetComponent<RectTransform>();
+        bookPanelRoot = CreateUI("BookPanel", parent);
+        RectTransform panelRT = bookPanelRoot.GetComponent<RectTransform>();
         panelRT.anchorMin = panelRT.anchorMax = panelRT.pivot = new Vector2(0.5f, 0.5f);
         panelRT.sizeDelta = new Vector2(1750f, 920f);
         panelRT.anchoredPosition = new Vector2(0f, -10f);
 
-        Image panelImage = panel.AddComponent<Image>();
+        Image panelImage = bookPanelRoot.AddComponent<Image>();
         panelImage.color = BookOuterColor;
 
-        Outline panelOutline = panel.AddComponent<Outline>();
+        Outline panelOutline = bookPanelRoot.AddComponent<Outline>();
         panelOutline.effectColor = new Color(0.55f, 0.38f, 0.20f, 0.28f);
         panelOutline.effectDistance = new Vector2(4f, -4f);
 
@@ -829,8 +846,24 @@ public class SettingsUIBuilder : MonoBehaviour
 
     private void SwitchTab(SettingsTab tab)
     {
+        SettingsTab previousTab = currentTab;
+        GameObject previousPage = currentPage;
         currentTab = tab;
         UpdateTabVisuals();
+
+        GameObject nextPage = GetPageForTab(tab);
+        if (nextPage != null && previousPage != nextPage)
+        {
+            if (previousPage != null)
+            {
+                UITransitionUtility.Hide(this, previousPage, new Vector2(tab > previousTab ? -20f : 20f, 0f), 0.995f, 0.10f);
+            }
+
+            nextPage.SetActive(true);
+            UITransitionUtility.Show(this, nextPage, new Vector2(tab > previousTab ? 20f : -20f, 0f), 0.995f, 0.14f);
+            currentPage = nextPage;
+        }
+
         ForceRefreshLayout();
     }
 
@@ -841,15 +874,31 @@ public class SettingsUIBuilder : MonoBehaviour
         bool audioActive = currentTab == SettingsTab.Audio;
         bool hotkeyActive = currentTab == SettingsTab.Hotkeys;
 
-        if (gameplayPage != null) gameplayPage.SetActive(gameplayActive);
-        if (displayPage != null) displayPage.SetActive(displayActive);
-        if (audioPage != null) audioPage.SetActive(audioActive);
-        if (hotkeyPage != null) hotkeyPage.SetActive(hotkeyActive);
-
         ApplyTabState(gameplayTabImage, gameplayTabText, gameplayActive);
         ApplyTabState(displayTabImage, displayTabText, displayActive);
         ApplyTabState(audioTabImage, audioTabText, audioActive);
         ApplyTabState(hotkeyTabImage, hotkeyTabText, hotkeyActive);
+
+    }
+
+    private GameObject GetPageForTab(SettingsTab tab)
+    {
+        return tab switch
+        {
+            SettingsTab.Gameplay => gameplayPage,
+            SettingsTab.Display => displayPage,
+            SettingsTab.Audio => audioPage,
+            SettingsTab.Hotkeys => hotkeyPage,
+            _ => null
+        };
+    }
+
+    private void SetVisiblePageImmediate(GameObject targetPage)
+    {
+        if (gameplayPage != null) gameplayPage.SetActive(gameplayPage == targetPage);
+        if (displayPage != null) displayPage.SetActive(displayPage == targetPage);
+        if (audioPage != null) audioPage.SetActive(audioPage == targetPage);
+        if (hotkeyPage != null) hotkeyPage.SetActive(hotkeyPage == targetPage);
     }
 
     private void ApplyTabState(Image image, TextMeshProUGUI text, bool active)
@@ -1197,6 +1246,14 @@ public class SettingsUIBuilder : MonoBehaviour
         RefreshAllUI();
     }
 
+    private void ShowSettingsNotification(string title, string message, Color color, float duration)
+    {
+        if (MissionUI.Instance != null)
+        {
+            MissionUI.Instance.ShowSystemNotification(title, message, color, duration);
+        }
+    }
+
     private void CancelHotkeyCapture(bool refresh = true)
     {
         isCapturingHotkey = false;
@@ -1394,6 +1451,41 @@ public class SettingsUIBuilder : MonoBehaviour
         confirmDialogConfirmAction = null;
         confirmDialogCancelAction = null;
         confirmDialogConfirmButton = null;
+    }
+
+    private void HideAnimated()
+    {
+        if (rootCanvasObj == null)
+        {
+            return;
+        }
+
+        GameObject canvasObject = rootCanvasObj;
+        rootCanvasObj = null;
+
+        if (overlayRoot != null)
+        {
+            UITransitionUtility.Hide(this, overlayRoot, Vector2.zero, 1f, 0.14f);
+        }
+
+        if (bookPanelRoot != null)
+        {
+            UITransitionUtility.Hide(this, bookPanelRoot, new Vector2(0f, 18f), 0.985f, 0.16f, () =>
+            {
+                if (canvasObject != null)
+                {
+                    Destroy(canvasObject);
+                }
+            });
+        }
+        else
+        {
+            Destroy(canvasObject);
+        }
+
+        overlayRoot = null;
+        bookPanelRoot = null;
+        currentPage = null;
     }
 
     private GameObject CreateUI(string name, RectTransform parent)

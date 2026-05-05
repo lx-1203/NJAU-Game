@@ -130,7 +130,17 @@ public class PhysicalTestUI : MonoBehaviour
 
     public void Show()
     {
-        if (!UIFlowGuard.PrepareForExclusiveWindow(UIFlowGuard.WindowPhysicalTest)) return;
+        if (!UIFlowGuard.PrepareForExclusiveWindow(UIFlowGuard.WindowPhysicalTest))
+        {
+            ShowSystemNotification("体测未打开", "当前还有其他关键界面占用操作，先处理完再开始体能测试。", new Color(0.82f, 0.38f, 0.30f), 2.8f);
+            return;
+        }
+
+        if (ptCanvasObj == null || testPanel == null || resultPanel == null)
+        {
+            ShowSystemNotification("体测界面异常", "体测界面还没有准备完整，这次无法正常打开。", new Color(0.82f, 0.38f, 0.30f), 2.8f);
+            return;
+        }
 
         // 刷新体魄显示
         if (ptCanvasObj != null) ptCanvasObj.SetActive(true);
@@ -470,6 +480,10 @@ public class PhysicalTestUI : MonoBehaviour
         if (PhysicalTestSystem.Instance == null)
         {
             Debug.LogError("[PhysicalTestUI] 找不到 PhysicalTestSystem.Instance");
+            if (MissionUI.Instance != null)
+            {
+                MissionUI.Instance.ShowSystemNotification("体测未开始", "体测系统还没有准备好，这次测试暂时无法结算。", new Color(0.82f, 0.38f, 0.30f), 2.8f);
+            }
             return;
         }
 
@@ -523,6 +537,14 @@ public class PhysicalTestUI : MonoBehaviour
             return FontManager.Instance.ChineseFont;
         }
         return null;
+    }
+
+    private void ShowSystemNotification(string title, string message, Color color, float duration)
+    {
+        if (MissionUI.Instance != null)
+        {
+            MissionUI.Instance.ShowSystemNotification(title, message, color, duration);
+        }
     }
 
     private GameObject CreatePanel(string name, Transform parent, Vector2 anchorMin, Vector2 anchorMax, Color bgColor)

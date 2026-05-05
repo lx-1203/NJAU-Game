@@ -13,6 +13,7 @@ public class MissionPanelBuilder : MonoBehaviour
     public static MissionPanelBuilder Instance { get; private set; }
 
     private Canvas canvas;
+    private GameObject background;
     private GameObject panel;
     private Transform contentTransform;
     private bool isOpen = false;
@@ -30,6 +31,12 @@ public class MissionPanelBuilder : MonoBehaviour
     private void Start()
     {
         CreatePanel();
+        SubscribeToEvents();
+    }
+
+    private void OnDestroy()
+    {
+        UnsubscribeFromEvents();
     }
 
     private void Update()
@@ -77,17 +84,17 @@ public class MissionPanelBuilder : MonoBehaviour
         GraphicRaycaster raycaster = canvasObj.AddComponent<GraphicRaycaster>();
 
         // 半透明背景
-        GameObject bgObj = new GameObject("Background");
-        bgObj.transform.SetParent(canvas.transform, false);
-        RectTransform bgRect = bgObj.AddComponent<RectTransform>();
+        background = new GameObject("Background");
+        background.transform.SetParent(canvas.transform, false);
+        RectTransform bgRect = background.AddComponent<RectTransform>();
         bgRect.anchorMin = Vector2.zero;
         bgRect.anchorMax = Vector2.one;
         bgRect.sizeDelta = Vector2.zero;
 
-        Image bgImage = bgObj.AddComponent<Image>();
+        Image bgImage = background.AddComponent<Image>();
         bgImage.color = new Color(0, 0, 0, 0.8f);
 
-        Button bgButton = bgObj.AddComponent<Button>();
+        Button bgButton = background.AddComponent<Button>();
         bgButton.onClick.AddListener(ClosePanel);
 
         // 主面板
@@ -142,8 +149,20 @@ public class MissionPanelBuilder : MonoBehaviour
         scroll.horizontal = false;
         scroll.vertical = true;
 
+        GameObject viewportObj = new GameObject("Viewport");
+        viewportObj.transform.SetParent(scrollObj.transform, false);
+        RectTransform viewportRect = viewportObj.AddComponent<RectTransform>();
+        viewportRect.anchorMin = Vector2.zero;
+        viewportRect.anchorMax = Vector2.one;
+        viewportRect.offsetMin = Vector2.zero;
+        viewportRect.offsetMax = Vector2.zero;
+        Image viewportImage = viewportObj.AddComponent<Image>();
+        viewportImage.color = new Color(1f, 1f, 1f, 0.01f);
+        Mask viewportMask = viewportObj.AddComponent<Mask>();
+        viewportMask.showMaskGraphic = false;
+
         GameObject contentObj = new GameObject("Content");
-        contentObj.transform.SetParent(scrollObj.transform, false);
+        contentObj.transform.SetParent(viewportObj.transform, false);
         contentTransform = contentObj.transform;
         RectTransform contentRect = contentObj.AddComponent<RectTransform>();
         contentRect.anchorMin = new Vector2(0, 1);
@@ -162,7 +181,11 @@ public class MissionPanelBuilder : MonoBehaviour
         ContentSizeFitter fitter = contentObj.AddComponent<ContentSizeFitter>();
         fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
+        scroll.viewport = viewportRect;
         scroll.content = contentRect;
+
+        UITransitionUtility.EnsureCanvasGroup(background);
+        UITransitionUtility.EnsureCanvasGroup(panel);
 
         canvasObj.SetActive(false);
     }
@@ -175,12 +198,27 @@ public class MissionPanelBuilder : MonoBehaviour
         if (MissionSystem.Instance == null)
         {
             Debug.LogWarning("[MissionPanelBuilder] MissionSystem not found");
+            if (MissionUI.Instance != null)
+            {
+                MissionUI.Instance.ShowSystemNotification("任务面板不可用", "任务系统还没有准备好，现在暂时无法打开任务列表。", new Color(0.82f, 0.38f, 0.30f), 2.8f);
+            }
             return;
         }
 
-        if (!UIFlowGuard.PrepareForExclusiveWindow(UIFlowGuard.WindowMissionPanel)) return;
-        canvas.gameObject.SetActive(true);
+        if (!UIFlowGuard.PrepareForExclusiveWindow(UIFlowGuard.WindowMissionPanel))
+        {
+            if (MissionUI.Instance != null)
+            {
+                MissionUI.Instance.ShowSystemNotification("任务面板未打开", "当前还有其他关键界面占用操作，先处理完再查看任务列表。", new Color(0.82f, 0.38f, 0.30f), 2.8f);
+            }
+            return;
+        }
         isOpen = true;
+        canvas.gameObject.SetActive(true);
+        background.SetActive(true);
+        panel.SetActive(true);
+        UITransitionUtility.Show(this, background, Vector2.zero, 1f, 0.18f);
+        UITransitionUtility.Show(this, panel, new Vector2(0f, 34f), 0.975f, 0.24f);
         RefreshPanel();
     }
 
@@ -189,11 +227,58 @@ public class MissionPanelBuilder : MonoBehaviour
     /// </summary>
     public void ClosePanel()
     {
-        canvas.gameObject.SetActive(false);
+        if (canvas == null)
+        {
+            isOpen = false;
+            return;
+        }
+
         isOpen = false;
+        UITransitionUtility.Hide(this, background, Vector2.zero, 1f, 0.14f);
+        UITransitionUtility.Hide(this, panel, new Vector2(0f, 20f), 0.985f, 0.16f, () =>
+        {
+            if (canvas != null)
+            {
+                canvas.gameObject.SetActive(false);
+            }
+        });
     }
 
     public bool IsOpen => isOpen;
+
+    private void SubscribeToEvents()
+    {
+        if (MissionSystem.Instance != null)
+        {
+            MissionSystem.Instance.OnMissionUnlocked += OnMissionStateChanged;
+            MissionSystem.Instance.OnMissionAccepted += OnMissionStateChanged;
+            MissionSystem.Instance.OnMissionCompleted += OnMissionStateChanged;
+            MissionSystem.Instance.OnMissionFailed += OnMissionStateChanged;
+            MissionSystem.Instance.OnObjectiveUpdated += OnMissionObjectiveUpdated;
+        }
+
+        if (SaveManager.Instance != null)
+        {
+            SaveManager.Instance.OnLoadCompleted += OnSaveLoaded;
+        }
+    }
+
+    private void UnsubscribeFromEvents()
+    {
+        if (MissionSystem.Instance != null)
+        {
+            MissionSystem.Instance.OnMissionUnlocked -= OnMissionStateChanged;
+            MissionSystem.Instance.OnMissionAccepted -= OnMissionStateChanged;
+            MissionSystem.Instance.OnMissionCompleted -= OnMissionStateChanged;
+            MissionSystem.Instance.OnMissionFailed -= OnMissionStateChanged;
+            MissionSystem.Instance.OnObjectiveUpdated -= OnMissionObjectiveUpdated;
+        }
+
+        if (SaveManager.Instance != null)
+        {
+            SaveManager.Instance.OnLoadCompleted -= OnSaveLoaded;
+        }
+    }
 
     /// <summary>
     /// 刷新面板内容
@@ -202,6 +287,10 @@ public class MissionPanelBuilder : MonoBehaviour
     {
         if (contentTransform == null || MissionSystem.Instance == null)
         {
+            if (MissionUI.Instance != null)
+            {
+                MissionUI.Instance.ShowSystemNotification("任务面板未刷新", "任务内容区或任务系统暂时不可用，这次没法更新任务列表。", new Color(0.82f, 0.38f, 0.30f), 2.8f);
+            }
             return;
         }
 
@@ -216,7 +305,9 @@ public class MissionPanelBuilder : MonoBehaviour
         }
 
         var activeMissions = MissionSystem.Instance.GetActiveMissions();
+        var availableMissions = MissionSystem.Instance.GetAvailableMissions();
         var completedMissions = MissionSystem.Instance.GetCompletedMissions();
+        var failedMissions = MissionSystem.Instance.GetFailedMissions();
 
         // 进行中的任务
         if (activeMissions.Count > 0)
@@ -225,6 +316,15 @@ public class MissionPanelBuilder : MonoBehaviour
             foreach (var mission in activeMissions.OrderBy(m => m.priority))
             {
                 CreateMissionItem(mission, MissionStatus.Active);
+            }
+        }
+
+        if (availableMissions.Count > 0)
+        {
+            CreateSectionHeader("可接取", new Color(1f, 0.82f, 0.28f));
+            foreach (var mission in availableMissions)
+            {
+                CreateMissionItem(mission, MissionStatus.Available);
             }
         }
 
@@ -238,7 +338,16 @@ public class MissionPanelBuilder : MonoBehaviour
             }
         }
 
-        if (activeMissions.Count == 0 && completedMissions.Count == 0)
+        if (failedMissions.Count > 0)
+        {
+            CreateSectionHeader("已失败", new Color(0.95f, 0.45f, 0.40f));
+            foreach (var mission in failedMissions)
+            {
+                CreateMissionItem(mission, MissionStatus.Failed);
+            }
+        }
+
+        if (activeMissions.Count == 0 && availableMissions.Count == 0 && completedMissions.Count == 0 && failedMissions.Count == 0)
         {
             CreateEmptyMessage();
         }
@@ -282,11 +391,32 @@ public class MissionPanelBuilder : MonoBehaviour
     /// </summary>
     private void CreateMissionItem(MissionDefinition mission, MissionStatus status)
     {
+        if (mission == null)
+        {
+            return;
+        }
+
         GameObject itemObj = new GameObject($"Mission_{mission.missionId}");
         itemObj.transform.SetParent(contentTransform, false);
 
         RectTransform itemRect = itemObj.AddComponent<RectTransform>();
-        itemRect.sizeDelta = new Vector2(0, 150);
+        int objectiveCount = 0;
+        if (status == MissionStatus.Active)
+        {
+            MissionRuntimeData runtime = MissionSystem.Instance != null
+                ? MissionSystem.Instance.GetMissionRuntimeData(mission.missionId)
+                : null;
+            objectiveCount = runtime != null && runtime.objectives != null ? runtime.objectives.Count : 0;
+        }
+
+        float preferredHeight = status == MissionStatus.Active
+            ? Mathf.Max(170f, 118f + objectiveCount * 42f)
+            : 132f;
+        itemRect.sizeDelta = new Vector2(0, preferredHeight);
+
+        LayoutElement layoutElement = itemObj.AddComponent<LayoutElement>();
+        layoutElement.preferredHeight = preferredHeight;
+        layoutElement.minHeight = preferredHeight;
 
         Image itemBg = itemObj.AddComponent<Image>();
         itemBg.color = new Color(0.25f, 0.25f, 0.25f, 1f);
@@ -395,6 +525,27 @@ public class MissionPanelBuilder : MonoBehaviour
                 }
                 objText.text = objStr.TrimEnd('\n');
             }
+
+            if (mission.canAbandon)
+            {
+                CreateStatusButton(itemObj.transform, "放弃", new Color(0.80f, 0.33f, 0.28f), () =>
+                {
+                    if (MissionSystem.Instance != null && MissionSystem.Instance.AbandonMission(mission.missionId))
+                    {
+                        RefreshPanel();
+                    }
+                });
+            }
+        }
+        else if (status == MissionStatus.Available)
+        {
+            CreateStatusButton(itemObj.transform, "接取", new Color(0.92f, 0.72f, 0.20f), () =>
+            {
+                if (MissionSystem.Instance != null && MissionSystem.Instance.AcceptMission(mission.missionId))
+                {
+                    RefreshPanel();
+                }
+            });
         }
         else if (status == MissionStatus.Completed)
         {
@@ -418,6 +569,75 @@ public class MissionPanelBuilder : MonoBehaviour
                 completeText.font = FontManager.Instance.ChineseFont;
             }
         }
+        else if (status == MissionStatus.Failed)
+        {
+            GameObject failedObj = new GameObject("Failed");
+            failedObj.transform.SetParent(itemObj.transform, false);
+            RectTransform failedRect = failedObj.AddComponent<RectTransform>();
+            failedRect.anchorMin = new Vector2(1, 0.5f);
+            failedRect.anchorMax = new Vector2(1, 0.5f);
+            failedRect.pivot = new Vector2(1, 0.5f);
+            failedRect.anchoredPosition = new Vector2(-10, 0);
+            failedRect.sizeDelta = new Vector2(100, 40);
+
+            TextMeshProUGUI failedText = failedObj.AddComponent<TextMeshProUGUI>();
+            failedText.text = "× 已失败";
+            failedText.fontSize = 20;
+            failedText.fontStyle = FontStyles.Bold;
+            failedText.alignment = TextAlignmentOptions.Center;
+            failedText.color = new Color(1f, 0.45f, 0.40f);
+            if (FontManager.Instance != null)
+            {
+                failedText.font = FontManager.Instance.ChineseFont;
+            }
+        }
+    }
+
+    private void CreateStatusButton(Transform parent, string label, Color color, UnityEngine.Events.UnityAction onClick)
+    {
+        GameObject buttonObj = CreateButton($"{label}Button", parent, new Vector2(1, 0.5f), new Vector2(1, 0.5f),
+            new Vector2(-10, 0), new Vector2(100, 40), label, 20);
+        RectTransform buttonRect = buttonObj.GetComponent<RectTransform>();
+        if (buttonRect != null)
+        {
+            buttonRect.pivot = new Vector2(1f, 0.5f);
+        }
+
+        Image buttonImage = buttonObj.GetComponent<Image>();
+        if (buttonImage != null)
+        {
+            buttonImage.color = color;
+        }
+
+        Button button = buttonObj.GetComponent<Button>();
+        if (button != null && onClick != null)
+        {
+            button.onClick.AddListener(onClick);
+        }
+    }
+
+    private void OnMissionStateChanged(MissionDefinition mission)
+    {
+        if (isOpen)
+        {
+            RefreshPanel();
+        }
+    }
+
+    private void OnMissionObjectiveUpdated(MissionDefinition mission, MissionObjective objective)
+    {
+        if (isOpen)
+        {
+            RefreshPanel();
+        }
+    }
+
+    private void OnSaveLoaded(int slot)
+    {
+        if (isOpen)
+        {
+            RefreshPanel();
+        }
     }
 
     /// <summary>
@@ -429,13 +649,14 @@ public class MissionPanelBuilder : MonoBehaviour
         msgObj.transform.SetParent(contentTransform, false);
 
         RectTransform msgRect = msgObj.AddComponent<RectTransform>();
-        msgRect.sizeDelta = new Vector2(0, 100);
+        msgRect.sizeDelta = new Vector2(0, 140);
 
         TextMeshProUGUI msgText = msgObj.AddComponent<TextMeshProUGUI>();
-        msgText.text = "暂无任务";
+        msgText.text = "当前没有可展示任务\n继续推进主线、人物关系、考试或社团路线，新的目标会逐步出现";
         msgText.fontSize = 24;
         msgText.alignment = TextAlignmentOptions.Center;
         msgText.color = new Color(0.5f, 0.5f, 0.5f);
+        msgText.enableWordWrapping = true;
         if (FontManager.Instance != null)
         {
             msgText.font = FontManager.Instance.ChineseFont;

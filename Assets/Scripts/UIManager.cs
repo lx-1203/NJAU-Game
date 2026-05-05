@@ -36,6 +36,7 @@ public class UIManager : MonoBehaviour
         if (mainMenuPanel == null || settingsPanel == null || aboutPanel == null)
         {
             Debug.LogError($"[UIManager] 面板引用未赋值! mainMenuPanel={mainMenuPanel}, settingsPanel={settingsPanel}, aboutPanel={aboutPanel}，请在Inspector中设置。");
+            ShowUINotification("标题界面未配置完整", "主菜单面板缺少必要引用，当前标题页功能无法完全展开。");
             return;
         }
 
@@ -58,6 +59,12 @@ public class UIManager : MonoBehaviour
     
     private void LoadSettings()
     {
+        if (musicVolumeSlider == null || sfxVolumeSlider == null || fullscreenToggle == null)
+        {
+            ShowUINotification("设置面板未配置完整", "设置控件缺少必要引用，这一页暂时无法正确读取和应用参数。");
+            return;
+        }
+
         // 从PlayerPrefs加载设置
         musicVolumeSlider.value = PlayerPrefs.GetFloat("MusicVolume", 0.7f);
         sfxVolumeSlider.value = PlayerPrefs.GetFloat("SFXVolume", 0.8f);
@@ -69,6 +76,12 @@ public class UIManager : MonoBehaviour
     
     private void SaveSettings()
     {
+        if (musicVolumeSlider == null || sfxVolumeSlider == null || fullscreenToggle == null)
+        {
+            ShowUINotification("设置保存失败", "设置控件没有准备好，这次修改暂时没有写入。");
+            return;
+        }
+
         // 保存设置到PlayerPrefs
         PlayerPrefs.SetFloat("MusicVolume", musicVolumeSlider.value);
         PlayerPrefs.SetFloat("SFXVolume", sfxVolumeSlider.value);
@@ -78,6 +91,11 @@ public class UIManager : MonoBehaviour
     
     private void ApplySettings()
     {
+        if (musicVolumeSlider == null || fullscreenToggle == null)
+        {
+            return;
+        }
+
         // 应用音量设置
         AudioListener.volume = musicVolumeSlider.value;
         
@@ -94,6 +112,12 @@ public class UIManager : MonoBehaviour
     
     public void OpenSettings()
     {
+        if (mainMenuPanel == null || aboutPanel == null || settingsPanel == null)
+        {
+            ShowUINotification("无法打开设置", "设置面板没有成功构建，当前无法切换到设置页。");
+            return;
+        }
+
         mainMenuPanel.SetActive(false);
         aboutPanel.SetActive(false);
         settingsPanel.SetActive(true);
@@ -101,6 +125,12 @@ public class UIManager : MonoBehaviour
     
     public void OpenAbout()
     {
+        if (mainMenuPanel == null || settingsPanel == null || aboutPanel == null)
+        {
+            ShowUINotification("无法打开说明", "说明面板没有成功构建，当前无法切换到说明页。");
+            return;
+        }
+
         mainMenuPanel.SetActive(false);
         settingsPanel.SetActive(false);
         aboutPanel.SetActive(true);
@@ -108,6 +138,12 @@ public class UIManager : MonoBehaviour
     
     public void BackToMainMenu()
     {
+        if (mainMenuPanel == null || settingsPanel == null || aboutPanel == null)
+        {
+            ShowUINotification("无法返回主菜单", "标题页面板缺少引用，当前切换操作没有完成。");
+            return;
+        }
+
         settingsPanel.SetActive(false);
         aboutPanel.SetActive(false);
         mainMenuPanel.SetActive(true);
@@ -139,5 +175,13 @@ public class UIManager : MonoBehaviour
     {
         ApplySettings();
         SaveSettings();
+    }
+
+    private void ShowUINotification(string title, string message, float duration = 2.8f)
+    {
+        if (MissionUI.Instance != null)
+        {
+            MissionUI.Instance.ShowSystemNotification(title, message, new Color(0.82f, 0.38f, 0.30f), duration);
+        }
     }
 }

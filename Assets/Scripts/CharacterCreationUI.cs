@@ -8,6 +8,18 @@ public class CharacterCreationUI : MonoBehaviour
 {
     private const string MalePreviewResource = "MalePlayerIdleFrames/IdleFrame_00";
     private const string FemalePreviewResource = "PlayerSprite";
+    private static readonly string[] AvailableMajors =
+    {
+        "生物科学专业",
+        "农学专业",
+        "园艺专业",
+        "动物医学专业",
+        "食品科学与工程专业",
+        "环境科学专业",
+        "计算机科学与技术专业",
+        "金融学专业",
+        "工商管理专业"
+    };
 
     public static CharacterCreationUI Instance { get; private set; }
     public static bool HasPendingCharacter { get; private set; }
@@ -29,6 +41,7 @@ public class CharacterCreationUI : MonoBehaviour
     private static readonly Color BgColor = new Color(0.12f, 0.12f, 0.18f, 0.95f);
     private static readonly Color InputBgColor = new Color(0.2f, 0.2f, 0.25f, 1f);
     private static readonly Color ButtonColor = new Color(0.2f, 0.6f, 0.3f, 1f);
+    private static readonly HashSet<string> NotifiedMissingPreviewSprites = new HashSet<string>();
 
     public bool IsOpen => canvasObj != null;
 
@@ -91,6 +104,9 @@ public class CharacterCreationUI : MonoBehaviour
     public void Show()
     {
         UIFlowGuard.EnsureEventSystem();
+        if (!UIFlowGuard.PrepareForExclusiveWindow(UIFlowGuard.WindowCharacterCreation))
+            return;
+
         if (canvasObj != null)
             return;
 
@@ -317,11 +333,22 @@ public class CharacterCreationUI : MonoBehaviour
         majorDropdown.captionText = dpLabel;
         majorDropdown.itemText = itemLabel;
         majorDropdown.targetGraphic = dropdownBg;
-        majorDropdown.options = new List<TMP_Dropdown.OptionData>
+        List<TMP_Dropdown.OptionData> majorOptions = new List<TMP_Dropdown.OptionData>();
+        for (int i = 0; i < AvailableMajors.Length; i++)
         {
-            new TMP_Dropdown.OptionData(StartupFlowSettings.DefaultPlayerMajor)
-        };
-        majorDropdown.value = 0;
+            majorOptions.Add(new TMP_Dropdown.OptionData(AvailableMajors[i]));
+        }
+
+        if (!string.IsNullOrWhiteSpace(StartupFlowSettings.DefaultPlayerMajor) &&
+            System.Array.IndexOf(AvailableMajors, StartupFlowSettings.DefaultPlayerMajor) < 0)
+        {
+            majorOptions.Add(new TMP_Dropdown.OptionData(StartupFlowSettings.DefaultPlayerMajor));
+        }
+
+        majorDropdown.options = majorOptions;
+        int defaultMajorIndex = majorOptions.FindIndex(option => option.text == StartupFlowSettings.DefaultPlayerMajor);
+        majorDropdown.value = defaultMajorIndex >= 0 ? defaultMajorIndex : 0;
+        majorDropdown.RefreshShownValue();
 
         GameObject btnObj = new GameObject("ConfirmBtn", typeof(RectTransform));
         btnObj.transform.SetParent(containerObj.transform, false);
@@ -378,6 +405,11 @@ public class CharacterCreationUI : MonoBehaviour
         portraitImg.sprite = Resources.Load<Sprite>(spriteResource);
         portraitImg.preserveAspect = true;
         portraitImg.color = Color.white;
+        if (portraitImg.sprite == null && !NotifiedMissingPreviewSprites.Contains(spriteResource))
+        {
+            NotifiedMissingPreviewSprites.Add(spriteResource);
+            ShowCharacterCreationNotification("角色预览缺失", $"{label}角色的预览资源没有找到，当前会继续显示基础卡片。", new Color(0.86f, 0.62f, 0.24f), 3f);
+        }
 
         GameObject checkObj = new GameObject("Checkmark", typeof(RectTransform));
         checkObj.transform.SetParent(cardObj.transform, false);
@@ -456,10 +488,30 @@ public class CharacterCreationUI : MonoBehaviour
 
     private void OnConfirmClicked()
     {
+        if (nameInput == null || majorDropdown == null || majorDropdown.options == null || majorDropdown.options.Count == 0)
+        {
+            ShowCharacterCreationNotification("入学登记未完成", "角色创建界面的关键字段没有准备好，当前无法确认进入游戏。", new Color(0.82f, 0.38f, 0.30f), 2.8f);
+            return;
+        }
+
+        string playerName = nameInput.text.Trim();
+        if (string.IsNullOrWhiteSpace(playerName))
+        {
+            ShowCharacterCreationNotification("姓名不能为空", "先填写角色姓名，再开启这段大学生活。", new Color(0.82f, 0.38f, 0.30f), 2.6f);
+            return;
+        }
+
+        int playerGender = femaleToggle != null && femaleToggle.isOn ? 1 : 0;
+        string playerMajor = majorDropdown.options[majorDropdown.value].text;
+
+        StartupFlowSettings.DefaultPlayerName = playerName;
+        StartupFlowSettings.DefaultPlayerGender = playerGender;
+        StartupFlowSettings.DefaultPlayerMajor = playerMajor;
+
         ApplyPendingCharacter(
-            nameInput.text.Trim(),
-            femaleToggle != null && femaleToggle.isOn ? 1 : 0,
-            majorDropdown.options[majorDropdown.value].text);
+            playerName,
+            playerGender,
+            playerMajor);
 
         Destroy(canvasObj);
         canvasObj = null;
@@ -478,5 +530,13 @@ public class CharacterCreationUI : MonoBehaviour
         rect.anchorMax = Vector2.one;
         rect.offsetMin = Vector2.zero;
         rect.offsetMax = Vector2.zero;
+    }
+
+    private void ShowCharacterCreationNotification(string title, string message, Color color, float duration = 3f)
+    {
+        if (MissionUI.Instance != null)
+        {
+            MissionUI.Instance.ShowSystemNotification(title, message, color, duration);
+        }
     }
 }

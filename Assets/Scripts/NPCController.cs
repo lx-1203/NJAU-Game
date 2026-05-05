@@ -6,6 +6,8 @@ public class NPCController : MonoBehaviour
     private const string DefaultNPCSpriteResourcePath = "NPCSprite";
     private const int HintSpriteTextureSize = 64;
     private static Sprite sharedRoundSprite;
+    private static readonly System.Collections.Generic.HashSet<string> notifiedMissingPortraits = new System.Collections.Generic.HashSet<string>();
+    private static bool notifiedMissingFallbackSprite;
 
     [Header("NPC Settings")]
     [SerializeField] private float interactionRange = 2.5f;
@@ -74,12 +76,22 @@ public class NPCController : MonoBehaviour
         {
             npcSprite = Resources.Load<Sprite>(DefaultNPCSpriteResourcePath);
             Debug.LogWarning($"[NPCController] Missing Resources/{npcData.portraitId}, fallback to Resources/{DefaultNPCSpriteResourcePath}");
+            if (!string.IsNullOrEmpty(npcData.portraitId) && !notifiedMissingPortraits.Contains(npcData.portraitId))
+            {
+                notifiedMissingPortraits.Add(npcData.portraitId);
+                ShowNPCNotification("角色立绘缺失", $"{npcData.displayName} 的立绘没有找到，当前会先使用默认头像代替。", new Color(0.86f, 0.62f, 0.24f), 3f);
+            }
         }
 
         if (npcSprite == null)
         {
             spriteRenderer.enabled = false;
             Debug.LogWarning($"[NPCController] Missing fallback sprite Resources/{DefaultNPCSpriteResourcePath}; hiding renderer for {npcId}");
+            if (!notifiedMissingFallbackSprite)
+            {
+                notifiedMissingFallbackSprite = true;
+                ShowNPCNotification("NPC 显示异常", "默认 NPC 头像资源也没有加载成功，部分角色会暂时不可见。", new Color(0.82f, 0.38f, 0.30f), 3f);
+            }
             return;
         }
 
@@ -370,5 +382,13 @@ public class NPCController : MonoBehaviour
     {
         Gizmos.color = Color.yellow;
         Gizmos.DrawWireSphere(transform.position, interactionRange);
+    }
+
+    private void ShowNPCNotification(string title, string message, Color color, float duration = 3f)
+    {
+        if (MissionUI.Instance != null)
+        {
+            MissionUI.Instance.ShowSystemNotification(title, message, color, duration);
+        }
     }
 }

@@ -71,6 +71,7 @@ public class CampusMapUI
     private readonly Dictionary<LocationId, Sprite> hoverSprites = new Dictionary<LocationId, Sprite>();
     private readonly Dictionary<LocationId, NodeEntry> nodeEntries = new Dictionary<LocationId, NodeEntry>();
     private LocationId? hoveredLocationId;
+    private readonly HashSet<LocationId> missingHoverOverlayNotified = new HashSet<LocationId>();
 
     public GameObject OverlayRoot => overlayRoot;
     public bool IsVisible => overlayRoot != null && overlayRoot.activeSelf;
@@ -90,6 +91,10 @@ public class CampusMapUI
     {
         if (overlayRoot == null)
         {
+            if (MissionUI.Instance != null)
+            {
+                MissionUI.Instance.ShowSystemNotification("地图不可用", "校园地图覆盖层还没有成功创建，现在暂时无法打开。", new Color(0.82f, 0.38f, 0.30f), 2.8f);
+            }
             return;
         }
 
@@ -114,6 +119,10 @@ public class CampusMapUI
         if (canvas == null)
         {
             Debug.LogError("[CampusMapUI] Canvas 为 null，无法构建地图");
+            if (MissionUI.Instance != null)
+            {
+                MissionUI.Instance.ShowSystemNotification("地图构建失败", "校园地图缺少挂载画布，这一轮无法正常生成地图界面。", new Color(0.82f, 0.38f, 0.30f), 2.8f);
+            }
             return;
         }
 
@@ -166,6 +175,10 @@ public class CampusMapUI
     {
         if (LocationManager.Instance == null || GameState.Instance == null)
         {
+            if (MissionUI.Instance != null)
+            {
+                MissionUI.Instance.ShowSystemNotification("地图未刷新", "地点或时间状态还没有准备好，这次无法更新校园地图信息。", new Color(0.82f, 0.38f, 0.30f), 2.8f);
+            }
             return;
         }
 
@@ -467,6 +480,14 @@ public class CampusMapUI
         {
             hoverOverlayImage.sprite = null;
             hoverOverlayImage.enabled = false;
+
+            if (!missingHoverOverlayNotified.Contains(locationId) && MissionUI.Instance != null)
+            {
+                missingHoverOverlayNotified.Add(locationId);
+                LocationDefinition location = LocationManager.Instance != null ? LocationManager.Instance.GetLocation(locationId) : null;
+                string locationName = location != null ? location.displayName : locationId.ToString();
+                MissionUI.Instance.ShowSystemNotification("地图高亮缺失", $"{locationName} 的悬浮高亮资源还没有加载成功，先继续使用基础地图浏览。", new Color(0.86f, 0.62f, 0.24f), 3f);
+            }
         }
 
         RefreshMap();
@@ -517,6 +538,10 @@ public class CampusMapUI
             if (baseMapSprite == null)
             {
                 Debug.LogWarning("[CampusMapUI] 未找到校园底图 Resources/" + BaseMapResourcePath);
+                if (MissionUI.Instance != null)
+                {
+                    MissionUI.Instance.ShowSystemNotification("地图底图缺失", "校园地图底图资源没有加载成功，界面会继续使用简化底色显示。", new Color(0.86f, 0.62f, 0.24f), 3f);
+                }
             }
         }
 

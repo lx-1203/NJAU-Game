@@ -44,6 +44,8 @@ public class SemesterSummaryData
     public Dictionary<string, int> attributeChanges;        // 属性增减 (属性名 -> 变化量)
     public List<NPCRelationInfo> npcRelations;              // NPC关系
     public List<string> unlockedAchievements;               // 本学期解锁的成就ID
+    public int pendingMakeupCount;                          // 待补考课程数
+    public List<string> pendingMakeupCourseNames;           // 待补考课程名
 
     // ========== 属性快照 ==========
     public Dictionary<string, int> startAttributes;         // 学期开始时属性
@@ -55,6 +57,7 @@ public class SemesterSummaryData
         attributeChanges = new Dictionary<string, int>();
         npcRelations = new List<NPCRelationInfo>();
         unlockedAchievements = new List<string>();
+        pendingMakeupCourseNames = new List<string>();
         startAttributes = new Dictionary<string, int>();
         endAttributes = new Dictionary<string, int>();
     }

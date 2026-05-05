@@ -12,6 +12,9 @@ public class GameSceneInitializer : MonoBehaviour
         UIFlowGuard.CleanupBlockingUI();
         EnsureEventSystem();
 
+        // 提前初始化提示通道，确保后续系统在 Awake/Start 阶段发出的前台反馈能被接住。
+        SetupMissionUI();
+
         // 存档管理器（必须在其他系统之前初始化）
         SetupSaveManager();
 
@@ -81,7 +84,6 @@ public class GameSceneInitializer : MonoBehaviour
         SetupUIEscapeRouter();
         SetupInfoPanelManager();
         SetupInventoryUI();
-        SetupMissionUI();
         SetupMissionPanelBuilder();
         SetupJobSelectionUI();
         SetupPhysicalTestUI();
@@ -107,6 +109,11 @@ public class GameSceneInitializer : MonoBehaviour
         {
             SaveManager.Instance.ApplyLoadedData(SaveManager.PendingLoadData);
             SaveManager.PendingLoadData = null;
+            SaveManager.PendingLoadSlot = -1;
+            if (MissionSystem.Instance != null)
+            {
+                MissionSystem.Instance.RefreshMissionState();
+            }
             Debug.Log("[GameSceneInit] 已从存档恢复游戏状态");
         }
     }

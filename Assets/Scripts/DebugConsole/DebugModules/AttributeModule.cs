@@ -36,13 +36,22 @@ public class AttributeModule : MonoBehaviour, IDebugModule
         public TMP_InputField input;
     }
 
-    private static readonly Color TextColor = new Color(0.92f, 0.92f, 0.92f);
-    private static readonly Color AccentColor = new Color(1f, 0.85f, 0.3f);
-    private static readonly Color FieldColor = new Color(0.16f, 0.16f, 0.22f, 0.95f);
-    private static readonly Color SliderBackgroundColor = new Color(0.14f, 0.14f, 0.2f, 0.95f);
-    private static readonly Color SliderFillColor = new Color(0.28f, 0.55f, 0.86f, 1f);
-    private static readonly Color ButtonColor = new Color(0.22f, 0.42f, 0.72f, 1f);
-    private static readonly Sprite SliderHandleSprite = Resources.GetBuiltinResource<Sprite>("UI/Skin/Knob.psd");
+    private static readonly Color TextColor = new Color32(0xF1, 0xEA, 0xDB, 0xFF);
+    private static readonly Color AccentColor = new Color32(0xF2, 0xC5, 0x68, 0xFF);
+    private static readonly Color FieldColor = new Color32(0x2B, 0x24, 0x33, 0xF2);
+    private static readonly Color SliderBackgroundColor = new Color32(0x24, 0x1E, 0x2A, 0xF2);
+    private static readonly Color SliderFillColor = new Color32(0x9E, 0x75, 0x48, 0xFF);
+    private static readonly Color ButtonColor = new Color32(0x7A, 0x56, 0x35, 0xFF);
+    private static Sprite _sliderHandleSprite;
+    private static Sprite SliderHandleSprite
+    {
+        get
+        {
+            if (_sliderHandleSprite == null)
+                _sliderHandleSprite = Resources.GetBuiltinResource<Sprite>("UI/Skin/Knob.psd");
+            return _sliderHandleSprite;
+        }
+    }
 
     private static readonly AttributeDefinition[] Definitions =
     {

@@ -175,6 +175,12 @@
           "targetId": "Mood",
           "value": 15,
           "description": "心情 +15"
+        },
+        {
+          "type": "Item",
+          "targetId": "daily_coffee",
+          "value": 1,
+          "description": "获得物品：咖啡 x1"
         }
       ],
       "timeLimit": 0,
@@ -370,6 +376,544 @@
       "timeLimit": 0,
       "autoAccept": true,
       "canAbandon": false
+    },
+    {
+      "missionId": "M009",
+      "missionName": "四级冲刺",
+      "description": "进入第二学期后，开始为英语四级做准备",
+      "type": "MainStory",
+      "priority": 5,
+      "triggerConditions": [
+        {
+          "conditionType": "Semester",
+          "minValue": 2,
+          "comparisonOperator": ">="
+        }
+      ],
+      "prerequisiteMissions": ["M008"],
+      "objectives": [
+        {
+          "objectiveId": "M009_OBJ1",
+          "type": "ActionCount",
+          "description": "背单词 3 次",
+          "targetId": "memorize_words",
+          "targetValue": 3,
+          "currentValue": 0,
+          "isCompleted": false
+        },
+        {
+          "objectiveId": "M009_OBJ2",
+          "type": "PassExam",
+          "description": "通过英语四级",
+          "targetId": "cet4",
+          "targetValue": 1,
+          "currentValue": 0,
+          "isCompleted": false
+        }
+      ],
+      "rewards": [
+        {
+          "type": "Money",
+          "targetId": "",
+          "value": 1200,
+          "description": "金钱 +1200"
+        },
+        {
+          "type": "Attribute",
+          "targetId": "Luck",
+          "value": 6,
+          "description": "幸运 +6"
+        }
+      ],
+      "timeLimit": 0,
+      "autoAccept": true,
+      "canAbandon": false
+    },
+    {
+      "missionId": "M010",
+      "missionName": "组织生活",
+      "description": "尝试加入一个组织，在校园里找到自己的位置",
+      "type": "MainStory",
+      "priority": 6,
+      "triggerConditions": [
+        {
+          "conditionType": "Semester",
+          "minValue": 3,
+          "comparisonOperator": ">="
+        }
+      ],
+      "prerequisiteMissions": ["M009"],
+      "objectives": [
+        {
+          "objectiveId": "M010_OBJ1",
+          "type": "JoinClub",
+          "description": "加入任意社团或组织",
+          "targetId": "",
+          "targetValue": 1,
+          "currentValue": 0,
+          "isCompleted": false
+        },
+        {
+          "objectiveId": "M010_OBJ2",
+          "type": "AttributeThreshold",
+          "description": "领导力达到 35",
+          "targetId": "Leadership",
+          "targetValue": 35,
+          "currentValue": 0,
+          "isCompleted": false
+        }
+      ],
+      "rewards": [
+        {
+          "type": "Attribute",
+          "targetId": "Leadership",
+          "value": 8,
+          "description": "领导力 +8"
+        },
+        {
+          "type": "Attribute",
+          "targetId": "Mood",
+          "value": 10,
+          "description": "心情 +10"
+        }
+      ],
+      "timeLimit": 0,
+      "autoAccept": true,
+      "canAbandon": false
+    },
+    {
+      "missionId": "M011",
+      "missionName": "手头宽裕一点",
+      "description": "想办法让生活费别再那么紧张",
+      "type": "SideQuest",
+      "priority": 14,
+      "triggerConditions": [
+        {
+          "conditionType": "Semester",
+          "minValue": 3,
+          "comparisonOperator": ">="
+        }
+      ],
+      "prerequisiteMissions": [],
+      "objectives": [
+        {
+          "objectiveId": "M011_OBJ1",
+          "type": "MoneyThreshold",
+          "description": "金钱达到 10000",
+          "targetId": "",
+          "targetValue": 10000,
+          "currentValue": 0,
+          "isCompleted": false
+        }
+      ],
+      "rewards": [
+        {
+          "type": "Item",
+          "targetId": "study_materials",
+          "value": 2,
+          "description": "获得物品：学习资料 x2"
+        },
+        {
+          "type": "Attribute",
+          "targetId": "Mood",
+          "value": 8,
+          "description": "心情 +8"
+        }
+      ],
+      "timeLimit": 0,
+      "autoAccept": false,
+      "canAbandon": true
+    },
+    {
+      "missionId": "M012",
+      "missionName": "大二站稳脚跟",
+      "description": "把能力、经济和人际都拉到一个更稳的位置",
+      "type": "MainStory",
+      "priority": 7,
+      "triggerConditions": [
+        {
+          "conditionType": "Semester",
+          "minValue": 4,
+          "comparisonOperator": ">="
+        }
+      ],
+      "prerequisiteMissions": ["M010"],
+      "objectives": [
+        {
+          "objectiveId": "M012_OBJ1",
+          "type": "MoneyThreshold",
+          "description": "金钱达到 12000",
+          "targetId": "",
+          "targetValue": 12000,
+          "currentValue": 0,
+          "isCompleted": false
+        },
+        {
+          "objectiveId": "M012_OBJ2",
+          "type": "AttributeThreshold",
+          "description": "学力达到 80",
+          "targetId": "Study",
+          "targetValue": 80,
+          "currentValue": 0,
+          "isCompleted": false
+        },
+        {
+          "objectiveId": "M012_OBJ3",
+          "type": "NPCAffinityThreshold",
+          "description": "与任意重要同学建立稳定关系（林知秋好感达到 40）",
+          "targetId": "lin_zhiqiu",
+          "targetValue": 40,
+          "currentValue": 0,
+          "isCompleted": false
+        }
+      ],
+      "rewards": [
+        {
+          "type": "Money",
+          "targetId": "",
+          "value": 2000,
+          "description": "金钱 +2000"
+        },
+        {
+          "type": "Attribute",
+          "targetId": "Charm",
+          "value": 6,
+          "description": "魅力 +6"
+        }
+      ],
+      "timeLimit": 0,
+      "autoAccept": true,
+      "canAbandon": false
+    },
+    {
+      "missionId": "M013",
+      "missionName": "迈出职业第一步",
+      "description": "升入大三后，别再只停留在校园里，开始真正接触职业世界",
+      "type": "MainStory",
+      "priority": 8,
+      "triggerConditions": [
+        {
+          "conditionType": "Semester",
+          "minValue": 5,
+          "comparisonOperator": ">="
+        }
+      ],
+      "prerequisiteMissions": ["M012"],
+      "objectives": [
+        {
+          "objectiveId": "M013_OBJ1",
+          "type": "CompleteEvent",
+          "description": "完成 1 次实习",
+          "targetId": "job_internship_completed",
+          "targetValue": 1,
+          "currentValue": 0,
+          "isCompleted": false
+        },
+        {
+          "objectiveId": "M013_OBJ2",
+          "type": "PassExam",
+          "description": "通过计算机等级考试",
+          "targetId": "computer_level",
+          "targetValue": 1,
+          "currentValue": 0,
+          "isCompleted": false
+        }
+      ],
+      "rewards": [
+        {
+          "type": "Money",
+          "targetId": "",
+          "value": 2500,
+          "description": "金钱 +2500"
+        },
+        {
+          "type": "Attribute",
+          "targetId": "Leadership",
+          "value": 8,
+          "description": "领导力 +8"
+        }
+      ],
+      "timeLimit": 0,
+      "autoAccept": true,
+      "canAbandon": false
+    },
+    {
+      "missionId": "M014",
+      "missionName": "英语再上一层楼",
+      "description": "大三之后，光有四级已经不太够看了",
+      "type": "MainStory",
+      "priority": 9,
+      "triggerConditions": [
+        {
+          "conditionType": "Semester",
+          "minValue": 6,
+          "comparisonOperator": ">="
+        }
+      ],
+      "prerequisiteMissions": ["M013"],
+      "objectives": [
+        {
+          "objectiveId": "M014_OBJ1",
+          "type": "PassExam",
+          "description": "通过英语六级",
+          "targetId": "cet6",
+          "targetValue": 1,
+          "currentValue": 0,
+          "isCompleted": false
+        },
+        {
+          "objectiveId": "M014_OBJ2",
+          "type": "AttributeThreshold",
+          "description": "学力达到 90",
+          "targetId": "Study",
+          "targetValue": 90,
+          "currentValue": 0,
+          "isCompleted": false
+        }
+      ],
+      "rewards": [
+        {
+          "type": "Attribute",
+          "targetId": "Luck",
+          "value": 8,
+          "description": "幸运 +8"
+        },
+        {
+          "type": "Attribute",
+          "targetId": "Charm",
+          "value": 5,
+          "description": "魅力 +5"
+        }
+      ],
+      "timeLimit": 0,
+      "autoAccept": true,
+      "canAbandon": false
+    },
+    {
+      "missionId": "M015",
+      "missionName": "履历成形",
+      "description": "继续打磨你的履历，让成长开始有明确结果",
+      "type": "MainStory",
+      "priority": 10,
+      "triggerConditions": [
+        {
+          "conditionType": "Semester",
+          "minValue": 7,
+          "comparisonOperator": ">="
+        }
+      ],
+      "prerequisiteMissions": ["M014"],
+      "objectives": [
+        {
+          "objectiveId": "M015_OBJ1",
+          "type": "CompleteEvent",
+          "description": "累计完成 3 次实习",
+          "targetId": "job_internship_completed",
+          "targetValue": 3,
+          "currentValue": 0,
+          "isCompleted": false
+        },
+        {
+          "objectiveId": "M015_OBJ2",
+          "type": "MoneyThreshold",
+          "description": "金钱达到 20000",
+          "targetId": "",
+          "targetValue": 20000,
+          "currentValue": 0,
+          "isCompleted": false
+        },
+        {
+          "objectiveId": "M015_OBJ3",
+          "type": "AttributeThreshold",
+          "description": "领导力达到 65",
+          "targetId": "Leadership",
+          "targetValue": 65,
+          "currentValue": 0,
+          "isCompleted": false
+        }
+      ],
+      "rewards": [
+        {
+          "type": "Money",
+          "targetId": "",
+          "value": 3000,
+          "description": "金钱 +3000"
+        },
+        {
+          "type": "Attribute",
+          "targetId": "Leadership",
+          "value": 10,
+          "description": "领导力 +10"
+        }
+      ],
+      "timeLimit": 0,
+      "autoAccept": true,
+      "canAbandon": false
+    },
+    {
+      "missionId": "M016",
+      "missionName": "毕业前夜",
+      "description": "大学最后一学期，把学业、经济和关系都收束成一个体面的结尾",
+      "type": "MainStory",
+      "priority": 11,
+      "triggerConditions": [
+        {
+          "conditionType": "Semester",
+          "minValue": 8,
+          "comparisonOperator": ">="
+        }
+      ],
+      "prerequisiteMissions": ["M015"],
+      "objectives": [
+        {
+          "objectiveId": "M016_OBJ1",
+          "type": "AttributeThreshold",
+          "description": "学力达到 100",
+          "targetId": "Study",
+          "targetValue": 100,
+          "currentValue": 0,
+          "isCompleted": false
+        },
+        {
+          "objectiveId": "M016_OBJ2",
+          "type": "MoneyThreshold",
+          "description": "金钱达到 30000",
+          "targetId": "",
+          "targetValue": 30000,
+          "currentValue": 0,
+          "isCompleted": false
+        },
+        {
+          "objectiveId": "M016_OBJ3",
+          "type": "NPCAffinityThreshold",
+          "description": "与林知秋的好感度达到 60",
+          "targetId": "lin_zhiqiu",
+          "targetValue": 60,
+          "currentValue": 0,
+          "isCompleted": false
+        }
+      ],
+      "rewards": [
+        {
+          "type": "Attribute",
+          "targetId": "Mood",
+          "value": 20,
+          "description": "心情 +20"
+        },
+        {
+          "type": "Unlock",
+          "targetId": "ending_ready_graduation",
+          "value": 1,
+          "description": "解锁标记：毕业准备完成"
+        }
+      ],
+      "timeLimit": 0,
+      "autoAccept": true,
+      "canAbandon": false
+    },
+    {
+      "missionId": "M017",
+      "missionName": "副业熟手",
+      "description": "用副业给自己攒一点更灵活的空间",
+      "type": "SideQuest",
+      "priority": 15,
+      "triggerConditions": [
+        {
+          "conditionType": "Semester",
+          "minValue": 4,
+          "comparisonOperator": ">="
+        }
+      ],
+      "prerequisiteMissions": [],
+      "objectives": [
+        {
+          "objectiveId": "M017_OBJ1",
+          "type": "CompleteEvent",
+          "description": "累计完成 3 次副业",
+          "targetId": "job_side_hustle_completed",
+          "targetValue": 3,
+          "currentValue": 0,
+          "isCompleted": false
+        }
+      ],
+      "rewards": [
+        {
+          "type": "Money",
+          "targetId": "",
+          "value": 1800,
+          "description": "金钱 +1800"
+        },
+        {
+          "type": "Attribute",
+          "targetId": "Charm",
+          "value": 4,
+          "description": "魅力 +4"
+        }
+      ],
+      "timeLimit": 0,
+      "autoAccept": false,
+      "canAbandon": true
+    },
+    {
+      "missionId": "M018",
+      "missionName": "路线试探",
+      "description": "别把大学过成一条线，试着把学习、社交和赚钱都碰一碰",
+      "type": "SideQuest",
+      "priority": 16,
+      "triggerConditions": [
+        {
+          "conditionType": "Semester",
+          "minValue": 3,
+          "comparisonOperator": ">="
+        }
+      ],
+      "prerequisiteMissions": [],
+      "objectives": [
+        {
+          "objectiveId": "M018_OBJ1",
+          "type": "ActionCount",
+          "description": "背单词 2 次",
+          "targetId": "memorize_words",
+          "targetValue": 2,
+          "currentValue": 0,
+          "isCompleted": false
+        },
+        {
+          "objectiveId": "M018_OBJ2",
+          "type": "CompleteEvent",
+          "description": "完成 1 次副业",
+          "targetId": "job_side_hustle_completed",
+          "targetValue": 1,
+          "currentValue": 0,
+          "isCompleted": false
+        },
+        {
+          "objectiveId": "M018_OBJ3",
+          "type": "JoinClub",
+          "description": "加入任意社团或组织",
+          "targetId": "",
+          "targetValue": 1,
+          "currentValue": 0,
+          "isCompleted": false
+        }
+      ],
+      "rewards": [
+        {
+          "type": "Attribute",
+          "targetId": "Mood",
+          "value": 12,
+          "description": "心情 +12"
+        },
+        {
+          "type": "Attribute",
+          "targetId": "Luck",
+          "value": 4,
+          "description": "幸运 +4"
+        }
+      ],
+      "timeLimit": 0,
+      "autoAccept": false,
+      "canAbandon": true
     }
   ]
 }

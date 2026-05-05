@@ -20,6 +20,8 @@ using TMPro;
 public class FontManager : MonoBehaviour
 {
     public static FontManager Instance { get; private set; }
+    private bool missingFontNotified;
+    private bool missingTMPSettingsNotified;
 
     [Header("中文字体设置")]
     [Tooltip("拖入你的中文 TMP SDF 字体资源（如华文新魏 SDF）")]
@@ -105,6 +107,11 @@ public class FontManager : MonoBehaviour
         }
 
         Debug.LogWarning("[FontManager] 未找到中文字体！请将 SDF 字体资源拖到 FontManager 的 chineseFontAsset 字段，或放到 Resources/Fonts/ 目录下。");
+        if (!missingFontNotified)
+        {
+            missingFontNotified = true;
+            ShowFontNotification("字体资源缺失", "中文字体没有加载成功，界面文本可能会出现缺字或显示异常。");
+        }
     }
 
     /// <summary>
@@ -120,6 +127,11 @@ public class FontManager : MonoBehaviour
         if (settings == null)
         {
             Debug.LogWarning("[FontManager] 未找到 TMP Settings，请先导入 TextMesh Pro 的 Essential Resources。");
+            if (!missingTMPSettingsNotified)
+            {
+                missingTMPSettingsNotified = true;
+                ShowFontNotification("TMP 配置缺失", "TextMesh Pro 的基础资源没有就绪，字体回退能力会受到影响。");
+            }
             return;
         }
 
@@ -228,5 +240,13 @@ public class FontManager : MonoBehaviour
         }
 
         return tmp;
+    }
+
+    private void ShowFontNotification(string title, string message, float duration = 3f)
+    {
+        if (MissionUI.Instance != null)
+        {
+            MissionUI.Instance.ShowSystemNotification(title, message, new Color(0.82f, 0.38f, 0.30f), duration);
+        }
     }
 }

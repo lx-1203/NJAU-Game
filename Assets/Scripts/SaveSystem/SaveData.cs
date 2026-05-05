@@ -115,6 +115,47 @@ public class StringBoolPair
     public StringBoolPair(string key, bool value) { this.key = key; this.value = value; }
 }
 
+/// <summary>属性快照存档数据</summary>
+[Serializable]
+public class AttributeSnapshotSaveData
+{
+    public int study;
+    public int charm;
+    public int physique;
+    public int leadership;
+    public int stress;
+    public int mood;
+    public int money;
+    public int year;
+    public int semester;
+}
+
+/// <summary>学期总结存档数据（JsonUtility 友好结构）</summary>
+[Serializable]
+public class SemesterSummarySaveData
+{
+    public int year;
+    public int semester;
+    public string yearName;
+    public string semesterName;
+    public float gpa;
+    public int academicScore;
+    public int socialScore;
+    public int sportsScore;
+    public int achievementScore;
+    public int penaltyScore;
+    public int totalScore;
+    public string grade;
+    public List<CourseGrade> courses = new List<CourseGrade>();
+    public List<StringIntPair> attributeChanges = new List<StringIntPair>();
+    public List<NPCRelationInfo> npcRelations = new List<NPCRelationInfo>();
+    public List<string> unlockedAchievements = new List<string>();
+    public int pendingMakeupCount;
+    public List<string> pendingMakeupCourseNames = new List<string>();
+    public List<StringIntPair> startAttributes = new List<StringIntPair>();
+    public List<StringIntPair> endAttributes = new List<StringIntPair>();
+}
+
 /// <summary>事件历史记录（用于存档序列化）</summary>
 [Serializable]
 public class EventHistoryRecord
@@ -193,6 +234,8 @@ public class SaveData
     public List<SemesterGPA> semesterGPAHistory = new List<SemesterGPA>();
     public List<ExamResult> failedCourses = new List<ExamResult>();
     public int studyCountThisSemester = 0;
+    public List<StringIntPair> subjectStudyCountsThisSemester = new List<StringIntPair>();
+    public List<StringIntPair> focusedCourseStudyCountsThisSemester = new List<StringIntPair>();
     public bool cet4Passed = false;
     public bool cet6Passed = false;
     public bool computerLevelPassed = false;
@@ -208,6 +251,8 @@ public class SaveData
     public int goOutCount = 0;
     public int sleepCount = 0;
     public int totalMoneySpent = 0;
+    public List<SemesterSummarySaveData> semesterSummaries = new List<SemesterSummarySaveData>();
+    public AttributeSnapshotSaveData semesterStartSnapshot = null;
 
     // ========== 交易记录（EconomyManager 存档） ==========
     public List<TransactionRecord> transactionRecords = new List<TransactionRecord>();
@@ -228,8 +273,16 @@ public class SaveData
     public List<InventoryItemSaveData> inventoryItems = new List<InventoryItemSaveData>();
     public List<string> seenDialogueEntries = new List<string>();
 
+    // ========== 工作/实习系统 ==========
+    public int totalInternshipCount = 0;
+    public string currentInternshipId = "";
+    public int consecutiveInternRounds = 0;
+    public string currentSideHustleId = "";
+    public int consecutiveHustleRounds = 0;
+
     // ========== 游戏时长 ==========
     public float totalPlayTimeSeconds = 0f;
+    public string thumbnailFileName = "";
 
     public void EnsureInitialized()
     {
@@ -245,10 +298,13 @@ public class SaveData
         courseRecords ??= new List<CourseRecord>();
         semesterGPAHistory ??= new List<SemesterGPA>();
         failedCourses ??= new List<ExamResult>();
+        subjectStudyCountsThisSemester ??= new List<StringIntPair>();
+        focusedCourseStudyCountsThisSemester ??= new List<StringIntPair>();
         lastMidtermResults ??= new List<ExamResult>();
         transactionRecords ??= new List<TransactionRecord>();
         clubRecords ??= new List<ClubMemberRecord>();
         clubExitCooldowns ??= new List<StringIntPair>();
+        semesterSummaries ??= new List<SemesterSummarySaveData>();
         missionData ??= new MissionSaveData();
         missionData.EnsureInitialized();
         inventoryItems ??= new List<InventoryItemSaveData>();

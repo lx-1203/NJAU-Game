@@ -33,6 +33,7 @@ public class NPCManager : MonoBehaviour
 #if UNITY_EDITOR
     private bool editorRefreshQueued;
 #endif
+    private readonly HashSet<string> notifiedIssues = new HashSet<string>();
 
     // ========== 公共方法 ==========
 
@@ -45,6 +46,7 @@ public class NPCManager : MonoBehaviour
         if (NPCDatabase.Instance == null)
         {
             Debug.LogWarning("[NPCManager] NPCDatabase 实例不存在，无法刷新NPC");
+            ShowNPCManagerNotificationOnce("missing-db", "NPC 未刷新", "NPC 数据库还没有准备好，当前场景的人物不会正常出现。");
             return;
         }
 
@@ -236,6 +238,7 @@ public class NPCManager : MonoBehaviour
         else
         {
             Debug.LogWarning("[NPCManager] TurnManager 实例不存在，无法订阅回合推进事件");
+            ShowNPCManagerNotificationOnce("missing-turn-manager", "NPC 时段同步异常", "时间推进系统没有就绪，NPC 的时段刷新可能不会自动更新。");
         }
 
         // 订阅地点切换事件 —— 切换地点时刷新NPC
@@ -538,6 +541,21 @@ public class NPCManager : MonoBehaviour
         if (!Application.isPlaying)
         {
             RefreshEditorSceneAnchors();
+        }
+    }
+
+    private void ShowNPCManagerNotificationOnce(string key, string title, string message, float duration = 3f)
+    {
+        if (notifiedIssues.Contains(key))
+        {
+            return;
+        }
+
+        notifiedIssues.Add(key);
+
+        if (MissionUI.Instance != null)
+        {
+            MissionUI.Instance.ShowSystemNotification(title, message, new Color(0.82f, 0.38f, 0.30f), duration);
         }
     }
 }

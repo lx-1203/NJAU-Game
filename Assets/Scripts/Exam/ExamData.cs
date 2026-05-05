@@ -51,12 +51,16 @@ public class ExamResult
     public string courseId;
     public string courseName;
     public int credits;
+    public string subjectTag;
     public int score;           // 0-100
     public float gradePoint;    // 0-4.0
     public int correctCount;    // 答对题数 0-3
     public bool cheated;        // 是否使用过作弊
     public bool cheatCaught;    // 是否作弊被抓
     public ExamType examType;
+    public float passRateEstimate;
+    public string prepSummary;
+    public string resultSummary;
 }
 
 /// <summary>学期GPA记录</summary>

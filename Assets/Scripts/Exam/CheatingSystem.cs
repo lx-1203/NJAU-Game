@@ -69,6 +69,7 @@ public class CheatingSystem : MonoBehaviour, ISaveable
             Debug.Log($"[CheatingSystem] 作弊被抓！累计被抓次数: {caughtCount}");
 
             ApplyPenalty(CaughtDarknessAdd, CaughtGuiltAdd, CaughtStressAdd);
+            NotifyCheatBehavior();
 
             OnCheatAttempted?.Invoke(true);
 
@@ -87,6 +88,7 @@ public class CheatingSystem : MonoBehaviour, ISaveable
             Debug.Log("[CheatingSystem] 作弊成功，未被发现");
 
             ApplyPenalty(SuccessDarknessAdd, SuccessGuiltAdd, 0);
+            NotifyCheatBehavior();
 
             OnCheatAttempted?.Invoke(false);
 
@@ -123,6 +125,14 @@ public class CheatingSystem : MonoBehaviour, ISaveable
 
         if (stressAmount > 0)
             PlayerAttributes.Instance.AddAttribute("压力", stressAmount);
+    }
+
+    private void NotifyCheatBehavior()
+    {
+        if (EventScheduler.Instance != null)
+        {
+            EventScheduler.Instance.NotifyBehavior("cheat");
+        }
     }
 
     // ========== 生命周期 ==========

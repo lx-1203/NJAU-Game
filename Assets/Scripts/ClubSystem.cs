@@ -270,6 +270,7 @@ public class ClubSystem : MonoBehaviour, ISaveable
         if (!CanJoinClub(clubId))
         {
             Debug.LogWarning($"[ClubSystem] 无法加入社团: {clubId}, 原因: {GetJoinBlockReason(clubId)}");
+            ShowClubNotification("暂时无法加入", GetJoinBlockReason(clubId), new Color(0.82f, 0.38f, 0.30f), 2.8f);
             return;
         }
 
@@ -283,6 +284,11 @@ public class ClubSystem : MonoBehaviour, ISaveable
 
         ClubDefinition club = GetClub(clubId);
         Debug.Log($"[ClubSystem] 加入社团: {club.name} (id={clubId})");
+        ShowClubNotification(
+            "加入社团",
+            $"{club.name} 已加入。\n后续可以参与社团活动、积累回合数，并逐步争取更高职务。",
+            new Color(0.28f, 0.72f, 0.86f),
+            3.2f);
 
         OnClubJoined?.Invoke(clubId);
         OnClubStateChanged?.Invoke();
@@ -291,18 +297,22 @@ public class ClubSystem : MonoBehaviour, ISaveable
     /// <summary>检查是否可以退出指定社团（官方组织不可退出）</summary>
     public bool CanLeaveClub(string clubId)
     {
+        return string.IsNullOrEmpty(GetLeaveBlockReason(clubId));
+    }
+
+    public string GetLeaveBlockReason(string clubId)
+    {
         if (!IsInClub(clubId))
-            return false;
+            return "尚未加入该社团";
 
         ClubDefinition club = GetClub(clubId);
         if (club == null)
-            return false;
+            return "社团数据缺失";
 
-        // 官方组织（校团委/党建班）不可主动退出
         if (club.isOfficial)
-            return false;
+            return "官方组织不可主动退出";
 
-        return true;
+        return string.Empty;
     }
 
     /// <summary>
@@ -314,6 +324,7 @@ public class ClubSystem : MonoBehaviour, ISaveable
         if (membership == null)
         {
             Debug.LogWarning($"[ClubSystem] 未加入该社团，无法退出: {clubId}");
+            ShowClubNotification("无法退出社团", "你还没有加入这个社团。", new Color(0.82f, 0.38f, 0.30f), 2.8f);
             return;
         }
 
@@ -323,6 +334,7 @@ public class ClubSystem : MonoBehaviour, ISaveable
         if (club != null && club.isOfficial)
         {
             Debug.LogWarning($"[ClubSystem] 官方组织不可主动退出: {club.name}");
+            ShowClubNotification("无法退出社团", $"{club.name} 属于官方组织，当前不支持主动退出。", new Color(0.82f, 0.38f, 0.30f), 3f);
             return;
         }
 
@@ -351,6 +363,11 @@ public class ClubSystem : MonoBehaviour, ISaveable
         UpdatePositionAPCost();
 
         Debug.Log($"[ClubSystem] 退出社团: {(club != null ? club.name : clubId)} (id={clubId}), 冷却{ExitCooldownRounds}回合");
+        ShowClubNotification(
+            "已退出社团",
+            BuildLeaveSummary(club),
+            new Color(0.84f, 0.46f, 0.32f),
+            3.2f);
 
         OnClubLeft?.Invoke(clubId);
         OnClubStateChanged?.Invoke();
@@ -370,28 +387,32 @@ public class ClubSystem : MonoBehaviour, ISaveable
     /// </summary>
     public bool CanDoClubActivity(string clubId)
     {
+        return string.IsNullOrEmpty(GetActivityBlockReason(clubId));
+    }
+
+    public string GetActivityBlockReason(string clubId)
+    {
         if (!IsInClub(clubId))
-            return false;
+            return "尚未加入该社团";
 
         ClubDefinition club = GetClub(clubId);
         if (club == null)
-            return false;
+            return "社团数据缺失";
 
-        // 每社团每回合最多活动1次
         if (HasActivityThisRound(clubId))
-            return false;
+            return "本回合已经参加过该社团活动";
 
         GameState gs = GameState.Instance;
         if (gs == null)
-            return false;
+            return "核心状态尚未初始化";
 
         if (gs.ActionPoints < club.activityAPCost)
-            return false;
+            return $"行动点不足，需要 {club.activityAPCost} AP";
 
         if (gs.Money < club.activityMoneyCost)
-            return false;
+            return $"余额不足，需要 ¥{club.activityMoneyCost}";
 
-        return true;
+        return string.Empty;
     }
 
     /// <summary>
@@ -403,6 +424,7 @@ public class ClubSystem : MonoBehaviour, ISaveable
         if (!CanDoClubActivity(clubId))
         {
             Debug.LogWarning($"[ClubSystem] 无法执行社团活动: {clubId}");
+            ShowClubNotification("无法参加活动", GetActivityBlockReason(clubId), new Color(0.82f, 0.38f, 0.30f), 2.8f);
             return;
         }
 
@@ -470,6 +492,11 @@ public class ClubSystem : MonoBehaviour, ISaveable
         Debug.Log($"[ClubSystem] 执行社团活动: {club.name} (id={clubId}), " +
                   $"消耗AP={club.activityAPCost}, 消耗金钱={club.activityMoneyCost}, " +
                   $"事件链进度={membership.eventChainProgress}");
+        ShowClubNotification(
+            "社团活动完成",
+            BuildActivitySummary(club),
+            new Color(0.28f, 0.72f, 0.86f),
+            3.2f);
 
         // 9. 触发事件
         OnClubStateChanged?.Invoke();
@@ -615,6 +642,11 @@ public class ClubSystem : MonoBehaviour, ISaveable
             {
                 PlayerAttributes.Instance.AddAttribute("压力", 3);
             }
+            ShowClubNotification(
+                "晋升落选",
+                $"{club.name} 的 {nextRank.title} 竞选暂时落空了。\n压力+3，资格仍会保留，后续还能继续争取。",
+                new Color(0.86f, 0.62f, 0.24f),
+                3.2f);
             return;
         }
 
@@ -624,6 +656,11 @@ public class ClubSystem : MonoBehaviour, ISaveable
         UpdatePositionAPCost();
 
         Debug.Log($"[ClubSystem] 晋升成功! {club.name}: {nextRank.title} (rank={nextRank.rank})");
+        ShowClubNotification(
+            "晋升成功",
+            $"{club.name} 职务提升为“{nextRank.title}”。\n新的身份会影响后续行动点负担与回合收益。",
+            new Color(0.28f, 0.72f, 0.86f),
+            3.4f);
 
         OnPromoted?.Invoke(clubId, nextRank.rank);
         OnClubStateChanged?.Invoke();
@@ -715,6 +752,7 @@ public class ClubSystem : MonoBehaviour, ISaveable
         if (!CanApplyForParty())
         {
             Debug.LogWarning("[ClubSystem] 不满足入党申请条件");
+            ShowClubNotification("暂时无法申请", GetPartyBlockReason(), new Color(0.82f, 0.38f, 0.30f), 2.8f);
             return;
         }
 
@@ -722,9 +760,70 @@ public class ClubSystem : MonoBehaviour, ISaveable
         partyApplicationRound = GetGlobalRound();
 
         Debug.Log($"[ClubSystem] 提交入党申请，当前全局回合={partyApplicationRound}");
+        ShowClubNotification(
+            "申请已提交",
+            "入党申请已经递交，后续会随着时间推进和条件满足逐步进入下一阶段。",
+            new Color(0.36f, 0.64f, 0.92f),
+            3.3f);
 
         OnPartyStageChanged?.Invoke(currentPartyStage);
         OnClubStateChanged?.Invoke();
+    }
+
+    private string BuildLeaveSummary(ClubDefinition club)
+    {
+        string clubName = club != null ? club.name : "该社团";
+        int extraPenalty = club != null && club.id == "student_union" ? LeaveStudentUnionExtraPenalty : 0;
+        int totalPenalty = LeaveLeadershipPenalty + extraPenalty;
+        return $"{clubName} 已退出。\n领导力-{totalPenalty}，并进入 {ExitCooldownRounds} 回合重新加入冷却。";
+    }
+
+    private string BuildActivitySummary(ClubDefinition club)
+    {
+        List<string> parts = new List<string>();
+        parts.Add($"{club.name} 活动已完成");
+
+        if (club.activityAPCost > 0)
+            parts.Add($"AP-{club.activityAPCost}");
+
+        if (club.activityMoneyCost > 0)
+            parts.Add($"花费¥{club.activityMoneyCost}");
+
+        string effectSummary = BuildEffectSummary(club.activityEffects);
+        if (!string.IsNullOrEmpty(effectSummary))
+            parts.Add(effectSummary);
+
+        if (!string.IsNullOrEmpty(club.npcId))
+            parts.Add("相关 NPC 好感也可能随活动同步提升");
+
+        return string.Join("，", parts);
+    }
+
+    private string BuildEffectSummary(AttributeEffect[] effects)
+    {
+        if (effects == null || effects.Length == 0)
+            return string.Empty;
+
+        List<string> parts = new List<string>();
+        for (int i = 0; i < effects.Length; i++)
+        {
+            AttributeEffect effect = effects[i];
+            if (effect == null || string.IsNullOrEmpty(effect.attributeName) || effect.amount == 0)
+                continue;
+
+            string sign = effect.amount > 0 ? "+" : string.Empty;
+            parts.Add($"{effect.attributeName}{sign}{effect.amount}");
+        }
+
+        return parts.Count > 0 ? string.Join("，", parts) : string.Empty;
+    }
+
+    private void ShowClubNotification(string title, string message, Color color, float duration)
+    {
+        if (MissionUI.Instance != null)
+        {
+            MissionUI.Instance.ShowSystemNotification(title, message, color, duration);
+        }
     }
 
     /// <summary>

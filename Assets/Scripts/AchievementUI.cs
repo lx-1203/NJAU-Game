@@ -273,6 +273,12 @@ public class AchievementUI : MonoBehaviour
     {
         UIFlowGuard.EnsureEventSystem();
 
+        if (!UIFlowGuard.PrepareForExclusiveWindow(UIFlowGuard.WindowAchievementReview))
+        {
+            ShowSystemNotification("成就回顾未打开", "当前还有其他关键界面占用操作，先处理完再来看成就记录吧。", new Color(0.82f, 0.38f, 0.30f), 2.8f);
+            return;
+        }
+
         if (isReviewShowing)
         {
             RefreshReviewList();
@@ -339,6 +345,11 @@ public class AchievementUI : MonoBehaviour
         {
             GameObject systemObject = new GameObject("AchievementSystem");
             systemObject.AddComponent<AchievementSystem>();
+
+            if (AchievementSystem.Instance == null)
+            {
+                ShowSystemNotification("成就系统未就绪", "成就数据这次没有成功初始化，稍后再打开回顾界面试试。", new Color(0.82f, 0.38f, 0.30f), 2.8f);
+            }
         }
     }
 
@@ -722,6 +733,7 @@ public class AchievementUI : MonoBehaviour
     {
         if (reviewListContent == null || AchievementSystem.Instance == null)
         {
+            ShowSystemNotification("成就回顾未刷新", "成就数据或界面内容区暂时不可用，这次没法更新列表。", new Color(0.82f, 0.38f, 0.30f), 2.8f);
             return;
         }
 
@@ -741,16 +753,29 @@ public class AchievementUI : MonoBehaviour
             .ThenBy(def => def.id)
             .ToList();
 
-        foreach (AchievementDefinition definition in filteredAchievements)
+        if (filteredAchievements.Count == 0)
         {
-            bool unlocked = AchievementSystem.Instance.IsUnlocked(definition.id);
-            GameObject item = CreateAchievementItem(definition, unlocked);
-            item.transform.SetParent(reviewListContent, false);
+            GameObject emptyState = CreateEmptyReviewState(categoryAchievements.Count > 0);
+            emptyState.transform.SetParent(reviewListContent, false);
+        }
+        else
+        {
+            foreach (AchievementDefinition definition in filteredAchievements)
+            {
+                bool unlocked = AchievementSystem.Instance.IsUnlocked(definition.id);
+                GameObject item = CreateAchievementItem(definition, unlocked);
+                item.transform.SetParent(reviewListContent, false);
+            }
         }
 
         if (reviewScrollRect != null)
         {
             Canvas.ForceUpdateCanvases();
+            LayoutRebuilder.ForceRebuildLayoutImmediate(reviewListContent);
+            if (reviewScrollRect.viewport != null)
+            {
+                LayoutRebuilder.ForceRebuildLayoutImmediate(reviewScrollRect.viewport);
+            }
             reviewScrollRect.verticalNormalizedPosition = 1f;
         }
 
@@ -770,6 +795,14 @@ public class AchievementUI : MonoBehaviour
 
         UpdateCategoryTabStyles();
         UpdateFilterStyles(filteredAchievements.Count);
+    }
+
+    private void ShowSystemNotification(string title, string message, Color color, float duration)
+    {
+        if (MissionUI.Instance != null)
+        {
+            MissionUI.Instance.ShowSystemNotification(title, message, color, duration);
+        }
     }
 
     private void UpdateCategoryTabStyles()
@@ -876,7 +909,7 @@ public class AchievementUI : MonoBehaviour
         TextMeshProUGUI nameText = CreateTMPText(
             textRoot.transform,
             "Name",
-            unlocked ? definition.name : "???",
+            definition.name,
             26f,
             unlocked ? AccentBrown : AccentMuted,
             TextAlignmentOptions.Left);
@@ -886,7 +919,7 @@ public class AchievementUI : MonoBehaviour
         TextMeshProUGUI descText = CreateTMPText(
             textRoot.transform,
             "Desc",
-            unlocked ? definition.description : "解锁后显示",
+            definition.description,
             18f,
             unlocked ? AccentMuted : new Color(0.56f, 0.53f, 0.5f, 1f),
             TextAlignmentOptions.Left);
@@ -927,6 +960,43 @@ public class AchievementUI : MonoBehaviour
             TextMeshProUGUI sealText = CreateTMPText(seal.transform, "Check", "✓", 38f, Color.white, TextAlignmentOptions.Center);
             Stretch(sealText.rectTransform);
         }
+
+        return itemObject;
+    }
+
+    private GameObject CreateEmptyReviewState(bool hasCategoryContent)
+    {
+        GameObject itemObject = CreateUIObject("AchievementEmptyState", null);
+        RectTransform itemRect = itemObject.GetComponent<RectTransform>();
+        itemRect.sizeDelta = new Vector2(592f, 132f);
+
+        Image background = itemObject.AddComponent<Image>();
+        background.color = new Color(1f, 0.99f, 0.95f, 0.92f);
+
+        Outline outline = itemObject.AddComponent<Outline>();
+        outline.effectColor = new Color(0.86f, 0.78f, 0.67f, 0.8f);
+        outline.effectDistance = new Vector2(2f, -2f);
+
+        VerticalLayoutGroup layout = itemObject.AddComponent<VerticalLayoutGroup>();
+        layout.padding = new RectOffset(22, 22, 18, 18);
+        layout.spacing = 8f;
+        layout.childAlignment = TextAnchor.MiddleCenter;
+        layout.childControlWidth = true;
+        layout.childControlHeight = false;
+        layout.childForceExpandWidth = true;
+        layout.childForceExpandHeight = false;
+
+        TextMeshProUGUI title = CreateTMPText(itemObject.transform, "Title",
+            hasCategoryContent ? "这一筛选下还没有条目" : "这一分类还没有成就条目", 24f, AccentBrown, TextAlignmentOptions.Center);
+        title.fontStyle = FontStyles.Bold;
+        title.rectTransform.sizeDelta = new Vector2(540f, 34f);
+
+        TextMeshProUGUI desc = CreateTMPText(itemObject.transform, "Desc",
+            hasCategoryContent ? "换个筛选看看，或者继续推进路线，把未达成的目标慢慢点亮。" : "后续随着玩法和内容继续铺开，这里会逐步补进对应收集。", 18f,
+            AccentMuted, TextAlignmentOptions.Center);
+        desc.enableWordWrapping = true;
+        desc.overflowMode = TextOverflowModes.Overflow;
+        desc.rectTransform.sizeDelta = new Vector2(540f, 50f);
 
         return itemObject;
     }

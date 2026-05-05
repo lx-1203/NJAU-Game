@@ -35,6 +35,7 @@ public class EndingUI : MonoBehaviour
     private TextMeshProUGUI _crisisBadgeText;
     private TextMeshProUGUI _starsText;
     private CanvasGroup _cgGroup;
+    private Image _cgImage;
     private TextMeshProUGUI _cgLabel;
     private CanvasGroup _descGroup;
     private TextMeshProUGUI _descText;
@@ -174,23 +175,43 @@ public class EndingUI : MonoBehaviour
         _starsText = CreateText("StarText", panelRect, BuildStarRichText(result.ending != null ? result.ending.stars : 0), 42f,
             Color.white, TextAlignmentOptions.Center, new Vector2(0.16f, 0.69f), new Vector2(0.84f, 0.77f), true);
 
-        GameObject cgObject = new GameObject("CGLabelBox", typeof(RectTransform), typeof(Image), typeof(CanvasGroup));
+        GameObject cgObject = new GameObject("CGDisplayBox", typeof(RectTransform), typeof(Image), typeof(CanvasGroup));
         cgObject.transform.SetParent(panelRect, false);
         RectTransform cgRect = cgObject.GetComponent<RectTransform>();
-        cgRect.anchorMin = new Vector2(0.08f, 0.55f);
-        cgRect.anchorMax = new Vector2(0.92f, 0.66f);
+        cgRect.anchorMin = new Vector2(0.08f, 0.48f);
+        cgRect.anchorMax = new Vector2(0.92f, 0.68f);
         cgRect.offsetMin = Vector2.zero;
         cgRect.offsetMax = Vector2.zero;
-        cgObject.GetComponent<Image>().color = new Color(1f, 1f, 1f, 0.06f);
+        Image cgBackground = cgObject.GetComponent<Image>();
+        cgBackground.color = new Color(1f, 1f, 1f, 0.06f);
         _cgGroup = cgObject.GetComponent<CanvasGroup>();
-        _cgLabel = CreateText("CGLabel", cgRect, BuildPlayerFacingSummary(result), 24f,
-            COLOR_LIGHT_GRAY, TextAlignmentOptions.Center, new Vector2(0f, 0f), new Vector2(1f, 1f));
+
+        Sprite cgSprite = LoadEndingCG(result != null && result.ending != null ? result.ending.cgId : string.Empty);
+
+        GameObject cgImageObject = new GameObject("CGImage", typeof(RectTransform), typeof(Image));
+        cgImageObject.transform.SetParent(cgRect, false);
+        RectTransform cgImageRect = cgImageObject.GetComponent<RectTransform>();
+        cgImageRect.anchorMin = new Vector2(0.02f, 0.08f);
+        cgImageRect.anchorMax = new Vector2(0.98f, 0.92f);
+        cgImageRect.offsetMin = Vector2.zero;
+        cgImageRect.offsetMax = Vector2.zero;
+
+        _cgImage = cgImageObject.GetComponent<Image>();
+        _cgImage.sprite = cgSprite;
+        _cgImage.preserveAspect = true;
+        _cgImage.color = cgSprite != null
+            ? Color.white
+            : (_useCollapsePresentation ? new Color(0.24f, 0.06f, 0.07f, 0.98f) : new Color(0.16f, 0.16f, 0.16f, 0.98f));
+
+        _cgLabel = CreateText("CGLabel", cgRect, BuildEndingCGFallbackText(result, cgSprite), 24f,
+            cgSprite != null ? new Color(1f, 1f, 1f, 0f) : COLOR_LIGHT_GRAY,
+            TextAlignmentOptions.Center, new Vector2(0.08f, 0.18f), new Vector2(0.92f, 0.82f));
 
         GameObject descObject = new GameObject("DescriptionBox", typeof(RectTransform), typeof(CanvasGroup));
         descObject.transform.SetParent(panelRect, false);
         RectTransform descRect = descObject.GetComponent<RectTransform>();
-        descRect.anchorMin = new Vector2(0.08f, 0.37f);
-        descRect.anchorMax = new Vector2(0.92f, 0.53f);
+        descRect.anchorMin = new Vector2(0.08f, 0.30f);
+        descRect.anchorMax = new Vector2(0.92f, 0.46f);
         descRect.offsetMin = Vector2.zero;
         descRect.offsetMax = Vector2.zero;
         _descGroup = descObject.GetComponent<CanvasGroup>();
@@ -1099,6 +1120,36 @@ public class EndingUI : MonoBehaviour
         }
 
         return $"结算分 {result.finalScore:F1}   GPA {result.finalGPA:F2}   星级 {Mathf.Clamp(result.ending.stars, 0, 7)}";
+    }
+
+    private Sprite LoadEndingCG(string cgId)
+    {
+        if (string.IsNullOrWhiteSpace(cgId))
+        {
+            return null;
+        }
+
+        return Resources.Load<Sprite>($"CG/{cgId}");
+    }
+
+    private string BuildEndingCGFallbackText(EndingResult result, Sprite cgSprite)
+    {
+        if (cgSprite != null)
+        {
+            return string.Empty;
+        }
+
+        if (result == null || result.ending == null)
+        {
+            return "结局纪要";
+        }
+
+        if (_useCollapsePresentation)
+        {
+            return $"崩溃记录\n{result.ending.name}";
+        }
+
+        return $"{result.ending.name}\n{BuildPlayerFacingSummary(result)}";
     }
 
     private string BuildPlayerFacingReasonText(EndingResult result)

@@ -68,23 +68,80 @@ public class AchievementSystem : MonoBehaviour
 
     private void Start()
     {
-        // 订阅行动系统事件（安全检查）
-        if (ActionSystem.Instance != null)
-        {
-            ActionSystem.Instance.OnActionExecuted += OnActionExecuted;
-        }
-        else
-        {
-            Debug.LogWarning("[AchievementSystem] ActionSystem.Instance 为 null，将在后续重试订阅");
-        }
+        SubscribeEvents();
+        CheckAchievements();
     }
 
     private void OnDestroy()
     {
-        // 取消订阅，防止内存泄漏
+        UnsubscribeEvents();
+    }
+
+    private void SubscribeEvents()
+    {
+        if (ActionSystem.Instance != null)
+        {
+            ActionSystem.Instance.OnActionExecuted += OnActionExecuted;
+        }
+
+        if (GameState.Instance != null)
+        {
+            GameState.Instance.OnStateChanged += OnCoreStateChanged;
+            GameState.Instance.OnMoneyChanged += OnMoneyChanged;
+        }
+
+        if (PlayerAttributes.Instance != null)
+        {
+            PlayerAttributes.Instance.OnAttributesChanged += OnAttributesChanged;
+        }
+
+        if (AffinitySystem.Instance != null)
+        {
+            AffinitySystem.Instance.OnAffinityChanged += OnAffinityChanged;
+        }
+
+        if (ExamSystem.Instance != null)
+        {
+            ExamSystem.Instance.OnExamCompleted += OnExamCompleted;
+        }
+
+        if (TurnManager.Instance != null)
+        {
+            TurnManager.Instance.OnRoundAdvanced += OnRoundAdvanced;
+        }
+    }
+
+    private void UnsubscribeEvents()
+    {
         if (ActionSystem.Instance != null)
         {
             ActionSystem.Instance.OnActionExecuted -= OnActionExecuted;
+        }
+
+        if (GameState.Instance != null)
+        {
+            GameState.Instance.OnStateChanged -= OnCoreStateChanged;
+            GameState.Instance.OnMoneyChanged -= OnMoneyChanged;
+        }
+
+        if (PlayerAttributes.Instance != null)
+        {
+            PlayerAttributes.Instance.OnAttributesChanged -= OnAttributesChanged;
+        }
+
+        if (AffinitySystem.Instance != null)
+        {
+            AffinitySystem.Instance.OnAffinityChanged -= OnAffinityChanged;
+        }
+
+        if (ExamSystem.Instance != null)
+        {
+            ExamSystem.Instance.OnExamCompleted -= OnExamCompleted;
+        }
+
+        if (TurnManager.Instance != null)
+        {
+            TurnManager.Instance.OnRoundAdvanced -= OnRoundAdvanced;
         }
     }
 
@@ -99,6 +156,7 @@ public class AchievementSystem : MonoBehaviour
         if (jsonAsset == null)
         {
             Debug.LogError("[AchievementSystem] 无法加载成就定义文件: Resources/Data/achievements.json");
+            ShowAchievementNotification("成就系统未就绪", "没有找到成就配置文件，本轮将暂时跳过成就解锁。", new Color(0.82f, 0.38f, 0.30f), 3f);
             return;
         }
 
@@ -113,11 +171,13 @@ public class AchievementSystem : MonoBehaviour
             else
             {
                 Debug.LogWarning("[AchievementSystem] 成就定义为空");
+                ShowAchievementNotification("成就数据为空", "成就配置已经读到，但里面暂时没有可用条目。", new Color(0.82f, 0.38f, 0.30f), 3f);
             }
         }
         catch (Exception e)
         {
             Debug.LogError($"[AchievementSystem] 解析成就 JSON 失败: {e.Message}");
+            ShowAchievementNotification("成就加载失败", "成就配置解析失败，这一轮将先跳过成就系统。", new Color(0.82f, 0.38f, 0.30f), 3f);
         }
     }
 
@@ -129,6 +189,36 @@ public class AchievementSystem : MonoBehaviour
     private void OnActionExecuted(ActionDefinition action)
     {
         totalRoundsPlayed++;
+        CheckAchievements();
+    }
+
+    private void OnCoreStateChanged()
+    {
+        CheckAchievements();
+    }
+
+    private void OnMoneyChanged(int money)
+    {
+        CheckAchievements();
+    }
+
+    private void OnAttributesChanged()
+    {
+        CheckAchievements();
+    }
+
+    private void OnAffinityChanged(string npcId, int oldValue, int newValue, int delta)
+    {
+        CheckAchievements();
+    }
+
+    private void OnExamCompleted(SemesterGPA semesterGPA)
+    {
+        CheckAchievements();
+    }
+
+    private void OnRoundAdvanced(GameState.RoundAdvanceResult result)
+    {
         CheckAchievements();
     }
 
@@ -170,6 +260,7 @@ public class AchievementSystem : MonoBehaviour
     {
         if (string.IsNullOrWhiteSpace(achievementId))
         {
+            ShowAchievementNotification("成就未触发", "收到了一条空的成就编号，系统没有执行解锁。", new Color(0.82f, 0.38f, 0.30f), 2.8f);
             return false;
         }
 
@@ -177,6 +268,7 @@ public class AchievementSystem : MonoBehaviour
         if (def == null)
         {
             Debug.LogWarning($"[AchievementSystem] 找不到成就定义: {achievementId}");
+            ShowAchievementNotification("成就未找到", $"没有找到编号为 {achievementId} 的成就定义。", new Color(0.82f, 0.38f, 0.30f), 2.8f);
             return false;
         }
 
@@ -339,8 +431,8 @@ public class AchievementSystem : MonoBehaviour
         int year = GameState.Instance.CurrentYear;
         int semester = GameState.Instance.CurrentSemester;
         int round = GameState.Instance.CurrentRound;
-
-        return (year - 1) * 80 + (semester - 1) * 40 + round;
+        int completedSemesters = (year - 1) * 2 + (semester - 1);
+        return completedSemesters * GameState.MaxRoundsPerSemester + round;
     }
 
     // ========== 解锁 ==========
@@ -424,6 +516,7 @@ public class AchievementSystem : MonoBehaviour
         catch (Exception e)
         {
             Debug.LogError($"[AchievementSystem] 加载成就存档失败: {e.Message}");
+            ShowAchievementNotification("成就存档读取失败", "历史成就记录暂时没有成功读取，本次会按空记录继续。", new Color(0.82f, 0.38f, 0.30f), 3f);
         }
     }
 
@@ -491,5 +584,13 @@ public class AchievementSystem : MonoBehaviour
     public void ResetSemesterAchievements()
     {
         currentSemesterAchievements.Clear();
+    }
+
+    private void ShowAchievementNotification(string title, string message, Color color, float duration)
+    {
+        if (MissionUI.Instance != null)
+        {
+            MissionUI.Instance.ShowSystemNotification(title, message, color, duration);
+        }
     }
 }

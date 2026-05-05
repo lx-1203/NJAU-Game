@@ -47,6 +47,7 @@ public class EventExecutor : MonoBehaviour
         if (dialogueTrigger == null)
         {
             Debug.LogError("[EventExecutor] DialogueSystem.Instance 未实现 IDialogueTrigger 接口！");
+            ShowEventSystemNotification("事件系统异常", "对话触发器没有准备好，部分事件可能只能直接结算。");
         }
     }
 
@@ -59,9 +60,18 @@ public class EventExecutor : MonoBehaviour
     /// <param name="onComplete">事件执行完毕后的回调。</param>
     public void Execute(EventDefinition eventDef, Action onComplete)
     {
+        if (eventDef == null)
+        {
+            Debug.LogWarning("[EventExecutor] 收到空事件，已跳过执行。");
+            ShowEventSystemNotification("事件已跳过", "这次没有读取到有效事件内容，流程已自动略过。");
+            onComplete?.Invoke();
+            return;
+        }
+
         if (isExecuting)
         {
             Debug.LogWarning($"[EventExecutor] 事件 {eventDef.id} 被忽略，当前正在执行另一个事件。");
+            ShowEventSystemNotification("事件排队中", "当前还有其他事件正在结算，这条内容会先被跳过。");
             // 仍然调用 onComplete 以防止事件队列永久阻塞
             onComplete?.Invoke();
             return;
@@ -71,9 +81,46 @@ public class EventExecutor : MonoBehaviour
         currentEventDef = eventDef;
         currentOnComplete = onComplete;
 
+        if (dialogueTrigger == null)
+        {
+            dialogueTrigger = DialogueSystem.Instance as IDialogueTrigger;
+        }
+
         Debug.Log($"[EventExecutor] 开始执行事件: {eventDef.id}");
 
+        MovePlayerToEventLocation(eventDef);
+        ApplyEventPresentation(eventDef);
+
         PlayDialogueSequence(eventDef, 0);
+    }
+
+    private void MovePlayerToEventLocation(EventDefinition eventDef)
+    {
+        if (eventDef == null || eventDef.presentation == null || string.IsNullOrWhiteSpace(eventDef.presentation.locationId))
+        {
+            return;
+        }
+
+        if (LocationManager.Instance == null || GameState.Instance == null)
+        {
+            return;
+        }
+
+        if (!Enum.TryParse(eventDef.presentation.locationId, true, out LocationId targetLocation))
+        {
+            Debug.LogWarning($"[EventExecutor] 事件 {eventDef.id} 的地点 {eventDef.presentation.locationId} 无法解析。");
+            return;
+        }
+
+        if (GameState.Instance.CurrentLocation == targetLocation)
+        {
+            return;
+        }
+
+        if (!LocationManager.Instance.MoveTo(targetLocation))
+        {
+            Debug.LogWarning($"[EventExecutor] 事件 {eventDef.id} 传送到 {targetLocation} 失败。");
+        }
     }
 
     // ========== 对话序列 ==========
@@ -93,6 +140,14 @@ public class EventExecutor : MonoBehaviour
         }
 
         EventDialogue dialogue = eventDef.dialogues[dialogueIndex];
+
+        if (dialogueTrigger == null)
+        {
+            Debug.LogError($"[EventExecutor] 缺少对话触发器，无法播放事件对话: {eventDef.id}");
+            ShowEventSystemNotification("事件直接结算", "这段事件的对话界面暂时不可用，系统将直接按结果结算。");
+            OnDialoguesFinished(eventDef);
+            return;
+        }
 
         dialogueTrigger.ShowDialogue(dialogue.speaker, dialogue.lines, () =>
         {
@@ -126,6 +181,20 @@ public class EventExecutor : MonoBehaviour
 
             if (filteredChoices.Count > 0)
             {
+                if (dialogueTrigger == null)
+                {
+                    Debug.LogError($"[EventExecutor] 缺少对话触发器，无法展示事件选项: {eventDef.id}");
+                    ShowEventSystemNotification("事件直接结算", "事件选项界面暂时不可用，系统已按默认结果继续推进。");
+                    ApplyEventCosts(eventDef.actionPointCost, eventDef.moneyCost, eventDef.id, "缺少选项UI时应用默认效果");
+                    if (eventDef.defaultEffects != null && eventDef.defaultEffects.Length > 0)
+                    {
+                        ApplyEffects(eventDef.defaultEffects);
+                    }
+                    EventHistory.Instance.RecordEvent(eventDef.id, -1);
+                    FinishExecution();
+                    return;
+                }
+
                 dialogueTrigger.ShowChoices(filteredChoices.ToArray(), (int selectedFilteredIndex) =>
                 {
                     int originalIndex = indexMap[selectedFilteredIndex];
@@ -141,6 +210,7 @@ public class EventExecutor : MonoBehaviour
                     ApplyEffects(eventDef.defaultEffects);
                 }
                 EventHistory.Instance.RecordEvent(eventDef.id, -1);
+                ShowEventSummary(eventDef, null, eventDef.defaultEffects, eventDef.actionPointCost, eventDef.moneyCost);
                 Debug.Log($"[EventExecutor] 事件 {eventDef.id} 所有选项条件不满足，已应用默认效果。");
                 FinishExecution();
             }
@@ -155,6 +225,7 @@ public class EventExecutor : MonoBehaviour
             }
 
             EventHistory.Instance.RecordEvent(eventDef.id, -1);
+            ShowEventSummary(eventDef, null, eventDef.defaultEffects, eventDef.actionPointCost, eventDef.moneyCost);
             Debug.Log($"[EventExecutor] 事件 {eventDef.id} 无选项，已应用默认效果。");
 
             FinishExecution();
@@ -225,8 +296,8 @@ public class EventExecutor : MonoBehaviour
         Debug.Log($"[EventExecutor] 事件 {eventDef.id} 玩家选择了选项 {index}: {selectedChoice.text}");
 
         ApplyEventCosts(
-            eventDef.actionPointCost + Mathf.Max(0, selectedChoice.actionPointCost),
-            eventDef.moneyCost + Mathf.Max(0, selectedChoice.moneyCost),
+            eventDef.actionPointCost + selectedChoice.actionPointCost,
+            eventDef.moneyCost + selectedChoice.moneyCost,
             eventDef.id,
             selectedChoice.text);
 
@@ -238,6 +309,12 @@ public class EventExecutor : MonoBehaviour
 
         // 记录事件历史
         EventHistory.Instance.RecordEvent(eventDef.id, index);
+        ShowEventSummary(
+            eventDef,
+            selectedChoice,
+            selectedChoice.effects,
+            eventDef.actionPointCost + selectedChoice.actionPointCost,
+            eventDef.moneyCost + selectedChoice.moneyCost);
 
         // 处理选项触发的链接事件
         if (!string.IsNullOrEmpty(selectedChoice.triggerEventId))
@@ -297,6 +374,7 @@ public class EventExecutor : MonoBehaviour
 
                 default:
                     Debug.LogWarning($"[EventExecutor] 未知效果类型: {effect.type}");
+                    ShowEventSystemNotification("事件效果未识别", $"检测到未识别的效果类型：{effect.type}，这部分影响已被跳过。");
                     break;
             }
         }
@@ -314,15 +392,40 @@ public class EventExecutor : MonoBehaviour
         {
             gs.ActionPoints = Mathf.Max(0, gs.ActionPoints - actionPointCost);
         }
-
-        if (moneyCost != 0)
+        else if (actionPointCost < 0)
         {
-            gs.AddMoney(-moneyCost);
+            ApplyActionPointDelta(-actionPointCost);
+        }
+
+        if (moneyCost > 0)
+        {
+            if (EconomyManager.Instance != null)
+            {
+                EconomyManager.Instance.Spend(moneyCost, TransactionRecord.TransactionType.OtherExpense, $"事件支出: {eventId} / {sourceLabel}");
+            }
+            else
+            {
+                gs.AddMoney(-moneyCost);
+            }
+        }
+        else if (moneyCost < 0)
+        {
+            int income = -moneyCost;
+            if (EconomyManager.Instance != null)
+            {
+                EconomyManager.Instance.Earn(income, TransactionRecord.TransactionType.OtherIncome, $"事件收益: {eventId} / {sourceLabel}");
+            }
+            else
+            {
+                gs.AddMoney(income);
+            }
         }
 
         if (actionPointCost > 0 || moneyCost != 0)
         {
-            Debug.Log($"[EventExecutor] 事件成本 {eventId} / {sourceLabel}: AP-{actionPointCost}, Money-{moneyCost}");
+            string apLog = actionPointCost == 0 ? "0" : $"{(actionPointCost > 0 ? "-" : "+")}{Mathf.Abs(actionPointCost)}";
+            string moneyLog = moneyCost == 0 ? "0" : $"{(moneyCost > 0 ? "-" : "+")}{Mathf.Abs(moneyCost)}";
+            Debug.Log($"[EventExecutor] 事件成本 {eventId} / {sourceLabel}: AP{apLog}, Money{moneyLog}");
         }
     }
 
@@ -335,6 +438,105 @@ public class EventExecutor : MonoBehaviour
         }
 
         gs.ActionPoints = Mathf.Clamp(gs.ActionPoints + delta, 0, gs.EffectiveMaxActionPoints);
+    }
+
+    private void ShowEventSummary(EventDefinition eventDef, EventChoice selectedChoice, EventEffect[] effects, int actionPointCost, int moneyCost)
+    {
+        if (MissionUI.Instance == null || eventDef == null)
+        {
+            return;
+        }
+
+        string title = string.IsNullOrWhiteSpace(eventDef.title) ? "事件推进" : eventDef.title;
+        string message = BuildEventSummary(eventDef, selectedChoice, effects, actionPointCost, moneyCost);
+        MissionUI.Instance.ShowSystemNotification(title, message, new Color(0.36f, 0.64f, 0.92f), 3.4f);
+    }
+
+    private string BuildEventSummary(EventDefinition eventDef, EventChoice selectedChoice, EventEffect[] effects, int actionPointCost, int moneyCost)
+    {
+        System.Collections.Generic.List<string> parts = new System.Collections.Generic.List<string>();
+
+        if (selectedChoice != null && !string.IsNullOrWhiteSpace(selectedChoice.text))
+        {
+            parts.Add($"已选择：{selectedChoice.text}");
+        }
+        else if (!string.IsNullOrWhiteSpace(eventDef.description))
+        {
+            parts.Add(eventDef.description);
+        }
+
+        if (actionPointCost != 0)
+        {
+            parts.Add(actionPointCost > 0 ? $"AP-{actionPointCost}" : $"AP+{Mathf.Abs(actionPointCost)}");
+        }
+
+        if (moneyCost != 0)
+        {
+            parts.Add(moneyCost > 0 ? $"花费¥{moneyCost}" : $"获得¥{Mathf.Abs(moneyCost)}");
+        }
+
+        string effectSummary = BuildEffectSummary(effects);
+        if (!string.IsNullOrEmpty(effectSummary))
+        {
+            parts.Add(effectSummary);
+        }
+
+        if (selectedChoice != null && !string.IsNullOrEmpty(selectedChoice.triggerEventId))
+        {
+            parts.Add("后续影响已经埋下，相关事件会在之后继续发酵");
+        }
+
+        return parts.Count > 0 ? string.Join("，", parts) : "事件已结算完成。";
+    }
+
+    private string BuildEffectSummary(EventEffect[] effects)
+    {
+        if (effects == null || effects.Length == 0)
+        {
+            return string.Empty;
+        }
+
+        System.Collections.Generic.List<string> parts = new System.Collections.Generic.List<string>();
+        for (int i = 0; i < effects.Length; i++)
+        {
+            EventEffect effect = effects[i];
+            if (effect == null)
+            {
+                continue;
+            }
+
+            if (!string.IsNullOrWhiteSpace(effect.description))
+            {
+                parts.Add(effect.description);
+                continue;
+            }
+
+            switch (effect.type)
+            {
+                case "attribute":
+                    parts.Add($"{effect.target}{(effect.value >= 0 ? "+" : string.Empty)}{effect.value}");
+                    break;
+                case "money":
+                    parts.Add(effect.value >= 0 ? $"金钱+{effect.value}" : $"金钱{effect.value}");
+                    break;
+                case "actionpoint":
+                case "action_point":
+                case "ap":
+                    parts.Add(effect.value >= 0 ? $"AP+{effect.value}" : $"AP{effect.value}");
+                    break;
+                case "flag":
+                    parts.Add($"标记“{effect.target}”已更新");
+                    break;
+                case "darkness":
+                    parts.Add(effect.value >= 0 ? $"黑暗值+{effect.value}" : $"黑暗值{effect.value}");
+                    break;
+                case "unlock":
+                    parts.Add($"已解锁：{effect.target}");
+                    break;
+            }
+        }
+
+        return parts.Count > 0 ? string.Join("，", parts) : string.Empty;
     }
 
     // ========== 执行完成 ==========
@@ -359,6 +561,11 @@ public class EventExecutor : MonoBehaviour
 
         Debug.Log($"[EventExecutor] 事件执行完毕: {currentEventDef.id}");
 
+        if (DialogueSystem.Instance != null)
+        {
+            DialogueSystem.Instance.ClearEventPresentation();
+        }
+
         // 重置执行状态
         isExecuting = false;
 
@@ -368,5 +575,31 @@ public class EventExecutor : MonoBehaviour
         currentOnComplete = null;
 
         callback?.Invoke();
+    }
+
+    private void ApplyEventPresentation(EventDefinition eventDef)
+    {
+        if (eventDef == null || eventDef.presentation == null || DialogueSystem.Instance == null)
+        {
+            return;
+        }
+
+        string fallbackSpeaker = string.Empty;
+        string fallbackPortraitId = string.Empty;
+        if (eventDef.dialogues != null && eventDef.dialogues.Length > 0 && eventDef.dialogues[0] != null)
+        {
+            fallbackSpeaker = eventDef.dialogues[0].speaker;
+            fallbackPortraitId = eventDef.dialogues[0].portraitId;
+        }
+
+        DialogueSystem.Instance.ApplyEventPresentation(eventDef.presentation, fallbackSpeaker, fallbackPortraitId);
+    }
+
+    private void ShowEventSystemNotification(string title, string message)
+    {
+        if (MissionUI.Instance != null)
+        {
+            MissionUI.Instance.ShowSystemNotification(title, message, new Color(0.82f, 0.38f, 0.30f), 3f);
+        }
     }
 }

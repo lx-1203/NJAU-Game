@@ -24,6 +24,7 @@ public static class SceneLoader
         if (string.IsNullOrEmpty(sceneName))
         {
             Debug.LogError("[SceneLoader] 目标场景名称不能为空！");
+            ShowSceneNotification("无法切换场景", "没有收到有效的目标场景名称。");
             return;
         }
 
@@ -43,6 +44,7 @@ public static class SceneLoader
         if (string.IsNullOrEmpty(sceneName))
         {
             Debug.LogError("[SceneLoader] 目标场景名称不能为空！");
+            ShowSceneNotification("无法切换场景", "没有收到有效的目标场景名称。");
             return;
         }
 
@@ -65,6 +67,7 @@ public static class SceneLoader
         if (string.IsNullOrEmpty(sceneName))
         {
             Debug.LogError("[SceneLoader] 目标场景名称不能为空！");
+            ShowSceneNotification("无法切换场景", "没有收到有效的目标场景名称。");
             return;
         }
 
@@ -85,5 +88,13 @@ public static class SceneLoader
         #else
         Application.Quit();
         #endif
+    }
+
+    private static void ShowSceneNotification(string title, string message)
+    {
+        if (MissionUI.Instance != null)
+        {
+            MissionUI.Instance.ShowSystemNotification(title, message, new Color(0.82f, 0.38f, 0.30f), 2.8f);
+        }
     }
 }

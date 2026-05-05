@@ -50,7 +50,11 @@ public class TalentUI : MonoBehaviour
     public void ShowPanel()
     {
         if (talentCanvas != null) return; // 已打开
-        if (!UIFlowGuard.PrepareForExclusiveWindow(UIFlowGuard.WindowTalent)) return;
+        if (!UIFlowGuard.PrepareForExclusiveWindow(UIFlowGuard.WindowTalent))
+        {
+            ShowTalentNotification("天赋树未打开", "当前还有其他关键界面占用操作，先处理完再来分配天赋。");
+            return;
+        }
         BuildUI();
         RefreshAll();
     }
@@ -204,7 +208,11 @@ public class TalentUI : MonoBehaviour
         branchTitle.alignment = TextAlignmentOptions.Center;
         SetAnchors(branchTitle.gameObject, new Vector2(0, 0.92f), new Vector2(1, 1));
 
-        if (TalentSystem.Instance == null) return;
+        if (TalentSystem.Instance == null)
+        {
+            ShowTalentNotification("天赋树未完整载入", "天赋系统暂时没有准备好，这个分支现在无法生成节点。");
+            return;
+        }
 
         List<TalentDefinition> talents = TalentSystem.Instance.GetTalentsByBranch(branch);
 
@@ -255,7 +263,11 @@ public class TalentUI : MonoBehaviour
 
     private void RefreshAll()
     {
-        if (TalentSystem.Instance == null) return;
+        if (TalentSystem.Instance == null)
+        {
+            ShowTalentNotification("天赋树未刷新", "天赋系统暂时不可用，这次没法更新天赋状态。");
+            return;
+        }
 
         // 刷新天赋点显示
         if (pointsText != null)
@@ -303,7 +315,11 @@ public class TalentUI : MonoBehaviour
         }
 
         TalentDefinition talent = TalentSystem.Instance.GetTalent(selectedTalentId);
-        if (talent == null) return;
+        if (talent == null)
+        {
+            ShowTalentNotification("天赋详情不可用", "当前选中的天赋资料没有成功载入，换一个节点试试。");
+            return;
+        }
 
         bool isActive = TalentSystem.Instance.IsTalentActivated(selectedTalentId);
         bool canActivate = TalentSystem.Instance.CanActivateTalent(selectedTalentId);
@@ -351,8 +367,22 @@ public class TalentUI : MonoBehaviour
 
     private void OnActivateClicked()
     {
-        if (string.IsNullOrEmpty(selectedTalentId)) return;
-        if (TalentSystem.Instance == null) return;
+        if (string.IsNullOrEmpty(selectedTalentId))
+        {
+            ShowTalentNotification("无法激活天赋", "你还没有选中任何天赋节点。");
+            return;
+        }
+        if (TalentSystem.Instance == null)
+        {
+            ShowTalentNotification("无法激活天赋", "天赋系统暂时没有准备好，这次无法完成激活。");
+            return;
+        }
+
+        if (!TalentSystem.Instance.CanActivateTalent(selectedTalentId))
+        {
+            ShowTalentNotification("无法激活天赋", TalentSystem.Instance.BuildTalentBlockReason(selectedTalentId));
+            return;
+        }
 
         TalentSystem.Instance.ActivateTalent(selectedTalentId);
         RefreshAll();
@@ -360,9 +390,28 @@ public class TalentUI : MonoBehaviour
 
     private void OnResetClicked()
     {
-        if (TalentSystem.Instance == null) return;
+        if (TalentSystem.Instance == null)
+        {
+            ShowTalentNotification("无法重置天赋", "天赋系统暂时没有准备好，这次无法执行重置。");
+            return;
+        }
+
+        if (GameState.Instance == null || GameState.Instance.Money < 500)
+        {
+            ShowTalentNotification("无法重置天赋", "重置需要 ¥500，当前余额还不够。");
+            return;
+        }
+
         TalentSystem.Instance.ResetTalents();
         RefreshAll();
+    }
+
+    private void ShowTalentNotification(string title, string message)
+    {
+        if (MissionUI.Instance != null && !string.IsNullOrEmpty(message))
+        {
+            MissionUI.Instance.ShowSystemNotification(title, message, new Color(0.82f, 0.38f, 0.30f), 2.8f);
+        }
     }
 
     // ========== UI 辅助 ==========

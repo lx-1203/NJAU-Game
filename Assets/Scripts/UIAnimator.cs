@@ -34,33 +34,45 @@ public class UIAnimator : MonoBehaviour
     public void FadeIn(float duration = -1f)
     {
         if (duration < 0) duration = defaultDuration;
+        if (mainCanvasGroup == null) return;
         StartCoroutine(FadeCoroutine(mainCanvasGroup, 0f, 1f, duration));
     }
     
     public void FadeOut(float duration = -1f)
     {
         if (duration < 0) duration = defaultDuration;
+        if (mainCanvasGroup == null) return;
         StartCoroutine(FadeCoroutine(mainCanvasGroup, 1f, 0f, duration));
     }
     
     public void FadeElement(CanvasGroup canvasGroup, float targetAlpha, float duration = -1f)
     {
+        if (canvasGroup == null) return;
         if (duration < 0) duration = defaultDuration;
         StartCoroutine(FadeCoroutine(canvasGroup, canvasGroup.alpha, targetAlpha, duration));
     }
     
     private IEnumerator FadeCoroutine(CanvasGroup canvasGroup, float startAlpha, float endAlpha, float duration)
     {
+        if (canvasGroup == null) yield break;
+        if (duration <= 0f)
+        {
+            canvasGroup.alpha = endAlpha;
+            yield break;
+        }
+
         float elapsedTime = 0f;
         
-        while (elapsedTime< duration)
+        while (elapsedTime < duration)
         {
+            if (canvasGroup == null) yield break;
             float t = easingCurve.Evaluate(elapsedTime / duration);
             canvasGroup.alpha = Mathf.Lerp(startAlpha, endAlpha, t);
             elapsedTime += Time.deltaTime;
             yield return null;
         }
         
+        if (canvasGroup == null) yield break;
         canvasGroup.alpha = endAlpha;
     }
     
@@ -70,28 +82,39 @@ public class UIAnimator : MonoBehaviour
     
     public void MoveIn(RectTransform element, Vector2 startPosition, Vector2 endPosition, float duration = -1f)
     {
+        if (element == null) return;
         if (duration < 0) duration = defaultDuration;
         StartCoroutine(MoveCoroutine(element, startPosition, endPosition, duration));
     }
     
     public void MoveOut(RectTransform element, Vector2 endPosition, float duration = -1f)
     {
+        if (element == null) return;
         if (duration < 0) duration = defaultDuration;
         StartCoroutine(MoveCoroutine(element, element.anchoredPosition, endPosition, duration));
     }
     
     private IEnumerator MoveCoroutine(RectTransform element, Vector2 startPos, Vector2 endPos, float duration)
     {
+        if (element == null) yield break;
+        if (duration <= 0f)
+        {
+            element.anchoredPosition = endPos;
+            yield break;
+        }
+
         float elapsedTime = 0f;
         
-        while (elapsedTime< duration)
+        while (elapsedTime < duration)
         {
+            if (element == null) yield break;
             float t = easingCurve.Evaluate(elapsedTime / duration);
             element.anchoredPosition = Vector2.Lerp(startPos, endPos, t);
             elapsedTime += Time.deltaTime;
             yield return null;
         }
         
+        if (element == null) yield break;
         element.anchoredPosition = endPos;
     }
     
@@ -101,28 +124,39 @@ public class UIAnimator : MonoBehaviour
     
     public void ScaleIn(RectTransform element, Vector3 startScale, Vector3 endScale, float duration = -1f)
     {
+        if (element == null) return;
         if (duration < 0) duration = defaultDuration;
         StartCoroutine(ScaleCoroutine(element, startScale, endScale, duration));
     }
     
     public void ScaleOut(RectTransform element, Vector3 endScale, float duration = -1f)
     {
+        if (element == null) return;
         if (duration < 0) duration = defaultDuration;
         StartCoroutine(ScaleCoroutine(element, element.localScale, endScale, duration));
     }
     
     private IEnumerator ScaleCoroutine(RectTransform element, Vector3 startScale, Vector3 endScale, float duration)
     {
+        if (element == null) yield break;
+        if (duration <= 0f)
+        {
+            element.localScale = endScale;
+            yield break;
+        }
+
         float elapsedTime = 0f;
         
-        while (elapsedTime< duration)
+        while (elapsedTime < duration)
         {
+            if (element == null) yield break;
             float t = easingCurve.Evaluate(elapsedTime / duration);
             element.localScale = Vector3.Lerp(startScale, endScale, t);
             elapsedTime += Time.deltaTime;
             yield return null;
         }
         
+        if (element == null) yield break;
         element.localScale = endScale;
     }
     
@@ -157,6 +191,7 @@ public class UIAnimator : MonoBehaviour
     
     public void ButtonPressEffect(Button button, float scaleAmount = 0.95f, float duration = 0.1f)
     {
+        if (button == null) return;
         RectTransform rectTransform = button.GetComponent<RectTransform>();
         if (rectTransform == null) return;
         
@@ -171,17 +206,30 @@ public class UIAnimator : MonoBehaviour
     
     private IEnumerator ButtonPressCoroutine(RectTransform rectTransform, float scaleAmount, float duration)
     {
+        if (rectTransform == null) yield break;
+
+        GameObject targetObject = rectTransform.gameObject;
         Vector3 originalScale = rectTransform.localScale;
         Vector3 pressedScale = originalScale * scaleAmount;
         
         // 按下动画
         yield return ScaleCoroutine(rectTransform, originalScale, pressedScale, duration);
+        if (rectTransform == null)
+        {
+            runningAnimations.Remove(targetObject);
+            yield break;
+        }
         
         // 释放动画
         yield return ScaleCoroutine(rectTransform, pressedScale, originalScale, duration);
+        if (rectTransform == null)
+        {
+            runningAnimations.Remove(targetObject);
+            yield break;
+        }
         
         // 移除运行中的动画记录
-        runningAnimations.Remove(rectTransform.gameObject);
+        runningAnimations.Remove(targetObject);
     }
     
     #endregion

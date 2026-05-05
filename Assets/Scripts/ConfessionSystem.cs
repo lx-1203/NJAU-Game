@@ -150,6 +150,7 @@ public class ConfessionSystem : MonoBehaviour
         if (RomanceSystem.Instance == null)
         {
             Debug.LogError("[ConfessionSystem] RomanceSystem 未初始化");
+            ShowConfessionNotification("互动未完成", "恋爱系统暂时不可用，这次心意没能顺利传达。", false, false, npcId, 0f);
             onComplete?.Invoke(false);
             return;
         }
@@ -162,6 +163,13 @@ public class ConfessionSystem : MonoBehaviour
         if (!canProceed)
         {
             Debug.LogWarning($"[ConfessionSystem] {npcId} 不满足{(isReunion ? "复合" : "告白")}条件");
+            ShowConfessionNotification(
+                isReunion ? "暂时无法复合" : "暂时无法告白",
+                BuildRequirementFailureMessage(npcId, isReunion),
+                false,
+                isReunion,
+                npcId,
+                0f);
             onComplete?.Invoke(false);
             return;
         }
@@ -172,6 +180,13 @@ public class ConfessionSystem : MonoBehaviour
             if (!GameState.Instance.ConsumeActionPoint(CONFESSION_AP_COST))
             {
                 Debug.LogWarning("[ConfessionSystem] 行动点不足");
+                ShowConfessionNotification(
+                    isReunion ? "无法复合" : "无法告白",
+                    "当前行动点不足，需要 2 AP 才能完成这次关键互动。",
+                    false,
+                    isReunion,
+                    npcId,
+                    0f);
                 onComplete?.Invoke(false);
                 return;
             }
@@ -231,6 +246,15 @@ public class ConfessionSystem : MonoBehaviour
 
         // 触发事件
         OnConfessionResult?.Invoke(npcId, success, successRate);
+        ShowConfessionNotification(
+            success
+                ? (isReunion ? "复合成功" : "告白成功")
+                : (isReunion ? "复合未果" : "告白未果"),
+            BuildResultMessage(npcId, success, isReunion, successRate),
+            success,
+            isReunion,
+            npcId,
+            successRate);
 
         // 触发对话（如果 DialogueSystem 可用）
         TriggerConfessionDialogue(npcId, success, isReunion);
@@ -318,5 +342,59 @@ public class ConfessionSystem : MonoBehaviour
             if (npcData != null) return npcData.displayName;
         }
         return npcId;
+    }
+
+    private string BuildRequirementFailureMessage(string npcId, bool isReunion)
+    {
+        int affinity = GetAffinity(npcId);
+        if (GameState.Instance != null && GameState.Instance.ActionPoints < CONFESSION_AP_COST)
+        {
+            return "行动点还不够，先把这轮安排处理完再来。";
+        }
+
+        if (isReunion)
+        {
+            RomanceRecord record = RomanceSystem.Instance != null ? RomanceSystem.Instance.GetOrCreateRecord(npcId) : null;
+            if (record != null)
+            {
+                if (record.cooldownRoundsLeft > 0) return $"关系还在冷却中，剩余 {record.cooldownRoundsLeft} 回合后才能重新开口。";
+                if (record.hasReunited) return "这段关系已经用过一次复合机会，无法再次回头。";
+                if (record.breakupCount >= 2) return "这段关系已经承受过太多次分开，当前无法再次复合。";
+            }
+
+            return affinity < 70 ? $"好感度还不够，当前 {affinity}/70。" : "现在还不是重新开始的时候。";
+        }
+
+        return affinity < 80 ? $"好感度还差一点，当前 {affinity}/80。" : "现在还没到适合告白的状态。";
+    }
+
+    private string BuildResultMessage(string npcId, bool success, bool isReunion, float successRate)
+    {
+        string displayName = GetNPCDisplayName(npcId);
+        string rateText = successRate > 0f ? $"成功率 {successRate:P0}。" : string.Empty;
+
+        if (success)
+        {
+            return isReunion
+                ? $"{displayName} 愿意再给彼此一次机会。{rateText}这段关系重新回到了恋爱状态。"
+                : $"{displayName} 接住了你的心意。{rateText}你们正式开始交往了。";
+        }
+
+        return isReunion
+            ? $"{displayName} 还是没有准备好回到从前。{rateText}先把距离慢慢拉近，再寻找下一次机会。"
+            : $"{displayName} 暂时没有接受这份心意。{rateText}先继续相处，把关系经营得更稳一些。";
+    }
+
+    private void ShowConfessionNotification(string title, string message, bool success, bool isReunion, string npcId, float successRate)
+    {
+        if (MissionUI.Instance == null)
+        {
+            return;
+        }
+
+        Color color = success
+            ? new Color(0.82f, 0.44f, 0.68f)
+            : new Color(0.84f, 0.42f, 0.32f);
+        MissionUI.Instance.ShowSystemNotification(title, message, color, success ? 3.4f : 3f);
     }
 }

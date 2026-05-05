@@ -40,6 +40,7 @@ public static class DialogueParser
         {
             Directory.CreateDirectory(dialogueDir);
             Debug.LogWarning($"[DialogueParser] 对话目录不存在，已自动创建: {dialogueDir}");
+            ShowDialogueParserNotification("对话目录已创建", "对话资源目录原本不存在，系统已经自动建立，当前不会加载到对话内容。");
             return;
         }
 
@@ -48,6 +49,7 @@ public static class DialogueParser
         if (jsonFiles.Length == 0)
         {
             Debug.LogWarning($"[DialogueParser] 对话目录为空，未找到任何 .json 文件: {dialogueDir}");
+            ShowDialogueParserNotification("暂无对话资源", "对话目录目前是空的，相关角色和事件会缺少文本内容。");
             return;
         }
 
@@ -75,6 +77,7 @@ public static class DialogueParser
             catch (Exception e)
             {
                 Debug.LogError($"[DialogueParser] 加载对话文件失败: {filePath}\n{e.Message}");
+                ShowDialogueParserNotification("对话加载失败", $"有一份对话文件没有成功读取：{Path.GetFileName(filePath)}。");
             }
         }
 
@@ -217,6 +220,14 @@ public static class DialogueParser
             default:
                 Debug.LogWarning($"[DialogueParser] 未知属性名: \"{attrName}\"");
                 return 0;
+        }
+    }
+
+    private static void ShowDialogueParserNotification(string title, string message)
+    {
+        if (MissionUI.Instance != null)
+        {
+            MissionUI.Instance.ShowSystemNotification(title, message, new Color(0.82f, 0.38f, 0.30f), 3f);
         }
     }
 }

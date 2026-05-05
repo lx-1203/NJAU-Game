@@ -207,7 +207,8 @@
             "layer": 4,
             "conditions": [
                 { "type": "Money_Less", "value": -3000 },
-                { "type": "Mood_Less", "value": 30 }
+                { "type": "Mood_Less", "value": 30 },
+                { "type": "EventFlag_True", "targetId": "loan_contact_saved", "value": 1 }
             ],
             "description": "一笔又一笔的借贷如同无底洞。毕业时你的银行账户是鲜红的负数，而催债电话已经打到了父母那里。",
             "cgId": "cg_ending_debt"

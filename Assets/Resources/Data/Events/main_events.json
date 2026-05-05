@@ -4,7 +4,7 @@
       "id": "ME_001",
       "eventType": "MainStory",
       "title": "军训开始",
-      "description": "大一新生军训正式开始，教官严格训练每一位新生。",
+      "description": "大一刚开学，操场上第一次集合的哨声把所有人都拽进了大学生活的第一道秩序里。",
       "priority": 1,
       "isForced": true,
       "isRepeatable": false,
@@ -13,63 +13,285 @@
         "semester": 1,
         "roundMin": 1,
         "roundMax": 1,
+        "specificRounds": [1],
         "attributeConditions": [],
         "minMoney": 0,
         "maxMoney": 0,
         "affinityConditions": [],
         "requiredEventIds": [],
         "excludedEventIds": [],
+        "requiredFlags": [],
+        "excludedFlags": [],
         "minDarkness": 0,
         "triggerBehavior": "",
+        "triggerChance": 1,
         "phase": "RoundStart"
       },
       "dialogues": [
         {
           "speaker": "教官",
           "lines": [
-            "同学们，从今天开始进行为期两周的军训！",
-            "请做好吃苦的准备，我不会对任何人手软。"
+            "从今天起，站姿、队列、作息，全都要重新学。",
+            "你们要先学会在太阳底下把自己站稳。"
           ],
           "portraitId": ""
         },
         {
           "speaker": "旁白",
           "lines": [
-            "烈日下，你和同学们站成整齐的方阵...",
-            "你该如何度过这段时光？"
+            "操场边缘的热浪一层层往上翻，鞋底很快就烫得发麻。",
+            "你意识到，大学生活并不是从课堂开始，而是从你打算用什么姿态迎接第一场消耗开始。"
           ],
           "portraitId": ""
         }
       ],
       "choices": [
         {
-          "text": "认真训练",
+          "text": "咬牙认真训练",
+          "actionPointCost": 0,
+          "moneyCost": 0,
           "effects": [
             { "type": "attribute", "target": "体魄", "value": 5, "description": "体魄 +5" },
-            { "type": "attribute", "target": "压力", "value": 10, "description": "压力 +10" },
-            { "type": "attribute", "target": "领导力", "value": 2, "description": "领导力 +2" }
+            { "type": "attribute", "target": "压力", "value": 8, "description": "压力 +8" },
+            { "type": "attribute", "target": "领导力", "value": 2, "description": "领导力 +2" },
+            { "type": "flag", "target": "military_training_diligent", "value": 1, "description": "留下认真训练的印象" }
           ],
           "triggerEventId": "",
           "showConditions": []
         },
         {
-          "text": "摸鱼划水",
+          "text": "趁乱偷偷划水",
+          "actionPointCost": 0,
+          "moneyCost": 0,
           "effects": [
             { "type": "attribute", "target": "心情", "value": 5, "description": "心情 +5" },
-            { "type": "attribute", "target": "压力", "value": -5, "description": "压力 -5" }
+            { "type": "attribute", "target": "压力", "value": -5, "description": "压力 -5" },
+            { "type": "flag", "target": "military_training_slack", "value": 1, "description": "留下偷懒的痕迹" }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "顺手照顾快撑不住的同学",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            { "type": "attribute", "target": "魅力", "value": 3, "description": "魅力 +3" },
+            { "type": "attribute", "target": "领导力", "value": 2, "description": "领导力 +2" },
+            { "type": "attribute", "target": "压力", "value": 4, "description": "压力 +4" },
+            { "type": "flag", "target": "military_training_helper", "value": 1, "description": "留下照顾同学的印象" }
           ],
           "triggerEventId": "",
           "showConditions": []
         }
       ],
       "defaultEffects": [],
-      "chainEventIds": []
+      "chainEventIds": [],
+      "presentation": {
+        "sceneKey": "freshman_training_opening",
+        "sceneDisplayName": "军训操场",
+        "locationId": "Playground",
+        "backgroundResourcePath": "",
+        "protagonistPortraitResourcePath": "",
+        "npcPortraitResourcePath": "",
+        "backgroundSlotName": "BG_Freshman_Training_Ground",
+        "protagonistSlotName": "PC_Freshman_Training_Default",
+        "npcSlotName": "NPC_Instructor_Training_Default"
+      }
     },
     {
       "id": "ME_002",
       "eventType": "MainStory",
       "title": "班委竞选",
-      "description": "新学期的班委竞选开始了，你要参加吗？",
+      "description": "军训刚过去，班级秩序和人际站位开始重新洗牌，第一次公开亮相的时刻到了。",
+      "priority": 1,
+      "isForced": true,
+      "isRepeatable": false,
+      "trigger": {
+        "year": 1,
+        "semester": 1,
+        "roundMin": 2,
+        "roundMax": 2,
+        "specificRounds": [2],
+        "attributeConditions": [],
+        "minMoney": 0,
+        "maxMoney": 0,
+        "affinityConditions": [],
+        "requiredEventIds": [ "ME_001" ],
+        "excludedEventIds": [],
+        "requiredFlags": [],
+        "excludedFlags": [],
+        "minDarkness": 0,
+        "triggerBehavior": "",
+        "triggerChance": 1,
+        "phase": "RoundStart"
+      },
+      "dialogues": [
+        {
+          "speaker": "班主任",
+          "lines": [
+            "军训结束了，接下来班级事务也该有人站出来负责。",
+            "愿意承担事情的同学，现在可以上台。"
+          ],
+          "portraitId": ""
+        },
+        {
+          "speaker": "旁白",
+          "lines": [
+            "一瞬间，教室里安静得只剩纸张翻动的声音。",
+            "这不是一次简单的举手，而是别人将如何记住你。"
+          ],
+          "portraitId": ""
+        }
+      ],
+      "choices": [
+        {
+          "text": "主动上台竞选",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            { "type": "attribute", "target": "领导力", "value": 5, "description": "领导力 +5" },
+            { "type": "attribute", "target": "魅力", "value": 3, "description": "魅力 +3" },
+            { "type": "attribute", "target": "压力", "value": 6, "description": "压力 +6" },
+            { "type": "flag", "target": "class_committee_candidate", "value": 1, "description": "进入竞选路径" }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "不争位置，先观察局势",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            { "type": "attribute", "target": "心情", "value": 3, "description": "心情 +3" },
+            { "type": "attribute", "target": "压力", "value": -2, "description": "压力 -2" },
+            { "type": "flag", "target": "class_committee_low_profile", "value": 1, "description": "保持低调观望" }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "帮熟人拉票组织气氛",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            { "type": "attribute", "target": "魅力", "value": 2, "description": "魅力 +2" },
+            { "type": "attribute", "target": "领导力", "value": 2, "description": "领导力 +2" },
+            { "type": "flag", "target": "class_committee_helper", "value": 1, "description": "进入拉票协助路径" }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        }
+      ],
+      "defaultEffects": [],
+      "chainEventIds": [],
+      "presentation": {
+        "sceneKey": "freshman_class_committee",
+        "sceneDisplayName": "新生班会",
+        "locationId": "TeachingBuilding",
+        "backgroundResourcePath": "",
+        "protagonistPortraitResourcePath": "",
+        "npcPortraitResourcePath": "",
+        "backgroundSlotName": "BG_Freshman_Classroom_Meeting",
+        "protagonistSlotName": "PC_ClassCampaign_Default",
+        "npcSlotName": "NPC_HomeroomTeacher_Default"
+      }
+    },
+    {
+      "id": "ME_003",
+      "eventType": "MainStory",
+      "title": "第一次期中备考",
+      "description": "第一轮真正意义上的考试周压过来了，整个宿舍楼都在用不同方式对抗焦虑。",
+      "priority": 1,
+      "isForced": true,
+      "isRepeatable": false,
+      "trigger": {
+        "year": 1,
+        "semester": 1,
+        "roundMin": 3,
+        "roundMax": 3,
+        "specificRounds": [3],
+        "attributeConditions": [],
+        "minMoney": 0,
+        "maxMoney": 0,
+        "affinityConditions": [],
+        "requiredEventIds": [ "ME_002" ],
+        "excludedEventIds": [],
+        "requiredFlags": [],
+        "excludedFlags": [],
+        "minDarkness": 0,
+        "triggerBehavior": "",
+        "triggerChance": 1,
+        "phase": "RoundStart"
+      },
+      "dialogues": [
+        {
+          "speaker": "室友",
+          "lines": [
+            "图书馆今晚肯定爆满，再不定个方向就真的来不及了。",
+            "你到底准备靠硬刷、抱团，还是赌临场状态？"
+          ],
+          "portraitId": ""
+        }
+      ],
+      "choices": [
+        {
+          "text": "一个人沉下心硬刷题",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            { "type": "attribute", "target": "学力", "value": 6, "description": "学力 +6" },
+            { "type": "attribute", "target": "压力", "value": 6, "description": "压力 +6" },
+            { "type": "flag", "target": "midterm_focus_track", "value": 1, "description": "进入硬刷备考路线" }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "拉几个人一起互相监督",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            { "type": "attribute", "target": "学力", "value": 3, "description": "学力 +3" },
+            { "type": "attribute", "target": "魅力", "value": 2, "description": "魅力 +2" },
+            { "type": "attribute", "target": "压力", "value": 2, "description": "压力 +2" },
+            { "type": "flag", "target": "midterm_group_track", "value": 1, "description": "进入抱团备考路线" }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "先稳住心态，靠临场发挥",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            { "type": "attribute", "target": "心情", "value": 5, "description": "心情 +5" },
+            { "type": "attribute", "target": "幸运", "value": 3, "description": "幸运 +3" },
+            { "type": "flag", "target": "midterm_lucky_track", "value": 1, "description": "进入临场发挥路线" }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        }
+      ],
+      "defaultEffects": [],
+      "chainEventIds": [],
+      "presentation": {
+        "sceneKey": "freshman_midterm_prep",
+        "sceneDisplayName": "考前夜",
+        "locationId": "Dormitory",
+        "backgroundResourcePath": "",
+        "protagonistPortraitResourcePath": "",
+        "npcPortraitResourcePath": "",
+        "backgroundSlotName": "BG_Dormitory_PreExam_Night",
+        "protagonistSlotName": "PC_PreExam_Default",
+        "npcSlotName": "NPC_Roommate_PreExam_Default"
+      }
+    },
+    {
+      "id": "ME_004",
+      "eventType": "MainStory",
+      "title": "期末压顶",
+      "description": "刚从期中缓过一口气，学期真正决定绩点和去向的那场硬仗已经站到面前。",
       "priority": 1,
       "isForced": true,
       "isRepeatable": false,
@@ -78,57 +300,89 @@
         "semester": 1,
         "roundMin": 5,
         "roundMax": 5,
+        "specificRounds": [5],
         "attributeConditions": [],
         "minMoney": 0,
         "maxMoney": 0,
         "affinityConditions": [],
-        "requiredEventIds": [],
+        "requiredEventIds": [ "ME_003" ],
         "excludedEventIds": [],
+        "requiredFlags": [],
+        "excludedFlags": [],
         "minDarkness": 0,
         "triggerBehavior": "",
+        "triggerChance": 1,
         "phase": "RoundStart"
       },
       "dialogues": [
         {
-          "speaker": "班主任",
+          "speaker": "旁白",
           "lines": [
-            "同学们，新学期的班委竞选即将开始。",
-            "有意向的同学可以报名参加。"
+            "期中只是预演，真正会写进绩点和未来履历里的，是眼前这一轮期末。",
+            "你能感觉到，大家说话都比开学时更谨慎，也更像是在给自己找一个交代。"
+          ],
+          "portraitId": ""
+        },
+        {
+          "speaker": "室友",
+          "lines": [
+            "这回真不是随便糊弄就能过去了。",
+            "你是准备狠狠干绩点，还是先把状态和证书一起稳住？"
           ],
           "portraitId": ""
         }
       ],
       "choices": [
         {
-          "text": "积极参选",
+          "text": "补短板冲绩点",
+          "actionPointCost": 0,
+          "moneyCost": 0,
           "effects": [
-            { "type": "attribute", "target": "领导力", "value": 5, "description": "领导力 +5" },
-            { "type": "attribute", "target": "魅力", "value": 3, "description": "魅力 +3" },
-            { "type": "attribute", "target": "压力", "value": 8, "description": "压力 +8" }
+            { "type": "attribute", "target": "学力", "value": 5, "description": "学力 +5" },
+            { "type": "attribute", "target": "压力", "value": 5, "description": "压力 +5" },
+            { "type": "flag", "target": "final_exam_cram_track", "value": 1, "description": "进入冲绩点路线" }
           ],
           "triggerEventId": "",
           "showConditions": []
         },
         {
-          "text": "保持低调",
+          "text": "先稳作息和状态",
+          "actionPointCost": 0,
+          "moneyCost": 0,
           "effects": [
-            { "type": "attribute", "target": "心情", "value": 3, "description": "心情 +3" }
+            { "type": "attribute", "target": "心情", "value": 4, "description": "心情 +4" },
+            { "type": "attribute", "target": "压力", "value": -3, "description": "压力 -3" },
+            { "type": "flag", "target": "final_exam_balance_track", "value": 1, "description": "进入状态平衡路线" }
           ],
           "triggerEventId": "",
           "showConditions": []
         },
         {
-          "text": "帮朋友拉票",
+          "text": "课程和证书一起压过去",
+          "actionPointCost": 0,
+          "moneyCost": 0,
           "effects": [
-            { "type": "attribute", "target": "魅力", "value": 2, "description": "魅力 +2" },
-            { "type": "attribute", "target": "领导力", "value": 1, "description": "领导力 +1" }
+            { "type": "attribute", "target": "领导力", "value": 2, "description": "领导力 +2" },
+            { "type": "attribute", "target": "压力", "value": 3, "description": "压力 +3" },
+            { "type": "flag", "target": "final_exam_certificate_track", "value": 1, "description": "进入课程证书双线推进路线" }
           ],
           "triggerEventId": "",
           "showConditions": []
         }
       ],
       "defaultEffects": [],
-      "chainEventIds": []
+      "chainEventIds": [],
+      "presentation": {
+        "sceneKey": "freshman_final_prep",
+        "sceneDisplayName": "期末前夜",
+        "locationId": "Dormitory",
+        "backgroundResourcePath": "",
+        "protagonistPortraitResourcePath": "",
+        "npcPortraitResourcePath": "",
+        "backgroundSlotName": "BG_Dormitory_FinalPrep_Night",
+        "protagonistSlotName": "PC_FinalPrep_Default",
+        "npcSlotName": "NPC_Roommate_FinalPrep_Default"
+      }
     }
   ]
 }

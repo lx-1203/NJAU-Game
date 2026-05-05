@@ -80,16 +80,26 @@ public class ShopUIBuilder : MonoBehaviour
         CreateBottomBar();
 
         // 默认隐藏
+        UITransitionUtility.EnsureCanvasGroup(shopPanel);
         shopPanel.SetActive(false);
     }
 
     /// <summary>显示商店面板</summary>
     public void ShowShop()
     {
-        if (shopPanel == null) return;
+        if (shopPanel == null)
+        {
+            ShowSystemNotification("商店未打开", "商店界面还没有准备好，这次无法正常进入。", new Color(0.82f, 0.38f, 0.30f), 2.8f);
+            return;
+        }
 
-        if (!UIFlowGuard.PrepareForExclusiveWindow(UIFlowGuard.WindowShop)) return;
+        if (!UIFlowGuard.PrepareForExclusiveWindow(UIFlowGuard.WindowShop))
+        {
+            ShowSystemNotification("商店未打开", "当前还有其他关键界面占用操作，先处理完再来购物。", new Color(0.82f, 0.38f, 0.30f), 2.8f);
+            return;
+        }
         shopPanel.SetActive(true);
+        UITransitionUtility.Show(this, shopPanel, Vector2.zero, 1f, 0.18f);
         RefreshBalance();
         SelectCategory("food");
     }
@@ -98,7 +108,7 @@ public class ShopUIBuilder : MonoBehaviour
     public void HideShop()
     {
         if (shopPanel == null) return;
-        shopPanel.SetActive(false);
+        UITransitionUtility.Hide(this, shopPanel, Vector2.zero, 1f, 0.14f);
     }
 
     /// <summary>
@@ -380,6 +390,11 @@ public class ShopUIBuilder : MonoBehaviour
         if (ShopSystem.Instance == null) return;
 
         ShopItemDefinition[] items = ShopSystem.Instance.GetAvailableItems(currentCategory);
+        if (items == null || items.Length == 0)
+        {
+            CreateEmptyCategoryState();
+            return;
+        }
 
         foreach (ShopItemDefinition item in items)
         {
@@ -443,6 +458,45 @@ public class ShopUIBuilder : MonoBehaviour
         buyBtn.onClick.AddListener(() => OnBuyClicked(itemId, itemName, itemPrice));
     }
 
+    private void CreateEmptyCategoryState()
+    {
+        GameObject card = CreatePanel("EmptyCategoryState", itemListContent, new Color(0.12f, 0.12f, 0.18f, 0.88f));
+        RectTransform cardRT = card.GetComponent<RectTransform>();
+        cardRT.sizeDelta = new Vector2(0, 140f);
+
+        VerticalLayoutGroup layout = card.AddComponent<VerticalLayoutGroup>();
+        layout.spacing = 8f;
+        layout.padding = new RectOffset(20, 20, 20, 20);
+        layout.childAlignment = TextAnchor.MiddleCenter;
+        layout.childControlWidth = true;
+        layout.childControlHeight = false;
+        layout.childForceExpandWidth = true;
+        layout.childForceExpandHeight = false;
+
+        CreateTMPText("EmptyTitle", card.transform, "当前分类暂时没有可买内容",
+            22f, TextWhite, TextAlignmentOptions.Center, new Vector2(0, 34f));
+        CreateTMPText("EmptyDesc", card.transform, BuildEmptyCategoryMessage(),
+            17f, new Color(0.82f, 0.82f, 0.86f), TextAlignmentOptions.Center, new Vector2(0, 64f));
+    }
+
+    private string BuildEmptyCategoryMessage()
+    {
+        bool isOverdrafted = DebtSystem.Instance != null && DebtSystem.Instance.IsOverdrafted;
+        bool isFoodRestricted = DebtSystem.Instance != null && DebtSystem.Instance.IsFoodRestricted;
+
+        if (isOverdrafted && currentCategory != "food" && currentCategory != "study")
+        {
+            return "透支期间只能购买食品和学习类物品。\n先把财务拉回安全线，其他消费就会重新开放。";
+        }
+
+        if (isFoodRestricted && currentCategory == "food")
+        {
+            return "资金紧张时，饮食类只保留最便宜的生存选项。\n缓一缓余额，餐食选择会重新丰富起来。";
+        }
+
+        return "这一栏目前没有可展示商品。\n切到别的分类看看，或等后续状态变化后再回来。";
+    }
+
     /// <summary>拼接属性效果描述字符串</summary>
     private string BuildEffectString(AttributeEffect[] effects)
     {
@@ -464,7 +518,19 @@ public class ShopUIBuilder : MonoBehaviour
     /// <summary>购买按钮点击回调</summary>
     private void OnBuyClicked(string itemId, string itemName, int itemPrice)
     {
-        if (ShopSystem.Instance == null) return;
+        if (ShopSystem.Instance == null)
+        {
+            ShowSystemNotification("商店暂不可用", "商店数据还没有准备好，稍后再来看看。", new Color(0.82f, 0.38f, 0.30f), 2.8f);
+            return;
+        }
+
+        if (!ShopSystem.Instance.CanBuyItem(itemId))
+        {
+            ShowSystemNotification("无法购买", BuildCannotBuyReason(itemId), new Color(0.82f, 0.38f, 0.30f), 3f);
+            RefreshItemList();
+            RefreshBalance();
+            return;
+        }
 
         bool success = ShopSystem.Instance.BuyItem(itemId);
         if (success)
@@ -481,6 +547,11 @@ public class ShopUIBuilder : MonoBehaviour
 
             // 弹窗
             ShowTransactionPopup(itemName, itemPrice, newBalance);
+            ShowSystemNotification("购买完成", BuildPurchaseSummary(itemId, itemName, itemPrice, newBalance), new Color(0.28f, 0.72f, 0.86f), 3f);
+        }
+        else
+        {
+            ShowSystemNotification("购买失败", "这次交易没有顺利完成，检查余额、债务限制或背包容量后再试。", new Color(0.82f, 0.38f, 0.30f), 3f);
         }
     }
 
@@ -551,6 +622,82 @@ public class ShopUIBuilder : MonoBehaviour
         }
 
         Destroy(popup);
+    }
+
+    private string BuildCannotBuyReason(string itemId)
+    {
+        ShopItemDefinition item = ShopSystem.Instance != null ? ShopSystem.Instance.GetItemDefinition(itemId) : null;
+        if (item == null)
+        {
+            return "商品资料暂时读取失败，换一个条目试试。";
+        }
+
+        if (EconomyManager.Instance == null)
+        {
+            return "当前无法读取余额，暂时不能完成交易。";
+        }
+
+        if (!EconomyManager.Instance.CanAfford(item.price))
+        {
+            return $"余额不足，这件商品需要 ¥{item.price}。";
+        }
+
+        if (InventorySystem.Instance != null && item.canStore)
+        {
+            int ownedCount = InventorySystem.Instance.GetItemCount(itemId);
+            if (ownedCount >= Mathf.Max(1, item.maxStack))
+            {
+                return $"这件商品已经达到持有上限（{item.maxStack}）。";
+            }
+        }
+
+        bool isFoodRestricted = DebtSystem.Instance != null && DebtSystem.Instance.IsFoodRestricted;
+        bool isOverdrafted = DebtSystem.Instance != null && DebtSystem.Instance.IsOverdrafted;
+
+        if (isFoodRestricted && item.category == "food" && item.price > 3)
+        {
+            return "当前资金紧张，只能购买最便宜的食品。";
+        }
+
+        if (isOverdrafted && item.category != "food" && item.category != "study")
+        {
+            return "透支期间只能购买食品和学习类物品。";
+        }
+
+        return "当前条件不满足，暂时无法购买这件商品。";
+    }
+
+    private string BuildPurchaseSummary(string itemId, string itemName, int itemPrice, int newBalance)
+    {
+        ShopItemDefinition item = ShopSystem.Instance != null ? ShopSystem.Instance.GetItemDefinition(itemId) : null;
+        int ownedCount = InventorySystem.Instance != null ? InventorySystem.Instance.GetItemCount(itemId) : 0;
+        string effectSummary = item != null ? BuildEffectString(item.effects) : string.Empty;
+
+        List<string> parts = new List<string>
+        {
+            $"{itemName} -¥{itemPrice}",
+            $"余额 ¥{newBalance}"
+        };
+
+        if (!string.IsNullOrEmpty(effectSummary))
+        {
+            parts.Add(effectSummary);
+        }
+
+        if (item != null && item.canStore)
+        {
+            parts.Add($"持有 x{ownedCount}");
+        }
+
+        return string.Join("，", parts);
+    }
+
+    private void ShowSystemNotification(string title, string message, Color color, float duration)
+    {
+        if (MissionUI.Instance != null)
+        {
+            MissionUI.Instance.ShowSystemNotification(title, message, color, duration);
+        }
     }
 
     // ====================================================================

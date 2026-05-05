@@ -144,9 +144,17 @@ public class NewsSystem : MonoBehaviour
     public void ShowNews()
     {
         if (isShowing) return;
-        if (GameState.Instance == null) return;
+        if (GameState.Instance == null)
+        {
+            ShowNewsNotification("校报未打开", "游戏状态还没有准备好，这次无法生成校园新闻。", new Color(0.82f, 0.38f, 0.30f), 2.8f);
+            return;
+        }
 
-        if (!UIFlowGuard.PrepareForExclusiveWindow(UIFlowGuard.WindowNews)) return;
+        if (!UIFlowGuard.PrepareForExclusiveWindow(UIFlowGuard.WindowNews))
+        {
+            ShowNewsNotification("校报未打开", "当前还有其他关键界面占用操作，先处理完再来看这一轮校报。", new Color(0.82f, 0.38f, 0.30f), 2.8f);
+            return;
+        }
         EnsureEventSystem();
 
         int year = GameState.Instance.CurrentYear;
@@ -154,6 +162,13 @@ public class NewsSystem : MonoBehaviour
         int round = GameState.Instance.CurrentRound;
 
         List<NewsItem> news = GenerateNewsForRound(year, semester, round);
+        if (news == null || news.Count == 0)
+        {
+            ShowNewsNotification("本回合没有校报", "这一回合暂时没有可发布的新闻，系统会直接跳过校园报纸。", new Color(0.36f, 0.64f, 0.92f), 2.8f);
+            OnNewsDismissed?.Invoke();
+            return;
+        }
+
         BuildNewsUI(news, year, semester, round);
         isShowing = true;
     }
@@ -652,6 +667,12 @@ public class NewsSystem : MonoBehaviour
 
     private void BuildNewsUI(List<NewsItem> news, int year, int semester, int round)
     {
+        if (news == null || news.Count == 0)
+        {
+            ShowNewsNotification("校报未生成", "新闻内容列表为空，本轮不会展示校报界面。", new Color(0.82f, 0.38f, 0.30f), 2.8f);
+            return;
+        }
+
         if (UseFallbackNewsPresentation)
         {
             BuildFallbackNewsUI(news, year, semester, round);
@@ -757,6 +778,11 @@ public class NewsSystem : MonoBehaviour
         // 填充新闻内容
         foreach (var item in news)
         {
+            if (item == null)
+            {
+                continue;
+            }
+
             switch (item.type)
             {
                 case NewsType.Headline:
@@ -1131,7 +1157,7 @@ public class NewsSystem : MonoBehaviour
     {
         if (news == null || news.Count == 0)
         {
-            return "今日校园平静无事。\n\n点击下方按钮继续。";
+            return "今天没有额外的大新闻。\n\n校园照常运转，课程、社团、关系和生活节奏仍会继续推进。\n整理好这一天的安排，再从下面继续出发。";
         }
 
         System.Text.StringBuilder sb = new System.Text.StringBuilder();
@@ -1141,7 +1167,7 @@ public class NewsSystem : MonoBehaviour
         {
             NewsItem item = news[i];
             string title = string.IsNullOrWhiteSpace(item.title) ? GetNewsTypeLabel(item.type) : item.title;
-            string content = string.IsNullOrWhiteSpace(item.content) ? "暂无内容" : item.content;
+            string content = string.IsNullOrWhiteSpace(item.content) ? "这条简讯还没有更多展开，先把重点记下了。" : item.content;
 
             sb.Append(title);
             sb.Append('\n');
@@ -1213,5 +1239,13 @@ public class NewsSystem : MonoBehaviour
         GameObject eventSystemObj = new GameObject("EventSystem");
         eventSystemObj.AddComponent<EventSystem>();
         eventSystemObj.AddComponent<StandaloneInputModule>();
+    }
+
+    private void ShowNewsNotification(string title, string message, Color color, float duration = 3f)
+    {
+        if (MissionUI.Instance != null)
+        {
+            MissionUI.Instance.ShowSystemNotification(title, message, color, duration);
+        }
     }
 }

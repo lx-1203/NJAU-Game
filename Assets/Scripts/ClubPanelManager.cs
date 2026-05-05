@@ -15,6 +15,7 @@ public class ClubPanelManager : MonoBehaviour
     private string selectedClubId;
     private TextMeshProUGUI detailHintText;  // 动态创建的提示文本
     private Dictionary<string, GameObject> clubListItems = new Dictionary<string, GameObject>();
+    private GameObject overlayObject;
 
     // ========== 列表项颜色（与 Builder 保持一致） ==========
 
@@ -43,6 +44,7 @@ public class ClubPanelManager : MonoBehaviour
         Transform overlay = builder.clubCanvas.transform.Find("Overlay");
         if (overlay != null)
         {
+            overlayObject = overlay.gameObject;
             Button overlayBtn = overlay.GetComponent<Button>();
             if (overlayBtn != null)
                 overlayBtn.onClick.AddListener(ClosePanel);
@@ -72,15 +74,25 @@ public class ClubPanelManager : MonoBehaviour
     /// <summary>打开社团面板</summary>
     public void OpenPanel()
     {
-        if (builder == null || builder.panelRoot == null) return;
+        if (builder == null || builder.panelRoot == null)
+        {
+            ShowPanelNotification("社团面板未打开", "社团界面还没有准备好，这次无法正常打开。");
+            return;
+        }
 
-        if (!UIFlowGuard.PrepareForExclusiveWindow(UIFlowGuard.WindowClubPanel)) return;
+        if (!UIFlowGuard.PrepareForExclusiveWindow(UIFlowGuard.WindowClubPanel))
+        {
+            ShowPanelNotification("社团面板未打开", "当前还有其他关键界面占用操作，先处理完再来安排社团事务。");
+            return;
+        }
         builder.panelRoot.SetActive(true);
+        UITransitionUtility.Show(this, builder.panelRoot, new Vector2(0f, 30f), 0.98f, 0.24f);
 
-        // 同时显示遮罩
-        Transform overlay = builder.clubCanvas.transform.Find("Overlay");
-        if (overlay != null)
-            overlay.gameObject.SetActive(true);
+        if (overlayObject != null)
+        {
+            overlayObject.SetActive(true);
+            UITransitionUtility.Show(this, overlayObject, Vector2.zero, 1f, 0.18f);
+        }
 
         RefreshAll();
     }
@@ -89,13 +101,11 @@ public class ClubPanelManager : MonoBehaviour
     public void ClosePanel()
     {
         if (builder == null || builder.panelRoot == null) return;
-
-        builder.panelRoot.SetActive(false);
-
-        // 同时隐藏遮罩
-        Transform overlay = builder.clubCanvas.transform.Find("Overlay");
-        if (overlay != null)
-            overlay.gameObject.SetActive(false);
+        UITransitionUtility.Hide(this, builder.panelRoot, new Vector2(0f, 18f), 0.985f, 0.16f);
+        if (overlayObject != null)
+        {
+            UITransitionUtility.Hide(this, overlayObject, Vector2.zero, 1f, 0.14f);
+        }
     }
 
     /// <summary>面板是否处于打开状态</summary>
@@ -114,8 +124,16 @@ public class ClubPanelManager : MonoBehaviour
     /// <summary>刷新左侧社团列表</summary>
     public void RefreshClubList()
     {
-        if (builder == null || builder.listContent == null) return;
-        if (ClubSystem.Instance == null) return;
+        if (builder == null || builder.listContent == null)
+        {
+            ShowPanelNotification("社团面板未刷新", "社团列表区域暂时不可用，这次没法更新社团清单。");
+            return;
+        }
+        if (ClubSystem.Instance == null)
+        {
+            ShowPanelNotification("社团面板未刷新", "社团系统暂时没有准备好，这次没法更新社团清单。");
+            return;
+        }
 
         // 清空旧列表项
         for (int i = builder.listContent.childCount - 1; i >= 0; i--)
@@ -196,8 +214,16 @@ public class ClubPanelManager : MonoBehaviour
     /// <summary>刷新右侧详情区（基于 selectedClubId）</summary>
     public void RefreshDetail()
     {
-        if (builder == null) return;
-        if (ClubSystem.Instance == null) return;
+        if (builder == null)
+        {
+            ShowPanelNotification("社团详情不可用", "社团详情面板暂时不可用，这次无法更新信息。");
+            return;
+        }
+        if (ClubSystem.Instance == null)
+        {
+            ShowPanelNotification("社团详情不可用", "社团系统暂时没有准备好，这次无法更新信息。");
+            return;
+        }
 
         // 找不到社团或未选中 → 隐藏详情内容
         if (string.IsNullOrEmpty(selectedClubId))
@@ -330,8 +356,16 @@ public class ClubPanelManager : MonoBehaviour
     /// <summary>刷新入党进度区域</summary>
     public void RefreshPartySection()
     {
-        if (builder == null || builder.partySection == null) return;
-        if (ClubSystem.Instance == null) return;
+        if (builder == null || builder.partySection == null)
+        {
+            ShowPanelNotification("入党进度不可用", "入党进度区域暂时不可用，这次无法更新状态。");
+            return;
+        }
+        if (ClubSystem.Instance == null)
+        {
+            ShowPanelNotification("入党进度不可用", "社团系统暂时没有准备好，这次无法更新状态。");
+            return;
+        }
 
         int currentStage = ClubSystem.Instance.CurrentPartyStage;
         int totalStages = ClubSystem.Instance.PartyStageCount;
@@ -385,37 +419,81 @@ public class ClubPanelManager : MonoBehaviour
 
     private void OnActivityClicked()
     {
-        if (string.IsNullOrEmpty(selectedClubId)) return;
-        if (ClubSystem.Instance == null) return;
+        if (string.IsNullOrEmpty(selectedClubId))
+        {
+            ShowPanelNotification("无法参加活动", "你还没有选中任何社团。");
+            return;
+        }
+        if (ClubSystem.Instance == null)
+        {
+            ShowPanelNotification("无法参加活动", "社团系统暂时没有准备好，这次无法安排活动。");
+            return;
+        }
 
+        if (!ClubSystem.Instance.CanDoClubActivity(selectedClubId))
+        {
+            ShowPanelNotification("无法参加活动", ClubSystem.Instance.GetActivityBlockReason(selectedClubId));
+            return;
+        }
         ClubSystem.Instance.DoClubActivity(selectedClubId);
     }
 
     private void OnJoinLeaveClicked()
     {
-        if (string.IsNullOrEmpty(selectedClubId)) return;
-        if (ClubSystem.Instance == null) return;
+        if (string.IsNullOrEmpty(selectedClubId))
+        {
+            ShowPanelNotification("无法处理社团操作", "你还没有选中任何社团。");
+            return;
+        }
+        if (ClubSystem.Instance == null)
+        {
+            ShowPanelNotification("无法处理社团操作", "社团系统暂时没有准备好，这次无法执行加入或退出。");
+            return;
+        }
 
         if (ClubSystem.Instance.IsInClub(selectedClubId))
         {
             if (!ClubSystem.Instance.CanLeaveClub(selectedClubId))
             {
                 Debug.Log("[ClubPanelManager] 该社团不可退出");
+                ShowPanelNotification("无法退出社团", ClubSystem.Instance.GetLeaveBlockReason(selectedClubId));
                 return;
             }
             ClubSystem.Instance.LeaveClub(selectedClubId);
         }
         else
         {
+            if (!ClubSystem.Instance.CanJoinClub(selectedClubId))
+            {
+                ShowPanelNotification("暂时无法加入", ClubSystem.Instance.GetJoinBlockReason(selectedClubId));
+                return;
+            }
             ClubSystem.Instance.JoinClub(selectedClubId);
         }
     }
 
     private void OnPartyApplyClicked()
     {
-        if (ClubSystem.Instance == null) return;
+        if (ClubSystem.Instance == null)
+        {
+            ShowPanelNotification("暂时无法申请", "社团系统暂时没有准备好，这次无法处理入党申请。");
+            return;
+        }
 
+        if (!ClubSystem.Instance.CanApplyForParty())
+        {
+            ShowPanelNotification("暂时无法申请", ClubSystem.Instance.GetPartyBlockReason());
+            return;
+        }
         ClubSystem.Instance.ApplyForParty();
+    }
+
+    private void ShowPanelNotification(string title, string message)
+    {
+        if (MissionUI.Instance != null && !string.IsNullOrEmpty(message))
+        {
+            MissionUI.Instance.ShowSystemNotification(title, message, new Color(0.82f, 0.38f, 0.30f), 2.8f);
+        }
     }
 
     /// <summary>选中一个社团</summary>
@@ -492,7 +570,11 @@ public class ClubPanelManager : MonoBehaviour
             return;
         }
 
-        if (builder == null || builder.detailContainer == null) return;
+        if (builder == null || builder.detailContainer == null)
+        {
+            ShowPanelNotification("社团提示不可用", "社团详情提示区域暂时不可用，这次无法补充条件说明。");
+            return;
+        }
 
         GameObject hintGo = new GameObject("HintText", typeof(RectTransform));
         hintGo.transform.SetParent(builder.detailContainer, false);

@@ -78,6 +78,24 @@ public class EventHistory : MonoBehaviour, ISaveable
     /// <param name="choiceIndex">玩家选择的选项索引，无选项时传 -1。</param>
     public void RecordEvent(string eventId, int choiceIndex)
     {
+        if (string.IsNullOrWhiteSpace(eventId))
+        {
+            if (MissionUI.Instance != null)
+            {
+                MissionUI.Instance.ShowSystemNotification("事件记录失败", "有一条事件缺少编号，本次不会写入事件历史。", new Color(0.82f, 0.38f, 0.30f), 2.8f);
+            }
+            return;
+        }
+
+        if (GameState.Instance == null)
+        {
+            if (MissionUI.Instance != null)
+            {
+                MissionUI.Instance.ShowSystemNotification("事件记录延后", "当前时间状态还没有准备好，这条事件暂时无法写入历史。", new Color(0.86f, 0.62f, 0.24f), 2.8f);
+            }
+            return;
+        }
+
         var record = new EventRecord
         {
             eventId = eventId,

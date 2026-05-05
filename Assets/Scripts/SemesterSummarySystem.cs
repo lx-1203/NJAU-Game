@@ -110,6 +110,11 @@ public class SemesterSummarySystem : MonoBehaviour, ISaveable
         {
             Debug.LogWarning("[SemesterSummarySystem] ActionSystem 实例不存在，无法订阅事件");
         }
+
+        if (EconomyManager.Instance != null)
+        {
+            EconomyManager.Instance.OnTransactionLogged += HandleTransactionLogged;
+        }
     }
 
     private void OnDestroy()
@@ -121,6 +126,10 @@ public class SemesterSummarySystem : MonoBehaviour, ISaveable
         if (ActionSystem.Instance != null)
         {
             ActionSystem.Instance.OnActionExecuted -= HandleActionExecuted;
+        }
+        if (EconomyManager.Instance != null)
+        {
+            EconomyManager.Instance.OnTransactionLogged -= HandleTransactionLogged;
         }
     }
 
@@ -236,12 +245,21 @@ public class SemesterSummarySystem : MonoBehaviour, ISaveable
                 break;
             case "goout":
                 goOutCount++;
-                totalMoneySpent += action.moneyCost;
                 break;
             case "sleep":
                 sleepCount++;
                 break;
         }
+    }
+
+    private void HandleTransactionLogged(TransactionRecord record)
+    {
+        if (record == null || record.amount >= 0)
+        {
+            return;
+        }
+
+        totalMoneySpent += -record.amount;
     }
 
     // ========== 总结生成 ==========
@@ -307,6 +325,19 @@ public class SemesterSummarySystem : MonoBehaviour, ISaveable
         data.gpa = gpaProvider.GetSemesterGPA(year, semester);
         data.courses = gpaProvider.GetSemesterCourses(year, semester);
         data.npcRelations = npcProvider.GetAllRelations();
+        if (ExamSystem.Instance != null)
+        {
+            List<ExamResult> pendingMakeup = ExamSystem.Instance.GetFailedCourses();
+            data.pendingMakeupCount = pendingMakeup.Count;
+            data.pendingMakeupCourseNames = new List<string>();
+            for (int i = 0; i < pendingMakeup.Count; i++)
+            {
+                if (!string.IsNullOrEmpty(pendingMakeup[i].courseName))
+                {
+                    data.pendingMakeupCourseNames.Add(pendingMakeup[i].courseName);
+                }
+            }
+        }
 
         // ========== 评分计算 ==========
         int totalFriendship = npcProvider.GetTotalFriendship();
@@ -659,7 +690,10 @@ public class SemesterSummarySystem : MonoBehaviour, ISaveable
                     r.courseName,
                     r.score,
                     r.gradePoint,
-                    r.credits > 0 ? r.credits : 3
+                    r.credits > 0 ? r.credits : 3,
+                    r.prepSummary,
+                    r.resultSummary,
+                    r.passRateEstimate
                 ));
             }
             return courses;
@@ -867,6 +901,18 @@ public class SemesterSummarySystem : MonoBehaviour, ISaveable
         data.goOutCount = goOutCount;
         data.sleepCount = sleepCount;
         data.totalMoneySpent = totalMoneySpent;
+        data.semesterStartSnapshot = SerializeSnapshot(semesterStartSnapshot);
+        data.semesterSummaries = new List<SemesterSummarySaveData>();
+
+        foreach (var pair in semesterSummaries)
+        {
+            if (pair.Value == null)
+            {
+                continue;
+            }
+
+            data.semesterSummaries.Add(SerializeSummary(pair.Value));
+        }
     }
 
     public void LoadFromData(SaveData data)
@@ -876,5 +922,171 @@ public class SemesterSummarySystem : MonoBehaviour, ISaveable
         goOutCount = data.goOutCount;
         sleepCount = data.sleepCount;
         totalMoneySpent = data.totalMoneySpent;
+        semesterStartSnapshot = DeserializeSnapshot(data.semesterStartSnapshot);
+        semesterSummaries.Clear();
+
+        if (data.semesterSummaries == null)
+        {
+            return;
+        }
+
+        foreach (SemesterSummarySaveData summarySave in data.semesterSummaries)
+        {
+            SemesterSummaryData summary = DeserializeSummary(summarySave);
+            if (summary == null)
+            {
+                continue;
+            }
+
+            semesterSummaries[$"{summary.year}_{summary.semester}"] = summary;
+        }
+    }
+
+    private static AttributeSnapshotSaveData SerializeSnapshot(AttributeSnapshot snapshot)
+    {
+        if (snapshot == null)
+        {
+            return null;
+        }
+
+        return new AttributeSnapshotSaveData
+        {
+            study = snapshot.study,
+            charm = snapshot.charm,
+            physique = snapshot.physique,
+            leadership = snapshot.leadership,
+            stress = snapshot.stress,
+            mood = snapshot.mood,
+            money = snapshot.money,
+            year = snapshot.year,
+            semester = snapshot.semester
+        };
+    }
+
+    private static AttributeSnapshot DeserializeSnapshot(AttributeSnapshotSaveData snapshot)
+    {
+        if (snapshot == null)
+        {
+            return null;
+        }
+
+        return new AttributeSnapshot
+        {
+            study = snapshot.study,
+            charm = snapshot.charm,
+            physique = snapshot.physique,
+            leadership = snapshot.leadership,
+            stress = snapshot.stress,
+            mood = snapshot.mood,
+            money = snapshot.money,
+            year = snapshot.year,
+            semester = snapshot.semester
+        };
+    }
+
+    private static SemesterSummarySaveData SerializeSummary(SemesterSummaryData summary)
+    {
+        SemesterSummarySaveData save = new SemesterSummarySaveData
+        {
+            year = summary.year,
+            semester = summary.semester,
+            yearName = summary.yearName,
+            semesterName = summary.semesterName,
+            gpa = summary.gpa,
+            academicScore = summary.academicScore,
+            socialScore = summary.socialScore,
+            sportsScore = summary.sportsScore,
+            achievementScore = summary.achievementScore,
+            penaltyScore = summary.penaltyScore,
+            totalScore = summary.totalScore,
+            grade = summary.grade.ToString(),
+            courses = summary.courses != null ? new List<CourseGrade>(summary.courses) : new List<CourseGrade>(),
+            npcRelations = summary.npcRelations != null ? new List<NPCRelationInfo>(summary.npcRelations) : new List<NPCRelationInfo>(),
+            unlockedAchievements = summary.unlockedAchievements != null ? new List<string>(summary.unlockedAchievements) : new List<string>(),
+            pendingMakeupCount = summary.pendingMakeupCount,
+            pendingMakeupCourseNames = summary.pendingMakeupCourseNames != null ? new List<string>(summary.pendingMakeupCourseNames) : new List<string>()
+        };
+
+        save.attributeChanges = SerializeDictionary(summary.attributeChanges);
+        save.startAttributes = SerializeDictionary(summary.startAttributes);
+        save.endAttributes = SerializeDictionary(summary.endAttributes);
+        return save;
+    }
+
+    private static SemesterSummaryData DeserializeSummary(SemesterSummarySaveData save)
+    {
+        if (save == null)
+        {
+            return null;
+        }
+
+        SemesterSummaryData summary = new SemesterSummaryData
+        {
+            year = save.year,
+            semester = save.semester,
+            yearName = save.yearName,
+            semesterName = save.semesterName,
+            gpa = save.gpa,
+            academicScore = save.academicScore,
+            socialScore = save.socialScore,
+            sportsScore = save.sportsScore,
+            achievementScore = save.achievementScore,
+            penaltyScore = save.penaltyScore,
+            totalScore = save.totalScore,
+            courses = save.courses != null ? new List<CourseGrade>(save.courses) : new List<CourseGrade>(),
+            npcRelations = save.npcRelations != null ? new List<NPCRelationInfo>(save.npcRelations) : new List<NPCRelationInfo>(),
+            unlockedAchievements = save.unlockedAchievements != null ? new List<string>(save.unlockedAchievements) : new List<string>(),
+            pendingMakeupCount = save.pendingMakeupCount,
+            pendingMakeupCourseNames = save.pendingMakeupCourseNames != null ? new List<string>(save.pendingMakeupCourseNames) : new List<string>(),
+            attributeChanges = DeserializeDictionary(save.attributeChanges),
+            startAttributes = DeserializeDictionary(save.startAttributes),
+            endAttributes = DeserializeDictionary(save.endAttributes)
+        };
+
+        if (!string.IsNullOrEmpty(save.grade) &&
+            Enum.TryParse(save.grade, true, out SemesterGrade grade))
+        {
+            summary.grade = grade;
+        }
+
+        return summary;
+    }
+
+    private static List<StringIntPair> SerializeDictionary(Dictionary<string, int> source)
+    {
+        List<StringIntPair> pairs = new List<StringIntPair>();
+        if (source == null)
+        {
+            return pairs;
+        }
+
+        foreach (var pair in source)
+        {
+            pairs.Add(new StringIntPair(pair.Key, pair.Value));
+        }
+
+        return pairs;
+    }
+
+    private static Dictionary<string, int> DeserializeDictionary(List<StringIntPair> source)
+    {
+        Dictionary<string, int> result = new Dictionary<string, int>();
+        if (source == null)
+        {
+            return result;
+        }
+
+        for (int i = 0; i < source.Count; i++)
+        {
+            StringIntPair pair = source[i];
+            if (pair == null || string.IsNullOrEmpty(pair.key))
+            {
+                continue;
+            }
+
+            result[pair.key] = pair.value;
+        }
+
+        return result;
     }
 }

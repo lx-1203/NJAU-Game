@@ -22,6 +22,7 @@ public class LocationSceneBuilder : MonoBehaviour
 
     private static Sprite solidSprite;
     private readonly Dictionary<LocationId, Transform> locationRoots = new Dictionary<LocationId, Transform>();
+    private readonly HashSet<string> notifiedIssues = new HashSet<string>();
 
     private Transform root;
 
@@ -47,6 +48,7 @@ public class LocationSceneBuilder : MonoBehaviour
         if (LocationManager.Instance == null)
         {
             Debug.LogWarning("[LocationSceneBuilder] LocationManager is missing, scenery was not generated.");
+            ShowSceneBuilderNotificationOnce("missing-location-manager", "场景搭建未完成", "地点管理器还没有准备好，本轮场景布景没有成功生成。");
             return;
         }
 
@@ -140,6 +142,7 @@ public class LocationSceneBuilder : MonoBehaviour
         if (texture == null)
         {
             Debug.LogWarning($"[LocationSceneBuilder] No custom art found for {locationName}. Expected a sprite or texture named {locationName} under Assets/Resources/LocationScenes.");
+            ShowSceneBuilderNotificationOnce($"missing-art:{locationName}", "场景素材缺失", $"{locationName} 还没有找到专属场景素材，系统会继续使用程序生成的默认布景。", new Color(0.86f, 0.62f, 0.24f), 3f);
             return null;
         }
 
@@ -411,6 +414,21 @@ public class LocationSceneBuilder : MonoBehaviour
             this.trim = Color.Lerp(primary, ground, 0.35f);
             this.accent = accent;
             this.label = label;
+        }
+    }
+
+    private void ShowSceneBuilderNotificationOnce(string key, string title, string message, Color? color = null, float duration = 3f)
+    {
+        if (notifiedIssues.Contains(key))
+        {
+            return;
+        }
+
+        notifiedIssues.Add(key);
+
+        if (MissionUI.Instance != null)
+        {
+            MissionUI.Instance.ShowSystemNotification(title, message, color ?? new Color(0.82f, 0.38f, 0.30f), duration);
         }
     }
 }

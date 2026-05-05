@@ -79,12 +79,17 @@ public class ExamUIManager : MonoBehaviour
         if (courses == null || courses.Length == 0)
         {
             Debug.LogWarning("[ExamUIManager] 无课程，跳过考试");
+            ShowExamUINotification("考试已跳过", "这次没有可考课程，考试流程会直接结束。", new Color(0.36f, 0.64f, 0.92f), 2.8f);
             OnExamUICompleted?.Invoke();
             return;
         }
 
         Debug.Log($"[ExamUIManager] 开始考试序列，共 {courses.Length} 门课");
-        if (!UIFlowGuard.PrepareForExclusiveWindow(UIFlowGuard.WindowExam)) return;
+        if (!UIFlowGuard.PrepareForExclusiveWindow(UIFlowGuard.WindowExam))
+        {
+            ShowExamUINotification("考试未开始", "当前还有其他关键界面占用操作，先处理完再进入考试。", new Color(0.82f, 0.38f, 0.30f), 2.8f);
+            return;
+        }
 
         examCourses = courses;
         currentExamType = examType;
@@ -100,6 +105,14 @@ public class ExamUIManager : MonoBehaviour
 
         // 确保 UI 已构建
         EnsureUIBuilt();
+
+        if (builder == null || builder.examCanvas == null)
+        {
+            ShowExamUINotification("考试界面异常", "考试界面这次没有成功构建，流程暂时无法继续。", new Color(0.82f, 0.38f, 0.30f), 2.8f);
+            currentState = ExamUIState.Done;
+            OnExamUICompleted?.Invoke();
+            return;
+        }
 
         // 显示 Canvas
         builder.examCanvas.SetActive(true);
@@ -154,6 +167,12 @@ public class ExamUIManager : MonoBehaviour
 
         string examTypeName = GetExamTypeName(currentExamType);
         builder.transitionHintText.text = $"—— {examTypeName} ——\n准备开始答题...";
+        if (builder.transitionBonusText != null)
+        {
+            builder.transitionBonusText.text = ExamSystem.Instance != null
+                ? ExamSystem.Instance.BuildExamPreparationSummary(course, currentExamType)
+                : "备考统计暂未载入，将按当前答题表现与角色状态结算。";
+        }
 
         // 1 秒后自动进入答题
         StartCoroutine(DelayedAction(1.0f, () =>
@@ -262,6 +281,7 @@ public class ExamUIManager : MonoBehaviour
         if (CheatingSystem.Instance == null)
         {
             Debug.LogWarning("[ExamUIManager] CheatingSystem 不存在");
+            ShowExamUINotification("无法作弊", "作弊系统没有成功初始化，这次不能使用作弊选项。", new Color(0.82f, 0.38f, 0.30f), 2.8f);
             return;
         }
 
@@ -301,12 +321,13 @@ public class ExamUIManager : MonoBehaviour
     {
         builder.questionPanel.SetActive(false);
         builder.cheatCaughtPanel.SetActive(true);
+        ShowExamUINotification("作弊被抓", "这门考试按 0 分结算，并立刻追加黑暗值、负罪感和压力惩罚。", new Color(0.82f, 0.38f, 0.30f), 3.2f);
 
         builder.cheatCaughtText.text = "被监考老师发现了！";
         builder.cheatPenaltyText.text = "该科目记 0 分\n黑暗值+10  负罪感+15  压力+20";
 
         // 提交该科目 0 分结果
-        SubmitCurrentCourseResult(0, true);
+        SubmitCurrentCourseResult(0, true, 0f);
 
         // 2 秒后进入下一科
         StartCoroutine(DelayedAction(2.0f, () =>
@@ -321,12 +342,13 @@ public class ExamUIManager : MonoBehaviour
     {
         builder.questionPanel.SetActive(false);
         builder.cheatCaughtPanel.SetActive(true);
+        ShowExamUINotification("学术不端", "累计作弊被抓达到开除阈值，考试结束后会直接进入开除结局。", new Color(0.82f, 0.38f, 0.30f), 3.2f);
 
         builder.cheatCaughtText.text = "被监考老师发现了！";
         builder.cheatPenaltyText.text = "累计作弊被抓达到 2 次\n\n<color=#FF4444><size=32>学术不端 · 开除学籍</size></color>";
 
         // 提交该科目 0 分
-        SubmitCurrentCourseResult(0, true);
+        SubmitCurrentCourseResult(0, true, 0f);
 
         // 3 秒后触发开除结局
         StartCoroutine(DelayedAction(3.0f, () =>
@@ -431,7 +453,7 @@ public class ExamUIManager : MonoBehaviour
         float passRate = 0f;
         if (ExamSystem.Instance != null)
         {
-            passRate = ExamSystem.Instance.CalculatePassRate(currentExamType, correctCountThisCourse, totalQuestions);
+            passRate = ExamSystem.Instance.CalculatePassRate(currentExamType, examCourses[currentCourseIndex], correctCountThisCourse, totalQuestions);
         }
         else
         {
@@ -442,7 +464,7 @@ public class ExamUIManager : MonoBehaviour
             ? ExamSystem.Instance.CalculateScore(passRate)
             : Mathf.RoundToInt(passRate * 100f);
 
-        SubmitCurrentCourseResult(score, false);
+        SubmitCurrentCourseResult(score, false, passRate);
 
         // 进入下一科
         currentCourseIndex++;
@@ -451,7 +473,7 @@ public class ExamUIManager : MonoBehaviour
 
     // ========== 成绩提交 ==========
 
-    private void SubmitCurrentCourseResult(int score, bool cheatCaught)
+    private void SubmitCurrentCourseResult(int score, bool cheatCaught, float passRateEstimate)
     {
         CourseDefinition course = examCourses[currentCourseIndex];
 
@@ -460,13 +482,21 @@ public class ExamUIManager : MonoBehaviour
             courseId = course.id,
             courseName = course.courseName,
             credits = course.credits,
+            subjectTag = course.subjectTag,
             score = score,
             gradePoint = GPACalculator.ScoreToGradePoint(score),
             correctCount = correctCountThisCourse,
             cheated = cheatedThisCourse,
             cheatCaught = cheatCaught,
-            examType = currentExamType
+            examType = currentExamType,
+            passRateEstimate = passRateEstimate
         };
+
+        if (ExamSystem.Instance != null)
+        {
+            result.prepSummary = ExamSystem.Instance.BuildExamPreparationSummary(course, currentExamType);
+            result.resultSummary = ExamSystem.Instance.BuildExamResultSummary(result);
+        }
 
         semesterResults.Add(result);
 
@@ -522,7 +552,11 @@ public class ExamUIManager : MonoBehaviour
 
     private void ClearScorecardRows()
     {
-        if (builder.scorecardContent == null) return;
+        if (builder == null || builder.scorecardContent == null)
+        {
+            ShowExamUINotification("成绩单未刷新", "考试成绩内容区暂时不可用，这次没法完整刷新成绩单。", new Color(0.82f, 0.38f, 0.30f), 2.8f);
+            return;
+        }
 
         for (int i = builder.scorecardContent.childCount - 1; i >= 0; i--)
         {
@@ -552,14 +586,14 @@ public class ExamUIManager : MonoBehaviour
                     ExamSystem.Instance.FinalizeMidtermExam();
                     break;
                 case ExamType.Makeup:
-                    // 补考走独立的结算路径，不创建新的学期GPA
-                    ExamSystem.Instance.FinalizeMidtermExam(); // 暂用期中结算（不影响GPA），后续可改为ProcessMakeupResults
+                    // 补考走独立的回写路径，不创建新的学期GPA
+                    ExamSystem.Instance.FinalizeMakeupExam();
                     break;
                 case ExamType.CET4:
                 case ExamType.CET6:
                 case ExamType.ComputerLevel:
-                    // 证书考试不影响GPA，仅记录结果
-                    ExamSystem.Instance.FinalizeMidtermExam();
+                    // 证书考试不影响GPA，仅更新通过状态
+                    ExamSystem.Instance.FinalizeCertificateExam(currentExamType);
                     break;
                 default:
                     ExamSystem.Instance.FinalizeSemesterExam(examYear, examSemester);
@@ -586,6 +620,7 @@ public class ExamUIManager : MonoBehaviour
         if (builder.examCanvas == null)
         {
             builder.BuildExamUI();
+            ShowExamUINotification("考试界面已重建", "考试界面刚刚补建完成，本轮考试会继续进行。", new Color(0.36f, 0.64f, 0.92f), 2.6f);
         }
     }
 
@@ -630,6 +665,14 @@ public class ExamUIManager : MonoBehaviour
                 new ExamQuestion { question = "9 - 3 = ?", options = new[] { "5", "6", "7", "8" }, correctIndex = 1, subjectTag = "general" }
             }
         };
+    }
+
+    private void ShowExamUINotification(string title, string message, Color color, float duration = 3f)
+    {
+        if (MissionUI.Instance != null)
+        {
+            MissionUI.Instance.ShowSystemNotification(title, message, color, duration);
+        }
     }
 
     // ========== 生命周期 ==========

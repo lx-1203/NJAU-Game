@@ -18,6 +18,9 @@ public class CourseGrade
     public float score;         // 百分制成绩
     public float gradePoint;    // 绩点 (0.0 ~ 4.0)
     public int credits;         // 学分
+    public string prepSummary;  // 备考摘要
+    public string resultSummary; // 结果解读
+    public float passRateEstimate; // 估算通过率 0~1
 
     public CourseGrade() { }
 
@@ -27,6 +30,14 @@ public class CourseGrade
         this.score = score;
         this.gradePoint = gp;
         this.credits = credits;
+    }
+
+    public CourseGrade(string name, float score, float gp, int credits, string prepSummary, string resultSummary, float passRateEstimate)
+        : this(name, score, gp, credits)
+    {
+        this.prepSummary = prepSummary;
+        this.resultSummary = resultSummary;
+        this.passRateEstimate = passRateEstimate;
     }
 }
 

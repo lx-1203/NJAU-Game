@@ -28,6 +28,7 @@ public class ActionDefinition
     public int moneyCost;        // 金钱消耗（出校门为 50）
     public bool endsRound;       // 是否立即结束回合（睡觉 = true）
     public bool isGlobal;        // 是否全局行动（不受地点限制，如"睡觉"在宿舍以外也显示）
+    public LocationId? targetLocation; // 默认执行地点，会在结算前自动传送
     public AttributeEffect[] effects;
 }
 
@@ -64,6 +65,7 @@ public class ActionSystem : MonoBehaviour
             moneyCost = 0,
             endsRound = false,
             isGlobal = false,
+            targetLocation = LocationId.TeachingBuilding,
             effects = new AttributeEffect[]
             {
                 new AttributeEffect("学力", 7),
@@ -80,6 +82,7 @@ public class ActionSystem : MonoBehaviour
             moneyCost = 0,
             endsRound = false,
             isGlobal = false,
+            targetLocation = LocationId.TeachingBuilding,
             effects = new AttributeEffect[]
             {
                 new AttributeEffect("学力", 5),
@@ -98,6 +101,7 @@ public class ActionSystem : MonoBehaviour
             moneyCost = 0,
             endsRound = false,
             isGlobal = false,
+            targetLocation = LocationId.Dormitory,
             effects = new AttributeEffect[]
             {
                 new AttributeEffect("魅力", 2),
@@ -115,6 +119,7 @@ public class ActionSystem : MonoBehaviour
             moneyCost = 0,
             endsRound = false,
             isGlobal = false,
+            targetLocation = LocationId.Dormitory,
             effects = new AttributeEffect[]
             {
                 new AttributeEffect("心情", 12),
@@ -133,6 +138,7 @@ public class ActionSystem : MonoBehaviour
             moneyCost = 0,
             endsRound = false,
             isGlobal = true,
+            targetLocation = LocationId.Dormitory,
             effects = new AttributeEffect[]
             {
                 new AttributeEffect("压力", -5)
@@ -150,6 +156,7 @@ public class ActionSystem : MonoBehaviour
             moneyCost = 50,
             endsRound = false,
             isGlobal = true,
+            targetLocation = LocationId.TakeoutStation,
             effects = new AttributeEffect[]
             {
                 new AttributeEffect("心情", 10),
@@ -168,6 +175,7 @@ public class ActionSystem : MonoBehaviour
             moneyCost = 15,
             endsRound = false,
             isGlobal = false,
+            targetLocation = LocationId.Canteen,
             effects = new AttributeEffect[]
             {
                 new AttributeEffect("体魄", 1),
@@ -186,6 +194,7 @@ public class ActionSystem : MonoBehaviour
             moneyCost = 0,
             endsRound = false,
             isGlobal = false,
+            targetLocation = LocationId.Playground,
             effects = new AttributeEffect[]
             {
                 new AttributeEffect("体魄", 1),
@@ -203,6 +212,7 @@ public class ActionSystem : MonoBehaviour
             moneyCost = 0,
             endsRound = false,
             isGlobal = true,
+            targetLocation = LocationId.TeachingBuilding,
             effects = new AttributeEffect[]
             {
                 new AttributeEffect("学力", 1),
@@ -219,6 +229,7 @@ public class ActionSystem : MonoBehaviour
             moneyCost = 0,
             endsRound = false,
             isGlobal = false,
+            targetLocation = LocationId.Playground,
             effects = new AttributeEffect[]
             {
                 new AttributeEffect("体魄", 2),
@@ -237,6 +248,7 @@ public class ActionSystem : MonoBehaviour
             moneyCost = 30,
             endsRound = false,
             isGlobal = false,
+            targetLocation = LocationId.Store,
             effects = new AttributeEffect[]
             {
                 new AttributeEffect("心情", 5)
@@ -254,6 +266,7 @@ public class ActionSystem : MonoBehaviour
             moneyCost = 0,
             endsRound = false,
             isGlobal = false,
+            targetLocation = LocationId.ExpressStation,
             effects = new AttributeEffect[]
             {
                 new AttributeEffect("心情", 8)
@@ -271,6 +284,7 @@ public class ActionSystem : MonoBehaviour
             moneyCost = 25,
             endsRound = false,
             isGlobal = false,
+            targetLocation = LocationId.TakeoutStation,
             effects = new AttributeEffect[]
             {
                 new AttributeEffect("心情", 6),
@@ -307,33 +321,54 @@ public class ActionSystem : MonoBehaviour
         return LocationManager.Instance.GetAvailableActions(locationId);
     }
 
-    /// <summary>检查指定行动是否可执行（行动点、金钱、地点）</summary>
-    public bool CanExecuteAction(string id)
+    /// <summary>返回行动不可执行的原因；可执行则返回空字符串</summary>
+    public string GetActionBlockReason(string id)
     {
         ActionDefinition action = GetAction(id);
         if (action == null)
         {
-            Debug.LogWarning($"[ActionSystem] 未找到行动定义: {id}");
-            return false;
+            return "行动数据缺失";
         }
 
         GameState gs = GameState.Instance;
         if (gs == null)
         {
-            Debug.LogError("[ActionSystem] GameState 实例不存在");
-            return false;
+            return "核心状态尚未初始化";
         }
 
-        // 额外AP消耗（负罪感）
         int extraAP = 0;
         if (PenaltySystem.Instance != null)
             extraAP = PenaltySystem.Instance.GetGuiltExtraAPCost();
 
-        if (gs.ActionPoints < action.actionPointCost + extraAP)
-            return false;
+        int totalAPCost = action.actionPointCost + extraAP;
+        if (gs.ActionPoints < totalAPCost)
+        {
+            return extraAP > 0
+                ? $"行动点不足，需要 {action.actionPointCost} AP + 额外 {extraAP} AP 负担"
+                : $"行动点不足，需要 {action.actionPointCost} AP";
+        }
 
         if (gs.Money < action.moneyCost)
+        {
+            return $"余额不足，需要 ¥{action.moneyCost}";
+        }
+
+        return string.Empty;
+    }
+
+    /// <summary>检查指定行动是否可执行（行动点、金钱、地点）</summary>
+    public bool CanExecuteAction(string id)
+    {
+        string reason = GetActionBlockReason(id);
+        if (!string.IsNullOrEmpty(reason))
+        {
+            ActionDefinition action = GetAction(id);
+            if (action == null)
+                Debug.LogWarning($"[ActionSystem] 未找到行动定义: {id}");
+            else
+                Debug.LogWarning($"[ActionSystem] 无法执行行动: {id}, 原因: {reason}");
             return false;
+        }
 
         return true;
     }
@@ -353,6 +388,11 @@ public class ActionSystem : MonoBehaviour
 
         ActionDefinition action = GetAction(id);
         GameState gs = GameState.Instance;
+
+        if (!TryMoveToActionLocation(action))
+        {
+            return false;
+        }
 
         // 2. 扣除行动点（含负罪感额外消耗）
         int extraAPCost = 0;
@@ -430,6 +470,8 @@ public class ActionSystem : MonoBehaviour
         Debug.Log($"[ActionSystem] 执行行动: {action.displayName} (id={action.id}), " +
                   $"消耗行动点={action.actionPointCost}, 消耗金钱={action.moneyCost}");
 
+        ShowActionNotification(action, extraAPCost);
+
         // 6. 触发事件
         OnActionExecuted?.Invoke(action);
 
@@ -450,5 +492,112 @@ public class ActionSystem : MonoBehaviour
         DontDestroyOnLoad(gameObject);
 
         InitDefaultActions();
+    }
+
+    private bool TryMoveToActionLocation(ActionDefinition action)
+    {
+        if (action == null || !action.targetLocation.HasValue || GameState.Instance == null)
+        {
+            return true;
+        }
+
+        if (LocationManager.Instance == null)
+        {
+            Debug.LogWarning($"[ActionSystem] 地点管理器未初始化，无法为行动 {action.id} 执行场景跳转。");
+            return false;
+        }
+
+        LocationId currentLocation = GameState.Instance.CurrentLocation;
+        ActionDefinition[] currentActions = LocationManager.Instance.GetAvailableActions(currentLocation);
+        for (int i = 0; i < currentActions.Length; i++)
+        {
+            if (currentActions[i] != null && currentActions[i].id == action.id)
+            {
+                return true;
+            }
+        }
+
+        LocationId targetLocation = action.targetLocation.Value;
+        if (currentLocation == targetLocation)
+        {
+            return true;
+        }
+
+        bool moved = LocationManager.Instance.MoveTo(targetLocation);
+        if (!moved)
+        {
+            Debug.LogWarning($"[ActionSystem] 行动 {action.id} 需要传送到 {targetLocation}，但跳转失败。");
+        }
+
+        return moved;
+    }
+
+    private void ShowActionNotification(ActionDefinition action, int extraAPCost)
+    {
+        if (MissionUI.Instance == null || action == null)
+        {
+            return;
+        }
+
+        MissionUI.Instance.ShowSystemNotification(
+            action.displayName,
+            BuildActionSummary(action, extraAPCost),
+            new Color(0.28f, 0.72f, 0.86f),
+            3f);
+    }
+
+    private string BuildActionSummary(ActionDefinition action, int extraAPCost)
+    {
+        List<string> parts = new List<string>();
+
+        int totalAPCost = action.actionPointCost + extraAPCost;
+        if (totalAPCost > 0)
+        {
+            if (extraAPCost > 0)
+                parts.Add($"AP-{totalAPCost}（含额外负担 {extraAPCost}）");
+            else
+                parts.Add($"AP-{totalAPCost}");
+        }
+
+        if (action.moneyCost > 0)
+        {
+            parts.Add($"花费¥{action.moneyCost}");
+        }
+
+        string effectSummary = BuildEffectSummary(action.effects);
+        if (!string.IsNullOrEmpty(effectSummary))
+        {
+            parts.Add(effectSummary);
+        }
+
+        if (action.id == "sleep")
+        {
+            parts.Add("这一轮的节奏已经收尾，可以准备进入下一回合。");
+        }
+
+        return parts.Count > 0 ? string.Join("，", parts) : "已完成本次安排。";
+    }
+
+    private string BuildEffectSummary(AttributeEffect[] effects)
+    {
+        if (effects == null || effects.Length == 0)
+        {
+            return string.Empty;
+        }
+
+        List<string> parts = new List<string>();
+        for (int i = 0; i < effects.Length; i++)
+        {
+            AttributeEffect effect = effects[i];
+            if (effect == null || string.IsNullOrEmpty(effect.attributeName) || effect.amount == 0)
+            {
+                continue;
+            }
+
+            string sign = effect.amount > 0 ? "+" : string.Empty;
+            parts.Add($"{effect.attributeName}{sign}{effect.amount}");
+        }
+
+        return parts.Count > 0 ? string.Join("，", parts) : string.Empty;
     }
 }

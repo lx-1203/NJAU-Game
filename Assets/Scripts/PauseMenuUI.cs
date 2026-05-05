@@ -101,8 +101,17 @@ public class PauseMenuUI : MonoBehaviour
         }
         else
         {
-            if (!CanOpenPauseFromCurrentState()) return;
-            if (!UIFlowGuard.PrepareForExclusiveWindow(UIFlowGuard.WindowPauseMenu)) return;
+            if (!CanOpenPauseFromCurrentState())
+            {
+                ShowPauseNotification("无法打开暂停菜单", "当前状态下不能打开暂停菜单，先结束正在进行的强制流程。");
+                return;
+            }
+
+            if (!UIFlowGuard.PrepareForExclusiveWindow(UIFlowGuard.WindowPauseMenu))
+            {
+                ShowPauseNotification("暂停菜单被占用", "当前有其他独占界面正在占用输入，稍后再试。");
+                return;
+            }
         }
 
         isOpen = true;
@@ -274,6 +283,10 @@ public class PauseMenuUI : MonoBehaviour
                 {
                     SettingsUIBuilder.ShowSettings(false);
                 }
+                else
+                {
+                    ShowPauseNotification("设置不可用", "设置系统还没有准备好，现在暂时无法打开设置。");
+                }
             });
 
         // 存档
@@ -305,6 +318,10 @@ public class PauseMenuUI : MonoBehaviour
         {
             SaveManager.Instance.AutoSave();
             Debug.Log("[PauseMenu] 返回标题前自动存档");
+        }
+        else
+        {
+            ShowPauseNotification("未执行自动存档", "存档系统暂时不可用，这次返回标题不会自动保存当前进度。");
         }
 
         Close();
@@ -400,5 +417,13 @@ public class PauseMenuUI : MonoBehaviour
     {
         if (FontManager.Instance != null && FontManager.Instance.ChineseFont != null)
             text.font = FontManager.Instance.ChineseFont;
+    }
+
+    private void ShowPauseNotification(string title, string message, float duration = 2.8f)
+    {
+        if (MissionUI.Instance != null)
+        {
+            MissionUI.Instance.ShowSystemNotification(title, message, new Color(0.82f, 0.38f, 0.30f), duration);
+        }
     }
 }

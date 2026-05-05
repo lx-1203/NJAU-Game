@@ -60,6 +60,34 @@ public class AffinityCondition
     public int minValue;
 }
 
+[Serializable]
+public class RomanceCondition
+{
+    /// <summary>NPC ID，留空时可用于“任意恋人”类条件。</summary>
+    public string npcId;
+    /// <summary>要求的恋爱状态，如 Dating / Crushing / BrokenUp。</summary>
+    public string requiredState;
+    /// <summary>最低恋爱健康度。</summary>
+    public int minHealth;
+    /// <summary>是否要求玩家当前拥有任意恋人。</summary>
+    public bool requireAnyPartner;
+}
+
+[Serializable]
+public class ClubCondition
+{
+    /// <summary>社团 ID。留空且要求入党阶段时可只校验党团进度。</summary>
+    public string clubId;
+    /// <summary>是否要求已加入社团。</summary>
+    public bool requireJoined;
+    /// <summary>最低社团职级序号。</summary>
+    public int minRank;
+    /// <summary>在社团中经历的最少回合数。</summary>
+    public int minRoundsInClub;
+    /// <summary>最低入党阶段序号。</summary>
+    public int minPartyStage;
+}
+
 /// <summary>事件触发条件集合</summary>
 [Serializable]
 public class EventTriggerCondition
@@ -89,12 +117,20 @@ public class EventTriggerCondition
     // ----- 好感度条件 -----
     /// <summary>好感度条件列表</summary>
     public AffinityCondition[] affinityConditions;
+    /// <summary>恋爱条件列表</summary>
+    public RomanceCondition[] romanceConditions;
+    /// <summary>社团 / 入党条件列表</summary>
+    public ClubCondition[] clubConditions;
 
     // ----- 前置事件条件 -----
     /// <summary>必须已触发的事件ID列表</summary>
     public string[] requiredEventIds;
     /// <summary>必须未触发的事件ID列表</summary>
     public string[] excludedEventIds;
+    /// <summary>必须为真的全局标记列表</summary>
+    public string[] requiredFlags;
+    /// <summary>必须为假的全局标记列表</summary>
+    public string[] excludedFlags;
 
     // ----- 黑暗值条件（DE 专用） -----
     /// <summary>最低黑暗值 (0=不限)</summary>
@@ -106,6 +142,9 @@ public class EventTriggerCondition
 
     /// <summary>触发概率，0~1，默认 1</summary>
     public float triggerChance = 1f;
+
+    /// <summary>要求玩家处于指定地点；留空表示不限。</summary>
+    public string requiredLocationId;
 
     // ----- 触发阶段 -----
     /// <summary>在哪个阶段检查："RoundStart", "ActionComplete", "RoundEnd"</summary>
@@ -158,6 +197,29 @@ public class EventChoice
     public AttributeCondition[] showConditions;
 }
 
+[Serializable]
+public class EventPresentationDefinition
+{
+    /// <summary>演出场景键，可用于钟山台检索和筛选。</summary>
+    public string sceneKey;
+    /// <summary>演出标题，可显示在事件场景层顶部。</summary>
+    public string sceneDisplayName;
+    /// <summary>关联地点 ID（可选，主要用于配置定位和后续美术整理）。</summary>
+    public string locationId;
+    /// <summary>背景图 Resources 路径。</summary>
+    public string backgroundResourcePath;
+    /// <summary>主角立绘 Resources 路径。</summary>
+    public string protagonistPortraitResourcePath;
+    /// <summary>NPC 立绘 Resources 路径。</summary>
+    public string npcPortraitResourcePath;
+    /// <summary>背景资源占位名，资源缺失时显示。</summary>
+    public string backgroundSlotName;
+    /// <summary>主角立绘占位名，资源缺失时显示。</summary>
+    public string protagonistSlotName;
+    /// <summary>NPC 立绘占位名，资源缺失时显示。</summary>
+    public string npcSlotName;
+}
+
 // ========== 事件定义（核心） ==========
 
 /// <summary>
@@ -200,6 +262,8 @@ public class EventDefinition
     public EventEffect[] defaultEffects;
     /// <summary>后续自动触发的事件ID列表</summary>
     public string[] chainEventIds;
+    /// <summary>事件专属场景演出配置。</summary>
+    public EventPresentationDefinition presentation;
 
     // ========== 运行时缓存 ==========
 

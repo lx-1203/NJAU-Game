@@ -118,10 +118,19 @@ public class NPCDatabase : MonoBehaviour
             Debug.LogError("[NPCDatabase] 找不到 Resources/Data/npc_database.json");
             allNPCs = new NPCData[0];
             allSocialActions = new SocialActionDefinition[0];
+            ShowDatabaseNotification("社交数据缺失", "NPC 与社交行动数据没有加载成功，本局的人际互动会暂时不可用。");
             return;
         }
 
         NPCDatabaseRoot root = JsonUtility.FromJson<NPCDatabaseRoot>(jsonAsset.text);
+        if (root == null)
+        {
+            Debug.LogError("[NPCDatabase] npc_database.json 解析结果为空");
+            allNPCs = new NPCData[0];
+            allSocialActions = new SocialActionDefinition[0];
+            ShowDatabaseNotification("社交数据损坏", "NPC 数据文件解析失败，本局的人际互动暂时无法正常开启。");
+            return;
+        }
 
         // 建立 NPC 索引
         allNPCs = root.npcs ?? new NPCData[0];
@@ -146,6 +155,15 @@ public class NPCDatabase : MonoBehaviour
         }
 
         Debug.Log($"[NPCDatabase] 加载完成：{allNPCs.Length} 个NPC，{allSocialActions.Length} 种社交行动");
+
+        if (allNPCs.Length == 0)
+        {
+            ShowDatabaseNotification("没有可互动角色", "当前没有成功载入任何 NPC 数据，这一局的人际关系内容会保持为空。");
+        }
+        else if (allSocialActions.Length == 0)
+        {
+            ShowDatabaseNotification("社交行动为空", "NPC 已载入，但社交行动数据为空，互动菜单会缺少可执行选项。");
+        }
     }
 
     private int ResolveCurrentPlayerGender()
@@ -182,5 +200,13 @@ public class NPCDatabase : MonoBehaviour
 
         LoadDatabase();
         EnsureBuiltInSocialActions();
+    }
+
+    private void ShowDatabaseNotification(string title, string message, float duration = 3f)
+    {
+        if (MissionUI.Instance != null)
+        {
+            MissionUI.Instance.ShowSystemNotification(title, message, new Color(0.82f, 0.38f, 0.30f), duration);
+        }
     }
 }

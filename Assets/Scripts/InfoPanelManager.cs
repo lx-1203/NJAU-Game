@@ -19,6 +19,7 @@ public class InfoPanelManager : MonoBehaviour
     private int currentTabIndex = 0;
     private string selectedNPCId = null;
     private bool isSubscribed = false;
+    private GameObject currentTabPanel;
 
     // ========== 生命周期 ==========
 
@@ -72,6 +73,11 @@ public class InfoPanelManager : MonoBehaviour
 
         // 社交互动按钮
         builder.btnSocialInteract.onClick.AddListener(OnSocialInteractClicked);
+
+        if (builder.btnOpenMissionPanel != null)
+        {
+            builder.btnOpenMissionPanel.onClick.AddListener(OnOpenMissionPanelClicked);
+        }
     }
 
     // ========== 公共接口 ==========
@@ -79,7 +85,14 @@ public class InfoPanelManager : MonoBehaviour
     /// <summary>打开面板（默认显示个人信息标签）</summary>
     public void OpenPanel(int defaultTab = 0)
     {
-        if (builder.panelRoot == null) return;
+        if (builder.panelRoot == null)
+        {
+            if (MissionUI.Instance != null)
+            {
+                MissionUI.Instance.ShowSystemNotification("信息面板不可用", "信息面板还没有成功构建，现在暂时无法打开。", new Color(0.82f, 0.38f, 0.30f), 2.8f);
+            }
+            return;
+        }
 
         if (builder.panelRoot.activeSelf)
         {
@@ -87,9 +100,18 @@ public class InfoPanelManager : MonoBehaviour
             return;
         }
 
-        if (!UIFlowGuard.PrepareForExclusiveWindow(UIFlowGuard.WindowInfoPanel)) return;
+        if (!UIFlowGuard.PrepareForExclusiveWindow(UIFlowGuard.WindowInfoPanel))
+        {
+            if (MissionUI.Instance != null)
+            {
+                MissionUI.Instance.ShowSystemNotification("无法打开信息面板", "当前有其他独占界面正在占用输入，稍后再试。", new Color(0.82f, 0.38f, 0.30f), 2.8f);
+            }
+            return;
+        }
         builder.panelRoot.SetActive(true);
         builder.overlayObj.SetActive(true);
+        UITransitionUtility.Show(this, builder.overlayObj, Vector2.zero, 1f, 0.18f);
+        UITransitionUtility.Show(this, builder.panelRoot, new Vector2(0f, 30f), 0.98f, 0.24f);
 
         SwitchTab(defaultTab);
         SubscribeEvents();
@@ -100,10 +122,10 @@ public class InfoPanelManager : MonoBehaviour
     {
         if (builder.panelRoot == null) return;
 
-        builder.panelRoot.SetActive(false);
-        builder.overlayObj.SetActive(false);
-
         UnsubscribeEvents();
+        currentTabPanel = null;
+        UITransitionUtility.Hide(this, builder.overlayObj, Vector2.zero, 1f, 0.14f);
+        UITransitionUtility.Hide(this, builder.panelRoot, new Vector2(0f, 18f), 0.985f, 0.16f);
     }
 
     public bool IsOpen => builder != null && builder.panelRoot != null && builder.panelRoot.activeSelf;
@@ -113,12 +135,8 @@ public class InfoPanelManager : MonoBehaviour
     {
         if (tabIndex < 0 || tabIndex >= 3) return;
 
+        int previousTabIndex = currentTabIndex;
         currentTabIndex = tabIndex;
-
-        // 隐藏所有子面板
-        builder.playerInfoPanel.SetActive(false);
-        builder.relationshipPanel.SetActive(false);
-        builder.questPanel.SetActive(false);
 
         // 更新标签按钮状态
         for (int i = 0; i < builder.tabButtons.Length; i++)
@@ -135,25 +153,66 @@ public class InfoPanelManager : MonoBehaviour
             builder.tabButtons[i].colors = cb;
         }
 
+        GameObject targetPanel = null;
+
         // 显示目标子面板并刷新数据
         switch (tabIndex)
         {
             case 0:
-                builder.playerInfoPanel.SetActive(true);
+                targetPanel = builder.playerInfoPanel;
                 builder.txtTitle.text = "个人信息";
                 RefreshPlayerInfo();
                 break;
             case 1:
-                builder.relationshipPanel.SetActive(true);
+                targetPanel = builder.relationshipPanel;
                 builder.txtTitle.text = "人际关系";
                 RefreshRelationships();
                 break;
             case 2:
-                builder.questPanel.SetActive(true);
+                targetPanel = builder.questPanel;
                 builder.txtTitle.text = "任务";
                 RefreshQuests();
                 break;
         }
+
+        if (targetPanel == null)
+        {
+            return;
+        }
+
+        if (currentTabPanel == targetPanel)
+        {
+            targetPanel.SetActive(true);
+            return;
+        }
+
+        GameObject previousPanel = currentTabPanel;
+        currentTabPanel = targetPanel;
+
+        GameObject[] allPanels =
+        {
+            builder.playerInfoPanel,
+            builder.relationshipPanel,
+            builder.questPanel
+        };
+
+        for (int i = 0; i < allPanels.Length; i++)
+        {
+            GameObject panel = allPanels[i];
+            if (panel != null && panel != previousPanel && panel != targetPanel)
+            {
+                panel.SetActive(false);
+            }
+        }
+
+        if (previousPanel != null)
+        {
+            float direction = tabIndex > previousTabIndex ? -24f : 24f;
+            UITransitionUtility.Hide(this, previousPanel, new Vector2(direction, 0f), 0.995f, 0.12f);
+        }
+
+        targetPanel.SetActive(true);
+        UITransitionUtility.Show(this, targetPanel, new Vector2(tabIndex > previousTabIndex ? 24f : -24f, 0f), 0.995f, 0.16f);
     }
 
     /// <summary>刷新所有数据</summary>
@@ -233,7 +292,12 @@ public class InfoPanelManager : MonoBehaviour
 
         builder.txtGPA.text = $"累计GPA：{cumulativeGPA:F2}    本学期GPA：{semesterGPA:F2}";
 
-        builder.txtCredits.text = "已修学分：-- / 121";
+        int earnedCredits = CalculateEarnedCredits();
+        builder.txtCredits.text = $"已修学分：{earnedCredits} / 121";
+        if (builder.txtCertificates != null)
+        {
+            builder.txtCertificates.text = BuildCertificateStatusText();
+        }
 
         // 经济信息
         builder.txtMoney.text = $"当前金钱：¥{gs.Money}";
@@ -256,6 +320,10 @@ public class InfoPanelManager : MonoBehaviour
         builder.txtDebt.color = debtLevel == "正常"
             ? new Color(0.44f, 0.31f, 0.22f)
             : new Color(0.78f, 0.24f, 0.16f);
+        if (builder.txtJobProgress != null)
+        {
+            builder.txtJobProgress.text = BuildJobProgressText();
+        }
 
         // 社团信息
         if (ClubSystem.Instance != null)
@@ -329,6 +397,144 @@ public class InfoPanelManager : MonoBehaviour
             case 3: return "主席/书记";
             default: return "成员";
         }
+    }
+
+    private int CalculateEarnedCredits()
+    {
+        if (ExamSystem.Instance == null)
+        {
+            return 0;
+        }
+
+        ExamResult[] allResults = ExamSystem.Instance.GetAllResults();
+        if (allResults == null || allResults.Length == 0)
+        {
+            return 0;
+        }
+
+        HashSet<string> countedCourseIds = new HashSet<string>();
+        int totalCredits = 0;
+
+        for (int i = 0; i < allResults.Length; i++)
+        {
+            ExamResult result = allResults[i];
+            if (result == null || string.IsNullOrEmpty(result.courseId))
+            {
+                continue;
+            }
+
+            if (result.credits <= 0 || result.score < 60 || !countedCourseIds.Add(result.courseId))
+            {
+                continue;
+            }
+
+            totalCredits += result.credits;
+        }
+
+        return totalCredits;
+    }
+
+    private string BuildCertificateStatusText()
+    {
+        if (ExamSystem.Instance == null || GameState.Instance == null)
+        {
+            return "证书：四级、六级与计算机等级会随学年推进逐步开放。";
+        }
+
+        int overallSemester = (GameState.Instance.CurrentYear - 1) * 2 + GameState.Instance.CurrentSemester;
+
+        string cet4;
+        if (ExamSystem.Instance.IsCET4Passed)
+        {
+            cet4 = "四级已过";
+        }
+        else if (overallSemester >= 2)
+        {
+            cet4 = "四级可报考";
+        }
+        else
+        {
+            cet4 = "四级待大一下后开放";
+        }
+
+        string cet6;
+        if (ExamSystem.Instance.IsCET6Passed)
+        {
+            cet6 = "六级已过";
+        }
+        else if (ExamSystem.Instance.IsCET4Passed)
+        {
+            cet6 = "六级可报考";
+        }
+        else
+        {
+            cet6 = "六级待四级后开放";
+        }
+
+        string computer = ExamSystem.Instance.IsComputerLevelPassed
+            ? "计算机已过"
+            : GameState.Instance.CurrentYear >= 2 ? "计算机可报考" : "计算机待大二开放";
+
+        return $"证书：{cet4} / {cet6}\n{computer}  ·  当前{GetYearSemesterLabel()}";
+    }
+
+    private string BuildJobProgressText()
+    {
+        if (JobSystem.Instance == null)
+        {
+            return "工作进度：达到解锁阶段后，这里会记录你的实习与副业安排。";
+        }
+
+        string currentPlan = "本回合未安排工作";
+        if (!string.IsNullOrEmpty(JobSystem.Instance.currentInternshipId))
+        {
+            JobDefinitionData job = JobSystem.Instance.GetJob(JobSystem.Instance.currentInternshipId);
+            currentPlan = $"本回合已安排实习：{(job != null ? job.name : JobSystem.Instance.currentInternshipId)}";
+        }
+        else if (!string.IsNullOrEmpty(JobSystem.Instance.currentSideHustleId))
+        {
+            JobDefinitionData job = JobSystem.Instance.GetJob(JobSystem.Instance.currentSideHustleId);
+            currentPlan = $"本回合已安排副业：{(job != null ? job.name : JobSystem.Instance.currentSideHustleId)}";
+        }
+
+        string unlockHint;
+        if (JobSystem.Instance.IsInternshipUnlocked() && JobSystem.Instance.IsSideHustleUnlocked())
+        {
+            unlockHint = "实习与副业都已开放，可按当前路线自由安排。";
+        }
+        else if (JobSystem.Instance.IsInternshipUnlocked())
+        {
+            unlockHint = "实习已开放；副业还需要继续推进人际或黑暗路线。";
+        }
+        else if (JobSystem.Instance.IsSideHustleUnlocked())
+        {
+            unlockHint = "副业已开放；实习还需要证书或 GPA 再往上走。";
+        }
+        else
+        {
+            unlockHint = "工作入口还在积累阶段，先提升学年、证书、GPA 或人际条件。";
+        }
+
+        return $"{currentPlan}\n累计实习 {JobSystem.Instance.totalInternshipCount} 次 / 连续副业 {JobSystem.Instance.consecutiveHustleRounds} 回合\n{unlockHint}";
+    }
+
+    private string GetYearSemesterLabel()
+    {
+        if (GameState.Instance == null)
+        {
+            return "当前学期";
+        }
+
+        string year = GameState.Instance.CurrentYear switch
+        {
+            1 => "大一",
+            2 => "大二",
+            3 => "大三",
+            4 => "大四",
+            _ => "大学"
+        };
+        string semester = GameState.Instance.CurrentSemester == 1 ? "上" : "下";
+        return $"{year}{semester}";
     }
 
     // ========== 人际关系面板刷新 ==========
@@ -565,13 +771,14 @@ public class InfoPanelManager : MonoBehaviour
             GameObject noRecord = new GameObject("NoRecord");
             noRecord.transform.SetParent(builder.interactionRecordContainer, false);
             RectTransform rt = noRecord.AddComponent<RectTransform>();
-            rt.sizeDelta = new Vector2(820, 25);
+            rt.sizeDelta = new Vector2(820, 42);
 
             TextMeshProUGUI txt = noRecord.AddComponent<TextMeshProUGUI>();
-            txt.text = "暂无互动记录";
+            txt.text = "最近还没有留下互动记录\n多去打招呼、聊天或一起行动，这里会慢慢记下你们的来往。";
             txt.fontSize = 14f;
             txt.color = new Color(0.55f, 0.55f, 0.60f);
             txt.alignment = TextAlignmentOptions.Left;
+            txt.enableWordWrapping = true;
             return;
         }
 
@@ -703,16 +910,19 @@ public class InfoPanelManager : MonoBehaviour
         // 检查MissionSystem是否可用
         if (MissionSystem.Instance == null)
         {
-            CreateQuestPlaceholder("任务系统未初始化");
+            CreateQuestPlaceholder("任务情报正在整理中。\n先继续推进回合、提升属性或接触人物，新的目标会逐步出现。");
             return;
         }
 
         List<MissionDefinition> activeMissions = MissionSystem.Instance.GetActiveMissions();
+        List<MissionDefinition> availableMissions = MissionSystem.Instance.GetAvailableMissions();
         List<MissionDefinition> completedMissions = MissionSystem.Instance.GetCompletedMissions();
+        List<MissionDefinition> failedMissions = MissionSystem.Instance.GetFailedMissions();
 
-        if (activeMissions.Count == 0 && completedMissions.Count == 0)
+        if (activeMissions.Count == 0 && availableMissions.Count == 0 &&
+            completedMissions.Count == 0 && failedMissions.Count == 0)
         {
-            CreateQuestPlaceholder("暂无任务");
+            CreateQuestPlaceholder("当前还没有可追踪任务。\n继续推进主线、社交、考试或社团路线，很快就会刷出新的目标。");
             return;
         }
 
@@ -726,6 +936,15 @@ public class InfoPanelManager : MonoBehaviour
             }
         }
 
+        if (availableMissions.Count > 0)
+        {
+            CreateQuestSectionHeader("可接取");
+            foreach (var mission in availableMissions)
+            {
+                CreateQuestCard(mission, false, isAvailable: true);
+            }
+        }
+
         // 显示已完成的任务（最近5个）
         if (completedMissions.Count > 0)
         {
@@ -736,6 +955,16 @@ public class InfoPanelManager : MonoBehaviour
                 CreateQuestCard(completedMissions[i], true);
             }
         }
+
+        if (failedMissions.Count > 0)
+        {
+            CreateQuestSectionHeader("已失败");
+            int showCount = Mathf.Min(failedMissions.Count, 5);
+            for (int i = failedMissions.Count - showCount; i < failedMissions.Count; i++)
+            {
+                CreateQuestCard(failedMissions[i], false, isAvailable: false, isFailed: true);
+            }
+        }
     }
 
     private void CreateQuestPlaceholder(string message)
@@ -744,13 +973,14 @@ public class InfoPanelManager : MonoBehaviour
         placeholder.transform.SetParent(builder.questListContent, false);
 
         RectTransform rt = placeholder.AddComponent<RectTransform>();
-        rt.sizeDelta = new Vector2(1150, 50);
+        rt.sizeDelta = new Vector2(1150, 96);
 
         TextMeshProUGUI txt = placeholder.AddComponent<TextMeshProUGUI>();
         txt.text = message;
         txt.fontSize = 18f;
         txt.color = new Color(0.55f, 0.55f, 0.60f); // TextGray
         txt.alignment = TextAlignmentOptions.Center;
+        txt.enableWordWrapping = true;
     }
 
     private void CreateQuestSectionHeader(string title)
@@ -768,8 +998,13 @@ public class InfoPanelManager : MonoBehaviour
         txt.alignment = TextAlignmentOptions.Left;
     }
 
-    private void CreateQuestCard(MissionDefinition mission, bool isCompleted)
+    private void CreateQuestCard(MissionDefinition mission, bool isCompleted, bool isAvailable = false, bool isFailed = false)
     {
+        if (mission == null || builder == null || builder.questListContent == null)
+        {
+            return;
+        }
+
         // 卡片容器
         GameObject card = new GameObject($"QuestCard_{mission.missionId}");
         card.transform.SetParent(builder.questListContent, false);
@@ -778,9 +1013,22 @@ public class InfoPanelManager : MonoBehaviour
         cardRT.sizeDelta = new Vector2(1150, 0); // 高度由ContentSizeFitter决定
 
         Image cardBg = card.AddComponent<Image>();
-        cardBg.color = isCompleted
-            ? new Color(0.10f, 0.10f, 0.14f, 0.80f)
-            : new Color(0.12f, 0.12f, 0.18f, 0.95f); // CardBgColor
+        if (isCompleted)
+        {
+            cardBg.color = new Color(0.10f, 0.10f, 0.14f, 0.80f);
+        }
+        else if (isFailed)
+        {
+            cardBg.color = new Color(0.20f, 0.11f, 0.11f, 0.92f);
+        }
+        else if (isAvailable)
+        {
+            cardBg.color = new Color(0.14f, 0.16f, 0.10f, 0.95f);
+        }
+        else
+        {
+            cardBg.color = new Color(0.12f, 0.12f, 0.18f, 0.95f);
+        }
 
         VerticalLayoutGroup vlg = card.AddComponent<VerticalLayoutGroup>();
         vlg.spacing = 4f;
@@ -836,15 +1084,43 @@ public class InfoPanelManager : MonoBehaviour
         nameRT.sizeDelta = new Vector2(900, 28);
 
         TextMeshProUGUI nameTxt = nameObj.AddComponent<TextMeshProUGUI>();
-        string completedMark = isCompleted ? " ✓" : "";
+        string completedMark = isCompleted ? " ✓" : isFailed ? " ✕" : isAvailable ? " [可接取]" : "";
         nameTxt.text = mission.missionName + completedMark;
         nameTxt.fontSize = 17f;
-        nameTxt.color = isCompleted
-            ? new Color(0.55f, 0.55f, 0.60f)           // TextGray
-            : new Color(1.0f, 0.85f, 0.30f);            // TextGold
+        if (isCompleted)
+        {
+            nameTxt.color = new Color(0.55f, 0.55f, 0.60f);
+        }
+        else if (isFailed)
+        {
+            nameTxt.color = new Color(1.0f, 0.68f, 0.68f);
+        }
+        else
+        {
+            nameTxt.color = new Color(1.0f, 0.85f, 0.30f);
+        }
         nameTxt.alignment = TextAlignmentOptions.Left;
         nameTxt.enableWordWrapping = false;
         nameTxt.overflowMode = TextOverflowModes.Ellipsis;
+
+        GameObject descObj = new GameObject("MissionDescription");
+        descObj.transform.SetParent(card.transform, false);
+        RectTransform descRT = descObj.AddComponent<RectTransform>();
+        descRT.sizeDelta = new Vector2(1126, 42);
+
+        TextMeshProUGUI descTxt = descObj.AddComponent<TextMeshProUGUI>();
+        descTxt.text = mission.description;
+        descTxt.fontSize = 14f;
+        descTxt.color = isFailed
+            ? new Color(0.94f, 0.80f, 0.80f)
+            : new Color(0.92f, 0.92f, 0.92f);
+        descTxt.alignment = TextAlignmentOptions.Left;
+        descTxt.enableWordWrapping = true;
+        descTxt.overflowMode = TextOverflowModes.Ellipsis;
+        if (FontManager.Instance != null)
+        {
+            FontManager.Instance.ApplyChineseFont(descTxt);
+        }
 
         // 目标进度（仅进行中任务）
         if (!isCompleted)
@@ -857,6 +1133,51 @@ public class InfoPanelManager : MonoBehaviour
                     CreateObjectiveRow(card.transform, objective);
                 }
             }
+            else if (mission.objectives != null)
+            {
+                foreach (var objective in mission.objectives)
+                {
+                    CreateObjectivePreviewRow(card.transform, objective, isFailed);
+                }
+            }
+        }
+
+        if (isAvailable)
+        {
+            CreateQuestActionButton(card.transform, "接取任务", new Color(0.86f, 0.66f, 0.22f, 1f), () =>
+            {
+                if (MissionSystem.Instance != null && MissionSystem.Instance.AcceptMission(mission.missionId))
+                {
+                    RefreshQuests();
+                }
+            });
+        }
+        else if (!isCompleted && !isFailed)
+        {
+            CreateQuestActionButton(card.transform, "完整任务面板", new Color(0.34f, 0.47f, 0.72f, 1f), () =>
+            {
+                OnOpenMissionPanelClicked();
+            });
+        }
+    }
+
+    private void CreateObjectivePreviewRow(Transform parent, MissionObjective objective, bool isFailed)
+    {
+        GameObject objRow = new GameObject("ObjectivePreviewRow");
+        objRow.transform.SetParent(parent, false);
+        RectTransform objRowRT = objRow.AddComponent<RectTransform>();
+        objRowRT.sizeDelta = new Vector2(1126, 20);
+
+        TextMeshProUGUI objTxt = objRow.AddComponent<TextMeshProUGUI>();
+        objTxt.text = $"  {objective.description}";
+        objTxt.fontSize = 14f;
+        objTxt.color = isFailed
+            ? new Color(0.90f, 0.72f, 0.72f)
+            : new Color(0.88f, 0.88f, 0.84f);
+        objTxt.alignment = TextAlignmentOptions.Left;
+        if (FontManager.Instance != null)
+        {
+            FontManager.Instance.ApplyChineseFont(objTxt);
         }
     }
 
@@ -906,17 +1227,84 @@ public class InfoPanelManager : MonoBehaviour
             : new Color(0.30f, 0.70f, 0.30f);  // 进行中绿色
     }
 
+    private void CreateQuestActionButton(Transform parent, string label, Color color, UnityEngine.Events.UnityAction onClick)
+    {
+        GameObject buttonObj = new GameObject(label.Replace(" ", string.Empty));
+        buttonObj.transform.SetParent(parent, false);
+
+        RectTransform buttonRT = buttonObj.AddComponent<RectTransform>();
+        buttonRT.sizeDelta = new Vector2(180f, 34f);
+
+        LayoutElement layout = buttonObj.AddComponent<LayoutElement>();
+        layout.preferredWidth = 180f;
+        layout.preferredHeight = 34f;
+
+        Image buttonBg = buttonObj.AddComponent<Image>();
+        buttonBg.color = color;
+
+        Button button = buttonObj.AddComponent<Button>();
+        button.targetGraphic = buttonBg;
+        if (onClick != null)
+        {
+            button.onClick.AddListener(onClick);
+        }
+
+        TextMeshProUGUI buttonText = new GameObject("Label").AddComponent<TextMeshProUGUI>();
+        buttonText.transform.SetParent(buttonObj.transform, false);
+        RectTransform textRT = buttonText.GetComponent<RectTransform>();
+        textRT.anchorMin = Vector2.zero;
+        textRT.anchorMax = Vector2.one;
+        textRT.offsetMin = Vector2.zero;
+        textRT.offsetMax = Vector2.zero;
+        buttonText.text = label;
+        buttonText.fontSize = 14f;
+        buttonText.color = new Color(0.98f, 0.96f, 0.92f);
+        buttonText.alignment = TextAlignmentOptions.Center;
+        buttonText.enableWordWrapping = false;
+
+        if (FontManager.Instance != null)
+        {
+            FontManager.Instance.ApplyChineseFont(buttonText);
+        }
+    }
+
     // ========== 按钮事件处理 ==========
 
     private void OnSocialInteractClicked()
     {
-        if (string.IsNullOrEmpty(selectedNPCId)) return;
+        if (string.IsNullOrEmpty(selectedNPCId))
+        {
+            if (MissionUI.Instance != null)
+            {
+                MissionUI.Instance.ShowSystemNotification("未选择互动对象", "先在左侧列表中选中一个角色，再打开社交互动。", new Color(0.82f, 0.38f, 0.30f), 2.8f);
+            }
+            return;
+        }
 
         // 打开NPCInteractionMenu
         if (NPCInteractionMenu.Instance != null)
         {
             NPCInteractionMenu.Instance.ShowForNPC(selectedNPCId);
         }
+        else if (MissionUI.Instance != null)
+        {
+            MissionUI.Instance.ShowSystemNotification("互动菜单不可用", "NPC 互动菜单还没有成功初始化，现在暂时无法打开。", new Color(0.82f, 0.38f, 0.30f), 2.8f);
+        }
+    }
+
+    private void OnOpenMissionPanelClicked()
+    {
+        if (MissionPanelBuilder.Instance == null)
+        {
+            if (MissionUI.Instance != null)
+            {
+                MissionUI.Instance.ShowSystemNotification("任务面板不可用", "任务列表还没有成功初始化，现在暂时无法从信息页跳转。", new Color(0.82f, 0.38f, 0.30f), 2.8f);
+            }
+            return;
+        }
+
+        ClosePanel();
+        MissionPanelBuilder.Instance.OpenPanel();
     }
 
     // ========== 事件订阅 ==========
@@ -945,7 +1333,10 @@ public class InfoPanelManager : MonoBehaviour
 
         if (MissionSystem.Instance != null)
         {
+            MissionSystem.Instance.OnMissionUnlocked += OnMissionStateChanged;
+            MissionSystem.Instance.OnMissionAccepted += OnMissionStateChanged;
             MissionSystem.Instance.OnMissionCompleted += OnMissionCompleted;
+            MissionSystem.Instance.OnMissionFailed += OnMissionStateChanged;
             MissionSystem.Instance.OnObjectiveUpdated += OnObjectiveUpdated;
         }
 
@@ -976,7 +1367,10 @@ public class InfoPanelManager : MonoBehaviour
 
         if (MissionSystem.Instance != null)
         {
+            MissionSystem.Instance.OnMissionUnlocked -= OnMissionStateChanged;
+            MissionSystem.Instance.OnMissionAccepted -= OnMissionStateChanged;
             MissionSystem.Instance.OnMissionCompleted -= OnMissionCompleted;
+            MissionSystem.Instance.OnMissionFailed -= OnMissionStateChanged;
             MissionSystem.Instance.OnObjectiveUpdated -= OnObjectiveUpdated;
         }
 
@@ -1024,6 +1418,14 @@ public class InfoPanelManager : MonoBehaviour
     }
 
     private void OnMissionCompleted(MissionDefinition mission)
+    {
+        if (currentTabIndex == 2 && builder.panelRoot.activeSelf)
+        {
+            RefreshQuests();
+        }
+    }
+
+    private void OnMissionStateChanged(MissionDefinition mission)
     {
         if (currentTabIndex == 2 && builder.panelRoot.activeSelf)
         {

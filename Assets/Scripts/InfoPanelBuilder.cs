@@ -37,8 +37,10 @@ public class InfoPanelBuilder : MonoBehaviour
     [HideInInspector] public TextMeshProUGUI txtHiddenAttrs; // 黑暗值、负罪感、幸运
     [HideInInspector] public TextMeshProUGUI txtGPA;
     [HideInInspector] public TextMeshProUGUI txtCredits;
+    [HideInInspector] public TextMeshProUGUI txtCertificates;
     [HideInInspector] public TextMeshProUGUI txtMoney;
     [HideInInspector] public TextMeshProUGUI txtDebt;
+    [HideInInspector] public TextMeshProUGUI txtJobProgress;
     [HideInInspector] public TextMeshProUGUI txtClubs;
     [HideInInspector] public TextMeshProUGUI txtParty;
 
@@ -57,6 +59,7 @@ public class InfoPanelBuilder : MonoBehaviour
 
     // ========== 任务面板组件 ==========
     [HideInInspector] public Transform questListContent;
+    [HideInInspector] public Button btnOpenMissionPanel;
 
     // ========== 颜色常量 ==========
     private static readonly Color PanelBgColor = new Color(0.95f, 0.88f, 0.77f, 0.985f);
@@ -399,6 +402,9 @@ public class InfoPanelBuilder : MonoBehaviour
         txtCredits = CreateTMPText("Credits", section.transform, "已修学分：30 / 121", 16f, TextGray,
             TextAlignmentOptions.Left, new Vector2(1020, 25));
 
+        txtCertificates = CreateTMPText("Certificates", section.transform, "证书：四级未过 / 六级未开放 / 计算机未过", 16f, TextGray,
+            TextAlignmentOptions.Left, new Vector2(1020, 46));
+
         CreateSeparator(parent);
     }
 
@@ -411,6 +417,9 @@ public class InfoPanelBuilder : MonoBehaviour
 
         txtDebt = CreateTMPText("Debt", section.transform, "债务等级：正常", 16f, TextGray,
             TextAlignmentOptions.Left, new Vector2(1020, 25));
+
+        txtJobProgress = CreateTMPText("JobProgress", section.transform, "工作进度：尚未安排", 16f, TextGray,
+            TextAlignmentOptions.Left, new Vector2(1020, 46));
 
         CreateSeparator(parent);
     }
@@ -566,12 +575,32 @@ public class InfoPanelBuilder : MonoBehaviour
         rt.offsetMin = new Vector2(18, 18);
         rt.offsetMax = new Vector2(-18, -124);
 
-        ScrollRect scrollRect = CreateScrollView("QuestScrollView", questPanel.transform, new Vector2(1144, 618));
+        ScrollRect scrollRect = CreateScrollView("QuestScrollView", questPanel.transform, new Vector2(1144, 548));
+        RectTransform scrollRT = scrollRect.GetComponent<RectTransform>();
+        scrollRT.anchorMin = new Vector2(0f, 0f);
+        scrollRT.anchorMax = new Vector2(1f, 1f);
+        scrollRT.offsetMin = new Vector2(0f, 70f);
+        scrollRT.offsetMax = Vector2.zero;
         questListContent = scrollRect.content;
 
-        // 占位文本
-        CreateTMPText("PlaceholderText", questListContent, "任务系统开发中...", 18f, TextGray,
-            TextAlignmentOptions.Center, new Vector2(1020, 50));
+        GameObject buttonRow = new GameObject("QuestButtonRow");
+        buttonRow.transform.SetParent(questPanel.transform, false);
+        RectTransform btnRowRT = buttonRow.AddComponent<RectTransform>();
+        btnRowRT.anchorMin = new Vector2(0f, 0f);
+        btnRowRT.anchorMax = new Vector2(1f, 0f);
+        btnRowRT.pivot = new Vector2(0.5f, 0f);
+        btnRowRT.sizeDelta = new Vector2(0f, 56f);
+        btnRowRT.anchoredPosition = new Vector2(0f, 0f);
+
+        HorizontalLayoutGroup btnHLG = buttonRow.AddComponent<HorizontalLayoutGroup>();
+        btnHLG.padding = new RectOffset(0, 0, 6, 4);
+        btnHLG.childAlignment = TextAnchor.MiddleCenter;
+        btnHLG.childControlWidth = false;
+        btnHLG.childControlHeight = false;
+        btnHLG.childForceExpandWidth = false;
+        btnHLG.childForceExpandHeight = false;
+
+        btnOpenMissionPanel = CreateButton("BtnOpenMissionPanel", buttonRow.transform, "查看完整任务面板", ButtonNormal, new Vector2(240, 44));
 
         questPanel.SetActive(false);
     }

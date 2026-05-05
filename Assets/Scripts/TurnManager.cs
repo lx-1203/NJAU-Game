@@ -97,6 +97,10 @@ public class TurnManager : MonoBehaviour
     private bool waitingForSchedule = false;
     private bool isAdvanceQueued = false;
     private string lastScheduleRoundKey = string.Empty;
+    private string lastMakeupExamRoundKey = string.Empty;
+    private string lastCertificateExamRoundKey = string.Empty;
+    private bool hasPendingCertificateExam = false;
+    private ExamType pendingCertificateExamType = ExamType.CET4;
 
     /// <summary>暂存的回合推进结果（考试完成后继续处理）</summary>
     private GameState.RoundAdvanceResult pendingAdvanceResult;
@@ -250,12 +254,6 @@ public class TurnManager : MonoBehaviour
             ExamUIManager.Instance.OnExamUICompleted -= HandleMidtermCompleted;
         }
 
-        // 期中考试结算（不影响 GPA）
-        if (ExamSystem.Instance != null)
-        {
-            ExamSystem.Instance.FinalizeMidtermExam();
-        }
-
         waitingForExam = false;
 
         // 继续推进
@@ -367,6 +365,31 @@ public class TurnManager : MonoBehaviour
         {
             ExamUIManager.Instance.OnExamUICompleted -= HandleMakeupCompleted;
         }
+
+        waitingForExam = false;
+
+        if (ExamSystem.Instance != null && MissionUI.Instance != null)
+        {
+            int remaining = ExamSystem.Instance.GetFailedCourses().Count;
+            if (remaining > 0)
+            {
+                MissionUI.Instance.ShowSystemNotification(
+                    "补考结果",
+                    $"补考结束，仍有 {remaining} 门课程未通过。后续学期开始时还会再次安排补考。",
+                    new Color(0.82f, 0.30f, 0.28f),
+                    3.6f);
+            }
+            else
+            {
+                MissionUI.Instance.ShowSystemNotification(
+                    "补考结果",
+                    "补考已清空，当前没有待处理的挂科课程。",
+                    new Color(0.22f, 0.72f, 0.34f),
+                    3.2f);
+            }
+        }
+
+        ContinueRoundStartPhaseAfterBlockingSteps();
     }
 
     private void BeginRoundStartPhase(bool isGraduated)
@@ -421,21 +444,55 @@ public class TurnManager : MonoBehaviour
             EventScheduler.Instance.CheckAndTriggerEvents(TriggerPhase.RoundStart);
         }
 
-        if (GameState.Instance.CurrentRound == 1 && ExamSystem.Instance != null && ExamSystem.Instance.HasPendingMakeup())
+        ContinueRoundStartPhaseAfterBlockingSteps();
+    }
+
+    private void ContinueRoundStartPhaseAfterBlockingSteps()
+    {
+        if (TryStartPendingMakeupExam())
         {
-            Debug.Log("[TurnManager] 新学期第1回合，检测到挂科课程，触发补考");
-            var failedCourses = ExamSystem.Instance.GetFailedCourses();
-
-            if (ExamUIManager.Instance != null)
-            {
-                ExamUIManager.Instance.OnExamUICompleted += HandleMakeupCompleted;
-            }
-
-            ExamSystem.Instance.StartMakeupExam(failedCourses);
+            return;
         }
 
-        TryCertificateExams();
+        if (TryCertificateExams())
+        {
+            return;
+        }
+
         OnRoundStartPhaseCompleted?.Invoke();
+    }
+
+    private bool TryStartPendingMakeupExam()
+    {
+        if (GameState.Instance == null || ExamSystem.Instance == null || !ExamSystem.Instance.HasPendingMakeup())
+        {
+            return false;
+        }
+
+        if (GameState.Instance.CurrentRound != 1)
+        {
+            return false;
+        }
+
+        string roundKey = GetCurrentRoundKey();
+        if (roundKey == lastMakeupExamRoundKey)
+        {
+            return false;
+        }
+
+        Debug.Log("[TurnManager] 新学期第1回合，检测到挂科课程，触发补考");
+        lastMakeupExamRoundKey = roundKey;
+        waitingForExam = true;
+
+        ExamUIManager examUI = EnsureExamUIManager();
+        if (examUI != null)
+        {
+            examUI.OnExamUICompleted -= HandleMakeupCompleted;
+            examUI.OnExamUICompleted += HandleMakeupCompleted;
+        }
+
+        ExamSystem.Instance.StartMakeupExam(ExamSystem.Instance.GetFailedCourses());
+        return true;
     }
 
     private void EnsureCourseScheduleUI()
@@ -466,16 +523,17 @@ public class TurnManager : MonoBehaviour
     /// - CET6: CET4通过后，下一学期起可报考
     /// - 计算机等级: 大二上学期(year=2,semester=1)起可报考
     /// </summary>
-    private void TryCertificateExams()
+    private bool TryCertificateExams()
     {
-        if (ExamSystem.Instance == null || GameState.Instance == null) return;
+        if (ExamSystem.Instance == null || GameState.Instance == null) return false;
 
         int year = GameState.Instance.CurrentYear;
         int semester = GameState.Instance.CurrentSemester;
         int round = GameState.Instance.CurrentRound;
+        string roundKey = GetCurrentRoundKey();
 
         // 证书考试在每学期第4回合触发（期中考后、期末考前的窗口）
-        if (round != 4) return;
+        if (round != 4 || roundKey == lastCertificateExamRoundKey) return false;
 
         Debug.Log($"[TurnManager] 证书考试窗口期 —— {GameState.Instance.GetYearName()}{GameState.Instance.GetSemesterName()} 第{round}回合");
 
@@ -485,20 +543,16 @@ public class TurnManager : MonoBehaviour
         {
             Debug.Log("[TurnManager] 触发 CET4 (大学英语四级) 考试");
             waitingForExam = true;
+            hasPendingCertificateExam = true;
+            pendingCertificateExamType = ExamType.CET4;
+            lastCertificateExamRoundKey = roundKey;
 
-            if (ExamUIManager.Instance != null)
-            {
-                ExamUIManager.Instance.OnExamUICompleted += HandleCertExamCompleted;
-            }
-            else
-            {
-                GameObject examUIObj = new GameObject("ExamUIManager");
-                ExamUIManager examUI = examUIObj.AddComponent<ExamUIManager>();
-                examUI.OnExamUICompleted += HandleCertExamCompleted;
-            }
+            ExamUIManager examUI = EnsureExamUIManager();
+            examUI.OnExamUICompleted -= HandleCertExamCompleted;
+            examUI.OnExamUICompleted += HandleCertExamCompleted;
 
             ExamSystem.Instance.StartCET4Exam();
-            return; // 一次只触发一个证书考试
+            return true; // 一次只触发一个证书考试
         }
 
         // CET6: CET4通过后可报考
@@ -506,20 +560,16 @@ public class TurnManager : MonoBehaviour
         {
             Debug.Log("[TurnManager] 触发 CET6 (大学英语六级) 考试");
             waitingForExam = true;
+            hasPendingCertificateExam = true;
+            pendingCertificateExamType = ExamType.CET6;
+            lastCertificateExamRoundKey = roundKey;
 
-            if (ExamUIManager.Instance != null)
-            {
-                ExamUIManager.Instance.OnExamUICompleted += HandleCertExamCompleted;
-            }
-            else
-            {
-                GameObject examUIObj = new GameObject("ExamUIManager");
-                ExamUIManager examUI = examUIObj.AddComponent<ExamUIManager>();
-                examUI.OnExamUICompleted += HandleCertExamCompleted;
-            }
+            ExamUIManager examUI = EnsureExamUIManager();
+            examUI.OnExamUICompleted -= HandleCertExamCompleted;
+            examUI.OnExamUICompleted += HandleCertExamCompleted;
 
             ExamSystem.Instance.StartCET6Exam();
-            return;
+            return true;
         }
 
         // 计算机等级: 大二上起
@@ -528,21 +578,19 @@ public class TurnManager : MonoBehaviour
         {
             Debug.Log("[TurnManager] 触发计算机等级考试");
             waitingForExam = true;
+            hasPendingCertificateExam = true;
+            pendingCertificateExamType = ExamType.ComputerLevel;
+            lastCertificateExamRoundKey = roundKey;
 
-            if (ExamUIManager.Instance != null)
-            {
-                ExamUIManager.Instance.OnExamUICompleted += HandleCertExamCompleted;
-            }
-            else
-            {
-                GameObject examUIObj = new GameObject("ExamUIManager");
-                ExamUIManager examUI = examUIObj.AddComponent<ExamUIManager>();
-                examUI.OnExamUICompleted += HandleCertExamCompleted;
-            }
+            ExamUIManager examUI = EnsureExamUIManager();
+            examUI.OnExamUICompleted -= HandleCertExamCompleted;
+            examUI.OnExamUICompleted += HandleCertExamCompleted;
 
             ExamSystem.Instance.StartComputerLevelExam();
-            return;
+            return true;
         }
+
+        return false;
     }
 
     /// <summary>
@@ -555,6 +603,58 @@ public class TurnManager : MonoBehaviour
         {
             ExamUIManager.Instance.OnExamUICompleted -= HandleCertExamCompleted;
         }
+
+        ShowCertificateExamResultNotification();
         waitingForExam = false;
+        ContinueRoundStartPhaseAfterBlockingSteps();
+    }
+
+    private void ShowCertificateExamResultNotification()
+    {
+        if (!hasPendingCertificateExam)
+        {
+            return;
+        }
+
+        hasPendingCertificateExam = false;
+        if (MissionUI.Instance == null || ExamSystem.Instance == null)
+        {
+            return;
+        }
+
+        bool passed = false;
+        string examName = "证书考试";
+        switch (pendingCertificateExamType)
+        {
+            case ExamType.CET4:
+                examName = "英语四级";
+                passed = ExamSystem.Instance.IsCET4Passed;
+                break;
+            case ExamType.CET6:
+                examName = "英语六级";
+                passed = ExamSystem.Instance.IsCET6Passed;
+                break;
+            case ExamType.ComputerLevel:
+                examName = "计算机等级";
+                passed = ExamSystem.Instance.IsComputerLevelPassed;
+                break;
+        }
+
+        MissionUI.Instance.ShowSystemNotification(
+            passed ? $"{examName}通过" : $"{examName}未通过",
+            passed ? $"你已拿下{examName}考试，后续相关路线和任务会继续推进。" : $"这次{examName}考试没有通过，后续学期仍可再次尝试。",
+            passed ? new Color(0.22f, 0.72f, 0.34f) : new Color(0.82f, 0.30f, 0.28f),
+            3.4f);
+    }
+
+    private ExamUIManager EnsureExamUIManager()
+    {
+        if (ExamUIManager.Instance != null)
+        {
+            return ExamUIManager.Instance;
+        }
+
+        GameObject examUIObj = new GameObject("ExamUIManager");
+        return examUIObj.AddComponent<ExamUIManager>();
     }
 }

@@ -27,6 +27,7 @@ public class EventModule : MonoBehaviour, IDebugModule
     private static readonly string[] EventTypeOptions = { "Fixed", "MainStory", "Conditional", "Dark" };
     private static readonly string[] PhaseOptions = { "RoundStart", "ActionComplete", "RoundEnd" };
     private static readonly string[] TimelinePhaseOptions = { "All", "RoundStart", "ActionComplete", "RoundEnd" };
+    private static readonly string[] LibraryGroupOptions = { "全部", "考试结果", "证书考试", "补考", "NPC关系", "恋爱", "社团", "主线", "黑暗", "有场景演出" };
 
     private TMP_InputField eventIdInput;
     private TMP_InputField flagInput;
@@ -56,14 +57,28 @@ public class EventModule : MonoBehaviour, IDebugModule
     private TMP_InputField probabilityInput;
     private TMP_InputField triggerBehaviorInput;
     private TMP_InputField attributeConditionsInput;
+    private TMP_InputField affinityConditionsInput;
+    private TMP_InputField romanceConditionsInput;
+    private TMP_InputField clubConditionsInput;
     private TMP_InputField minMoneyInput;
     private TMP_InputField maxMoneyInput;
     private TMP_InputField minDarknessInput;
     private TMP_InputField requiredEventsInput;
     private TMP_InputField excludedEventsInput;
+    private TMP_InputField requiredFlagsInput;
+    private TMP_InputField excludedFlagsInput;
     private TMP_InputField speakerInput;
     private TMP_InputField portraitInput;
     private TMP_InputField dialogueLinesInput;
+    private TMP_InputField sceneKeyInput;
+    private TMP_InputField sceneDisplayNameInput;
+    private TMP_InputField locationIdInput;
+    private TMP_InputField backgroundResourceInput;
+    private TMP_InputField protagonistPortraitInput;
+    private TMP_InputField npcPortraitInput;
+    private TMP_InputField backgroundSlotInput;
+    private TMP_InputField protagonistSlotInput;
+    private TMP_InputField npcSlotInput;
     private TMP_InputField defaultEffectsInput;
     private TMP_InputField chainEventsInput;
     private TMP_InputField choiceATextInput;
@@ -71,22 +86,26 @@ public class EventModule : MonoBehaviour, IDebugModule
     private TMP_InputField choiceAMoneyCostInput;
     private TMP_InputField choiceAEffectsInput;
     private TMP_InputField choiceANextInput;
+    private TMP_InputField choiceAShowConditionsInput;
     private TMP_InputField choiceBTextInput;
     private TMP_InputField choiceBAPCostInput;
     private TMP_InputField choiceBMoneyCostInput;
     private TMP_InputField choiceBEffectsInput;
     private TMP_InputField choiceBNextInput;
+    private TMP_InputField choiceBShowConditionsInput;
     private TMP_InputField choiceCTextInput;
     private TMP_InputField choiceCAPCostInput;
     private TMP_InputField choiceCMoneyCostInput;
     private TMP_InputField choiceCEffectsInput;
     private TMP_InputField choiceCNextInput;
+    private TMP_InputField choiceCShowConditionsInput;
     private TMP_Dropdown roundEventDropdown;
     private TMP_InputField timelineYearInput;
     private TMP_InputField timelineSemesterInput;
     private TMP_InputField timelineRoundInput;
     private TMP_Dropdown timelinePhaseDropdown;
     private TMP_InputField librarySearchInput;
+    private TMP_Dropdown libraryGroupDropdown;
     private Transform roundEventListContent;
     private Transform libraryEventListContent;
 
@@ -300,6 +319,14 @@ public class EventModule : MonoBehaviour, IDebugModule
         excludedEventsInput = CreateInputField(row4.transform, "事件ID,事件ID", 220f, 30f);
         SetFlexibleWidth(excludedEventsInput.gameObject, 160f);
 
+        GameObject row4b = CreateRow(metaPanel.transform, 34f);
+        CreateLabel(row4b.transform, "前置标记", 14f, TextWhite, 30f, 68f);
+        requiredFlagsInput = CreateInputField(row4b.transform, "flag_a,flag_b", 220f, 30f);
+        SetFlexibleWidth(requiredFlagsInput.gameObject, 160f);
+        CreateLabel(row4b.transform, "排除标记", 14f, TextWhite, 30f, 68f);
+        excludedFlagsInput = CreateInputField(row4b.transform, "flag_x,flag_y", 220f, 30f);
+        SetFlexibleWidth(excludedFlagsInput.gameObject, 160f);
+
         GameObject row5 = CreateRow(metaPanel.transform, 34f);
         CreateLabel(row5.transform, "属性条件", 14f, TextWhite, 30f, 68f);
         attributeConditionsInput = CreateInputField(row5.transform, "学力>=60,心情<30", 240f, 30f);
@@ -309,6 +336,11 @@ public class EventModule : MonoBehaviour, IDebugModule
         maxMoneyInput = CreateInputField(row5.transform, "max", 64f, 30f, "0");
         CreateLabel(row5.transform, "黑暗值", 14f, TextWhite, 30f, 52f);
         minDarknessInput = CreateInputField(row5.transform, "min", 64f, 30f, "0");
+
+        GameObject row5b = CreateRow(metaPanel.transform, 34f);
+        CreateLabel(row5b.transform, "好感条件", 14f, TextWhite, 30f, 68f);
+        affinityConditionsInput = CreateInputField(row5b.transform, "npc_id:Friend:40; npc_b::60", 380f, 30f);
+        SetFlexibleWidth(affinityConditionsInput.gameObject, 240f);
 
         descriptionInput = CreateMultilineInput(parent, "剧情简介 / 备注", 92f);
 
@@ -330,6 +362,44 @@ public class EventModule : MonoBehaviour, IDebugModule
         SetFlexibleWidth(portraitInput.gameObject, 120f);
         dialogueLinesInput = CreateMultilineInput(dialoguePanel.transform, "每行一句台词，按顺序播放", 130f);
 
+        GameObject presentationPanel = CreatePanel(parent, 240f);
+        VerticalLayoutGroup presentationLayout = presentationPanel.AddComponent<VerticalLayoutGroup>();
+        presentationLayout.spacing = 8f;
+        presentationLayout.padding = new RectOffset(12, 12, 12, 12);
+        presentationLayout.childControlWidth = true;
+        presentationLayout.childControlHeight = false;
+        presentationLayout.childForceExpandHeight = false;
+
+        CreateLabel(presentationPanel.transform, "事件场景演出", 16f, TextGold, 28f);
+        GameObject presentationRow1 = CreateRow(presentationPanel.transform, 34f);
+        CreateLabel(presentationRow1.transform, "场景键", 14f, TextWhite, 30f, 52f);
+        sceneKeyInput = CreateInputField(presentationRow1.transform, "evt_freshman_training", 160f, 30f);
+        CreateLabel(presentationRow1.transform, "场景名", 14f, TextWhite, 30f, 52f);
+        sceneDisplayNameInput = CreateInputField(presentationRow1.transform, "军训操场", 180f, 30f);
+        CreateLabel(presentationRow1.transform, "地点", 14f, TextWhite, 30f, 44f);
+        locationIdInput = CreateInputField(presentationRow1.transform, "Playground", 120f, 30f);
+
+        GameObject presentationRow2 = CreateRow(presentationPanel.transform, 34f);
+        CreateLabel(presentationRow2.transform, "背景", 14f, TextWhite, 30f, 44f);
+        backgroundResourceInput = CreateInputField(presentationRow2.transform, "Backgrounds/Event/freshman_training", 220f, 30f);
+        SetFlexibleWidth(backgroundResourceInput.gameObject, 180f);
+        CreateLabel(presentationRow2.transform, "背景占位", 14f, TextWhite, 30f, 68f);
+        backgroundSlotInput = CreateInputField(presentationRow2.transform, "BG_FreshmanTraining", 170f, 30f);
+
+        GameObject presentationRow3 = CreateRow(presentationPanel.transform, 34f);
+        CreateLabel(presentationRow3.transform, "主角立绘", 14f, TextWhite, 30f, 68f);
+        protagonistPortraitInput = CreateInputField(presentationRow3.transform, "Portraits/Player/player_event_training", 210f, 30f);
+        SetFlexibleWidth(protagonistPortraitInput.gameObject, 170f);
+        CreateLabel(presentationRow3.transform, "主角占位", 14f, TextWhite, 30f, 68f);
+        protagonistSlotInput = CreateInputField(presentationRow3.transform, "PC_Training_Default", 150f, 30f);
+
+        GameObject presentationRow4 = CreateRow(presentationPanel.transform, 34f);
+        CreateLabel(presentationRow4.transform, "NPC立绘", 14f, TextWhite, 30f, 60f);
+        npcPortraitInput = CreateInputField(presentationRow4.transform, "Portraits/NPC/instructor_event_training", 210f, 30f);
+        SetFlexibleWidth(npcPortraitInput.gameObject, 170f);
+        CreateLabel(presentationRow4.transform, "NPC占位", 14f, TextWhite, 30f, 60f);
+        npcSlotInput = CreateInputField(presentationRow4.transform, "NPC_Instructor_Training", 150f, 30f);
+
         GameObject choicePanel = CreatePanel(parent, 360f);
         VerticalLayoutGroup choiceLayout = choicePanel.AddComponent<VerticalLayoutGroup>();
         choiceLayout.spacing = 8f;
@@ -339,9 +409,9 @@ public class EventModule : MonoBehaviour, IDebugModule
         choiceLayout.childForceExpandHeight = false;
 
         CreateLabel(choicePanel.transform, "选项与效果", 16f, TextGold, 28f);
-        CreateChoiceEditor(choicePanel.transform, "选项 A", out choiceATextInput, out choiceAAPCostInput, out choiceAMoneyCostInput, out choiceAEffectsInput, out choiceANextInput);
-        CreateChoiceEditor(choicePanel.transform, "选项 B", out choiceBTextInput, out choiceBAPCostInput, out choiceBMoneyCostInput, out choiceBEffectsInput, out choiceBNextInput);
-        CreateChoiceEditor(choicePanel.transform, "选项 C", out choiceCTextInput, out choiceCAPCostInput, out choiceCMoneyCostInput, out choiceCEffectsInput, out choiceCNextInput);
+        CreateChoiceEditor(choicePanel.transform, "选项 A", out choiceATextInput, out choiceAAPCostInput, out choiceAMoneyCostInput, out choiceAEffectsInput, out choiceANextInput, out choiceAShowConditionsInput);
+        CreateChoiceEditor(choicePanel.transform, "选项 B", out choiceBTextInput, out choiceBAPCostInput, out choiceBMoneyCostInput, out choiceBEffectsInput, out choiceBNextInput, out choiceBShowConditionsInput);
+        CreateChoiceEditor(choicePanel.transform, "选项 C", out choiceCTextInput, out choiceCAPCostInput, out choiceCMoneyCostInput, out choiceCEffectsInput, out choiceCNextInput, out choiceCShowConditionsInput);
         defaultEffectsInput = CreateMultilineInput(choicePanel.transform, "默认效果。格式：attribute:学力:5; money::200; actionPoint::1", 78f);
         chainEventsInput = CreateInputField(choicePanel.transform, "事件链：事件ID,事件ID", 320f, 30f);
 
@@ -351,7 +421,7 @@ public class EventModule : MonoBehaviour, IDebugModule
         CreateButton(authorButtons.transform, "清空编辑器", 110f, BtnRed, ClearAuthoringForm);
     }
 
-    private void CreateChoiceEditor(Transform parent, string title, out TMP_InputField textInput, out TMP_InputField apCostInput, out TMP_InputField moneyCostInput, out TMP_InputField effectsInput, out TMP_InputField nextInput)
+    private void CreateChoiceEditor(Transform parent, string title, out TMP_InputField textInput, out TMP_InputField apCostInput, out TMP_InputField moneyCostInput, out TMP_InputField effectsInput, out TMP_InputField nextInput, out TMP_InputField showConditionsInput)
     {
         GameObject block = CreatePanel(parent, 92f);
         VerticalLayoutGroup layout = block.AddComponent<VerticalLayoutGroup>();
@@ -370,6 +440,8 @@ public class EventModule : MonoBehaviour, IDebugModule
         nextInput = CreateInputField(row.transform, "下一事件 ID", 110f, 28f);
         effectsInput = CreateInputField(block.transform, "效果格式：attribute:学力:5; money::-200; actionPoint::1", 400f, 28f);
         SetFlexibleWidth(effectsInput.gameObject, 220f);
+        showConditionsInput = CreateInputField(block.transform, "显示条件：学力>=60,心情>20", 400f, 28f);
+        SetFlexibleWidth(showConditionsInput.gameObject, 220f);
     }
 
     private void ForceTriggerEvent()
@@ -530,7 +602,10 @@ public class EventModule : MonoBehaviour, IDebugModule
         }
 
         bool deleted = ZhongshanDeckToolStateBridge.DeleteAuthoredEvent(eventId);
-        statusText.text = deleted ? $"已删除草稿：{eventId}" : $"未找到草稿：{eventId}";
+        bool removedRuntime = EventScheduler.Instance != null && EventScheduler.Instance.RemoveRuntimeEvent(eventId);
+        statusText.text = deleted
+            ? (removedRuntime ? $"已删除草稿并移除运行时事件：{eventId}" : $"已删除草稿：{eventId}")
+            : $"未找到草稿：{eventId}";
         Refresh();
     }
 
@@ -542,7 +617,10 @@ public class EventModule : MonoBehaviour, IDebugModule
         }
 
         bool deleted = ZhongshanDeckToolStateBridge.DeleteAuthoredEvent(eventId);
-        statusText.text = deleted ? $"已删除草稿：{eventId}" : $"未找到草稿：{eventId}";
+        bool removedRuntime = EventScheduler.Instance != null && EventScheduler.Instance.RemoveRuntimeEvent(eventId);
+        statusText.text = deleted
+            ? (removedRuntime ? $"已删除草稿并移除运行时事件：{eventId}" : $"已删除草稿：{eventId}")
+            : $"未找到草稿：{eventId}";
         Refresh();
     }
 
@@ -588,14 +666,26 @@ public class EventModule : MonoBehaviour, IDebugModule
         if (specificRoundsInput != null) specificRoundsInput.text = string.Empty;
         if (triggerBehaviorInput != null) triggerBehaviorInput.text = string.Empty;
         if (attributeConditionsInput != null) attributeConditionsInput.text = string.Empty;
+        if (affinityConditionsInput != null) affinityConditionsInput.text = string.Empty;
         if (minMoneyInput != null) minMoneyInput.text = "0";
         if (maxMoneyInput != null) maxMoneyInput.text = "0";
         if (minDarknessInput != null) minDarknessInput.text = "0";
         if (requiredEventsInput != null) requiredEventsInput.text = string.Empty;
         if (excludedEventsInput != null) excludedEventsInput.text = string.Empty;
+        if (requiredFlagsInput != null) requiredFlagsInput.text = string.Empty;
+        if (excludedFlagsInput != null) excludedFlagsInput.text = string.Empty;
         if (speakerInput != null) speakerInput.text = string.Empty;
         if (portraitInput != null) portraitInput.text = string.Empty;
         if (dialogueLinesInput != null) dialogueLinesInput.text = string.Empty;
+        if (sceneKeyInput != null) sceneKeyInput.text = string.Empty;
+        if (sceneDisplayNameInput != null) sceneDisplayNameInput.text = string.Empty;
+        if (locationIdInput != null) locationIdInput.text = string.Empty;
+        if (backgroundResourceInput != null) backgroundResourceInput.text = string.Empty;
+        if (protagonistPortraitInput != null) protagonistPortraitInput.text = string.Empty;
+        if (npcPortraitInput != null) npcPortraitInput.text = string.Empty;
+        if (backgroundSlotInput != null) backgroundSlotInput.text = string.Empty;
+        if (protagonistSlotInput != null) protagonistSlotInput.text = string.Empty;
+        if (npcSlotInput != null) npcSlotInput.text = string.Empty;
         if (defaultEffectsInput != null) defaultEffectsInput.text = string.Empty;
         if (chainEventsInput != null) chainEventsInput.text = string.Empty;
         if (choiceATextInput != null) choiceATextInput.text = string.Empty;
@@ -603,16 +693,19 @@ public class EventModule : MonoBehaviour, IDebugModule
         if (choiceAMoneyCostInput != null) choiceAMoneyCostInput.text = "0";
         if (choiceAEffectsInput != null) choiceAEffectsInput.text = string.Empty;
         if (choiceANextInput != null) choiceANextInput.text = string.Empty;
+        if (choiceAShowConditionsInput != null) choiceAShowConditionsInput.text = string.Empty;
         if (choiceBTextInput != null) choiceBTextInput.text = string.Empty;
         if (choiceBAPCostInput != null) choiceBAPCostInput.text = "0";
         if (choiceBMoneyCostInput != null) choiceBMoneyCostInput.text = "0";
         if (choiceBEffectsInput != null) choiceBEffectsInput.text = string.Empty;
         if (choiceBNextInput != null) choiceBNextInput.text = string.Empty;
+        if (choiceBShowConditionsInput != null) choiceBShowConditionsInput.text = string.Empty;
         if (choiceCTextInput != null) choiceCTextInput.text = string.Empty;
         if (choiceCAPCostInput != null) choiceCAPCostInput.text = "0";
         if (choiceCMoneyCostInput != null) choiceCMoneyCostInput.text = "0";
         if (choiceCEffectsInput != null) choiceCEffectsInput.text = string.Empty;
         if (choiceCNextInput != null) choiceCNextInput.text = string.Empty;
+        if (choiceCShowConditionsInput != null) choiceCShowConditionsInput.text = string.Empty;
         if (eventTypeDropdown != null) eventTypeDropdown.value = 0;
         if (phaseDropdown != null) phaseDropdown.value = 0;
         if (forcedToggle != null) forcedToggle.isOn = false;
@@ -682,9 +775,11 @@ public class EventModule : MonoBehaviour, IDebugModule
                 attributeConditions = ParseAttributeConditions(SafeText(attributeConditionsInput)),
                 minMoney = ParseInt(minMoneyInput, 0),
                 maxMoney = ParseInt(maxMoneyInput, 0),
-                affinityConditions = Array.Empty<AffinityCondition>(),
+                affinityConditions = ParseAffinityConditions(SafeText(affinityConditionsInput)),
                 requiredEventIds = ParseCsv(SafeText(requiredEventsInput)),
                 excludedEventIds = ParseCsv(SafeText(excludedEventsInput)),
+                requiredFlags = ParseCsv(SafeText(requiredFlagsInput)),
+                excludedFlags = ParseCsv(SafeText(excludedFlagsInput)),
                 minDarkness = ParseInt(minDarknessInput, 0),
                 triggerBehavior = SafeText(triggerBehaviorInput),
                 triggerChance = Mathf.Clamp01(ParseFloat(probabilityInput, 1f)),
@@ -701,22 +796,62 @@ public class EventModule : MonoBehaviour, IDebugModule
             },
             choices = BuildChoices(),
             defaultEffects = ParseEffects(SafeText(defaultEffectsInput)),
-            chainEventIds = ParseCsv(SafeText(chainEventsInput))
+            chainEventIds = ParseCsv(SafeText(chainEventsInput)),
+            presentation = BuildPresentation()
         };
 
         return true;
     }
 
+    private EventPresentationDefinition BuildPresentation()
+    {
+        string sceneKey = SafeText(sceneKeyInput);
+        string sceneDisplayName = SafeText(sceneDisplayNameInput);
+        string locationId = SafeText(locationIdInput);
+        string backgroundPath = SafeText(backgroundResourceInput);
+        string protagonistPath = SafeText(protagonistPortraitInput);
+        string npcPath = SafeText(npcPortraitInput);
+        string backgroundSlot = SafeText(backgroundSlotInput);
+        string protagonistSlot = SafeText(protagonistSlotInput);
+        string npcSlot = SafeText(npcSlotInput);
+
+        if (string.IsNullOrEmpty(sceneKey) &&
+            string.IsNullOrEmpty(sceneDisplayName) &&
+            string.IsNullOrEmpty(locationId) &&
+            string.IsNullOrEmpty(backgroundPath) &&
+            string.IsNullOrEmpty(protagonistPath) &&
+            string.IsNullOrEmpty(npcPath) &&
+            string.IsNullOrEmpty(backgroundSlot) &&
+            string.IsNullOrEmpty(protagonistSlot) &&
+            string.IsNullOrEmpty(npcSlot))
+        {
+            return null;
+        }
+
+        return new EventPresentationDefinition
+        {
+            sceneKey = sceneKey,
+            sceneDisplayName = sceneDisplayName,
+            locationId = locationId,
+            backgroundResourcePath = backgroundPath,
+            protagonistPortraitResourcePath = protagonistPath,
+            npcPortraitResourcePath = npcPath,
+            backgroundSlotName = backgroundSlot,
+            protagonistSlotName = protagonistSlot,
+            npcSlotName = npcSlot
+        };
+    }
+
     private EventChoice[] BuildChoices()
     {
         List<EventChoice> choices = new List<EventChoice>();
-        TryAppendChoice(choices, choiceATextInput, choiceAAPCostInput, choiceAMoneyCostInput, choiceAEffectsInput, choiceANextInput);
-        TryAppendChoice(choices, choiceBTextInput, choiceBAPCostInput, choiceBMoneyCostInput, choiceBEffectsInput, choiceBNextInput);
-        TryAppendChoice(choices, choiceCTextInput, choiceCAPCostInput, choiceCMoneyCostInput, choiceCEffectsInput, choiceCNextInput);
+        TryAppendChoice(choices, choiceATextInput, choiceAAPCostInput, choiceAMoneyCostInput, choiceAEffectsInput, choiceANextInput, choiceAShowConditionsInput);
+        TryAppendChoice(choices, choiceBTextInput, choiceBAPCostInput, choiceBMoneyCostInput, choiceBEffectsInput, choiceBNextInput, choiceBShowConditionsInput);
+        TryAppendChoice(choices, choiceCTextInput, choiceCAPCostInput, choiceCMoneyCostInput, choiceCEffectsInput, choiceCNextInput, choiceCShowConditionsInput);
         return choices.ToArray();
     }
 
-    private void TryAppendChoice(List<EventChoice> choices, TMP_InputField textField, TMP_InputField apCostField, TMP_InputField moneyCostField, TMP_InputField effectsField, TMP_InputField nextField)
+    private void TryAppendChoice(List<EventChoice> choices, TMP_InputField textField, TMP_InputField apCostField, TMP_InputField moneyCostField, TMP_InputField effectsField, TMP_InputField nextField, TMP_InputField showConditionsField)
     {
         string text = SafeText(textField);
         if (string.IsNullOrEmpty(text))
@@ -729,7 +864,7 @@ public class EventModule : MonoBehaviour, IDebugModule
             moneyCost = ParseInt(moneyCostField, 0),
             effects = ParseEffects(SafeText(effectsField)),
             triggerEventId = SafeText(nextField),
-            showConditions = Array.Empty<AttributeCondition>()
+            showConditions = ParseAttributeConditions(SafeText(showConditionsField))
         });
     }
 
@@ -761,27 +896,41 @@ public class EventModule : MonoBehaviour, IDebugModule
         probabilityInput.text = trigger.triggerChance <= 0f ? "0" : trigger.triggerChance.ToString("0.##");
         triggerBehaviorInput.text = trigger.triggerBehavior ?? string.Empty;
         attributeConditionsInput.text = FormatAttributeConditions(trigger.attributeConditions);
+        affinityConditionsInput.text = FormatAffinityConditions(trigger.affinityConditions);
         minMoneyInput.text = trigger.minMoney.ToString();
         maxMoneyInput.text = trigger.maxMoney.ToString();
         minDarknessInput.text = trigger.minDarkness.ToString();
         requiredEventsInput.text = string.Join(",", trigger.requiredEventIds ?? Array.Empty<string>());
         excludedEventsInput.text = string.Join(",", trigger.excludedEventIds ?? Array.Empty<string>());
+        requiredFlagsInput.text = string.Join(",", trigger.requiredFlags ?? Array.Empty<string>());
+        excludedFlagsInput.text = string.Join(",", trigger.excludedFlags ?? Array.Empty<string>());
 
         EventDialogue dialogue = evt.dialogues != null && evt.dialogues.Length > 0 ? evt.dialogues[0] : null;
         speakerInput.text = dialogue != null ? dialogue.speaker ?? string.Empty : string.Empty;
         portraitInput.text = dialogue != null ? dialogue.portraitId ?? string.Empty : string.Empty;
         dialogueLinesInput.text = dialogue != null ? string.Join("\n", dialogue.lines ?? Array.Empty<string>()) : string.Empty;
 
+        EventPresentationDefinition presentation = evt.presentation;
+        sceneKeyInput.text = presentation != null ? presentation.sceneKey ?? string.Empty : string.Empty;
+        sceneDisplayNameInput.text = presentation != null ? presentation.sceneDisplayName ?? string.Empty : string.Empty;
+        locationIdInput.text = presentation != null ? presentation.locationId ?? string.Empty : string.Empty;
+        backgroundResourceInput.text = presentation != null ? presentation.backgroundResourcePath ?? string.Empty : string.Empty;
+        protagonistPortraitInput.text = presentation != null ? presentation.protagonistPortraitResourcePath ?? string.Empty : string.Empty;
+        npcPortraitInput.text = presentation != null ? presentation.npcPortraitResourcePath ?? string.Empty : string.Empty;
+        backgroundSlotInput.text = presentation != null ? presentation.backgroundSlotName ?? string.Empty : string.Empty;
+        protagonistSlotInput.text = presentation != null ? presentation.protagonistSlotName ?? string.Empty : string.Empty;
+        npcSlotInput.text = presentation != null ? presentation.npcSlotName ?? string.Empty : string.Empty;
+
         defaultEffectsInput.text = FormatEffects(evt.defaultEffects);
         chainEventsInput.text = string.Join(",", evt.chainEventIds ?? Array.Empty<string>());
 
-        FillChoice(evt.choices, 0, choiceATextInput, choiceAAPCostInput, choiceAMoneyCostInput, choiceAEffectsInput, choiceANextInput);
-        FillChoice(evt.choices, 1, choiceBTextInput, choiceBAPCostInput, choiceBMoneyCostInput, choiceBEffectsInput, choiceBNextInput);
-        FillChoice(evt.choices, 2, choiceCTextInput, choiceCAPCostInput, choiceCMoneyCostInput, choiceCEffectsInput, choiceCNextInput);
+        FillChoice(evt.choices, 0, choiceATextInput, choiceAAPCostInput, choiceAMoneyCostInput, choiceAEffectsInput, choiceANextInput, choiceAShowConditionsInput);
+        FillChoice(evt.choices, 1, choiceBTextInput, choiceBAPCostInput, choiceBMoneyCostInput, choiceBEffectsInput, choiceBNextInput, choiceBShowConditionsInput);
+        FillChoice(evt.choices, 2, choiceCTextInput, choiceCAPCostInput, choiceCMoneyCostInput, choiceCEffectsInput, choiceCNextInput, choiceCShowConditionsInput);
         UpdateEditorModeLabel();
     }
 
-    private void FillChoice(EventChoice[] choices, int index, TMP_InputField textField, TMP_InputField apField, TMP_InputField moneyField, TMP_InputField effectsField, TMP_InputField nextField)
+    private void FillChoice(EventChoice[] choices, int index, TMP_InputField textField, TMP_InputField apField, TMP_InputField moneyField, TMP_InputField effectsField, TMP_InputField nextField, TMP_InputField showConditionsField)
     {
         EventChoice choice = choices != null && index < choices.Length ? choices[index] : null;
         textField.text = choice != null ? choice.text ?? string.Empty : string.Empty;
@@ -789,6 +938,7 @@ public class EventModule : MonoBehaviour, IDebugModule
         moneyField.text = choice != null ? choice.moneyCost.ToString() : "0";
         effectsField.text = choice != null ? FormatEffects(choice.effects) : string.Empty;
         nextField.text = choice != null ? choice.triggerEventId ?? string.Empty : string.Empty;
+        showConditionsField.text = choice != null ? FormatAttributeConditions(choice.showConditions) : string.Empty;
     }
 
     private void UpdateEditorModeLabel()
@@ -1069,9 +1219,13 @@ public class EventModule : MonoBehaviour, IDebugModule
         builder.AppendLine($"事件成本 AP {evt.actionPointCost} | 金钱 {evt.moneyCost} | 每回合上限 {evt.maxTriggersPerRound}");
         builder.AppendLine($"指定回合 {JoinInts(evt.trigger.specificRounds)} | 概率 {evt.trigger.triggerChance:0.##}");
         builder.AppendLine($"属性条件 {FormatAttributeConditions(evt.trigger.attributeConditions)}");
+        builder.AppendLine($"好感条件 {FormatAffinityConditions(evt.trigger.affinityConditions)}");
         builder.AppendLine($"金钱 {evt.trigger.minMoney}~{evt.trigger.maxMoney} | 黑暗值 >= {evt.trigger.minDarkness}");
         builder.AppendLine($"前置 {string.Join(",", evt.trigger.requiredEventIds ?? Array.Empty<string>())}");
         builder.AppendLine($"排除 {string.Join(",", evt.trigger.excludedEventIds ?? Array.Empty<string>())}");
+        builder.AppendLine($"前置标记 {string.Join(",", evt.trigger.requiredFlags ?? Array.Empty<string>())}");
+        builder.AppendLine($"排除标记 {string.Join(",", evt.trigger.excludedFlags ?? Array.Empty<string>())}");
+        builder.AppendLine($"场景演出 {FormatPresentation(evt.presentation)}");
         builder.AppendLine();
         builder.AppendLine("对话");
 
@@ -1091,12 +1245,29 @@ public class EventModule : MonoBehaviour, IDebugModule
         {
             for (int i = 0; i < evt.choices.Length; i++)
             {
-                builder.AppendLine($"- {evt.choices[i].text} | AP {evt.choices[i].actionPointCost} | 金钱 {evt.choices[i].moneyCost} => {FormatEffects(evt.choices[i].effects)}");
+                builder.AppendLine($"- {evt.choices[i].text} | AP {evt.choices[i].actionPointCost} | 金钱 {evt.choices[i].moneyCost} | 显示 {FormatAttributeConditions(evt.choices[i].showConditions)} => {FormatEffects(evt.choices[i].effects)}");
             }
         }
 
         builder.AppendLine();
         builder.Append($"默认效果 {FormatEffects(evt.defaultEffects)}");
+
+        if (EventScheduler.Instance != null)
+        {
+            List<EventScheduler.EventValidationIssue> issues = EventScheduler.Instance.GetValidationIssuesSnapshot()
+                .Where(issue => issue.eventId == evt.id)
+                .ToList();
+            if (issues.Count > 0)
+            {
+                builder.AppendLine();
+                builder.AppendLine();
+                builder.AppendLine("校验提醒");
+                for (int i = 0; i < issues.Count; i++)
+                {
+                    builder.AppendLine($"- [{issues[i].severity}] {issues[i].message}");
+                }
+            }
+        }
         previewText.text = builder.ToString().TrimEnd();
     }
 
@@ -1208,6 +1379,41 @@ public class EventModule : MonoBehaviour, IDebugModule
         return conditions.ToArray();
     }
 
+    private AffinityCondition[] ParseAffinityConditions(string source)
+    {
+        if (string.IsNullOrWhiteSpace(source))
+            return Array.Empty<AffinityCondition>();
+
+        string[] entries = source.Split(new[] { ';', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+        List<AffinityCondition> conditions = new List<AffinityCondition>();
+
+        for (int i = 0; i < entries.Length; i++)
+        {
+            string entry = entries[i].Trim();
+            if (string.IsNullOrEmpty(entry))
+                continue;
+
+            string[] parts = entry.Split(':');
+            string npcId = parts.Length > 0 ? parts[0].Trim() : string.Empty;
+            string minLevel = parts.Length > 1 ? parts[1].Trim() : string.Empty;
+            int minValue = 0;
+            if (parts.Length > 2)
+                int.TryParse(parts[2].Trim(), out minValue);
+
+            if (string.IsNullOrEmpty(npcId))
+                continue;
+
+            conditions.Add(new AffinityCondition
+            {
+                npcId = npcId,
+                minLevel = minLevel,
+                minValue = minValue
+            });
+        }
+
+        return conditions.ToArray();
+    }
+
     private string BuildEffectDescription(string type, string target, int value)
     {
             switch (type)
@@ -1245,6 +1451,19 @@ public class EventModule : MonoBehaviour, IDebugModule
             return "-";
 
         return string.Join(", ", conditions.Select(condition => $"{condition.attributeName}{condition.comparison}{condition.value}"));
+    }
+
+    private string FormatAffinityConditions(AffinityCondition[] conditions)
+    {
+        if (conditions == null || conditions.Length == 0)
+            return "-";
+
+        return string.Join("; ", conditions.Select(condition =>
+        {
+            string level = string.IsNullOrEmpty(condition.minLevel) ? string.Empty : condition.minLevel;
+            string value = condition.minValue > 0 ? condition.minValue.ToString() : string.Empty;
+            return $"{condition.npcId}:{level}:{value}".TrimEnd(':');
+        }));
     }
 
     private int ParseInt(TMP_InputField input, int fallback)
@@ -1553,6 +1772,8 @@ public class EventModule : MonoBehaviour, IDebugModule
             affinityConditions = source != null ? source.affinityConditions : Array.Empty<AffinityCondition>(),
             requiredEventIds = source != null ? source.requiredEventIds : Array.Empty<string>(),
             excludedEventIds = source != null ? source.excludedEventIds : Array.Empty<string>(),
+            requiredFlags = source != null ? source.requiredFlags : Array.Empty<string>(),
+            excludedFlags = source != null ? source.excludedFlags : Array.Empty<string>(),
             minDarkness = source != null ? source.minDarkness : 0,
             triggerBehavior = source != null ? source.triggerBehavior : string.Empty,
             triggerChance = source != null ? source.triggerChance : 1f,
@@ -1578,6 +1799,10 @@ public class EventModule : MonoBehaviour, IDebugModule
             bits.Add($"前置 {string.Join(",", trigger.requiredEventIds)}");
         if (trigger.excludedEventIds != null && trigger.excludedEventIds.Length > 0)
             bits.Add($"排除 {string.Join(",", trigger.excludedEventIds)}");
+        if (trigger.requiredFlags != null && trigger.requiredFlags.Length > 0)
+            bits.Add($"前置标记 {string.Join(",", trigger.requiredFlags)}");
+        if (trigger.excludedFlags != null && trigger.excludedFlags.Length > 0)
+            bits.Add($"排除标记 {string.Join(",", trigger.excludedFlags)}");
         if (trigger.affinityConditions != null && trigger.affinityConditions.Length > 0)
             bits.Add("好感条件");
 
@@ -1631,6 +1856,31 @@ public class EventModule : MonoBehaviour, IDebugModule
         string json = JsonUtility.ToJson(new EventDatabaseRoot { events = new[] { evt } });
         EventDatabaseRoot root = JsonUtility.FromJson<EventDatabaseRoot>(json);
         return root != null && root.events != null && root.events.Length > 0 ? root.events[0] : evt;
+    }
+
+    private string FormatPresentation(EventPresentationDefinition presentation)
+    {
+        if (presentation == null)
+        {
+            return "未配置";
+        }
+
+        List<string> parts = new List<string>();
+        if (!string.IsNullOrEmpty(presentation.sceneDisplayName))
+            parts.Add(presentation.sceneDisplayName);
+        else if (!string.IsNullOrEmpty(presentation.sceneKey))
+            parts.Add(presentation.sceneKey);
+
+        if (!string.IsNullOrEmpty(presentation.locationId))
+            parts.Add($"地点 {presentation.locationId}");
+        if (!string.IsNullOrEmpty(presentation.backgroundResourcePath) || !string.IsNullOrEmpty(presentation.backgroundSlotName))
+            parts.Add($"背景 {(!string.IsNullOrEmpty(presentation.backgroundResourcePath) ? presentation.backgroundResourcePath : presentation.backgroundSlotName)}");
+        if (!string.IsNullOrEmpty(presentation.protagonistPortraitResourcePath) || !string.IsNullOrEmpty(presentation.protagonistSlotName))
+            parts.Add($"主角 {(!string.IsNullOrEmpty(presentation.protagonistPortraitResourcePath) ? presentation.protagonistPortraitResourcePath : presentation.protagonistSlotName)}");
+        if (!string.IsNullOrEmpty(presentation.npcPortraitResourcePath) || !string.IsNullOrEmpty(presentation.npcSlotName))
+            parts.Add($"NPC {(!string.IsNullOrEmpty(presentation.npcPortraitResourcePath) ? presentation.npcPortraitResourcePath : presentation.npcSlotName)}");
+
+        return parts.Count > 0 ? string.Join(" | ", parts) : "未配置";
     }
 
     private void CreateLibraryRow(EventSelectionOption option, string subtitle)

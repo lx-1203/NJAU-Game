@@ -42,10 +42,16 @@ public interface IDebtEventTrigger
 /// </summary>
 public class DefaultDebtEventTrigger : IDebtEventTrigger
 {
+    private static readonly Color FoodRestrictedColor = new Color(0.86f, 0.62f, 0.24f);
+    private static readonly Color OverdraftColor = new Color(0.82f, 0.38f, 0.30f);
+    private static readonly Color LoanColor = new Color(0.78f, 0.30f, 0.24f);
+    private static readonly Color BankruptcyColor = new Color(0.70f, 0.20f, 0.20f);
+
     /// <summary>食物受限：提示只能吃泡面</summary>
     public void OnFoodRestricted()
     {
         Debug.Log("[DebtSystem] 快揭不开锅了！只能吃泡面了。");
+        ShowDebtNotification("资金吃紧", "余额已跌破 ¥200。\n商店里暂时只能购买最便宜的食物，先把生活节奏稳住。", FoodRestrictedColor, 3.2f);
         if (DialogueSystem.Instance != null)
         {
             DialogueSystem.Instance.StartDialogue("系统", new string[]
@@ -59,6 +65,7 @@ public class DefaultDebtEventTrigger : IDebtEventTrigger
     public void OnOverdraftStarted()
     {
         Debug.Log("[DebtSystem] 进入透支状态！每回合压力+10");
+        ShowDebtNotification("账户透支", "余额已经跌到 0 以下。\n从这一回合开始，每轮都会额外增加 10 点压力。", OverdraftColor, 3.4f);
         if (DialogueSystem.Instance != null)
         {
             DialogueSystem.Instance.StartDialogue("系统", new string[]
@@ -72,8 +79,16 @@ public class DefaultDebtEventTrigger : IDebtEventTrigger
     /// <summary>网贷事件：触发网贷剧情线</summary>
     public void OnLoanEventTriggered()
     {
-        Debug.Log("[DebtSystem] 触发网贷事件！DE_003");
-        if (DialogueSystem.Instance != null)
+        Debug.Log("[DebtSystem] 触发网贷事件！");
+        ShowDebtNotification("债务恶化", "债务已超过 ¥2000。\n高风险借贷事件可能出现，尽快想办法止损。", LoanColor, 3.5f);
+
+        int queuedEvents = 0;
+        if (EventScheduler.Instance != null)
+        {
+            queuedEvents = EventScheduler.Instance.NotifyBehavior("loan");
+        }
+
+        if (queuedEvents <= 0 && DialogueSystem.Instance != null)
         {
             DialogueSystem.Instance.StartDialogue("系统", new string[]
             {
@@ -87,6 +102,7 @@ public class DefaultDebtEventTrigger : IDebtEventTrigger
     public void OnBankruptcyTriggered()
     {
         Debug.Log("[DebtSystem] 触发网贷破产结局！");
+        ShowDebtNotification("财务崩盘", "债务已突破 ¥5000，破产结局即将触发。", BankruptcyColor, 3.6f);
 
         // 1. 设置破产标记，供 EndingDeterminer Layer0 条件匹配
         if (EventHistory.Instance != null)
@@ -108,6 +124,14 @@ public class DefaultDebtEventTrigger : IDebtEventTrigger
         if (GameEndingManager.Instance != null)
         {
             GameEndingManager.Instance.TriggerEnding("Bankruptcy");
+        }
+    }
+
+    private void ShowDebtNotification(string title, string message, Color color, float duration)
+    {
+        if (MissionUI.Instance != null)
+        {
+            MissionUI.Instance.ShowSystemNotification(title, message, color, duration);
         }
     }
 }
@@ -240,6 +264,14 @@ public class DebtSystem : MonoBehaviour
             {
                 PlayerAttributes.Instance.Stress += 10;
                 Debug.Log("[DebtSystem] 透支惩罚：压力 +10");
+                if (MissionUI.Instance != null)
+                {
+                    MissionUI.Instance.ShowSystemNotification(
+                        "透支压力",
+                        "本回合因持续透支，额外承受了 10 点压力。先处理债务，不然后续节奏会越来越吃紧。",
+                        new Color(0.82f, 0.38f, 0.30f),
+                        3.2f);
+                }
             }
         }
     }

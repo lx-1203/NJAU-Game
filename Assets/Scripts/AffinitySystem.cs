@@ -145,6 +145,7 @@ public class AffinitySystem : MonoBehaviour
         if (action == null)
         {
             Debug.LogWarning($"[AffinitySystem] 未找到社交行动: {socialActionId}");
+            ShowAffinityNotification("互动未完成", "这次社交动作没有成功载入。", new Color(0.82f, 0.38f, 0.30f), 2.8f);
             return 0;
         }
 
@@ -152,6 +153,7 @@ public class AffinitySystem : MonoBehaviour
         if (npcData == null)
         {
             Debug.LogWarning($"[AffinitySystem] 未找到NPC: {npcId}");
+            ShowAffinityNotification("互动未完成", "没有找到这位角色的数据。", new Color(0.82f, 0.38f, 0.30f), 2.8f);
             return 0;
         }
 
@@ -164,6 +166,7 @@ public class AffinitySystem : MonoBehaviour
             if (!gs.ConsumeActionPoint(action.actionPointCost))
             {
                 Debug.Log($"[AffinitySystem] 行动点不足");
+                ShowAffinityNotification("无法互动", $"行动点不足，需要 {action.actionPointCost} AP。", new Color(0.82f, 0.38f, 0.30f), 2.8f);
                 return 0;
             }
 
@@ -175,6 +178,7 @@ public class AffinitySystem : MonoBehaviour
                     Debug.Log($"[AffinitySystem] 金钱不足");
                     // 回退行动点（简易处理）
                     gs.ActionPoints += action.actionPointCost;
+                    ShowAffinityNotification("无法互动", $"当前资金不够，这次互动需要 ¥{action.moneyCost}。", new Color(0.82f, 0.38f, 0.30f), 2.8f);
                     return 0;
                 }
                 gs.AddMoney(-action.moneyCost);
@@ -409,5 +413,13 @@ public class AffinitySystem : MonoBehaviour
     private void OnRoundAdvanced(GameState.RoundAdvanceResult result)
     {
         ProcessTurnDecay();
+    }
+
+    private void ShowAffinityNotification(string title, string message, Color color, float duration)
+    {
+        if (MissionUI.Instance != null)
+        {
+            MissionUI.Instance.ShowSystemNotification(title, message, color, duration);
+        }
     }
 }

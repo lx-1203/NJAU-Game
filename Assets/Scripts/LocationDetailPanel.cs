@@ -16,6 +16,8 @@ using System.Collections.Generic;
 /// </summary>
 public class LocationDetailPanel
 {
+    private sealed class TransitionHost : MonoBehaviour { }
+
     // ========== 事件 ==========
 
     /// <summary>导航完成时触发，参数为目标地点</summary>
@@ -45,6 +47,7 @@ public class LocationDetailPanel
     private GameObject panelRoot;
     private CanvasGroup canvasGroup;
     private GameObject contentContainer;
+    private TransitionHost transitionHost;
 
     // 动态内容引用（每次 Show 时重建）
     private TextMeshProUGUI titleText;
@@ -66,6 +69,10 @@ public class LocationDetailPanel
         if (parentPanel == null)
         {
             Debug.LogError("[LocationDetailPanel] parentPanel 为 null");
+            if (MissionUI.Instance != null)
+            {
+                MissionUI.Instance.ShowSystemNotification("地点面板未创建", "地图详情面板缺少挂载容器，当前无法正常展开地点信息。", new Color(0.82f, 0.38f, 0.30f), 2.8f);
+            }
             return;
         }
 
@@ -90,6 +97,7 @@ public class LocationDetailPanel
         canvasGroup.alpha = 0f;
         canvasGroup.blocksRaycasts = false;
         canvasGroup.interactable = false;
+        transitionHost = panelRoot.AddComponent<TransitionHost>();
 
         // 内容容器（带 Padding 的垂直布局）
         contentContainer = new GameObject("Content");
@@ -129,6 +137,10 @@ public class LocationDetailPanel
         if (locDef == null)
         {
             Debug.LogWarning($"[LocationDetailPanel] 找不到地点定义: {targetLocation}");
+            if (MissionUI.Instance != null)
+            {
+                MissionUI.Instance.ShowSystemNotification("地点数据缺失", "这个地点的详细数据没有成功载入，详情面板暂时无法打开。", new Color(0.82f, 0.38f, 0.30f), 2.8f);
+            }
             return;
         }
 
@@ -147,13 +159,8 @@ public class LocationDetailPanel
         BuildButtons(targetLocation, isCurrentLocation);
 
         // 显示面板
-        panelRoot.SetActive(true);
         isVisible = true;
-
-        // 淡入动画（简单版：直接设置 alpha）
-        canvasGroup.alpha = 1f;
-        canvasGroup.blocksRaycasts = true;
-        canvasGroup.interactable = true;
+        UITransitionUtility.Show(transitionHost, panelRoot, new Vector2(18f, 0f), 0.99f, 0.18f);
     }
 
     /// <summary>
@@ -164,10 +171,7 @@ public class LocationDetailPanel
         if (panelRoot == null) return;
 
         isVisible = false;
-        canvasGroup.alpha = 0f;
-        canvasGroup.blocksRaycasts = false;
-        canvasGroup.interactable = false;
-        panelRoot.SetActive(false);
+        UITransitionUtility.Hide(transitionHost, panelRoot, new Vector2(12f, 0f), 0.99f, 0.14f);
     }
 
     /// <summary>面板是否当前可见</summary>
@@ -215,7 +219,7 @@ public class LocationDetailPanel
 
         if (actions.Length == 0)
         {
-            CreateText("NoActions", "  暂无可用行动", 14f, TextGray, TextAlignmentOptions.Left, 20f);
+            CreateText("NoActions", "  这个地点当前时段没有可执行行动\n  可以先移动去别处，或等待回合推进后再回来看看", 14f, TextGray, TextAlignmentOptions.Left, 38f);
         }
         else
         {
@@ -255,13 +259,23 @@ public class LocationDetailPanel
 
         if (npcs.Length == 0)
         {
-            CreateText("NoNPCs", "  此处暂无人物", 14f, TextGray, TextAlignmentOptions.Left, 20f);
+            CreateText("NoNPCs", $"  这一时段这里暂时没人出现\n  现在是{GetCurrentTimeSlotLabel()}，可以去别的地点碰碰运气", 14f, TextGray, TextAlignmentOptions.Left, 38f);
         }
         else
         {
             foreach (var npc in npcs)
             {
-                CreateText($"NPC_{npc}", $"  {npc}", 14f, TextGreen, TextAlignmentOptions.Left, 20f);
+                string displayName = npc;
+                if (NPCDatabase.Instance != null)
+                {
+                    NPCData npcData = NPCDatabase.Instance.GetNPC(npc);
+                    if (npcData != null && !string.IsNullOrEmpty(npcData.displayName))
+                    {
+                        displayName = npcData.displayName;
+                    }
+                }
+
+                CreateText($"NPC_{npc}", $"  {displayName}", 14f, TextGreen, TextAlignmentOptions.Left, 20f);
             }
         }
     }
@@ -276,7 +290,7 @@ public class LocationDetailPanel
         }
         else
         {
-            moveCostText = CreateText("MoveCost", "可自由前往",
+            moveCostText = CreateText("MoveCost", "可自由前往 · 本次移动不消耗行动点",
                 15f, TextGreen, TextAlignmentOptions.Center, 24f);
         }
     }
@@ -347,6 +361,17 @@ public class LocationDetailPanel
         {
             UnityEngine.Object.Destroy(contentContainer.transform.GetChild(i).gameObject);
         }
+    }
+
+    private string GetCurrentTimeSlotLabel()
+    {
+        return AffinitySystem.GetCurrentTimeSlot() switch
+        {
+            TimeSlot.Morning => "上午",
+            TimeSlot.Afternoon => "下午",
+            TimeSlot.Evening => "晚上",
+            _ => "当前时段"
+        };
     }
 
     /// <summary>创建文本对象并加入内容容器</summary>

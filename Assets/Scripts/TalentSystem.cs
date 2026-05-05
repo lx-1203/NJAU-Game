@@ -174,6 +174,13 @@ public class TalentSystem : MonoBehaviour, ISaveable
         if (points <= 0) return;
         availablePoints += points;
         Debug.Log($"[TalentSystem] 获得{points}天赋点 ({reason})，当前可用: {availablePoints}");
+        ShowTalentNotification(
+            "获得天赋点",
+            string.IsNullOrEmpty(reason)
+                ? $"获得 {points} 点天赋点，当前可用 {availablePoints}。"
+                : $"{reason}带来 {points} 点天赋点，当前可用 {availablePoints}。",
+            new Color(0.36f, 0.64f, 0.92f),
+            3f);
         OnTalentPointsChanged?.Invoke();
     }
 
@@ -247,6 +254,7 @@ public class TalentSystem : MonoBehaviour, ISaveable
         if (!CanActivateTalent(talentId))
         {
             Debug.LogWarning($"[TalentSystem] 无法激活天赋: {talentId}");
+            ShowTalentNotification("无法激活天赋", BuildTalentBlockReason(talentId), new Color(0.82f, 0.38f, 0.30f), 2.8f);
             return false;
         }
 
@@ -256,6 +264,11 @@ public class TalentSystem : MonoBehaviour, ISaveable
         activatedTalentIds.Add(talentId);
 
         Debug.Log($"[TalentSystem] 激活天赋: {talent.name} (消耗{talent.cost}TP, 剩余{availablePoints}TP)");
+        ShowTalentNotification(
+            "天赋已激活",
+            $"{talent.name} 已解锁。\n消耗 {talent.cost} TP，剩余 {availablePoints} TP。",
+            new Color(0.28f, 0.72f, 0.86f),
+            3.1f);
 
         OnTalentActivated?.Invoke(talent);
         OnTalentPointsChanged?.Invoke();
@@ -268,6 +281,7 @@ public class TalentSystem : MonoBehaviour, ISaveable
         if (GameState.Instance == null || GameState.Instance.Money < 500)
         {
             Debug.LogWarning("[TalentSystem] 重置天赋失败：金钱不足500");
+            ShowTalentNotification("无法重置天赋", "重置需要 ¥500，当前余额还不够。", new Color(0.82f, 0.38f, 0.30f), 2.8f);
             return false;
         }
 
@@ -283,6 +297,11 @@ public class TalentSystem : MonoBehaviour, ISaveable
         activatedTalentIds.Clear();
 
         Debug.Log($"[TalentSystem] 天赋树已重置，可用天赋点: {availablePoints}");
+        ShowTalentNotification(
+            "天赋树已重置",
+            $"已返还全部已投入点数，当前可用 {availablePoints} TP。\n本次重置花费 ¥500。",
+            new Color(0.86f, 0.62f, 0.24f),
+            3.2f);
         OnTalentPointsChanged?.Invoke();
         return true;
     }
@@ -416,5 +435,33 @@ public class TalentSystem : MonoBehaviour, ISaveable
         }
 
         OnTalentPointsChanged?.Invoke();
+    }
+
+    public string BuildTalentBlockReason(string talentId)
+    {
+        if (activatedTalentIds.Contains(talentId))
+            return "这个天赋已经激活过了。";
+
+        TalentDefinition talent = GetTalent(talentId);
+        if (talent == null)
+            return "天赋数据缺失，暂时无法激活。";
+
+        if (availablePoints < talent.cost)
+            return $"天赋点不足，需要 {talent.cost} TP，当前仅有 {availablePoints} TP。";
+
+        int pointsInBranch = GetPointsInBranch(talent.branch);
+        int requiredPoints = GetRequiredPointsForLayer(talent.layer);
+        if (pointsInBranch < requiredPoints)
+            return $"该层尚未解锁，需要先在本分支投入 {requiredPoints} 点，当前仅投入 {pointsInBranch} 点。";
+
+        return "当前还不满足激活条件。";
+    }
+
+    private void ShowTalentNotification(string title, string message, Color color, float duration)
+    {
+        if (MissionUI.Instance != null)
+        {
+            MissionUI.Instance.ShowSystemNotification(title, message, color, duration);
+        }
     }
 }

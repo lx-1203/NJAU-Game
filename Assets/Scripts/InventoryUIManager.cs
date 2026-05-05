@@ -125,10 +125,15 @@ public class InventoryUIManager : MonoBehaviour
     {
         if (panelRoot == null || frameObject == null)
         {
+            ShowInventoryNotification("背包不可用", "背包界面还没有成功构建，现在暂时无法打开。", new Color(0.78f, 0.33f, 0.24f), 2.8f);
             return;
         }
 
-        if (!UIFlowGuard.PrepareForExclusiveWindow(UIFlowGuard.WindowInventory)) return;
+        if (!UIFlowGuard.PrepareForExclusiveWindow(UIFlowGuard.WindowInventory))
+        {
+            ShowInventoryNotification("无法打开背包", "当前有其他独占界面正在占用输入，稍后再试。", new Color(0.78f, 0.33f, 0.24f), 2.8f);
+            return;
+        }
         frameObject.SetActive(true);
         panelRoot.SetActive(true);
         overlayObject.SetActive(true);
@@ -156,6 +161,7 @@ public class InventoryUIManager : MonoBehaviour
     {
         if (panelRoot == null || InventorySystem.Instance == null)
         {
+            ShowInventoryNotification("背包未刷新", "背包数据还没有准备好，这次无法刷新物品列表。", new Color(0.78f, 0.33f, 0.24f), 2.8f);
             return;
         }
 
@@ -490,22 +496,49 @@ public class InventoryUIManager : MonoBehaviour
     {
         if (InventorySystem.Instance == null || string.IsNullOrEmpty(selectedItemId))
         {
-            return;
-        }
-
-        if (!InventorySystem.Instance.UseItem(selectedItemId))
-        {
+            ShowInventoryNotification("背包", "当前没有可使用的物品。", new Color(0.78f, 0.33f, 0.24f), 2.4f);
             return;
         }
 
         ShopItemDefinition definition = ShopSystem.Instance != null
             ? ShopSystem.Instance.GetItemDefinition(selectedItemId)
             : null;
+        int beforeCount = InventorySystem.Instance.GetItemCount(selectedItemId);
 
-        if (definition != null)
+        if (definition == null)
         {
-            itemDescriptionText.text = $"{definition.description}\n\n已使用 1 个。";
+            ShowInventoryNotification("背包", "该物品信息缺失，暂时无法使用。", new Color(0.78f, 0.33f, 0.24f), 2.8f);
+            return;
         }
+
+        if (beforeCount <= 0)
+        {
+            ShowInventoryNotification("物品不足", $"{definition.displayName} 已经用完了。", new Color(0.78f, 0.33f, 0.24f), 2.6f);
+            Refresh();
+            return;
+        }
+
+        if (!InventorySystem.Instance.UseItem(selectedItemId))
+        {
+            string reason = definition.canUse ? "当前状态下不能使用这个物品。" : "这件物品只能收藏，不能直接使用。";
+            ShowInventoryNotification("使用失败", reason, new Color(0.78f, 0.33f, 0.24f), 2.8f);
+            return;
+        }
+
+        int afterCount = InventorySystem.Instance.GetItemCount(selectedItemId);
+        string quantitySummary = definition.consumeOnUse
+            ? $"剩余 {Mathf.Max(0, afterCount)} 个。"
+            : "该物品为长期持有，不会消耗数量。";
+        string effectSummary = BuildEffectSummary(definition.effects);
+        ShowInventoryNotification(
+            definition.displayName,
+            $"{definition.useVerb}{definition.displayName}成功。{effectSummary}{quantitySummary}",
+            new Color(0.34f, 0.62f, 0.33f),
+            3.1f);
+
+        itemDescriptionText.text = definition.consumeOnUse
+            ? $"{definition.description}\n\n刚刚已使用 1 个，{quantitySummary}"
+            : $"{definition.description}\n\n刚刚完成一次{definition.useVerb}。";
 
         Refresh();
     }
@@ -537,6 +570,31 @@ public class InventoryUIManager : MonoBehaviour
         }
 
         return $"效果：{string.Join("  ", parts)}";
+    }
+
+    private string BuildEffectSummary(AttributeEffect[] effects)
+    {
+        if (effects == null || effects.Length == 0)
+        {
+            return "本次没有属性变化。";
+        }
+
+        List<string> parts = new List<string>();
+        foreach (AttributeEffect effect in effects)
+        {
+            string sign = effect.amount >= 0 ? "+" : "";
+            parts.Add($"{effect.attributeName}{sign}{effect.amount}");
+        }
+
+        return $"属性变化：{string.Join("，", parts)}。";
+    }
+
+    private void ShowInventoryNotification(string title, string message, Color color, float duration)
+    {
+        if (MissionUI.Instance != null)
+        {
+            MissionUI.Instance.ShowSystemNotification(title, message, color, duration);
+        }
     }
 
     private int GetTotalCollectableCount()

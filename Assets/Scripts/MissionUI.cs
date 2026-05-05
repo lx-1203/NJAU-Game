@@ -21,6 +21,7 @@ public class MissionUI : MonoBehaviour
     private Queue<MissionNotification> notificationQueue = new Queue<MissionNotification>();
     private bool isShowingNotification = false;
     private bool isSubscribed = false;
+    private bool uiInitialized = false;
 
     private void Awake()
     {
@@ -31,13 +32,12 @@ public class MissionUI : MonoBehaviour
         }
         Instance = this;
         DontDestroyOnLoad(gameObject);
+        EnsureUIInitialized();
     }
 
     private void Start()
     {
-        UIFlowGuard.EnsureEventSystem();
-        CreateNotificationCanvas();
-        CreateTrackerCanvas();
+        EnsureUIInitialized();
         SubscribeToEvents();
         RebuildTrackerFromState();
     }
@@ -91,6 +91,28 @@ public class MissionUI : MonoBehaviour
         }
 
         isSubscribed = false;
+    }
+
+    /// <summary>
+    /// 确保运行期 UI 已建立，避免其他系统在 Start 时序前抢先发通知。
+    /// </summary>
+    private void EnsureUIInitialized()
+    {
+        if (uiInitialized) return;
+
+        UIFlowGuard.EnsureEventSystem();
+
+        if (notificationCanvas == null)
+        {
+            CreateNotificationCanvas();
+        }
+
+        if (trackerCanvas == null)
+        {
+            CreateTrackerCanvas();
+        }
+
+        uiInitialized = true;
     }
 
     /// <summary>
@@ -284,11 +306,30 @@ public class MissionUI : MonoBehaviour
         RebuildTrackerFromState();
     }
 
+    public void ShowSystemNotification(string title, string message, Color color, float duration = 3f)
+    {
+        EnsureUIInitialized();
+
+        notificationQueue.Enqueue(new MissionNotification
+        {
+            title = title,
+            message = message,
+            color = color,
+            duration = duration
+        });
+
+        if (!isShowingNotification)
+        {
+            StartCoroutine(ProcessNotificationQueue());
+        }
+    }
+
     /// <summary>
     /// 处理通知队列。
     /// </summary>
     private IEnumerator ProcessNotificationQueue()
     {
+        EnsureUIInitialized();
         isShowingNotification = true;
 
         while (notificationQueue.Count > 0)
@@ -306,6 +347,8 @@ public class MissionUI : MonoBehaviour
     /// </summary>
     private IEnumerator ShowNotification(MissionNotification notification)
     {
+        EnsureUIInitialized();
+
         GameObject notifObj = new GameObject("Notification");
         notifObj.transform.SetParent(notificationCanvas.transform, false);
 

@@ -47,6 +47,7 @@ public class EndingDeterminer : MonoBehaviour
         if (jsonAsset == null)
         {
             Debug.LogError("[EndingDeterminer] 无法加载 Resources/Data/endings.json，结局定义为空");
+            ShowEndingDeterminerNotification("结局数据缺失", "没有加载到结局定义文件，毕业时会改用兜底结局。");
             return;
         }
 
@@ -62,11 +63,13 @@ public class EndingDeterminer : MonoBehaviour
             else
             {
                 Debug.LogError("[EndingDeterminer] JSON 解析结果为空");
+                ShowEndingDeterminerNotification("结局数据异常", "结局配置文件存在，但内容没有成功解析，系统会使用兜底结局。");
             }
         }
         catch (Exception e)
         {
             Debug.LogError($"[EndingDeterminer] JSON 解析失败: {e.Message}");
+            ShowEndingDeterminerNotification("结局数据损坏", "结局配置解析失败，毕业时会改用兜底结局。");
         }
     }
 
@@ -90,6 +93,7 @@ public class EndingDeterminer : MonoBehaviour
         if (endingDefinitions.Count == 0)
         {
             Debug.LogError("[EndingDeterminer] 结局定义为空，无法判定结局");
+            ShowEndingDeterminerNotification("结局判定失败", "当前没有可用的结局定义，系统将返回默认结局结果。");
             return CreateFallbackResult();
         }
 
@@ -115,6 +119,7 @@ public class EndingDeterminer : MonoBehaviour
 
         // 理论上不会到这里 (Layer 7 AlwaysTrue 保底)，但以防万一
         Debug.LogWarning("[EndingDeterminer] 未找到匹配的结局，返回兜底结果");
+        ShowEndingDeterminerNotification("未命中结局条件", "当前状态没有匹配到任何结局，系统将使用默认结局收尾。", 2.8f, new Color(0.86f, 0.62f, 0.24f));
         return CreateFallbackResult();
     }
 
@@ -188,6 +193,7 @@ public class EndingDeterminer : MonoBehaviour
         if (ending == null)
         {
             Debug.LogWarning("[EndingDeterminer] BuildResultForEnding 收到空结局定义，返回兜底结果");
+            ShowEndingDeterminerNotification("结局结果缺失", "指定结局定义为空，系统将使用默认结局结果。");
             return CreateFallbackResult();
         }
 
@@ -204,7 +210,7 @@ public class EndingDeterminer : MonoBehaviour
         float leadership = GetPlayerAttribute("leadership");
         float stress = GetPlayerAttribute("stress");
         float mood = GetPlayerAttribute("mood");
-        bool hasScholarship = EventHistory.Instance != null && EventHistory.Instance.GetFlag("HasNationalScholarship");
+        bool hasScholarship = HasNationalScholarshipFlag();
         int cheatingCount = CheatingSystem.Instance != null ? CheatingSystem.Instance.CaughtCount : 0;
 
         switch (condType)
@@ -253,6 +259,8 @@ public class EndingDeterminer : MonoBehaviour
                 return $"PlayerGender {GetPlayerGender():F0} == {target:F0}";
             case EndingConditionType.HasNationalScholarship:
                 return $"HasNationalScholarship = {hasScholarship}";
+            case EndingConditionType.EventFlag_True:
+                return $"EventFlag {condition.targetId} = {GetEventFlag(condition.targetId)}";
             case EndingConditionType.CheatingCount_GreaterOrEqual:
                 return $"CheatingCount {cheatingCount} >= {target:F0}";
             case EndingConditionType.SlackingValue_GreaterOrEqual:
@@ -380,7 +388,10 @@ public class EndingDeterminer : MonoBehaviour
 
             // ========== 成就/标记条件 ==========
             case EndingConditionType.HasNationalScholarship:
-                return EventHistory.Instance != null && EventHistory.Instance.GetFlag("HasNationalScholarship");
+                return HasNationalScholarshipFlag();
+
+            case EndingConditionType.EventFlag_True:
+                return GetEventFlag(condition.targetId);
 
             case EndingConditionType.CheatingCount_GreaterOrEqual:
                 return CheatingSystem.Instance != null && CheatingSystem.Instance.CaughtCount >= val;
@@ -474,6 +485,19 @@ public class EndingDeterminer : MonoBehaviour
     private float GetDarkness()
     {
         return PlayerAttributes.Instance != null ? PlayerAttributes.Instance.Darkness : 0f;
+    }
+
+    private bool HasNationalScholarshipFlag()
+    {
+        return GetEventFlag("HasNationalScholarship") || GetEventFlag("scholarship_received");
+    }
+
+    private bool GetEventFlag(string flagName)
+    {
+        if (EventHistory.Instance == null || string.IsNullOrWhiteSpace(flagName))
+            return false;
+
+        return EventHistory.Instance.GetFlag(flagName);
     }
 
     private float GetFriendCount()
@@ -714,5 +738,13 @@ public class EndingDeterminer : MonoBehaviour
         }
 
         return clones;
+    }
+
+    private void ShowEndingDeterminerNotification(string title, string message, float duration = 3f, Color? color = null)
+    {
+        if (MissionUI.Instance != null)
+        {
+            MissionUI.Instance.ShowSystemNotification(title, message, color ?? new Color(0.82f, 0.38f, 0.30f), duration);
+        }
     }
 }

@@ -144,6 +144,12 @@ public class ConfirmDialogUI : MonoBehaviour
     {
         UIFlowGuard.EnsureEventSystem();
 
+        if (!UIFlowGuard.PrepareForExclusiveWindow(UIFlowGuard.WindowConfirmDialog))
+        {
+            ShowSystemNotification("提示未弹出", "当前还有其他关键界面占用操作，这次无法再弹出新的确认窗口。", new Color(0.82f, 0.38f, 0.30f), 2.8f);
+            return;
+        }
+
         // 如果已经打开, 先销毁旧UI
         if (rootCanvasObj != null) Destroy(rootCanvasObj);
 
@@ -374,5 +380,13 @@ public class ConfirmDialogUI : MonoBehaviour
     {
         if (FontManager.Instance != null && FontManager.Instance.ChineseFont != null)
             text.font = FontManager.Instance.ChineseFont;
+    }
+
+    private void ShowSystemNotification(string title, string message, Color color, float duration)
+    {
+        if (MissionUI.Instance != null)
+        {
+            MissionUI.Instance.ShowSystemNotification(title, message, color, duration);
+        }
     }
 }

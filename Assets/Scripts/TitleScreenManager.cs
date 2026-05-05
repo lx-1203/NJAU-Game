@@ -66,6 +66,14 @@ public class TitleScreenManager : MonoBehaviour
     private bool transitionRequested = false;
     private string resolvedVideoPath;
     private string resolvedVideoUrl;
+    private bool notifiedMissingMenuVideo;
+    private bool notifiedVideoPlaybackError;
+    private bool notifiedVideoRecoveryState;
+    private GameObject titleNotificationRoot;
+    private Image titleNotificationBg;
+    private TextMeshProUGUI titleNotificationTitleText;
+    private TextMeshProUGUI titleNotificationMessageText;
+    private Coroutine titleNotificationCoroutine;
 
     // ===== 菜单 UI =====
     private CanvasGroup menuOverlay;
@@ -120,6 +128,12 @@ public class TitleScreenManager : MonoBehaviour
     private GameObject galleryPanel;
     private CanvasGroup galleryPanelGroup;
     private RectTransform galleryGridContent;
+    private Button galleryPrevPageButton;
+    private Button galleryNextPageButton;
+    private TextMeshProUGUI galleryPageText;
+    private TextMeshProUGUI galleryGridStatusText;
+    private Button galleryGenderMaleButton;
+    private Button galleryGenderFemaleButton;
     private TextMeshProUGUI gallerySectionTitle;
     private TextMeshProUGUI galleryPreviewTitle;
     private TextMeshProUGUI galleryPreviewSubtitle;
@@ -133,6 +147,9 @@ public class TitleScreenManager : MonoBehaviour
     private readonly List<GalleryCategory> galleryCategories = new List<GalleryCategory>();
     private int currentGalleryCategoryIndex = 0;
     private int currentGalleryEntryIndex = 0;
+    private int currentGalleryPageIndex = 0;
+    private int currentGalleryPageStartIndex = 0;
+    private int galleryRequirementPreviewGender = 0;
 
     private GameObject galleryViewerPanel;
     private CanvasGroup galleryViewerGroup;
@@ -201,6 +218,8 @@ public class TitleScreenManager : MonoBehaviour
         public string ResourceKey;
         public string Badge;
         public bool IsUnlocked;
+        public bool IsEnding;
+        public List<EndingCondition> Conditions = new List<EndingCondition>();
     }
 
     private sealed class GalleryCategory
@@ -288,6 +307,7 @@ public class TitleScreenManager : MonoBehaviour
     private void Awake()
     {
         UIFlowGuard.CleanupBlockingUI();
+        EnsureSaveManager();
         ResolveVideoSource();
         CacheColors();
         BuildUI();
@@ -339,6 +359,10 @@ public class TitleScreenManager : MonoBehaviour
     {
         if (hasEnteredMenu)
         {
+            if (!transitionRequested && menuOverlay != null && menuOverlay.gameObject.activeInHierarchy)
+            {
+                RefreshContinueButtonState();
+            }
             return;
         }
 
@@ -577,7 +601,7 @@ public class TitleScreenManager : MonoBehaviour
         label.fontStyle = FontStyles.Bold;
         label.margin = new Vector4(36f, 0f, 0f, 0f);
 
-        TextMeshProUGUI icon = CreateTMPBlock(rect, "Icon", "▣", 34f, new Color(0.95f, 0.88f, 0.66f, 1f), TextAlignmentOptions.Center);
+        TextMeshProUGUI icon = CreateTMPBlock(rect, "Icon", "■", 34f, new Color(0.95f, 0.88f, 0.66f, 1f), TextAlignmentOptions.Center);
         icon.rectTransform.anchorMin = new Vector2(0f, 0.5f);
         icon.rectTransform.anchorMax = new Vector2(0f, 0.5f);
         icon.rectTransform.pivot = new Vector2(0f, 0.5f);
@@ -692,7 +716,7 @@ public class TitleScreenManager : MonoBehaviour
                 ShowCreditsPanel();
                 return;
             default:
-                Debug.Log($"[TitleScreen] 点击右上角：{name}（功能待接入）");
+                ShowTutorialPanel();
                 break;
         }
     }
@@ -753,8 +777,25 @@ public class TitleScreenManager : MonoBehaviour
             var item = menuItems[i];
             float y = startY - i * (btnHeight + gap);
             bool isPrimary = (i == 0 || i == 1); // 继续/开始 高亮
-            CreateTextMenuButton(panelRect, item.label, new Vector2(0f, y), item.action, isPrimary);
+            Button createdButton = CreateTextMenuButton(panelRect, item.label, new Vector2(0f, y), item.action, isPrimary);
+            switch (item.label)
+            {
+                case "继续游戏":
+                    continueGameButton = createdButton;
+                    break;
+                case "开始游戏":
+                    startGameButton = createdButton;
+                    break;
+                case "设  置":
+                    settingsButton = createdButton;
+                    break;
+                case "退出游戏":
+                    quitGameButton = createdButton;
+                    break;
+            }
         }
+
+        RefreshContinueButtonState();
     }
 
     /// <summary>
@@ -834,8 +875,54 @@ public class TitleScreenManager : MonoBehaviour
         return btn;
     }
 
+    private void RefreshContinueButtonState()
+    {
+        EnsureSaveManager();
+
+        if (continueGameButton == null)
+        {
+            return;
+        }
+
+        bool hasAnySave = HasAnySaveData();
+        continueGameButton.interactable = hasAnySave || continueGameStartsGame;
+
+        TextMeshProUGUI label = continueGameButton.GetComponentInChildren<TextMeshProUGUI>(true);
+        Image lineImage = null;
+        if (continueGameButton.transform.childCount > 1)
+        {
+            Transform lineTransform = continueGameButton.transform.GetChild(1);
+            if (lineTransform != null)
+            {
+                lineImage = lineTransform.GetComponent<Image>();
+            }
+        }
+
+        if (label != null)
+        {
+            label.color = continueGameButton.interactable
+                ? Color.white
+                : new Color(1f, 1f, 1f, 0.38f);
+        }
+
+        if (lineImage != null)
+        {
+            lineImage.color = continueGameButton.interactable
+                ? new Color(1f, 1f, 1f, 0.35f)
+                : new Color(1f, 1f, 1f, 0.08f);
+        }
+    }
+
     private void OnLoadGame()
     {
+        EnsureSaveManager();
+
+        if (SaveManager.Instance == null)
+        {
+            ShowTitleNotification("读档入口不可用", "存档系统还没有准备好，现在暂时无法打开读档界面。");
+            return;
+        }
+
         SaveLoadUI.Show(false);
     }
 
@@ -1314,16 +1401,37 @@ public class TitleScreenManager : MonoBehaviour
         gridPane.offsetMin = new Vector2(10f, 10f);
         gridPane.offsetMax = new Vector2(-22f, -12f);
 
-        ScrollRect gridScroll = CreateTutorialScrollView(gridPane, out galleryGridContent);
-        gridScroll.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHideAndExpandViewport;
-        GridLayoutGroup grid = galleryGridContent.gameObject.AddComponent<GridLayoutGroup>();
-        grid.cellSize = new Vector2(280f, 170f);
-        grid.spacing = new Vector2(18f, 18f);
-        grid.padding = new RectOffset(8, 24, 8, 24);
-        grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-        grid.constraintCount = 3;
-        ContentSizeFitter gridFitter = galleryGridContent.gameObject.AddComponent<ContentSizeFitter>();
-        gridFitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        galleryGridContent = CreateUIElement("GalleryContent", gridPane).GetComponent<RectTransform>();
+        galleryGridContent.anchorMin = new Vector2(0f, 1f);
+        galleryGridContent.anchorMax = new Vector2(0f, 1f);
+        galleryGridContent.pivot = new Vector2(0f, 1f);
+        galleryGridContent.anchoredPosition = Vector2.zero;
+
+        galleryPrevPageButton = CreateMenuButton(gridPane, "GalleryPrevPageButton", "<", Vector2.zero, new Color(0.9f, 0.84f, 0.7f, 0.95f), () => ChangeGalleryPage(-1));
+        RectTransform prevRect = galleryPrevPageButton.GetComponent<RectTransform>();
+        prevRect.anchorMin = new Vector2(0f, 0f);
+        prevRect.anchorMax = new Vector2(0f, 0f);
+        prevRect.sizeDelta = new Vector2(52f, 42f);
+        prevRect.anchoredPosition = new Vector2(34f, 26f);
+
+        galleryNextPageButton = CreateMenuButton(gridPane, "GalleryNextPageButton", ">", Vector2.zero, new Color(0.9f, 0.84f, 0.7f, 0.95f), () => ChangeGalleryPage(1));
+        RectTransform nextRect = galleryNextPageButton.GetComponent<RectTransform>();
+        nextRect.anchorMin = new Vector2(0f, 0f);
+        nextRect.anchorMax = new Vector2(0f, 0f);
+        nextRect.sizeDelta = new Vector2(52f, 42f);
+        nextRect.anchoredPosition = new Vector2(172f, 26f);
+
+        galleryPageText = CreateTMPBlock(gridPane, "GalleryPageText", string.Empty, 18f, TutorialMutedTextColor, TextAlignmentOptions.Center);
+        galleryPageText.rectTransform.anchorMin = new Vector2(0f, 0f);
+        galleryPageText.rectTransform.anchorMax = new Vector2(0f, 0f);
+        galleryPageText.rectTransform.sizeDelta = new Vector2(96f, 32f);
+        galleryPageText.rectTransform.anchoredPosition = new Vector2(104f, 26f);
+
+        galleryGridStatusText = CreateTMPBlock(gridPane, "GalleryGridStatus", string.Empty, 18f, TutorialMutedTextColor, TextAlignmentOptions.Left);
+        galleryGridStatusText.rectTransform.anchorMin = new Vector2(0f, 0f);
+        galleryGridStatusText.rectTransform.anchorMax = new Vector2(1f, 0f);
+        galleryGridStatusText.rectTransform.offsetMin = new Vector2(240f, 10f);
+        galleryGridStatusText.rectTransform.offsetMax = new Vector2(-16f, 40f);
 
         RectTransform previewPane = CreateUIElement("PreviewPane", contentRoot).GetComponent<RectTransform>();
         previewPane.anchorMin = new Vector2(0.69f, 0.08f);
@@ -1339,9 +1447,23 @@ public class TitleScreenManager : MonoBehaviour
         gallerySectionTitle.rectTransform.offsetMax = Vector2.zero;
         gallerySectionTitle.fontStyle = FontStyles.Bold;
 
+        galleryGenderMaleButton = CreateMenuButton(previewPane, "GalleryGenderMaleButton", "男", Vector2.zero, new Color(0.85f, 0.9f, 0.98f, 1f), () => SetGalleryRequirementGender(0));
+        RectTransform maleRect = galleryGenderMaleButton.GetComponent<RectTransform>();
+        maleRect.anchorMin = new Vector2(0.16f, 0.84f);
+        maleRect.anchorMax = new Vector2(0.34f, 0.9f);
+        maleRect.offsetMin = Vector2.zero;
+        maleRect.offsetMax = Vector2.zero;
+
+        galleryGenderFemaleButton = CreateMenuButton(previewPane, "GalleryGenderFemaleButton", "女", Vector2.zero, new Color(0.98f, 0.84f, 0.9f, 1f), () => SetGalleryRequirementGender(1));
+        RectTransform femaleRect = galleryGenderFemaleButton.GetComponent<RectTransform>();
+        femaleRect.anchorMin = new Vector2(0.38f, 0.84f);
+        femaleRect.anchorMax = new Vector2(0.56f, 0.9f);
+        femaleRect.offsetMin = Vector2.zero;
+        femaleRect.offsetMax = Vector2.zero;
+
         RectTransform imageFrame = CreateUIElement("PreviewImageFrame", previewPane).GetComponent<RectTransform>();
-        imageFrame.anchorMin = new Vector2(0.06f, 0.5f);
-        imageFrame.anchorMax = new Vector2(0.94f, 0.88f);
+        imageFrame.anchorMin = new Vector2(0.06f, 0.48f);
+        imageFrame.anchorMax = new Vector2(0.94f, 0.82f);
         imageFrame.offsetMin = Vector2.zero;
         imageFrame.offsetMax = Vector2.zero;
         Image previewBg = imageFrame.gameObject.AddComponent<Image>();
@@ -1353,25 +1475,26 @@ public class TitleScreenManager : MonoBehaviour
         galleryPreviewImageLabel.fontStyle = FontStyles.Bold;
 
         galleryPreviewTitle = CreateTMPBlock(previewPane, "PreviewTitle", string.Empty, 30f, TutorialTextColor, TextAlignmentOptions.Center);
-        galleryPreviewTitle.rectTransform.anchorMin = new Vector2(0.05f, 0.41f);
-        galleryPreviewTitle.rectTransform.anchorMax = new Vector2(0.95f, 0.49f);
+        galleryPreviewTitle.rectTransform.anchorMin = new Vector2(0.05f, 0.36f);
+        galleryPreviewTitle.rectTransform.anchorMax = new Vector2(0.95f, 0.44f);
         galleryPreviewTitle.rectTransform.offsetMin = Vector2.zero;
         galleryPreviewTitle.rectTransform.offsetMax = Vector2.zero;
         galleryPreviewTitle.fontStyle = FontStyles.Bold;
 
         galleryPreviewSubtitle = CreateTMPBlock(previewPane, "PreviewSubtitle", string.Empty, 22f, TutorialAccentColor, TextAlignmentOptions.Center);
-        galleryPreviewSubtitle.rectTransform.anchorMin = new Vector2(0.05f, 0.35f);
-        galleryPreviewSubtitle.rectTransform.anchorMax = new Vector2(0.95f, 0.41f);
+        galleryPreviewSubtitle.rectTransform.anchorMin = new Vector2(0.05f, 0.31f);
+        galleryPreviewSubtitle.rectTransform.anchorMax = new Vector2(0.95f, 0.37f);
         galleryPreviewSubtitle.rectTransform.offsetMin = Vector2.zero;
         galleryPreviewSubtitle.rectTransform.offsetMax = Vector2.zero;
 
         galleryPreviewDescription = CreateTMPBlock(previewPane, "PreviewDescription", string.Empty, 21f, TutorialMutedTextColor, TextAlignmentOptions.TopLeft);
-        galleryPreviewDescription.rectTransform.anchorMin = new Vector2(0.08f, 0.15f);
-        galleryPreviewDescription.rectTransform.anchorMax = new Vector2(0.92f, 0.34f);
+        galleryPreviewDescription.rectTransform.anchorMin = new Vector2(0.08f, 0.14f);
+        galleryPreviewDescription.rectTransform.anchorMax = new Vector2(0.92f, 0.3f);
         galleryPreviewDescription.rectTransform.offsetMin = Vector2.zero;
         galleryPreviewDescription.rectTransform.offsetMax = Vector2.zero;
         galleryPreviewDescription.enableWordWrapping = true;
-        galleryPreviewDescription.lineSpacing = 6f;
+        galleryPreviewDescription.lineSpacing = 2f;
+        galleryPreviewDescription.fontSize = 18f;
 
         galleryOpenButton = CreateMenuButton(previewPane, "GalleryOpenButton", "查看", new Vector2(0f, -250f), new Color(0.98f, 0.78f, 0.38f, 1f), OpenSelectedGalleryEntry);
         RectTransform openRect = galleryOpenButton.GetComponent<RectTransform>();
@@ -1421,7 +1544,9 @@ public class TitleScreenManager : MonoBehaviour
                         Description = ending.description,
                         ResourceKey = ending.cgId,
                         Badge = indexLabel,
-                        IsUnlocked = endingUnlocked
+                        IsUnlocked = endingUnlocked,
+                        IsEnding = true,
+                        Conditions = CloneEndingConditions(ending.conditions)
                     });
 
                     if (!string.IsNullOrEmpty(ending.cgId) && seenCgIds.Add(ending.cgId))
@@ -1434,7 +1559,9 @@ public class TitleScreenManager : MonoBehaviour
                             Description = ending.description,
                             ResourceKey = ending.cgId,
                             Badge = indexLabel,
-                            IsUnlocked = cgUnlocked || endingUnlocked
+                            IsUnlocked = cgUnlocked || endingUnlocked,
+                            IsEnding = false,
+                            Conditions = CloneEndingConditions(ending.conditions)
                         });
                     }
                 }
@@ -1459,6 +1586,7 @@ public class TitleScreenManager : MonoBehaviour
         galleryPanelGroup.interactable = true;
         galleryPanelGroup.blocksRaycasts = true;
         SelectGalleryCategory(currentGalleryCategoryIndex);
+        StartCoroutine(RefreshGalleryLayoutNextFrame());
     }
 
     private void HideGalleryPanel()
@@ -1484,6 +1612,7 @@ public class TitleScreenManager : MonoBehaviour
 
         currentGalleryCategoryIndex = Mathf.Clamp(categoryIndex, 0, galleryCategories.Count - 1);
         currentGalleryEntryIndex = 0;
+        currentGalleryPageIndex = 0;
 
         for (int i = 0; i < galleryTabButtons.Count; i++)
         {
@@ -1496,6 +1625,11 @@ public class TitleScreenManager : MonoBehaviour
 
     private void RebuildGalleryGrid()
     {
+        if (galleryGridContent == null)
+        {
+            return;
+        }
+
         galleryEntryButtons.Clear();
         for (int i = galleryGridContent.childCount - 1; i >= 0; i--)
         {
@@ -1503,26 +1637,66 @@ public class TitleScreenManager : MonoBehaviour
         }
 
         List<GalleryEntry> entries = galleryCategories[currentGalleryCategoryIndex].Entries;
-        for (int i = 0; i < entries.Count; i++)
+        const int itemsPerPage = 12;
+        const int columnCount = 3;
+        const float cellWidth = 280f;
+        const float cellHeight = 190f;
+        const float horizontalSpacing = 18f;
+        const float verticalSpacing = 18f;
+        const int topPadding = 8;
+        const int rightPadding = 24;
+        const int bottomPadding = 24;
+        const int leftPadding = 8;
+
+        int totalPages = Mathf.Max(1, Mathf.CeilToInt(entries.Count / (float)itemsPerPage));
+        currentGalleryPageIndex = Mathf.Clamp(currentGalleryPageIndex, 0, totalPages - 1);
+        int startIndex = currentGalleryPageIndex * itemsPerPage;
+        int endIndex = Mathf.Min(startIndex + itemsPerPage, entries.Count);
+        currentGalleryPageStartIndex = startIndex;
+
+        for (int i = startIndex; i < endIndex; i++)
         {
             int captured = i;
-            galleryEntryButtons.Add(CreateGalleryEntryButton(galleryGridContent, entries[i], () =>
+            Button button = CreateGalleryEntryButton(galleryGridContent, entries[i], () =>
             {
                 currentGalleryEntryIndex = captured;
                 UpdateGallerySelection();
                 UpdateGalleryPreview();
-            }));
+            });
+
+            int localIndex = i - startIndex;
+            int row = localIndex / columnCount;
+            int column = localIndex % columnCount;
+            RectTransform buttonRect = button.GetComponent<RectTransform>();
+            buttonRect.anchorMin = new Vector2(0f, 1f);
+            buttonRect.anchorMax = new Vector2(0f, 1f);
+            buttonRect.pivot = new Vector2(0f, 1f);
+            buttonRect.anchoredPosition = new Vector2(
+                leftPadding + column * (cellWidth + horizontalSpacing),
+                -(topPadding + row * (cellHeight + verticalSpacing)));
+
+            galleryEntryButtons.Add(button);
         }
 
-        float cellHeight = 170f;
-        float verticalSpacing = 18f;
-        int topPadding = 8;
-        int bottomPadding = 24;
-        int rowCount = Mathf.Max(1, Mathf.CeilToInt(entries.Count / 3f));
+        int visibleCount = Mathf.Max(1, endIndex - startIndex);
+        int rowCount = Mathf.Max(1, Mathf.CeilToInt(visibleCount / (float)columnCount));
+        float requiredWidth = leftPadding + rightPadding + columnCount * cellWidth + Mathf.Max(0, columnCount - 1) * horizontalSpacing;
         float requiredHeight = topPadding + bottomPadding + rowCount * cellHeight + Mathf.Max(0, rowCount - 1) * verticalSpacing;
+        galleryGridContent.anchorMin = new Vector2(0f, 1f);
+        galleryGridContent.anchorMax = new Vector2(0f, 1f);
+        galleryGridContent.pivot = new Vector2(0f, 1f);
+        galleryGridContent.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, requiredWidth);
         galleryGridContent.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, requiredHeight);
+        galleryGridContent.anchoredPosition = Vector2.zero;
 
+        Canvas.ForceUpdateCanvases();
         LayoutRebuilder.ForceRebuildLayoutImmediate(galleryGridContent);
+        UpdateGalleryPageControls(totalPages);
+        if (galleryGridStatusText != null)
+        {
+            galleryGridStatusText.text = $"当前 {currentGalleryPageIndex + 1}/{totalPages} 页  显示 {Mathf.Max(0, endIndex - startIndex)}/{entries.Count}";
+        }
+        Debug.Log($"[Gallery] category={currentGalleryCategoryIndex} entries={entries.Count} page={currentGalleryPageIndex + 1}/{totalPages} visible={Mathf.Max(0, endIndex - startIndex)} contentChildren={galleryGridContent.childCount} size=({requiredWidth},{requiredHeight})");
         UpdateGallerySelection();
     }
 
@@ -1533,7 +1707,7 @@ public class TitleScreenManager : MonoBehaviour
         rect.sizeDelta = new Vector2(280f, 170f);
         LayoutElement layout = buttonGO.AddComponent<LayoutElement>();
         layout.preferredWidth = 280f;
-        layout.preferredHeight = 170f;
+        layout.preferredHeight = 190f;
 
         Image bg = buttonGO.AddComponent<Image>();
         bg.color = entry.IsUnlocked ? new Color(0.96f, 0.93f, 0.85f, 1f) : new Color(0.2f, 0.2f, 0.2f, 0.98f);
@@ -1545,22 +1719,56 @@ public class TitleScreenManager : MonoBehaviour
         button.targetGraphic = bg;
         button.onClick.AddListener(onClick);
 
-        TextMeshProUGUI badge = CreateTMPBlock(rect, "Badge", entry.Badge, 22f, Color.white, TextAlignmentOptions.Left);
+        RectTransform thumbFrame = CreateUIElement("Thumbnail", rect).GetComponent<RectTransform>();
+        thumbFrame.anchorMin = new Vector2(0.06f, 0.19f);
+        thumbFrame.anchorMax = new Vector2(0.94f, 0.78f);
+        thumbFrame.offsetMin = Vector2.zero;
+        thumbFrame.offsetMax = Vector2.zero;
+        Image thumbImage = thumbFrame.gameObject.AddComponent<Image>();
+        thumbImage.preserveAspect = true;
+        thumbImage.raycastTarget = false;
+
+        TextMeshProUGUI thumbLabel = CreateTMPBlock(thumbFrame, "ThumbnailLabel", string.Empty, 24f, Color.white, TextAlignmentOptions.Center);
+        StretchFull(thumbLabel.rectTransform);
+        thumbLabel.fontStyle = FontStyles.Bold;
+
+        SetGalleryImage(thumbImage, thumbLabel, entry);
+
+        TextMeshProUGUI badge = CreateTMPBlock(rect, "Badge", entry.Badge, 20f, Color.white, TextAlignmentOptions.Left);
         badge.rectTransform.anchorMin = new Vector2(0f, 1f);
         badge.rectTransform.anchorMax = new Vector2(1f, 1f);
-        badge.rectTransform.offsetMin = new Vector2(10f, -42f);
-        badge.rectTransform.offsetMax = new Vector2(-10f, 0f);
+        badge.rectTransform.offsetMin = new Vector2(10f, -34f);
+        badge.rectTransform.offsetMax = new Vector2(-10f, -2f);
         badge.fontStyle = FontStyles.Bold;
 
-        TextMeshProUGUI lockIcon = CreateTMPBlock(rect, "Lock", entry.IsUnlocked ? string.Empty : "未解锁", 28f, new Color(0.82f, 0.82f, 0.78f, 0.95f), TextAlignmentOptions.Center);
-        StretchFull(lockIcon.rectTransform);
+        string lockedTypeLabel = entry.IsEnding ? "结局未解锁" : "CG 未解锁";
+        TextMeshProUGUI lockIcon = CreateTMPBlock(rect, "Lock", entry.IsUnlocked ? string.Empty : lockedTypeLabel, 24f, new Color(0.82f, 0.82f, 0.78f, 0.95f), TextAlignmentOptions.Center);
+        lockIcon.rectTransform.anchorMin = new Vector2(0.12f, 0.41f);
+        lockIcon.rectTransform.anchorMax = new Vector2(0.88f, 0.59f);
+        lockIcon.rectTransform.offsetMin = Vector2.zero;
+        lockIcon.rectTransform.offsetMax = Vector2.zero;
+        lockIcon.fontStyle = FontStyles.Bold;
 
-        TextMeshProUGUI title = CreateTMPBlock(rect, "Title", entry.IsUnlocked ? entry.Title : "？？？", 22f, entry.IsUnlocked ? TutorialTextColor : new Color(0.92f, 0.92f, 0.92f, 0.95f), TextAlignmentOptions.Right);
-        title.rectTransform.anchorMin = new Vector2(0f, 0f);
-        title.rectTransform.anchorMax = new Vector2(1f, 0.28f);
-        title.rectTransform.offsetMin = new Vector2(10f, 8f);
-        title.rectTransform.offsetMax = new Vector2(-12f, 0f);
+        TextMeshProUGUI title = CreateTMPBlock(rect, "Title", entry.IsUnlocked ? entry.Title : "？？？", 18f, entry.IsUnlocked ? TutorialTextColor : new Color(0.92f, 0.92f, 0.92f, 0.95f), TextAlignmentOptions.Center);
+        title.rectTransform.anchorMin = new Vector2(0.08f, 0.08f);
+        title.rectTransform.anchorMax = new Vector2(0.92f, 0.18f);
+        title.rectTransform.offsetMin = Vector2.zero;
+        title.rectTransform.offsetMax = Vector2.zero;
         title.fontStyle = FontStyles.Bold;
+        title.enableWordWrapping = false;
+        title.overflowMode = TextOverflowModes.Ellipsis;
+
+        if (!entry.IsUnlocked)
+        {
+            TextMeshProUGUI hint = CreateTMPBlock(rect, "Hint", entry.IsEnding ? "达成后收录到结局册" : "解锁后收录到图鉴", 16f,
+                new Color(0.82f, 0.8f, 0.74f, 0.9f), TextAlignmentOptions.Center);
+            hint.rectTransform.anchorMin = new Vector2(0.08f, 0.0f);
+            hint.rectTransform.anchorMax = new Vector2(0.92f, 0.08f);
+            hint.rectTransform.offsetMin = Vector2.zero;
+            hint.rectTransform.offsetMax = Vector2.zero;
+            hint.enableWordWrapping = false;
+            hint.overflowMode = TextOverflowModes.Ellipsis;
+        }
 
         return button;
     }
@@ -1572,8 +1780,14 @@ public class TitleScreenManager : MonoBehaviour
             Image bg = galleryEntryButtons[i].GetComponent<Image>();
             if (bg != null)
             {
-                GalleryEntry entry = galleryCategories[currentGalleryCategoryIndex].Entries[i];
-                bg.color = i == currentGalleryEntryIndex
+                int absoluteIndex = currentGalleryPageStartIndex + i;
+                if (absoluteIndex >= galleryCategories[currentGalleryCategoryIndex].Entries.Count)
+                {
+                    continue;
+                }
+
+                GalleryEntry entry = galleryCategories[currentGalleryCategoryIndex].Entries[absoluteIndex];
+                bg.color = absoluteIndex == currentGalleryEntryIndex
                     ? (entry.IsUnlocked ? new Color(1f, 0.92f, 0.64f, 1f) : new Color(0.3f, 0.3f, 0.3f, 1f))
                     : (entry.IsUnlocked ? new Color(0.96f, 0.93f, 0.85f, 1f) : new Color(0.2f, 0.2f, 0.2f, 0.98f));
             }
@@ -1585,21 +1799,27 @@ public class TitleScreenManager : MonoBehaviour
         GalleryEntry entry = GetSelectedGalleryEntry();
         if (entry == null)
         {
-            galleryPreviewTitle.text = "暂无内容";
-            galleryPreviewSubtitle.text = string.Empty;
-            galleryPreviewDescription.text = string.Empty;
+            galleryPreviewTitle.text = "图鉴待整理";
+            galleryPreviewSubtitle.text = "当前分类还没有可展示内容";
+            galleryPreviewDescription.text = "继续推进周目、结局与关键事件后，这里会逐步收录对应的结局卡与 CG。";
             galleryPreviewImage.sprite = null;
-            galleryPreviewImageLabel.text = string.Empty;
+            galleryPreviewImageLabel.text = "暂无条目";
+            gallerySectionTitle.text = galleryCategories.Count > currentGalleryCategoryIndex
+                ? galleryCategories[currentGalleryCategoryIndex].Name
+                : "图鉴";
             galleryOpenButton.interactable = false;
+            SetGalleryGenderButtonsVisible(false);
             return;
         }
 
         gallerySectionTitle.text = galleryCategories[currentGalleryCategoryIndex].Name;
-        galleryPreviewTitle.text = entry.IsUnlocked ? entry.Title : "？？？";
-        galleryPreviewSubtitle.text = entry.Subtitle;
-        galleryPreviewDescription.text = entry.Description;
-        galleryOpenButton.interactable = true;
+        galleryPreviewTitle.text = entry.IsUnlocked ? entry.Title : (entry.IsEnding ? "未解锁结局" : "未解锁 CG");
+        galleryPreviewSubtitle.text = entry.IsUnlocked ? entry.Subtitle : (entry.IsEnding ? "尚未达成" : "尚未收集");
+        galleryPreviewDescription.text = BuildGalleryPreviewDescription(entry);
+        galleryOpenButton.interactable = entry.IsUnlocked;
         SetGalleryImage(galleryPreviewImage, galleryPreviewImageLabel, entry);
+        SetGalleryGenderButtonsVisible(entry.IsEnding);
+        UpdateGalleryGenderButtonState();
 
         int unlocked = 0;
         List<GalleryEntry> entries = galleryCategories[currentGalleryCategoryIndex].Entries;
@@ -1627,6 +1847,11 @@ public class TitleScreenManager : MonoBehaviour
             return;
         }
 
+        if (!entry.IsUnlocked)
+        {
+            return;
+        }
+
         galleryViewerPanel.SetActive(true);
         galleryViewerPanel.transform.SetAsLastSibling();
         galleryViewerGroup.alpha = 1f;
@@ -1634,7 +1859,7 @@ public class TitleScreenManager : MonoBehaviour
         galleryViewerGroup.blocksRaycasts = true;
         galleryViewerTitle.text = entry.IsUnlocked ? entry.Title : "？？？";
         galleryViewerSubtitle.text = entry.Subtitle;
-        galleryViewerDescription.text = entry.Description;
+        galleryViewerDescription.text = BuildGalleryPreviewDescription(entry);
         SetGalleryImage(galleryViewerImage, galleryViewerImageLabel, entry);
     }
 
@@ -1704,6 +1929,60 @@ public class TitleScreenManager : MonoBehaviour
         galleryViewerPanel.SetActive(false);
     }
 
+    private IEnumerator RefreshGalleryLayoutNextFrame()
+    {
+        yield return null;
+
+        if (galleryPanel == null || !galleryPanel.activeInHierarchy)
+        {
+            yield break;
+        }
+
+        Canvas.ForceUpdateCanvases();
+        RebuildGalleryGrid();
+        UpdateGalleryPreview();
+    }
+
+    private void ChangeGalleryPage(int delta)
+    {
+        List<GalleryEntry> entries = galleryCategories[currentGalleryCategoryIndex].Entries;
+        const int itemsPerPage = 12;
+        int totalPages = Mathf.Max(1, Mathf.CeilToInt(entries.Count / (float)itemsPerPage));
+        if (totalPages <= 1)
+        {
+            return;
+        }
+
+        int nextPage = Mathf.Clamp(currentGalleryPageIndex + delta, 0, totalPages - 1);
+        if (nextPage == currentGalleryPageIndex)
+        {
+            return;
+        }
+
+        currentGalleryPageIndex = nextPage;
+        currentGalleryEntryIndex = Mathf.Clamp(currentGalleryPageIndex * itemsPerPage, 0, Mathf.Max(0, entries.Count - 1));
+        RebuildGalleryGrid();
+        UpdateGalleryPreview();
+    }
+
+    private void UpdateGalleryPageControls(int totalPages)
+    {
+        if (galleryPageText != null)
+        {
+            galleryPageText.text = $"{currentGalleryPageIndex + 1}/{Mathf.Max(1, totalPages)}";
+        }
+
+        if (galleryPrevPageButton != null)
+        {
+            galleryPrevPageButton.interactable = currentGalleryPageIndex > 0;
+        }
+
+        if (galleryNextPageButton != null)
+        {
+            galleryNextPageButton.interactable = currentGalleryPageIndex < totalPages - 1;
+        }
+    }
+
     private void SetGalleryImage(Image image, TextMeshProUGUI label, GalleryEntry entry)
     {
         Sprite sprite = entry.IsUnlocked && !string.IsNullOrEmpty(entry.ResourceKey)
@@ -1711,7 +1990,182 @@ public class TitleScreenManager : MonoBehaviour
             : null;
         image.sprite = sprite;
         image.color = sprite != null ? Color.white : new Color(0.16f, 0.16f, 0.16f, 0.98f);
-        label.text = sprite != null ? string.Empty : (entry.IsUnlocked ? "CG 已解锁" : "未解锁");
+        if (sprite != null)
+        {
+            label.text = string.Empty;
+            return;
+        }
+
+        if (!entry.IsUnlocked)
+        {
+            label.text = entry.IsEnding ? "结局未解锁" : "CG 未解锁";
+            return;
+        }
+
+        label.text = entry.IsEnding ? "结局已解锁" : "CG 已解锁";
+    }
+
+    private string BuildLockedGalleryDescription(GalleryEntry entry)
+    {
+        if (entry == null)
+        {
+            return string.Empty;
+        }
+
+        return entry.IsEnding
+            ? "这个结局暂时还没有被你收入结局册。继续推进不同路线、属性组合与关键抉择，达成后这里会显示对应标题、描述和预览。"
+            : "这张游戏 CG 还没有被你收入图鉴。随着结局、事件或人物路线解锁，这里会补上对应画面。";
+    }
+
+    private string BuildGalleryPreviewDescription(GalleryEntry entry)
+    {
+        if (entry == null)
+        {
+            return string.Empty;
+        }
+
+        string baseDescription = entry.IsUnlocked ? entry.Description : BuildLockedGalleryDescription(entry);
+        if (!entry.IsEnding)
+        {
+            return baseDescription;
+        }
+
+        string genderText = galleryRequirementPreviewGender == 1 ? "女主" : "男主";
+        return $"{baseDescription}\n\n结局要求（{genderText}）\n{BuildEndingRequirementSummary(entry)}";
+    }
+
+    private string BuildEndingRequirementSummary(GalleryEntry entry)
+    {
+        if (entry == null || entry.Conditions == null || entry.Conditions.Count == 0)
+        {
+            return "无特殊条件";
+        }
+
+        List<string> lines = new List<string>();
+        for (int i = 0; i < entry.Conditions.Count; i++)
+        {
+            EndingCondition condition = entry.Conditions[i];
+            if (condition == null)
+            {
+                continue;
+            }
+
+            lines.Add($"- {FormatEndingConditionForGallery(condition)}");
+        }
+
+        return lines.Count > 0 ? string.Join("\n", lines) : "无特殊条件";
+    }
+
+    private string FormatEndingConditionForGallery(EndingCondition condition)
+    {
+        EndingConditionType condType = condition.GetConditionType();
+        float value = condition.value;
+        switch (condType)
+        {
+            case EndingConditionType.GPA_GreaterOrEqual: return $"GPA >= {value:F1}";
+            case EndingConditionType.GPA_Less: return $"GPA < {value:F1}";
+            case EndingConditionType.Study_GreaterOrEqual: return $"学力 >= {value:F0}";
+            case EndingConditionType.Charm_GreaterOrEqual: return $"魅力 >= {value:F0}";
+            case EndingConditionType.Physique_GreaterOrEqual: return $"体魄 >= {value:F0}";
+            case EndingConditionType.Leadership_GreaterOrEqual: return $"领导力 >= {value:F0}";
+            case EndingConditionType.Stress_GreaterOrEqual: return $"压力 >= {value:F0}";
+            case EndingConditionType.Study_Less: return $"学力 < {value:F0}";
+            case EndingConditionType.Mood_Equals: return $"心情 = {value:F0}";
+            case EndingConditionType.Mood_Less: return $"心情 < {value:F0}";
+            case EndingConditionType.Money_Less: return $"金钱 < {value:F0}";
+            case EndingConditionType.Money_GreaterOrEqual: return $"金钱 >= {value:F0}";
+            case EndingConditionType.Guilt_LessOrEqual: return $"负罪感 <= {value:F0}";
+            case EndingConditionType.Darkness_GreaterOrEqual: return $"黑暗值 >= {value:F0}";
+            case EndingConditionType.HasPartner: return "拥有恋人";
+            case EndingConditionType.NoPartner: return "没有恋人";
+            case EndingConditionType.RomanceLevel_GreaterOrEqual: return $"恋爱结局等级 >= {value:F0}";
+            case EndingConditionType.FriendCount_GreaterOrEqual: return $"朋友数 >= {value:F0}";
+            case EndingConditionType.IsStudentCouncilPresident: return "学生会主席";
+            case EndingConditionType.IsPartyMember: return "正式党员";
+            case EndingConditionType.PlayerGender_Equals:
+                int requiredGender = Mathf.RoundToInt(value) == 1 ? 1 : 0;
+                bool matched = galleryRequirementPreviewGender == requiredGender;
+                return $"主角性别 = {(requiredGender == 1 ? "女" : "男")}（当前：{(galleryRequirementPreviewGender == 1 ? "女" : "男")}，{(matched ? "满足" : "不满足")}）";
+            case EndingConditionType.HasNationalScholarship: return "获得国奖";
+            case EndingConditionType.EventFlag_True: return $"触发事件标记：{condition.targetId}";
+            case EndingConditionType.CheatingCount_GreaterOrEqual: return $"作弊被抓次数 >= {value:F0}";
+            case EndingConditionType.SlackingValue_GreaterOrEqual: return $"摆烂值 >= {value:F0}";
+            case EndingConditionType.MentalHealth_Equals: return $"心理健康 = {value:F0}";
+            case EndingConditionType.CET4Passed: return "通过英语四级";
+            case EndingConditionType.CET6Passed: return "通过英语六级";
+            case EndingConditionType.TotalStudyCount_GreaterOrEqual: return $"累计学习次数 >= {value:F0}";
+            case EndingConditionType.TotalSocialCount_GreaterOrEqual: return $"累计社交次数 >= {value:F0}";
+            case EndingConditionType.GraduationScore_GreaterOrEqual: return $"毕业总评 >= {value:F1}";
+            case EndingConditionType.InternshipCount_GreaterOrEqual: return $"实习次数 >= {value:F0}";
+            case EndingConditionType.AlwaysTrue: return "无条件";
+            default: return condition.type;
+        }
+    }
+
+    private void SetGalleryRequirementGender(int gender)
+    {
+        galleryRequirementPreviewGender = Mathf.Clamp(gender, 0, 1);
+        UpdateGalleryGenderButtonState();
+        UpdateGalleryPreview();
+    }
+
+    private void SetGalleryGenderButtonsVisible(bool visible)
+    {
+        if (galleryGenderMaleButton != null)
+        {
+            galleryGenderMaleButton.gameObject.SetActive(visible);
+        }
+
+        if (galleryGenderFemaleButton != null)
+        {
+            galleryGenderFemaleButton.gameObject.SetActive(visible);
+        }
+    }
+
+    private void UpdateGalleryGenderButtonState()
+    {
+        UpdateGalleryGenderButtonVisual(galleryGenderMaleButton, galleryRequirementPreviewGender == 0, new Color(0.85f, 0.9f, 0.98f, 1f));
+        UpdateGalleryGenderButtonVisual(galleryGenderFemaleButton, galleryRequirementPreviewGender == 1, new Color(0.98f, 0.84f, 0.9f, 1f));
+    }
+
+    private void UpdateGalleryGenderButtonVisual(Button button, bool selected, Color baseColor)
+    {
+        if (button == null)
+        {
+            return;
+        }
+
+        Image bg = button.GetComponent<Image>();
+        if (bg != null)
+        {
+            bg.color = selected ? new Color(baseColor.r * 0.95f, baseColor.g * 0.95f, baseColor.b * 0.95f, 1f) : new Color(0.95f, 0.93f, 0.9f, 0.95f);
+        }
+
+        TextMeshProUGUI text = button.GetComponentInChildren<TextMeshProUGUI>();
+        if (text != null)
+        {
+            text.color = selected ? TutorialAccentColor : TutorialMutedTextColor;
+            text.fontStyle = selected ? FontStyles.Bold : FontStyles.Normal;
+        }
+    }
+
+    private List<EndingCondition> CloneEndingConditions(List<EndingCondition> source)
+    {
+        List<EndingCondition> clones = new List<EndingCondition>();
+        if (source == null)
+        {
+            return clones;
+        }
+
+        for (int i = 0; i < source.Count; i++)
+        {
+            if (source[i] != null)
+            {
+                clones.Add(source[i].Clone());
+            }
+        }
+
+        return clones;
     }
 
     private static HashSet<string> LoadGallerySet(string key)
@@ -1984,8 +2438,9 @@ public class TitleScreenManager : MonoBehaviour
         if (category.Entries.Count == 0)
         {
             tutorialSectionTitle.text = category.Name;
-            tutorialEntryTitle.text = "暂无内容";
-            tutorialEntryDescription.text = string.Empty;
+            tutorialEntryTitle.text = "本栏内容整理中";
+            tutorialEntryDescription.text = "这一页之后会补入更具体的玩法建议、路线提醒和系统说明。先从左侧切到其他主题继续查看。";
+            RefreshTutorialHighlights(new[] { "切换其他主题", "先看现有条目", "后续持续补充" });
             return;
         }
 
@@ -2103,6 +2558,8 @@ public class TitleScreenManager : MonoBehaviour
             mainMenuPanel.SetActive(true);
         }
 
+        RefreshContinueButtonState();
+
         if (settingsPanel != null)
         {
             settingsPanel.SetActive(false);
@@ -2166,6 +2623,13 @@ public class TitleScreenManager : MonoBehaviour
     public void ContinueGame()
     {
         Debug.Log("[TitleScreen] 点击继续游戏");
+        EnsureSaveManager();
+
+        if (SaveManager.Instance == null)
+        {
+            ShowTitleNotification("继续游戏不可用", "存档系统还没有准备好，暂时无法读取自动存档。");
+            return;
+        }
 
         if (SaveManager.Instance != null && SaveManager.Instance.HasSaveData(0))
         {
@@ -2173,18 +2637,92 @@ public class TitleScreenManager : MonoBehaviour
             if (data != null)
             {
                 SaveManager.PendingLoadData = data;
+                SaveManager.PendingLoadSlot = 0;
                 Debug.Log("[TitleScreen] 已加载自动存档，准备进入游戏");
                 BeginGameTransition(false);
             }
             else
             {
                 Debug.LogWarning("[TitleScreen] 自动存档读取失败");
+                ShowTitleNotification("自动存档读取失败", "自动存档暂时无法读取，系统会为你打开手动读档入口。");
+                if (HasManualSaveData())
+                {
+                    OnLoadGame();
+                    return;
+                }
             }
         }
         else
         {
             Debug.Log("[TitleScreen] 无自动存档");
+            if (HasManualSaveData())
+            {
+                Debug.Log("[TitleScreen] 检测到手动存档，打开读档界面");
+                OnLoadGame();
+                return;
+            }
+
+            if (continueGameStartsGame)
+            {
+                ShowTitleNotification("没有可继续的进度", "当前没有找到自动存档，本次会直接进入新游戏流程。", 2.6f, new Color(0.36f, 0.64f, 0.92f));
+                StartGame();
+            }
+            else
+            {
+                ShowTitleNotification("没有可继续的进度", "当前没有找到自动存档或手动存档，先开始一局新游戏吧。");
+            }
         }
+    }
+
+    private bool HasAnySaveData()
+    {
+        EnsureSaveManager();
+
+        if (SaveManager.Instance == null)
+        {
+            return false;
+        }
+
+        for (int slot = 0; slot <= 3; slot++)
+        {
+            if (SaveManager.Instance.HasSaveData(slot))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private bool HasManualSaveData()
+    {
+        EnsureSaveManager();
+
+        if (SaveManager.Instance == null)
+        {
+            return false;
+        }
+
+        for (int slot = 1; slot <= 3; slot++)
+        {
+            if (SaveManager.Instance.HasSaveData(slot))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private void EnsureSaveManager()
+    {
+        if (SaveManager.Instance != null)
+        {
+            return;
+        }
+
+        GameObject obj = new GameObject("SaveManager");
+        obj.AddComponent<SaveManager>();
     }
 
     public void StartGame()
@@ -2392,6 +2930,11 @@ public class TitleScreenManager : MonoBehaviour
         if (!System.IO.File.Exists(resolvedVideoPath))
         {
             Debug.LogWarning($"[TitleScreen] 未找到开始界面视频: {resolvedVideoPath}");
+            if (!notifiedMissingMenuVideo)
+            {
+                notifiedMissingMenuVideo = true;
+                ShowTitleNotification("标题背景视频缺失", "开始界面视频没有找到，标题页会继续使用静态背景运行。", 3f, new Color(0.86f, 0.62f, 0.24f));
+            }
             return;
         }
 
@@ -2507,6 +3050,11 @@ public class TitleScreenManager : MonoBehaviour
         }
 
         Debug.LogWarning("[TitleScreen] 开始界面视频播放失败: " + message);
+        if (!notifiedVideoPlaybackError)
+        {
+            notifiedVideoPlaybackError = true;
+            ShowTitleNotification("标题背景播放失败", "开始界面视频播放异常，标题页会继续保留可操作状态。", 3f, new Color(0.86f, 0.62f, 0.24f));
+        }
 
         // 如果是备用播放器出错，延迟重试
         if (index == standbyPlayerIndex)
@@ -2546,6 +3094,11 @@ public class TitleScreenManager : MonoBehaviour
                 if (activePlayer != null && !activePlayer.isPlaying && !activePlayer.isPrepared)
                 {
                     Debug.LogWarning("[TitleScreen] 活跃播放器状态异常，尝试恢复");
+                    if (!notifiedVideoRecoveryState)
+                    {
+                        notifiedVideoRecoveryState = true;
+                        ShowTitleNotification("标题背景正在恢复", "背景视频状态异常，系统正在尝试自动恢复播放。", 2.8f, new Color(0.86f, 0.62f, 0.24f));
+                    }
                     if (playerPrepared[standbyPlayerIndex])
                     {
                         SwitchToPreparedPlayer(standbyPlayerIndex);
@@ -2657,6 +3210,11 @@ public class TitleScreenManager : MonoBehaviour
         }
 
         Debug.LogWarning("[TitleScreen] No menu background video found in StreamingAssets.");
+        if (!notifiedMissingMenuVideo)
+        {
+            notifiedMissingMenuVideo = true;
+            ShowTitleNotification("未找到标题背景视频", "StreamingAssets 中没有可用的标题背景视频，系统会继续使用静态界面。", 3f, new Color(0.86f, 0.62f, 0.24f));
+        }
     }
 
     private string[] GetVideoCandidates()
@@ -2865,6 +3423,43 @@ public class TitleScreenManager : MonoBehaviour
 
         scroll.viewport = viewport;
         scroll.content = content;
+        return scroll;
+    }
+
+    private ScrollRect CreateGalleryScrollView(RectTransform parent, out RectTransform content)
+    {
+        GameObject scrollGO = CreateUIElement("GalleryScrollView", parent);
+        RectTransform scrollRect = scrollGO.GetComponent<RectTransform>();
+        StretchFull(scrollRect);
+
+        Image bg = scrollGO.AddComponent<Image>();
+        bg.color = new Color(1f, 1f, 1f, 0.01f);
+
+        ScrollRect scroll = scrollGO.AddComponent<ScrollRect>();
+        scroll.horizontal = false;
+        scroll.vertical = true;
+        scroll.movementType = ScrollRect.MovementType.Clamped;
+        scroll.scrollSensitivity = 32f;
+        scroll.inertia = true;
+        scroll.decelerationRate = 0.12f;
+
+        RectTransform viewport = CreateUIElement("GalleryViewport", scrollRect).GetComponent<RectTransform>();
+        StretchFull(viewport);
+        Image viewportImage = viewport.gameObject.AddComponent<Image>();
+        viewportImage.color = new Color(1f, 1f, 1f, 0.001f);
+        Mask mask = viewport.gameObject.AddComponent<Mask>();
+        mask.showMaskGraphic = false;
+
+        content = CreateUIElement("GalleryContent", viewport).GetComponent<RectTransform>();
+        content.anchorMin = new Vector2(0f, 1f);
+        content.anchorMax = new Vector2(0f, 1f);
+        content.pivot = new Vector2(0f, 1f);
+        content.anchoredPosition = Vector2.zero;
+        content.sizeDelta = Vector2.zero;
+
+        scroll.viewport = viewport;
+        scroll.content = content;
+        scroll.horizontalScrollbar = null;
         return scroll;
     }
 
@@ -3309,6 +3904,140 @@ public class TitleScreenManager : MonoBehaviour
         rt.anchorMax = Vector2.one;
         rt.offsetMin = Vector2.zero;
         rt.offsetMax = Vector2.zero;
+    }
+
+    private void ShowTitleNotification(string title, string message, float duration = 2.8f, Color? color = null)
+    {
+        if (MissionUI.Instance != null)
+        {
+            MissionUI.Instance.ShowSystemNotification(title, message, color ?? new Color(0.82f, 0.38f, 0.30f), duration);
+            return;
+        }
+
+        EnsureTitleNotificationUI();
+
+        if (titleNotificationRoot == null || titleNotificationBg == null || titleNotificationTitleText == null || titleNotificationMessageText == null)
+        {
+            return;
+        }
+
+        Color resolvedColor = color ?? new Color(0.82f, 0.38f, 0.30f);
+        titleNotificationBg.color = new Color(resolvedColor.r, resolvedColor.g, resolvedColor.b, 0.92f);
+        titleNotificationTitleText.text = string.IsNullOrWhiteSpace(title) ? "系统提示" : title;
+        titleNotificationMessageText.text = string.IsNullOrWhiteSpace(message) ? "当前操作没有成功完成。" : message;
+
+        if (titleNotificationCoroutine != null)
+        {
+            StopCoroutine(titleNotificationCoroutine);
+        }
+
+        titleNotificationCoroutine = StartCoroutine(ShowTitleNotificationCoroutine(duration));
+    }
+
+    private void EnsureTitleNotificationUI()
+    {
+        if (canvasRect == null || titleNotificationRoot != null)
+        {
+            return;
+        }
+
+        titleNotificationRoot = CreateUIElement("TitleNotification", canvasRect);
+        titleNotificationRoot.transform.SetAsLastSibling();
+
+        RectTransform rootRT = titleNotificationRoot.GetComponent<RectTransform>();
+        rootRT.anchorMin = new Vector2(0.5f, 1f);
+        rootRT.anchorMax = new Vector2(0.5f, 1f);
+        rootRT.pivot = new Vector2(0.5f, 1f);
+        rootRT.sizeDelta = new Vector2(560f, 110f);
+        rootRT.anchoredPosition = new Vector2(0f, -26f);
+
+        titleNotificationBg = titleNotificationRoot.AddComponent<Image>();
+        titleNotificationBg.color = new Color(0.82f, 0.38f, 0.30f, 0f);
+        titleNotificationBg.raycastTarget = false;
+
+        CanvasGroup group = titleNotificationRoot.AddComponent<CanvasGroup>();
+        group.alpha = 0f;
+        group.blocksRaycasts = false;
+        group.interactable = false;
+
+        GameObject titleGO = CreateUIElement("NotificationTitle", rootRT);
+        RectTransform titleRT = titleGO.GetComponent<RectTransform>();
+        titleRT.anchorMin = new Vector2(0f, 1f);
+        titleRT.anchorMax = new Vector2(1f, 1f);
+        titleRT.pivot = new Vector2(0.5f, 1f);
+        titleRT.offsetMin = new Vector2(22f, -44f);
+        titleRT.offsetMax = new Vector2(-22f, -10f);
+
+        titleNotificationTitleText = titleGO.AddComponent<TextMeshProUGUI>();
+        titleNotificationTitleText.fontSize = 24f;
+        titleNotificationTitleText.fontStyle = FontStyles.Bold;
+        titleNotificationTitleText.alignment = TextAlignmentOptions.Left;
+        titleNotificationTitleText.color = Color.white;
+        titleNotificationTitleText.raycastTarget = false;
+        if (FontManager.Instance != null && FontManager.Instance.ChineseFont != null)
+        {
+            titleNotificationTitleText.font = FontManager.Instance.ChineseFont;
+        }
+
+        GameObject messageGO = CreateUIElement("NotificationMessage", rootRT);
+        RectTransform messageRT = messageGO.GetComponent<RectTransform>();
+        messageRT.anchorMin = new Vector2(0f, 0f);
+        messageRT.anchorMax = new Vector2(1f, 1f);
+        messageRT.pivot = new Vector2(0.5f, 0.5f);
+        messageRT.offsetMin = new Vector2(22f, 14f);
+        messageRT.offsetMax = new Vector2(-22f, -46f);
+
+        titleNotificationMessageText = messageGO.AddComponent<TextMeshProUGUI>();
+        titleNotificationMessageText.fontSize = 19f;
+        titleNotificationMessageText.alignment = TextAlignmentOptions.TopLeft;
+        titleNotificationMessageText.enableWordWrapping = true;
+        titleNotificationMessageText.color = new Color(1f, 1f, 1f, 0.95f);
+        titleNotificationMessageText.raycastTarget = false;
+        if (FontManager.Instance != null && FontManager.Instance.ChineseFont != null)
+        {
+            titleNotificationMessageText.font = FontManager.Instance.ChineseFont;
+        }
+    }
+
+    private IEnumerator ShowTitleNotificationCoroutine(float duration)
+    {
+        if (titleNotificationRoot == null)
+        {
+            yield break;
+        }
+
+        CanvasGroup group = titleNotificationRoot.GetComponent<CanvasGroup>();
+        if (group == null)
+        {
+            yield break;
+        }
+
+        titleNotificationRoot.SetActive(true);
+
+        float fadeIn = 0.18f;
+        float fadeOut = 0.22f;
+        float elapsed = 0f;
+
+        while (elapsed < fadeIn)
+        {
+            elapsed += Time.deltaTime;
+            group.alpha = Mathf.Clamp01(elapsed / fadeIn);
+            yield return null;
+        }
+
+        group.alpha = 1f;
+        yield return new WaitForSeconds(Mathf.Max(0.6f, duration));
+
+        elapsed = 0f;
+        while (elapsed < fadeOut)
+        {
+            elapsed += Time.deltaTime;
+            group.alpha = 1f - Mathf.Clamp01(elapsed / fadeOut);
+            yield return null;
+        }
+
+        group.alpha = 0f;
+        titleNotificationCoroutine = null;
     }
 
     #endregion

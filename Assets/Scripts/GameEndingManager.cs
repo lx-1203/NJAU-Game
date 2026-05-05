@@ -48,6 +48,7 @@ public class GameEndingManager : MonoBehaviour
         if (EndingDeterminer.Instance == null)
         {
             Debug.LogError($"[GameEndingManager] EndingDeterminer 未初始化，无法触发结局: {reason}");
+            ShowEndingNotification("无法触发结局", "结局判定器尚未准备好，这次流程没法继续收束。", new Color(0.82f, 0.38f, 0.30f), 3f);
             return false;
         }
 
@@ -72,6 +73,7 @@ public class GameEndingManager : MonoBehaviour
         if (result == null || result.ending == null)
         {
             Debug.LogError($"[GameEndingManager] 结局结果为空，无法展示: {reason}");
+            ShowEndingNotification("结局未完成", "这段流程暂时没能生成有效的结局结果。", new Color(0.82f, 0.38f, 0.30f), 3f);
             return false;
         }
 
@@ -95,6 +97,11 @@ public class GameEndingManager : MonoBehaviour
         }
 
         Debug.Log($"[GameEndingManager] 触发结局: {result.ending.name} ({result.ending.id})，原因: {reason}");
+        ShowEndingNotification(
+            "结局达成",
+            string.IsNullOrWhiteSpace(reason) ? $"即将进入结局《{result.ending.name}》。" : $"即将进入结局《{result.ending.name}》。\n触发原因：{reason}",
+            new Color(0.86f, 0.62f, 0.24f),
+            3.4f);
         EndingUI.Instance.Show(result, reason);
         return true;
     }
@@ -104,6 +111,7 @@ public class GameEndingManager : MonoBehaviour
         if (EndingDeterminer.Instance == null)
         {
             Debug.LogError($"[GameEndingManager] EndingDeterminer 未初始化，无法定向触发结局: {endingId}");
+            ShowEndingNotification("无法触发结局", "结局系统尚未准备好，当前不能定向进入结局。", new Color(0.82f, 0.38f, 0.30f), 3f);
             return false;
         }
 
@@ -111,6 +119,7 @@ public class GameEndingManager : MonoBehaviour
         if (ending == null)
         {
             Debug.LogError($"[GameEndingManager] 未找到指定结局: {endingId}");
+            ShowEndingNotification("结局不存在", $"没有找到编号为 {endingId} 的结局定义。", new Color(0.82f, 0.38f, 0.30f), 3f);
             return false;
         }
 
@@ -148,6 +157,14 @@ public class GameEndingManager : MonoBehaviour
         if (result.ending.id == "END_004")
         {
             AchievementSystem.Instance.UnlockAchievementById(ExpelledEndingAchievementId);
+        }
+    }
+
+    private void ShowEndingNotification(string title, string message, Color color, float duration)
+    {
+        if (MissionUI.Instance != null)
+        {
+            MissionUI.Instance.ShowSystemNotification(title, message, color, duration);
         }
     }
 }

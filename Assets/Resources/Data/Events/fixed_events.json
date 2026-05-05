@@ -8,20 +8,26 @@
       "priority": 3,
       "isForced": false,
       "isRepeatable": true,
+      "maxTriggersPerRound": 1,
       "trigger": {
         "year": 0,
         "semester": 0,
         "roundMin": 0,
         "roundMax": 0,
+        "specificRounds": [],
         "attributeConditions": [],
         "minMoney": 0,
         "maxMoney": 0,
         "affinityConditions": [],
         "requiredEventIds": [],
         "excludedEventIds": [],
+        "requiredFlags": [],
+        "excludedFlags": [],
         "minDarkness": 0,
         "triggerBehavior": "",
-        "phase": "RoundStart"
+        "triggerChance": 1,
+        "requiredLocationId": "TeachingBuilding",
+        "phase": "ActionComplete"
       },
       "dialogues": [
         {
@@ -54,7 +60,18 @@
         }
       ],
       "defaultEffects": [],
-      "chainEventIds": []
+      "chainEventIds": [],
+      "presentation": {
+        "sceneKey": "routine_classroom_hour",
+        "sceneDisplayName": "日常课堂",
+        "locationId": "TeachingBuilding",
+        "backgroundResourcePath": "",
+        "protagonistPortraitResourcePath": "",
+        "npcPortraitResourcePath": "",
+        "backgroundSlotName": "BG_Routine_Classroom",
+        "protagonistSlotName": "PC_ClassRoutine_Default",
+        "npcSlotName": "NPC_Teacher_ClassRoutine"
+      }
     }
   ]
 }

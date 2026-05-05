@@ -119,7 +119,7 @@ public class SettingsData
 
     public string GetLanguageLabel()
     {
-        return language == 1 ? "英语（开发中）" : "简体中文";
+        return language == 1 ? "英语（预留）" : "简体中文";
     }
 
     public string GetAutoPlayIntervalLabel()

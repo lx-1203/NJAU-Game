@@ -54,6 +54,7 @@ public enum EndingConditionType
 
     // ========== 成就/标记条件 ==========
     HasNationalScholarship,     // 获得国奖
+    EventFlag_True,             // 指定事件标记为真
     CheatingCount_GreaterOrEqual, // 作弊次数 >= value
     SlackingValue_GreaterOrEqual, // 摆烂值 >= value
     MentalHealth_Equals,        // 心理健康 == value
@@ -78,6 +79,7 @@ public class EndingCondition
 {
     public string type;         // 条件类型字符串 (对应 EndingConditionType)
     public float value;         // 比较值
+    public string targetId;     // 附加目标标识（事件flag等）
 
     public EndingCondition() { }
 
@@ -89,7 +91,10 @@ public class EndingCondition
 
     public EndingCondition Clone()
     {
-        return new EndingCondition(type, value);
+        return new EndingCondition(type, value)
+        {
+            targetId = targetId
+        };
     }
 
     /// <summary>

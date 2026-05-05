@@ -13,8 +13,11 @@ public class CourseScheduleUI : MonoBehaviour
     public static CourseScheduleUI Instance { get; private set; }
     private const float PanelVisualHeight = 940f;
     private const float ScheduleHeaderHeight = 72f;
-    private const float ScheduleGridWidth = 574f;
+    private const float ScheduleGridWidth = 554f;
     private const float ScheduleSlotHeight = 60f;
+    private const float ScheduleGridLeftInset = 78f;
+    private const float ScheduleGridTopInset = 4f;
+    private const float ScheduleTimeRailWidth = 70f;
 
     private enum CourseDecision
     {
@@ -132,6 +135,7 @@ public class CourseScheduleUI : MonoBehaviour
     private Action onCompleted;
     private CourseDefinition currentCourse;
     private CourseDefinition[] semesterCourses = Array.Empty<CourseDefinition>();
+    private List<ExamResult> pendingMakeupCourses = new List<ExamResult>();
     private readonly List<ScheduleBlockData> scheduleBlocks = new List<ScheduleBlockData>();
     private readonly Dictionary<string, CourseDecision> courseDecisions = new Dictionary<string, CourseDecision>();
     private FreeTimeDecision freeTimeDecision = FreeTimeDecision.None;
@@ -195,10 +199,15 @@ public class CourseScheduleUI : MonoBehaviour
         {
             Debug.Log($"[CourseScheduleUI] 忽略同回合重复刷新 —— {year}-{semester}-R{round}");
             onCompleted = completedCallback;
+            ShowScheduleNotification("课程表已打开", "当前回合的课程安排面板已经在展示中了。", new Color(0.36f, 0.64f, 0.92f), 2.4f);
             return;
         }
 
-        if (!UIFlowGuard.PrepareForExclusiveWindow(UIFlowGuard.WindowCourseSchedule)) return;
+        if (!UIFlowGuard.PrepareForExclusiveWindow(UIFlowGuard.WindowCourseSchedule))
+        {
+            ShowScheduleNotification("无法打开课程表", "当前还有其他强制界面占用输入，课程安排面板暂时无法弹出。", new Color(0.82f, 0.38f, 0.30f), 2.8f);
+            return;
+        }
 
         currentYear = year;
         currentSemester = semester;
@@ -207,6 +216,9 @@ public class CourseScheduleUI : MonoBehaviour
         semesterCourses = ExamSystem.Instance != null
             ? ExamSystem.Instance.GetCoursesForSemester(year, semester)
             : Array.Empty<CourseDefinition>();
+        pendingMakeupCourses = ExamSystem.Instance != null
+            ? ExamSystem.Instance.GetFailedCourses()
+            : new List<ExamResult>();
         currentCourse = ResolveRequiredCourse(semesterCourses, round);
 
         courseDecisions.Clear();
@@ -225,8 +237,16 @@ public class CourseScheduleUI : MonoBehaviour
         studyCourseSelectionActive = false;
         inspectedCourseId = currentCourse.id;
         selectedCourseId = currentCourse.id;
-        selectedStudyCourseId = string.Empty;
-        selectedStudyCourseName = string.Empty;
+        if (HasPendingMakeupThisRound())
+        {
+            selectedStudyCourseId = currentCourse.id;
+            selectedStudyCourseName = currentCourse.courseName;
+        }
+        else
+        {
+            selectedStudyCourseId = string.Empty;
+            selectedStudyCourseName = string.Empty;
+        }
         selectedEmptyDayIndex = -1;
         selectedEmptySlotIndex = -1;
 
@@ -245,6 +265,15 @@ public class CourseScheduleUI : MonoBehaviour
 
     private CourseDefinition ResolveRequiredCourse(CourseDefinition[] courses, int round)
     {
+        if (currentRound == 1 && pendingMakeupCourses != null && pendingMakeupCourses.Count > 0)
+        {
+            CourseDefinition makeupPriority = FindCourseDefinitionForMakeup(courses, pendingMakeupCourses);
+            if (makeupPriority != null)
+            {
+                return makeupPriority;
+            }
+        }
+
         if (courses == null || courses.Length == 0)
         {
             return new CourseDefinition
@@ -258,7 +287,16 @@ public class CourseScheduleUI : MonoBehaviour
             };
         }
 
-        return courses[0];
+        if (courses.Length == 1)
+        {
+            return courses[0];
+        }
+
+        int maxRounds = Mathf.Max(1, GameState.MaxRoundsPerSemester);
+        int normalizedRound = Mathf.Clamp(round, 1, maxRounds);
+        float progress = maxRounds <= 1 ? 1f : (normalizedRound - 1f) / (maxRounds - 1f);
+        int index = Mathf.RoundToInt(progress * (courses.Length - 1));
+        return courses[Mathf.Clamp(index, 0, courses.Length - 1)];
     }
 
     private void BuildUI()
@@ -360,8 +398,8 @@ public class CourseScheduleUI : MonoBehaviour
         RectTransform gridRect = gridContainer.GetComponent<RectTransform>();
         gridRect.anchorMin = new Vector2(0f, 0f);
         gridRect.anchorMax = new Vector2(1f, 1f);
-        gridRect.offsetMin = new Vector2(94f, 18f);
-        gridRect.offsetMax = new Vector2(-16f, -16f);
+        gridRect.offsetMin = new Vector2(78f, 26f);
+        gridRect.offsetMax = new Vector2(-24f, -12f);
 
         GameObject gridHeader = CreateUIObject("GridHeader", gridContainer.transform);
         RectTransform headerRect = gridHeader.GetComponent<RectTransform>();
@@ -371,7 +409,15 @@ public class CourseScheduleUI : MonoBehaviour
         headerRect.sizeDelta = new Vector2(0f, ScheduleHeaderHeight);
         headerRect.anchoredPosition = Vector2.zero;
         dayHeaderContainer = gridHeader.GetComponent<RectTransform>();
-        dayHeaderContainer.gameObject.SetActive(false);
+        HorizontalLayoutGroup dayHeaderLayout = gridHeader.AddComponent<HorizontalLayoutGroup>();
+        dayHeaderLayout.padding = new RectOffset(Mathf.RoundToInt(ScheduleGridLeftInset), 0, 0, 0);
+        dayHeaderLayout.spacing = 0f;
+        dayHeaderLayout.childAlignment = TextAnchor.MiddleCenter;
+        dayHeaderLayout.childControlWidth = false;
+        dayHeaderLayout.childControlHeight = true;
+        dayHeaderLayout.childForceExpandWidth = false;
+        dayHeaderLayout.childForceExpandHeight = false;
+        dayHeaderContainer.gameObject.SetActive(true);
 
         GameObject scrollRoot = CreateUIObject("ScheduleScrollRoot", gridContainer.transform);
         RectTransform scrollRootRect = scrollRoot.GetComponent<RectTransform>();
@@ -409,8 +455,8 @@ public class CourseScheduleUI : MonoBehaviour
         timeRailContainer.anchorMin = new Vector2(0f, 1f);
         timeRailContainer.anchorMax = new Vector2(0f, 1f);
         timeRailContainer.pivot = new Vector2(0f, 1f);
-        timeRailContainer.sizeDelta = new Vector2(74f, TimeRanges.Length * ScheduleSlotHeight);
-        timeRailContainer.anchoredPosition = new Vector2(12f, -8f);
+        timeRailContainer.sizeDelta = new Vector2(ScheduleTimeRailWidth, TimeRanges.Length * ScheduleSlotHeight);
+        timeRailContainer.anchoredPosition = new Vector2(4f, -ScheduleGridTopInset);
 
         GameObject gridBody = CreateUIObject("GridBody", scrollContent.transform);
         RectTransform gridBodyRect = gridBody.GetComponent<RectTransform>();
@@ -418,7 +464,7 @@ public class CourseScheduleUI : MonoBehaviour
         gridBodyRect.anchorMax = new Vector2(0f, 1f);
         gridBodyRect.pivot = new Vector2(0f, 1f);
         gridBodyRect.sizeDelta = new Vector2(ScheduleGridWidth, TimeRanges.Length * ScheduleSlotHeight);
-        gridBodyRect.anchoredPosition = new Vector2(94f, -8f);
+        gridBodyRect.anchoredPosition = new Vector2(ScheduleGridLeftInset, -ScheduleGridTopInset);
 
         Image gridBackground = gridBody.AddComponent<Image>();
         gridBackground.color = new Color(1f, 1f, 1f, 0.14f);
@@ -430,9 +476,6 @@ public class CourseScheduleUI : MonoBehaviour
     private void BuildControlPanel(Transform parent)
     {
         GameObject controlPanel = CreateCard("ControlPanel", parent, controlPanelColor);
-        Button controlPanelButton = controlPanel.AddComponent<Button>();
-        controlPanelButton.transition = Selectable.Transition.None;
-        controlPanelButton.onClick.AddListener(HandleControlPanelClicked);
         LayoutElement panelLayout = controlPanel.AddComponent<LayoutElement>();
         panelLayout.preferredWidth = 810f;
         panelLayout.minHeight = PanelVisualHeight;
@@ -446,13 +489,59 @@ public class CourseScheduleUI : MonoBehaviour
         controlGroup.childForceExpandWidth = true;
         controlGroup.childForceExpandHeight = false;
 
-        GameObject introCard = CreateControlCard(controlPanel.transform, 156f);
+        GameObject scrollRoot = CreateUIObject("ControlScrollRoot", controlPanel.transform);
+        LayoutElement scrollRootLayout = scrollRoot.AddComponent<LayoutElement>();
+        scrollRootLayout.flexibleHeight = 1f;
+        scrollRootLayout.minHeight = 0f;
+
+        Image scrollRootImage = scrollRoot.AddComponent<Image>();
+        scrollRootImage.color = new Color(1f, 1f, 1f, 0.01f);
+
+        ScrollRect scrollRect = scrollRoot.AddComponent<ScrollRect>();
+        scrollRect.horizontal = false;
+        scrollRect.vertical = true;
+        scrollRect.scrollSensitivity = 32f;
+        scrollRect.movementType = ScrollRect.MovementType.Clamped;
+        scrollRect.inertia = true;
+
+        GameObject viewport = CreateUIObject("Viewport", scrollRoot.transform);
+        RectTransform viewportRect = viewport.GetComponent<RectTransform>();
+        StretchToFill(viewportRect, Vector2.zero, Vector2.zero);
+        Image viewportImage = viewport.AddComponent<Image>();
+        viewportImage.color = new Color(1f, 1f, 1f, 0.01f);
+        Mask viewportMask = viewport.AddComponent<Mask>();
+        viewportMask.showMaskGraphic = false;
+
+        GameObject scrollContent = CreateUIObject("Content", viewport.transform);
+        RectTransform scrollContentRect = scrollContent.GetComponent<RectTransform>();
+        scrollContentRect.anchorMin = new Vector2(0f, 1f);
+        scrollContentRect.anchorMax = new Vector2(1f, 1f);
+        scrollContentRect.pivot = new Vector2(0.5f, 1f);
+        scrollContentRect.offsetMin = Vector2.zero;
+        scrollContentRect.offsetMax = Vector2.zero;
+        scrollContentRect.anchoredPosition = Vector2.zero;
+
+        VerticalLayoutGroup scrollContentGroup = scrollContent.AddComponent<VerticalLayoutGroup>();
+        scrollContentGroup.spacing = 14f;
+        scrollContentGroup.childAlignment = TextAnchor.UpperCenter;
+        scrollContentGroup.childControlWidth = true;
+        scrollContentGroup.childControlHeight = true;
+        scrollContentGroup.childForceExpandWidth = true;
+        scrollContentGroup.childForceExpandHeight = false;
+
+        ContentSizeFitter scrollContentFitter = scrollContent.AddComponent<ContentSizeFitter>();
+        scrollContentFitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+        scrollRect.viewport = viewportRect;
+        scrollRect.content = scrollContentRect;
+
+        GameObject introCard = CreateControlCard(scrollContent.transform, 172f, true);
         CreateSectionTitle(introCard.transform, "本月安排");
         requiredCourseText = CreateText("RequiredCourse", introCard.transform, "", 22, controlTextColor, TextAlignmentOptions.TopLeft);
         requiredCourseText.fontStyle = FontStyles.Bold;
         courseDecisionHintText = CreateText("CourseDecisionHint", introCard.transform, "", 16, controlSubTextColor, TextAlignmentOptions.TopLeft);
 
-        GameObject attendCard = CreateControlCard(controlPanel.transform, 112f);
+        GameObject attendCard = CreateControlCard(scrollContent.transform, 124f, true);
         CreateSectionTitle(attendCard.transform, "课程处理");
         GameObject attendRow = CreateButtonRow(attendCard.transform, 2, 68f);
         attendButton = CreateActionButton(attendRow.transform, "BtnAttend", "正常上课", attendColor, () =>
@@ -468,7 +557,7 @@ public class CourseScheduleUI : MonoBehaviour
             RebuildScheduleGrid();
         });
 
-        GameObject freeCard = CreateControlCard(controlPanel.transform, 138f);
+        GameObject freeCard = CreateControlCard(scrollContent.transform, 154f, true);
         CreateSectionTitle(freeCard.transform, "空余时间");
         GameObject freeRow = CreateButtonRow(freeCard.transform, 3, 68f);
         studyButton = CreateActionButton(freeRow.transform, "BtnStudy", "自习", studyColor, () =>
@@ -479,35 +568,42 @@ public class CourseScheduleUI : MonoBehaviour
         });
         memorizeButton = CreateActionButton(freeRow.transform, "BtnMemorize", "背单词", memorizeColor, () =>
         {
+            if (!EnsureFreeTimeSlotSelected("背单词"))
+            {
+                return;
+            }
+
             freeTimeDecision = FreeTimeDecision.Memorize;
             studyCourseSelectionActive = false;
             selectedStudyCourseId = string.Empty;
             selectedStudyCourseName = string.Empty;
-            selectedEmptyDayIndex = -1;
-            selectedEmptySlotIndex = -1;
             RefreshSelectionState();
             RebuildScheduleGrid();
         });
         leisureButton = CreateActionButton(freeRow.transform, "BtnLeisure", "轻松安排", leisureColor, () =>
         {
+            if (!EnsureFreeTimeSlotSelected("轻松安排"))
+            {
+                return;
+            }
+
             freeTimeDecision = FreeTimeDecision.Leisure;
             studyCourseSelectionActive = false;
             selectedStudyCourseId = string.Empty;
             selectedStudyCourseName = string.Empty;
-            selectedEmptyDayIndex = -1;
-            selectedEmptySlotIndex = -1;
             RefreshSelectionState();
             RebuildScheduleGrid();
         });
 
         freeTimeHintText = CreateText("FreeTimeHint", freeCard.transform, "", 16, controlSubTextColor, TextAlignmentOptions.TopLeft);
 
-        GameObject previewCard = CreateControlCard(controlPanel.transform, 132f);
+        GameObject previewCard = CreateControlCard(scrollContent.transform, 148f, true);
         CreateSectionTitle(previewCard.transform, "本月预览");
         previewText = CreateText("PreviewText", previewCard.transform, "", 17, controlSubTextColor, TextAlignmentOptions.TopLeft);
 
-        GameObject detailCard = CreateControlCard(controlPanel.transform, 230f);
+        GameObject detailCard = CreateControlCard(scrollContent.transform, 286f, false);
         LayoutElement detailLayout = detailCard.GetComponent<LayoutElement>();
+        detailLayout.preferredHeight = 320f;
         detailLayout.flexibleHeight = 1f;
         detailSectionTitleText = CreateText("DetailTitle", detailCard.transform, "本学期排课", 22, controlTextColor, TextAlignmentOptions.TopLeft);
         detailSectionTitleText.fontStyle = FontStyles.Bold;
@@ -554,6 +650,7 @@ public class CourseScheduleUI : MonoBehaviour
 
         requiredCourseText.text =
             $"{BuildCurrentDateLabel()}课程安排\n" +
+            $"{BuildScheduleFocusSummary()}\n" +
             $"本月共有 {scheduleBlocks.Count} 门课，默认全部正常上课；如要逃课，再单独点课程修改。";
         courseDecisionHintText.text = $"先点一门课程，可将它改为逃课。当前选中：《{GetSelectedCourseDisplayName()}》。";
 
@@ -669,6 +766,8 @@ public class CourseScheduleUI : MonoBehaviour
             "politics" => 4,
             "history" => 5,
             "economics" => 6,
+            "management" => 5,
+            "literature" => 2,
             _ => index % DayLabels.Length
         };
 
@@ -687,6 +786,8 @@ public class CourseScheduleUI : MonoBehaviour
             "politics" => 5,
             "history" => 7,
             "economics" => 8,
+            "management" => 6,
+            "literature" => 7,
             _ => (index * 2) % 8
         };
 
@@ -997,24 +1098,34 @@ public class CourseScheduleUI : MonoBehaviour
         {
             if (freeTimeDecision == FreeTimeDecision.Study)
             {
-                freeTimeHintText.text = string.IsNullOrEmpty(selectedStudyCourseName)
-                    ? "已切到自习，请在下方选目标课程。"
-                    : $"自习目标：{selectedStudyCourseName}";
+                freeTimeHintText.text = !HasSelectedFreeTimeSlot()
+                    ? "已切到自习。先在左侧点一节空白课时，再决定这段时间补哪门课。"
+                    : string.IsNullOrEmpty(selectedStudyCourseName)
+                    ? BuildStudyHintMessage()
+                    : BuildSelectedStudyHintMessage();
+            }
+            else if (freeTimeDecision != FreeTimeDecision.None)
+            {
+                freeTimeHintText.text = HasSelectedFreeTimeSlot()
+                    ? $"已在周{DayLabels[selectedEmptyDayIndex]}第{selectedEmptySlotIndex + 1}节安排“{BuildFreeTimeDecisionLabel(freeTimeDecision)}”。确认后会消耗对应行动点。"
+                    : $"想安排“{BuildFreeTimeDecisionLabel(freeTimeDecision)}”，请先在左侧点一节空白课时。";
             }
             else
             {
-                freeTimeHintText.text = "空余时间可不安排；想安排的话，可点空白课时进入自习选课，或直接选背单词/轻松安排。";
+                freeTimeHintText.text = BuildIdleFreeTimeHint();
             }
         }
 
         previewText.text = BuildPreviewText();
 
-        bool studyReady = freeTimeDecision != FreeTimeDecision.Study ||
-                          ((selectedEmptyDayIndex < 0 && selectedEmptySlotIndex < 0) || !string.IsNullOrEmpty(selectedStudyCourseId));
+        bool hasFreeTimeSlot = HasSelectedFreeTimeSlot();
+        bool freeTimeReady = freeTimeDecision == FreeTimeDecision.None ||
+                             (hasFreeTimeSlot &&
+                              (freeTimeDecision != FreeTimeDecision.Study || !string.IsNullOrEmpty(selectedStudyCourseId)));
         int finalActionPointCost = GetFinalScheduleActionPointCost();
         bool affordable = CanAffordFinalSchedule(finalActionPointCost);
         bool ready = AllCoursesDecided() &&
-                     studyReady &&
+                     freeTimeReady &&
                      affordable;
         confirmButton.interactable = ready;
         Image confirmImage = confirmButton.GetComponent<Image>();
@@ -1027,7 +1138,9 @@ public class CourseScheduleUI : MonoBehaviour
         {
             confirmButtonText.text = ready
                 ? $"确认安排 (-{finalActionPointCost}行动点)"
-                : $"行动点不足 (-{finalActionPointCost}行动点)";
+                : !freeTimeReady
+                    ? "先完成空余时间安排"
+                    : $"行动点不足 (-{finalActionPointCost}行动点)";
         }
     }
 
@@ -1075,6 +1188,15 @@ public class CourseScheduleUI : MonoBehaviour
         if (freeTimeDecision == FreeTimeDecision.None)
         {
             lines.Add("2. 本月空余时间未额外安排，按默认流程处理：不上自习。");
+            if (HasPendingMakeupThisRound())
+            {
+                lines.Add($"3. 本回合结束后会立刻处理补考，优先盯住《{currentCourse.courseName}》更稳。");
+            }
+        }
+        else if (!HasSelectedFreeTimeSlot())
+        {
+            lines.Add($"2. 已切到“{BuildFreeTimeDecisionLabel(freeTimeDecision)}”，但还没把它放进具体空档。");
+            lines.Add("3. 先点左侧空白课时，再确认本月安排。");
         }
         else if (freeTimeDecision == FreeTimeDecision.Study)
         {
@@ -1085,6 +1207,15 @@ public class CourseScheduleUI : MonoBehaviour
             else
             {
                 lines.Add($"2. 自习《{selectedStudyCourseName}》：学力+7，压力+5，消耗2行动点，并计入考试自习次数。");
+                CourseDefinition selectedCourse = FindSemesterCourseById(selectedStudyCourseId);
+                if (selectedCourse != null)
+                {
+                    lines.Add($"3. 本次会额外强化 {GetSubjectDisplayName(selectedCourse.subjectTag)}，对《{selectedCourse.courseName}》的考试更有帮助。");
+                    if (HasPendingMakeupThisRound() && selectedCourse.id == currentCourse.id)
+                    {
+                        lines.Add("4. 命中待补考课程时，之后补考还会额外获得专项通过率加成。");
+                    }
+                }
             }
         }
         else if (freeTimeDecision == FreeTimeDecision.Memorize)
@@ -1117,12 +1248,22 @@ public class CourseScheduleUI : MonoBehaviour
 
     private void OnEmptySlotClicked(int dayIndex, int slotIndex)
     {
-        BeginStudySelection();
         selectedEmptyDayIndex = dayIndex;
         selectedEmptySlotIndex = slotIndex;
+        if (freeTimeDecision == FreeTimeDecision.None)
+        {
+            BeginStudySelection();
+        }
+
         if (freeTimeHintText != null)
         {
-            freeTimeHintText.text = $"已选中周{DayLabels[dayIndex]}第{slotIndex + 1}节空档。请在右侧选一门自习课程。";
+            freeTimeHintText.text = freeTimeDecision switch
+            {
+                FreeTimeDecision.Study => $"已选中周{DayLabels[dayIndex]}第{slotIndex + 1}节空档。请在右侧选一门自习课程。",
+                FreeTimeDecision.Memorize => $"已选中周{DayLabels[dayIndex]}第{slotIndex + 1}节空档。这里会安排背单词。",
+                FreeTimeDecision.Leisure => $"已选中周{DayLabels[dayIndex]}第{slotIndex + 1}节空档。这里会安排轻松活动。",
+                _ => $"已选中周{DayLabels[dayIndex]}第{slotIndex + 1}节空档。请在右侧选择具体安排。"
+            };
         }
         RebuildScheduleGrid();
         RefreshSelectionState();
@@ -1174,6 +1315,7 @@ public class CourseScheduleUI : MonoBehaviour
     {
         if (detailScrollContent == null)
         {
+            ShowScheduleNotification("课程详情未刷新", "课程安排详情区域还没有准备好，这次无法更新右侧说明。", new Color(0.82f, 0.38f, 0.30f), 2.8f);
             return;
         }
 
@@ -1240,7 +1382,7 @@ public class CourseScheduleUI : MonoBehaviour
     {
         if (scheduleBlocks.Count == 0)
         {
-            return "本学期课程数据暂未就绪，先按通识课程处理。";
+            return BuildFallbackCourseInspectionText();
         }
 
         List<string> lines = new List<string>();
@@ -1271,6 +1413,47 @@ public class CourseScheduleUI : MonoBehaviour
         return string.Join("\n", lines);
     }
 
+    private string BuildFallbackCourseInspectionText()
+    {
+        List<string> lines = new List<string>();
+
+        lines.Add("当前回合课程安排");
+
+        if (!string.IsNullOrEmpty(currentCourse.courseName))
+        {
+            lines.Add($"《{currentCourse.courseName}》");
+            lines.Add($"{GetSubjectDisplayName(currentCourse.subjectTag)} · {currentCourse.credits}学分");
+            lines.Add(BuildDecisionSummary(currentCourse.id));
+        }
+        else
+        {
+            lines.Add("本回合按综合课程安排处理。");
+        }
+
+        if (semesterCourses != null && semesterCourses.Length > 0)
+        {
+            lines.Add(string.Empty);
+            lines.Add("本学期课程列表");
+            for (int i = 0; i < semesterCourses.Length; i++)
+            {
+                CourseDefinition course = semesterCourses[i];
+                if (course == null)
+                {
+                    continue;
+                }
+
+                lines.Add($"○ {course.courseName}  ·  {GetSubjectDisplayName(course.subjectTag)}  ·  {course.credits}学分");
+            }
+        }
+        else
+        {
+            lines.Add(string.Empty);
+            lines.Add("本学期没有读取到完整排课块，当前会先按回合重点课继续流程。");
+        }
+
+        return string.Join("\n", lines);
+    }
+
     private ScheduleBlockData GetInspectedScheduleBlock()
     {
         for (int i = 0; i < scheduleBlocks.Count; i++)
@@ -1296,6 +1479,7 @@ public class CourseScheduleUI : MonoBehaviour
     {
         if (!AllCoursesDecided())
         {
+            ShowScheduleNotification("课程安排未完成", "还有课程没有决定上课或逃课，先把本回合课表安排完整吧。", new Color(0.84f, 0.38f, 0.24f), 2.8f);
             return;
         }
 
@@ -1306,12 +1490,25 @@ public class CourseScheduleUI : MonoBehaviour
             {
                 freeTimeHintText.text = $"当前课表共 {finalActionPointCost} 张安排卡，行动点不足，无法确认。";
             }
+            ShowScheduleNotification("行动点不足", $"确认这份课表需要 {finalActionPointCost} 点行动力，当前无法完成结算。", new Color(0.84f, 0.38f, 0.24f), 2.8f);
+            return;
+        }
+
+        if (freeTimeDecision != FreeTimeDecision.None && !HasSelectedFreeTimeSlot())
+        {
+            if (freeTimeHintText != null)
+            {
+                freeTimeHintText.text = $"你已经选了“{BuildFreeTimeDecisionLabel(freeTimeDecision)}”，但还没指定具体空档。";
+            }
+            ShowScheduleNotification("课程安排", "请先在左侧点一节空白课时，再确认空余时间安排。", new Color(0.84f, 0.38f, 0.24f), 3f);
             return;
         }
 
         ApplyCourseDecisions(false);
         ApplyFreeTimeDecision(false);
         ConsumeFinalScheduleActionPoints(finalActionPointCost);
+
+        ShowScheduleNotification("课程安排已确认", BuildScheduleCommitSummary(finalActionPointCost), new Color(0.32f, 0.68f, 0.48f), 3.6f);
 
         Debug.Log($"[CourseScheduleUI] 已完成课程安排 —— {currentYear}-{currentSemester}-R{currentRound}");
 
@@ -1365,12 +1562,21 @@ public class CourseScheduleUI : MonoBehaviour
                 {
                     Debug.Log($"[CourseScheduleUI] 自习课程：{selectedStudyCourseName}");
                 }
-                if (!TryExecuteAction("study", consumeActionPoints))
+                CourseDefinition focusedStudyCourse = FindSemesterCourseById(selectedStudyCourseId) ?? currentCourse;
+                bool executed = TryExecuteAction("study", consumeActionPoints);
+                if (!executed)
                 {
                     ApplyFallbackAction(consumeActionPoints ? 2 : 0, 0, new AttributeEffect("学力", 7), new AttributeEffect("压力", 5));
-                    if (ExamSystem.Instance != null)
+                }
+                if (ExamSystem.Instance != null)
+                {
+                    if (executed && consumeActionPoints)
                     {
-                        ExamSystem.Instance.RegisterScheduleStudySession();
+                        ExamSystem.Instance.RegisterFocusedStudyCourse(focusedStudyCourse);
+                    }
+                    else
+                    {
+                        ExamSystem.Instance.RegisterScheduleStudySession(focusedStudyCourse);
                     }
                 }
                 break;
@@ -1426,6 +1632,7 @@ public class CourseScheduleUI : MonoBehaviour
     {
         if (ActionSystem.Instance == null)
         {
+            ShowScheduleNotification("行动执行失败", "行动系统还没有准备好，这次课程安排无法正确结算。", new Color(0.82f, 0.38f, 0.30f), 2.8f);
             return false;
         }
 
@@ -1434,6 +1641,7 @@ public class CourseScheduleUI : MonoBehaviour
             ActionDefinition action = ActionSystem.Instance.GetAction(actionId);
             if (action == null)
             {
+                ShowScheduleNotification("行动数据缺失", $"课程安排尝试执行 {actionId}，但没有找到对应行动定义。", new Color(0.82f, 0.38f, 0.30f), 2.8f);
                 return false;
             }
 
@@ -1509,6 +1717,77 @@ public class CourseScheduleUI : MonoBehaviour
             FreeTimeDecision.Leisure => 1,
             _ => 0
         };
+    }
+
+    private bool HasSelectedFreeTimeSlot()
+    {
+        return selectedEmptyDayIndex >= 0 && selectedEmptySlotIndex >= 0;
+    }
+
+    private bool EnsureFreeTimeSlotSelected(string planName)
+    {
+        if (HasSelectedFreeTimeSlot())
+        {
+            return true;
+        }
+
+        freeTimeDecision = FreeTimeDecision.None;
+        studyCourseSelectionActive = false;
+        selectedStudyCourseId = string.Empty;
+        selectedStudyCourseName = string.Empty;
+
+        if (freeTimeHintText != null)
+        {
+            freeTimeHintText.text = $"想安排“{planName}”，请先在左侧点一节空白课时。";
+        }
+
+        ShowScheduleNotification("空余时间", $"请先选一节空白课时，再安排“{planName}”。", new Color(0.84f, 0.38f, 0.24f), 2.8f);
+        return false;
+    }
+
+    private string BuildFreeTimeDecisionLabel(FreeTimeDecision decision)
+    {
+        return decision switch
+        {
+            FreeTimeDecision.Study => "自习",
+            FreeTimeDecision.Memorize => "背单词",
+            FreeTimeDecision.Leisure => "轻松安排",
+            _ => "空余时间"
+        };
+    }
+
+    private string BuildScheduleCommitSummary(int apCost)
+    {
+        int attendCount = 0;
+        int skipCount = 0;
+        for (int i = 0; i < scheduleBlocks.Count; i++)
+        {
+            switch (GetDecisionForCourse(scheduleBlocks[i].course.id))
+            {
+                case CourseDecision.Attend:
+                    attendCount++;
+                    break;
+                case CourseDecision.Skip:
+                    skipCount++;
+                    break;
+            }
+        }
+
+        string freeTimeSummary = freeTimeDecision == FreeTimeDecision.None
+            ? "空余时间留白"
+            : HasSelectedFreeTimeSlot()
+                ? $"周{DayLabels[selectedEmptyDayIndex]}第{selectedEmptySlotIndex + 1}节安排{BuildFreeTimeDecisionLabel(freeTimeDecision)}"
+                : $"待安排{BuildFreeTimeDecisionLabel(freeTimeDecision)}";
+
+        return $"上课 {attendCount} 门，逃课 {skipCount} 门，{freeTimeSummary}，共消耗 {apCost} 点行动力。";
+    }
+
+    private void ShowScheduleNotification(string title, string message, Color color, float duration)
+    {
+        if (MissionUI.Instance != null)
+        {
+            MissionUI.Instance.ShowSystemNotification(title, message, color, duration);
+        }
     }
 
     private bool ShouldShowPlannedFreeTimeCard()
@@ -1633,6 +1912,103 @@ public class CourseScheduleUI : MonoBehaviour
         return $"{month}月";
     }
 
+    private bool HasPendingMakeupThisRound()
+    {
+        return currentRound == 1 && pendingMakeupCourses != null && pendingMakeupCourses.Count > 0;
+    }
+
+    private string BuildScheduleFocusSummary()
+    {
+        if (HasPendingMakeupThisRound())
+        {
+            string pendingNames = BuildPendingMakeupCourseNames();
+            return $"补考预警：《{currentCourse.courseName}》优先复习\n待补考：{pendingNames}";
+        }
+
+        return $"本月重点课：《{currentCourse.courseName}》\n{GetSubjectDisplayName(currentCourse.subjectTag)} · {currentCourse.credits}学分";
+    }
+
+    private string BuildPendingMakeupCourseNames()
+    {
+        if (pendingMakeupCourses == null || pendingMakeupCourses.Count == 0)
+        {
+            return "无";
+        }
+
+        List<string> names = new List<string>();
+        for (int i = 0; i < pendingMakeupCourses.Count; i++)
+        {
+            if (!string.IsNullOrEmpty(pendingMakeupCourses[i].courseName))
+            {
+                names.Add(pendingMakeupCourses[i].courseName);
+            }
+        }
+
+        if (names.Count == 0)
+        {
+            return $"共 {pendingMakeupCourses.Count} 门";
+        }
+
+        if (names.Count > 3)
+        {
+            return string.Join("、", names.GetRange(0, 3)) + $" 等{names.Count}门";
+        }
+
+        return string.Join("、", names);
+    }
+
+    private string BuildStudyHintMessage()
+    {
+        if (HasPendingMakeupThisRound())
+        {
+            return $"补考马上开始，建议先在下方锁定待补考课程自习。当前待补考：{BuildPendingMakeupCourseNames()}。";
+        }
+
+        return "已切到自习，请在下方选目标课程。";
+    }
+
+    private string BuildSelectedStudyHintMessage()
+    {
+        if (HasPendingMakeupThisRound() && selectedStudyCourseId == currentCourse.id)
+        {
+            return $"自习目标：{selectedStudyCourseName}。这门课是待补考课程，之后补考会吃到额外专项加成。";
+        }
+
+        return $"自习目标：{selectedStudyCourseName}。对应科目考试通过率会小幅提升。";
+    }
+
+    private string BuildIdleFreeTimeHint()
+    {
+        if (HasPendingMakeupThisRound())
+        {
+            return $"本回合结束后将直接进入补考。现在点空白课时去自习，优先补《{currentCourse.courseName}》会更划算。";
+        }
+
+        return "空余时间可不安排；想安排的话，可点空白课时进入自习选课，或直接选背单词/轻松安排。";
+    }
+
+    private CourseDefinition FindCourseDefinitionForMakeup(CourseDefinition[] courses, List<ExamResult> failedResults)
+    {
+        if (courses == null || failedResults == null)
+        {
+            return null;
+        }
+
+        for (int i = 0; i < failedResults.Count; i++)
+        {
+            string failedCourseId = failedResults[i].courseId;
+            for (int j = 0; j < courses.Length; j++)
+            {
+                if (courses[j] != null && courses[j].id == failedCourseId)
+                {
+                    return courses[j];
+                }
+            }
+        }
+
+        return null;
+    }
+
     private string BuildCourseBlockTitle(string courseName)
     {
         if (string.IsNullOrEmpty(courseName))
@@ -1641,6 +2017,24 @@ public class CourseScheduleUI : MonoBehaviour
         }
 
         return courseName.Replace(" ", "\n");
+    }
+
+    private CourseDefinition FindSemesterCourseById(string courseId)
+    {
+        if (string.IsNullOrEmpty(courseId) || semesterCourses == null)
+        {
+            return null;
+        }
+
+        for (int i = 0; i < semesterCourses.Length; i++)
+        {
+            if (semesterCourses[i] != null && semesterCourses[i].id == courseId)
+            {
+                return semesterCourses[i];
+            }
+        }
+
+        return null;
     }
 
     private string GetPseudoDateLabel(int dayIndex)
@@ -1673,6 +2067,8 @@ public class CourseScheduleUI : MonoBehaviour
             "history" => new Color(0.68f, 0.59f, 0.92f, 0.96f),
             "physics" => new Color(0.42f, 0.64f, 0.89f, 0.96f),
             "economics" => new Color(0.54f, 0.73f, 0.97f, 0.96f),
+            "management" => new Color(0.49f, 0.78f, 0.56f, 0.96f),
+            "literature" => new Color(0.80f, 0.57f, 0.87f, 0.96f),
             _ => new Color(0.62f, 0.71f, 0.92f, 0.96f)
         };
     }
@@ -1689,6 +2085,8 @@ public class CourseScheduleUI : MonoBehaviour
             "history" => "历史类",
             "physics" => "物理类",
             "economics" => "经济类",
+            "management" => "管理类",
+            "literature" => "文学类",
             _ => "综合类"
         };
     }
@@ -1717,11 +2115,12 @@ public class CourseScheduleUI : MonoBehaviour
         return card;
     }
 
-    private GameObject CreateControlCard(Transform parent, float minHeight)
+    private GameObject CreateControlCard(Transform parent, float minHeight, bool fitToContent = false)
     {
         GameObject card = CreateCard("ControlCard", parent, controlCardColor);
         LayoutElement layout = card.AddComponent<LayoutElement>();
         layout.minHeight = minHeight;
+        layout.preferredHeight = minHeight;
 
         VerticalLayoutGroup group = card.AddComponent<VerticalLayoutGroup>();
         group.padding = new RectOffset(20, 20, 18, 18);
@@ -1730,6 +2129,13 @@ public class CourseScheduleUI : MonoBehaviour
         group.childControlHeight = true;
         group.childForceExpandWidth = true;
         group.childForceExpandHeight = false;
+
+        if (fitToContent)
+        {
+            ContentSizeFitter fitter = card.AddComponent<ContentSizeFitter>();
+            fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        }
+
         return card;
     }
 

@@ -34,6 +34,9 @@ public class DormitoryBackgroundController : MonoBehaviour
     private BoxCollider2D leftBoundaryCollider;
     private BoxCollider2D rightBoundaryCollider;
     private BoxCollider2D doorBlockerCollider;
+    private bool hasShownMissingLocationWarning;
+    private bool hasShownMissingSpriteWarning;
+    private bool hasShownMissingDefinitionWarning;
 
     private void Start()
     {
@@ -54,6 +57,11 @@ public class DormitoryBackgroundController : MonoBehaviour
         if (LocationManager.Instance == null)
         {
             Debug.LogWarning("[DormitoryBackground] LocationManager not ready.");
+            if (!hasShownMissingLocationWarning)
+            {
+                hasShownMissingLocationWarning = true;
+                ShowBackgroundNotification("宿舍场景未完成", "地点系统尚未就绪，宿舍背景会稍后再尝试加载。", new Color(0.86f, 0.62f, 0.24f));
+            }
             return;
         }
 
@@ -62,6 +70,11 @@ public class DormitoryBackgroundController : MonoBehaviour
         if (backgroundSprite == null)
         {
             Debug.LogWarning("[DormitoryBackground] Missing sprite at Resources/" + spriteResourcePath);
+            if (!hasShownMissingSpriteWarning)
+            {
+                hasShownMissingSpriteWarning = true;
+                ShowBackgroundNotification("宿舍背景缺失", "宿舍背景资源没有加载成功，当前会继续使用空白场景兜底。", new Color(0.82f, 0.38f, 0.30f));
+            }
             return;
         }
 
@@ -69,12 +82,25 @@ public class DormitoryBackgroundController : MonoBehaviour
         if (dormitory == null)
         {
             Debug.LogWarning("[DormitoryBackground] Dormitory location definition not found.");
+            if (!hasShownMissingDefinitionWarning)
+            {
+                hasShownMissingDefinitionWarning = true;
+                ShowBackgroundNotification("宿舍地点缺失", "宿舍地点定义没有成功载入，背景暂时无法定位。", new Color(0.82f, 0.38f, 0.30f));
+            }
             return;
         }
 
         EnsureRenderer();
         ApplySprite(backgroundSprite, dormitory);
         RefreshBoundaryColliders();
+    }
+
+    private void ShowBackgroundNotification(string title, string message, Color color, float duration = 3f)
+    {
+        if (MissionUI.Instance != null)
+        {
+            MissionUI.Instance.ShowSystemNotification(title, message, color, duration);
+        }
     }
 
     private string ResolveSpriteResourcePath()

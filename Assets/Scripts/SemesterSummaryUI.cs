@@ -98,16 +98,31 @@ public class SemesterSummaryUI : MonoBehaviour
         if (data == null)
         {
             Debug.LogWarning("[SemesterSummaryUI] 数据为空，无法显示");
+            if (MissionUI.Instance != null)
+            {
+                MissionUI.Instance.ShowSystemNotification("无法打开总结", "这一学期的结算数据还没有准备好。", new Color(0.82f, 0.38f, 0.30f), 2.8f);
+            }
             return;
         }
 
         if (isShowing)
         {
             Debug.LogWarning("[SemesterSummaryUI] 面板已在显示中");
+            if (MissionUI.Instance != null)
+            {
+                MissionUI.Instance.ShowSystemNotification("总结已打开", "当前学期总结已经在展示中了。", new Color(0.86f, 0.62f, 0.24f), 2.5f);
+            }
             return;
         }
 
-        if (!UIFlowGuard.PrepareForExclusiveWindow(UIFlowGuard.WindowSemesterSummary)) return;
+        if (!UIFlowGuard.PrepareForExclusiveWindow(UIFlowGuard.WindowSemesterSummary))
+        {
+            if (MissionUI.Instance != null)
+            {
+                MissionUI.Instance.ShowSystemNotification("无法打开总结", "当前还有其他关键界面占用操作，先处理完再查看学期总结。", new Color(0.82f, 0.38f, 0.30f), 2.8f);
+            }
+            return;
+        }
         currentData = data;
         isShowing = true;
 
@@ -441,7 +456,7 @@ public class SemesterSummaryUI : MonoBehaviour
     //  成绩列表
     // ====================================================================
 
-    /// <summary>创建成绩列表（课程名 + 分数 + 绩点）</summary>
+    /// <summary>创建成绩列表（课程名 + 分数 + 绩点 + 结果说明）</summary>
     private void CreateCourseList(Transform parent, SemesterSummaryData data)
     {
         Transform content = GetColumnContent(parent.gameObject);
@@ -450,7 +465,7 @@ public class SemesterSummaryUI : MonoBehaviour
         CreateSectionHeader(content, "成绩单");
 
         // 课程表头
-        CreateCourseRow(content, "课程", "分数", "绩点", true);
+        CreateCourseRow(content, "课程", "分数", "绩点", string.Empty, string.Empty, true);
 
         // 各科成绩
         if (data.courses != null)
@@ -461,6 +476,8 @@ public class SemesterSummaryUI : MonoBehaviour
                     course.courseName,
                     course.score.ToString("F1"),
                     course.gradePoint.ToString("F2"),
+                    BuildCourseSummary(course),
+                    BuildCourseTag(course),
                     false
                 );
             }
@@ -468,16 +485,22 @@ public class SemesterSummaryUI : MonoBehaviour
 
         // GPA 显示
         CreateGPARow(content, data.gpa);
+
+        if (data.pendingMakeupCount > 0)
+        {
+            string pendingText = BuildPendingMakeupSummary(data);
+            CreateSimpleText(content, pendingText, new Color(NegativeColor.r, NegativeColor.g, NegativeColor.b, 0.95f), 12f, FontStyles.Bold, TextAlignmentOptions.Center);
+        }
     }
 
     /// <summary>创建课程成绩行</summary>
-    private void CreateCourseRow(Transform parent, string name, string score, string gpa, bool isHeader)
+    private void CreateCourseRow(Transform parent, string name, string score, string gpa, string detail, string tag, bool isHeader)
     {
         GameObject rowObj = new GameObject("CourseRow");
         rowObj.transform.SetParent(parent, false);
 
         RectTransform rowRT = rowObj.AddComponent<RectTransform>();
-        rowRT.sizeDelta = new Vector2(0, isHeader ? 28 : 24);
+        rowRT.sizeDelta = new Vector2(0, isHeader ? 28 : 68);
 
         HorizontalLayoutGroup hlg = rowObj.AddComponent<HorizontalLayoutGroup>();
         hlg.spacing = 4f;
@@ -492,13 +515,58 @@ public class SemesterSummaryUI : MonoBehaviour
         Color color = isHeader ? SubHeaderColor : TextWhite;
         FontStyles style = isHeader ? FontStyles.Bold : FontStyles.Normal;
 
-        // 课程名 (占比较大)
-        CreateFlexText("Name", rowObj.transform, name, fontSize, color, style,
-            TextAlignmentOptions.Left, 3f);
+        if (isHeader)
+        {
+            // 课程名 (占比较大)
+            CreateFlexText("Name", rowObj.transform, name, fontSize, color, style,
+                TextAlignmentOptions.Left, 3f);
+
+            // 分数
+            CreateFlexText("Score", rowObj.transform, score, fontSize, color, style,
+                TextAlignmentOptions.Center, 1.2f);
+
+            // 绩点
+            CreateFlexText("GPA", rowObj.transform, gpa, fontSize, color, style,
+                TextAlignmentOptions.Center, 1f);
+            return;
+        }
+
+        GameObject nameCell = new GameObject("NameCell");
+        nameCell.transform.SetParent(rowObj.transform, false);
+        LayoutElement nameLayout = nameCell.AddComponent<LayoutElement>();
+        nameLayout.flexibleWidth = 3f;
+        VerticalLayoutGroup nameGroup = nameCell.AddComponent<VerticalLayoutGroup>();
+        nameGroup.spacing = 3f;
+        nameGroup.childAlignment = TextAnchor.UpperLeft;
+        nameGroup.childControlWidth = true;
+        nameGroup.childControlHeight = false;
+        nameGroup.childForceExpandWidth = true;
+        nameGroup.childForceExpandHeight = false;
+
+        CreateSimpleText(nameCell.transform, name, TextWhite, 15f, FontStyles.Bold, TextAlignmentOptions.TopLeft);
+        if (!string.IsNullOrEmpty(detail))
+        {
+            CreateSimpleText(nameCell.transform, detail, new Color(TextDim.r, TextDim.g, TextDim.b, 0.95f), 11f, FontStyles.Normal, TextAlignmentOptions.TopLeft);
+        }
 
         // 分数
-        CreateFlexText("Score", rowObj.transform, score, fontSize, color, style,
-            TextAlignmentOptions.Center, 1.2f);
+        GameObject scoreCell = new GameObject("ScoreCell");
+        scoreCell.transform.SetParent(rowObj.transform, false);
+        LayoutElement scoreLayout = scoreCell.AddComponent<LayoutElement>();
+        scoreLayout.flexibleWidth = 1.2f;
+        VerticalLayoutGroup scoreGroup = scoreCell.AddComponent<VerticalLayoutGroup>();
+        scoreGroup.spacing = 3f;
+        scoreGroup.childAlignment = TextAnchor.UpperCenter;
+        scoreGroup.childControlWidth = true;
+        scoreGroup.childControlHeight = false;
+        scoreGroup.childForceExpandWidth = true;
+        scoreGroup.childForceExpandHeight = false;
+        Color scoreColor = ParseScoreColor(score);
+        CreateSimpleText(scoreCell.transform, score, scoreColor, 15f, FontStyles.Bold, TextAlignmentOptions.Center);
+        if (!string.IsNullOrEmpty(tag))
+        {
+            CreateSimpleText(scoreCell.transform, tag, new Color(scoreColor.r, scoreColor.g, scoreColor.b, 0.95f), 11f, FontStyles.Normal, TextAlignmentOptions.Center);
+        }
 
         // 绩点
         CreateFlexText("GPA", rowObj.transform, gpa, fontSize, color, style,
@@ -523,6 +591,92 @@ public class SemesterSummaryUI : MonoBehaviour
         text.enableWordWrapping = false;
     }
 
+    private string BuildCourseSummary(CourseGrade course)
+    {
+        if (course == null)
+        {
+            return string.Empty;
+        }
+
+        List<string> parts = new List<string>();
+        if (!string.IsNullOrEmpty(course.prepSummary))
+        {
+            parts.Add(course.prepSummary);
+        }
+        if (!string.IsNullOrEmpty(course.resultSummary))
+        {
+            parts.Add(course.resultSummary);
+        }
+
+        if (parts.Count == 0)
+        {
+            int passRate = Mathf.RoundToInt(course.passRateEstimate * 100f);
+            string scoreSummary = course.score >= 90f ? "这门课发挥很稳，拿到了高分。"
+                : course.score >= 60f ? "这门课顺利通过，整体节奏比较平稳。"
+                : "这门课这次没有过线，后续需要重点补。";
+            string passRateSummary = course.passRateEstimate > 0f ? $"估算通过率约 {passRate}% 。" : string.Empty;
+            return $"{scoreSummary}{passRateSummary}";
+        }
+
+        return string.Join("\n", parts);
+    }
+
+    private string BuildCourseTag(CourseGrade course)
+    {
+        if (course == null)
+        {
+            return string.Empty;
+        }
+
+        int passRate = Mathf.RoundToInt(course.passRateEstimate * 100f);
+        if (course.score >= 90f)
+        {
+            return $"高分通过 · 估算 {passRate}%";
+        }
+
+        if (course.score >= 60f)
+        {
+            return $"通过 · 估算 {passRate}%";
+        }
+
+        return $"未通过 · 估算 {passRate}%";
+    }
+
+    private Color ParseScoreColor(string scoreText)
+    {
+        if (!float.TryParse(scoreText, out float score))
+        {
+            return TextWhite;
+        }
+
+        return score < 60f ? NegativeColor : TextWhite;
+    }
+
+    private string BuildPendingMakeupSummary(SemesterSummaryData data)
+    {
+        if (data == null || data.pendingMakeupCount <= 0)
+        {
+            return string.Empty;
+        }
+
+        if (data.pendingMakeupCourseNames == null || data.pendingMakeupCourseNames.Count == 0)
+        {
+            return $"下学期开学前仍有 {data.pendingMakeupCount} 门课程待补考。";
+        }
+
+        string joined = string.Join("、", data.pendingMakeupCourseNames);
+        if (joined.Length > 30)
+        {
+            joined = string.Join("、", data.pendingMakeupCourseNames.GetRange(0, Mathf.Min(2, data.pendingMakeupCourseNames.Count)));
+            if (data.pendingMakeupCourseNames.Count > 2)
+            {
+                joined += $" 等{data.pendingMakeupCount}门";
+            }
+        }
+
+        return $"待补考课程：{joined}";
+    }
+
     // ====================================================================
     //  NPC 好感度列表
     // ====================================================================
@@ -540,7 +694,7 @@ public class SemesterSummaryUI : MonoBehaviour
 
         if (data.npcRelations == null || data.npcRelations.Count == 0)
         {
-            CreateSimpleText(content, "暂无NPC关系数据", TextDim, 14f);
+            CreateSimpleText(content, "这学期还没有记录到明确的人际波动。\n多去社交、送礼、共同行动，下次这里会更热闹。", TextDim, 14f);
             return;
         }
 
@@ -597,7 +751,7 @@ public class SemesterSummaryUI : MonoBehaviour
 
         if (data.attributeChanges == null || data.attributeChanges.Count == 0)
         {
-            CreateSimpleText(content, "暂无属性变化数据", TextDim, 14f);
+            CreateSimpleText(content, "这学期的属性变化还没沉淀出有效记录。\n继续学习、运动、社交或打工，后续会在这里汇总成长轨迹。", TextDim, 14f);
             return;
         }
 
@@ -703,7 +857,7 @@ public class SemesterSummaryUI : MonoBehaviour
 
         if (data.unlockedAchievements == null || data.unlockedAchievements.Count == 0)
         {
-            CreateSimpleText(content, "本学期暂无解锁成就", TextDim, 14f);
+            CreateSimpleText(content, "这学期暂时还没有新成就入账。\n换条路线试试，或者把某个方向再推深一点。", TextDim, 14f);
             return;
         }
 
@@ -1086,17 +1240,26 @@ public class SemesterSummaryUI : MonoBehaviour
     /// <summary>创建简单文本行</summary>
     private void CreateSimpleText(Transform parent, string text, Color color, float fontSize)
     {
+        CreateSimpleText(parent, text, color, fontSize, FontStyles.Normal, TextAlignmentOptions.Left);
+    }
+
+    /// <summary>创建简单文本行（可自定义样式与对齐）</summary>
+    private void CreateSimpleText(Transform parent, string text, Color color, float fontSize, FontStyles style, TextAlignmentOptions alignment)
+    {
         GameObject obj = new GameObject("SimpleText");
         obj.transform.SetParent(parent, false);
 
         RectTransform rt = obj.AddComponent<RectTransform>();
-        rt.sizeDelta = new Vector2(0, 22);
+        int lineCount = string.IsNullOrEmpty(text) ? 1 : text.Split('\n').Length;
+        float baseHeight = fontSize >= 14f ? 22f : 36f;
+        rt.sizeDelta = new Vector2(0, Mathf.Max(baseHeight, baseHeight * lineCount));
 
         TextMeshProUGUI tmp = obj.AddComponent<TextMeshProUGUI>();
         tmp.text = text;
         tmp.fontSize = fontSize;
+        tmp.fontStyle = style;
         tmp.color = color;
-        tmp.alignment = TextAlignmentOptions.Left;
+        tmp.alignment = alignment;
         tmp.enableWordWrapping = true;
         tmp.overflowMode = TextOverflowModes.Ellipsis;
     }

@@ -59,6 +59,7 @@ public class ExamUIBuilder : MonoBehaviour
     // ========== 过渡面板引用 ==========
     public TextMeshProUGUI transitionSubjectText;
     public TextMeshProUGUI transitionHintText;
+    public TextMeshProUGUI transitionBonusText;
 
     // ========== 作弊被抓面板引用 ==========
     public TextMeshProUGUI cheatCaughtText;
@@ -266,8 +267,16 @@ public class ExamUIBuilder : MonoBehaviour
             new Vector2(0f, yBottom), new Vector2(1f, yTop), rowBg);
 
         // 课程名
-        CreateTMPText($"R_Name_{index}", row.transform,
-            new Vector2(0.02f, 0f), new Vector2(0.40f, 1f), 20, TextWhite, TextAlignmentOptions.MidlineLeft).text = result.courseName;
+        TextMeshProUGUI nameText = CreateTMPText($"R_Name_{index}", row.transform,
+            new Vector2(0.02f, 0.42f), new Vector2(0.40f, 1f), 20, TextWhite, TextAlignmentOptions.BottomLeft);
+        nameText.text = result.courseName;
+
+        TextMeshProUGUI detailText = CreateTMPText($"R_Detail_{index}", row.transform,
+            new Vector2(0.02f, 0.05f), new Vector2(0.52f, 0.42f), 13, TextWhite, TextAlignmentOptions.TopLeft);
+        detailText.text = BuildScoreRowDetail(result);
+        detailText.color = new Color(1f, 1f, 1f, 0.72f);
+        detailText.enableWordWrapping = true;
+        detailText.overflowMode = TextOverflowModes.Ellipsis;
 
         // 学分
         CreateTMPText($"R_Credits_{index}", row.transform,
@@ -275,14 +284,26 @@ public class ExamUIBuilder : MonoBehaviour
 
         // 分数（挂科红色）
         Color scoreColor = result.score < 60 ? TextFail : TextWhite;
-        CreateTMPText($"R_Score_{index}", row.transform,
-            new Vector2(0.55f, 0f), new Vector2(0.75f, 1f), 20, scoreColor, TextAlignmentOptions.Center).text = result.score.ToString();
+        TextMeshProUGUI scoreText = CreateTMPText($"R_Score_{index}", row.transform,
+            new Vector2(0.55f, 0.32f), new Vector2(0.75f, 0.82f), 20, scoreColor, TextAlignmentOptions.Center);
+        scoreText.text = result.score.ToString();
+
+        TextMeshProUGUI scoreMeta = CreateTMPText($"R_ScoreMeta_{index}", row.transform,
+            new Vector2(0.55f, 0.02f), new Vector2(0.75f, 0.32f), 12, scoreColor, TextAlignmentOptions.Top);
+        scoreMeta.text = BuildScoreMeta(result);
+        scoreMeta.color = new Color(scoreColor.r, scoreColor.g, scoreColor.b, 0.85f);
 
         // 绩点（挂科红色 + ❌）
         string gpText = result.gradePoint > 0 ? result.gradePoint.ToString("F1") : "0 \u274C";
         Color gpColor = result.gradePoint > 0 ? TextGold : TextFail;
-        CreateTMPText($"R_GPA_{index}", row.transform,
-            new Vector2(0.75f, 0f), new Vector2(1f, 1f), 20, gpColor, TextAlignmentOptions.Center).text = gpText;
+        TextMeshProUGUI gpaText = CreateTMPText($"R_GPA_{index}", row.transform,
+            new Vector2(0.75f, 0.32f), new Vector2(1f, 0.82f), 20, gpColor, TextAlignmentOptions.Center);
+        gpaText.text = gpText;
+
+        TextMeshProUGUI gpaMeta = CreateTMPText($"R_GPAMeta_{index}", row.transform,
+            new Vector2(0.75f, 0.02f), new Vector2(1f, 0.32f), 12, gpColor, TextAlignmentOptions.Top);
+        gpaMeta.text = BuildResultTag(result);
+        gpaMeta.color = new Color(gpColor.r, gpColor.g, gpColor.b, 0.85f);
 
         return row;
     }
@@ -299,8 +320,13 @@ public class ExamUIBuilder : MonoBehaviour
         transitionSubjectText.text = "高等数学I";
 
         transitionHintText = CreateTMPText("TransitionHint", transitionPanel.transform,
-            new Vector2(0.1f, 0.35f), new Vector2(0.9f, 0.45f), 24, TextWhite, TextAlignmentOptions.Center);
+            new Vector2(0.1f, 0.38f), new Vector2(0.9f, 0.47f), 24, TextWhite, TextAlignmentOptions.Center);
         transitionHintText.text = "准备开始答题...";
+
+        transitionBonusText = CreateTMPText("TransitionBonus", transitionPanel.transform,
+            new Vector2(0.18f, 0.24f), new Vector2(0.82f, 0.36f), 20, TextWhite, TextAlignmentOptions.Center);
+        transitionBonusText.text = "";
+        transitionBonusText.enableWordWrapping = true;
     }
 
     // ========== 作弊被抓面板 ==========
@@ -369,5 +395,45 @@ public class ExamUIBuilder : MonoBehaviour
         }
 
         return tmp;
+    }
+
+    private string BuildScoreRowDetail(ExamResult result)
+    {
+        if (result == null)
+        {
+            return string.Empty;
+        }
+
+        string prep = string.IsNullOrEmpty(result.prepSummary) ? "本次按现场答题与角色状态完成结算。" : result.prepSummary;
+        string summary = string.IsNullOrEmpty(result.resultSummary) ? string.Empty : ("\n" + result.resultSummary);
+        return prep + summary;
+    }
+
+    private string BuildScoreMeta(ExamResult result)
+    {
+        if (result == null)
+        {
+            return string.Empty;
+        }
+
+        int percent = Mathf.RoundToInt(result.passRateEstimate * 100f);
+        return $"估算通过率 {percent}%";
+    }
+
+    private string BuildResultTag(ExamResult result)
+    {
+        if (result == null)
+        {
+            return string.Empty;
+        }
+
+        if (result.cheatCaught)
+        {
+            return "作弊判零";
+        }
+
+        return result.score >= 90 ? "高分通过"
+            : result.score >= 60 ? "通过"
+            : "未通过";
     }
 }

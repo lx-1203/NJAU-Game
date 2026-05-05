@@ -135,6 +135,7 @@ public class CampusRunSystem : MonoBehaviour, ISaveable
         if (!CanRun)
         {
             Debug.LogWarning("[CampusRunSystem] 无法跑步：行动点不足");
+            ShowRunNotification("无法完成校园跑", "剩余行动点不足，先调整这回合安排再回来。", new Color(0.82f, 0.38f, 0.30f), 2.8f);
             return;
         }
 
@@ -149,6 +150,7 @@ public class CampusRunSystem : MonoBehaviour, ISaveable
         }
 
         Debug.Log($"[CampusRunSystem] 跑步完成！已跑{totalRuns}/{RequiredRuns}次");
+        ShowRunNotification("校园跑完成", BuildRunSummary(), new Color(0.28f, 0.72f, 0.86f), 3.1f);
         OnRunDataChanged?.Invoke();
     }
 
@@ -161,6 +163,7 @@ public class CampusRunSystem : MonoBehaviour, ISaveable
         if (!CanProxyRun)
         {
             Debug.LogWarning("[CampusRunSystem] 无法代跑：金钱不足");
+            ShowRunNotification("无法代跑", $"当前余额不足，至少需要 ¥{ProxyRunMinCost} 才能找人代跑。", new Color(0.82f, 0.38f, 0.30f), 2.8f);
             return false;
         }
 
@@ -204,10 +207,16 @@ public class CampusRunSystem : MonoBehaviour, ISaveable
                 PlayerAttributes.Instance.Guilt += ProxyCaughtPenaltyGuilt;
                 PlayerAttributes.Instance.Stress += ProxyCaughtPenaltyStress;
             }
+            ShowRunNotification(
+                "代跑被发现",
+                $"这次代跑没有算进有效次数。\n负罪感额外+{ProxyCaughtPenaltyGuilt}，压力+{ProxyCaughtPenaltyStress}，进度仍为 {totalRuns}/{RequiredRuns}。",
+                new Color(0.82f, 0.38f, 0.30f),
+                3.5f);
         }
         else
         {
             Debug.Log($"[CampusRunSystem] 代跑成功！已跑{totalRuns}/{RequiredRuns}次，花费¥{cost}");
+            ShowRunNotification("代跑完成", BuildProxyRunSummary(cost), new Color(0.86f, 0.62f, 0.24f), 3.2f);
         }
 
         OnRunDataChanged?.Invoke();
@@ -232,9 +241,40 @@ public class CampusRunSystem : MonoBehaviour, ISaveable
     public void ResetForNewSemester()
     {
         Debug.Log($"[CampusRunSystem] 学期结算：完成{totalRuns}/{RequiredRuns}次 (亲跑{completedRuns}+代跑{proxyRuns})，完成率{GetCompletionRate():P0}");
+        if (MissionUI.Instance != null)
+        {
+            MissionUI.Instance.ShowSystemNotification(
+                "校园跑学期结算",
+                BuildSemesterResetSummary(),
+                new Color(0.36f, 0.64f, 0.92f),
+                3.6f);
+        }
         completedRuns = 0;
         proxyRuns = 0;
         OnRunDataChanged?.Invoke();
+    }
+
+    private string BuildRunSummary()
+    {
+        return $"进度来到 {totalRuns}/{RequiredRuns}。\n体魄+{PhysiquePerRun}，压力-{StressReductionPerRun}，心情+{MoodPerRun}。";
+    }
+
+    private string BuildProxyRunSummary(int cost)
+    {
+        return $"已花费 ¥{cost} 完成一次代跑。\n当前进度 {totalRuns}/{RequiredRuns}，负罪感+1，黑暗值+1。";
+    }
+
+    private string BuildSemesterResetSummary()
+    {
+        return $"本学期累计完成 {totalRuns}/{RequiredRuns} 次校园跑（亲跑 {completedRuns} / 代跑 {proxyRuns}）。\n新学期开始后，跑步进度已重新统计。";
+    }
+
+    private void ShowRunNotification(string title, string message, Color color, float duration)
+    {
+        if (MissionUI.Instance != null)
+        {
+            MissionUI.Instance.ShowSystemNotification(title, message, color, duration);
+        }
     }
 
     // ========== 回合事件 ==========

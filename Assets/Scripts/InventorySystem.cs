@@ -73,6 +73,7 @@ public class InventorySystem : MonoBehaviour, ISaveable
         if (definition == null || !definition.canStore)
         {
             Debug.LogWarning($"[InventorySystem] Cannot store item: {itemId}");
+            ShowInventoryNotification("无法放入背包", "这件物品当前不能被存入背包。", new Color(0.82f, 0.38f, 0.30f), 2.8f);
             return false;
         }
 
@@ -81,6 +82,7 @@ public class InventorySystem : MonoBehaviour, ISaveable
         int delta = newQuantity - oldQuantity;
         if (delta <= 0)
         {
+            ShowInventoryNotification("背包已满", $"“{definition.displayName}”已经达到持有上限。", new Color(0.82f, 0.38f, 0.30f), 2.8f);
             return false;
         }
 
@@ -130,6 +132,7 @@ public class InventorySystem : MonoBehaviour, ISaveable
     {
         if (!CanUseItem(itemId))
         {
+            ShowInventoryNotification("无法使用物品", "当前不满足使用条件，检查数量或物品类型后再试。", new Color(0.82f, 0.38f, 0.30f), 2.8f);
             return false;
         }
 
@@ -208,7 +211,16 @@ public class InventorySystem : MonoBehaviour, ISaveable
                     continue;
                 }
 
-                itemQuantities[item.itemId] = item.quantity;
+                ShopItemDefinition definition = ShopSystem.Instance != null
+                    ? ShopSystem.Instance.GetItemDefinition(item.itemId)
+                    : null;
+
+                if (definition == null || !definition.canStore)
+                {
+                    continue;
+                }
+
+                itemQuantities[item.itemId] = Mathf.Clamp(item.quantity, 1, Mathf.Max(1, definition.maxStack));
             }
         }
 
@@ -218,5 +230,13 @@ public class InventorySystem : MonoBehaviour, ISaveable
     private void NotifyInventoryChanged()
     {
         OnInventoryChanged?.Invoke();
+    }
+
+    private void ShowInventoryNotification(string title, string message, Color color, float duration)
+    {
+        if (MissionUI.Instance != null)
+        {
+            MissionUI.Instance.ShowSystemNotification(title, message, color, duration);
+        }
     }
 }

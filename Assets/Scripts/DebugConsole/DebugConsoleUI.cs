@@ -15,27 +15,31 @@ public class DebugConsoleUI : MonoBehaviour
 
     private static DebugConsoleUI instance;
 
-    private const float TopBarHeight = 128f;
-    private const float BottomBarHeight = 136f;
-    private const float SidebarWidth = 156f;
-    private const float FramePadding = 12f;
-    private const float SectionGap = 10f;
+    private const float TopBarHeight = 118f;
+    private const float BottomBarHeight = 118f;
+    private const float SidebarWidth = 172f;
+    private const float FramePadding = 18f;
+    private const float SectionGap = 14f;
 
-    private static readonly Color BackgroundColor = new Color(0.04f, 0.04f, 0.07f, 0.9f);
-    private static readonly Color PanelColor = new Color(0.08f, 0.08f, 0.12f, 0.95f);
-    private static readonly Color HeaderColor = new Color(0.1f, 0.1f, 0.16f, 0.98f);
-    private static readonly Color SidebarColor = new Color(0.07f, 0.07f, 0.11f, 0.96f);
-    private static readonly Color ContentColor = new Color(0.06f, 0.06f, 0.1f, 0.92f);
-    private static readonly Color CardColor = new Color(0.1f, 0.1f, 0.15f, 0.98f);
-    private static readonly Color ButtonColor = new Color(0.22f, 0.42f, 0.72f, 1f);
-    private static readonly Color TabNormalColor = new Color(0.16f, 0.16f, 0.24f, 1f);
-    private static readonly Color TabSelectedColor = new Color(0.28f, 0.46f, 0.76f, 1f);
-    private static readonly Color AccentColor = new Color(1f, 0.85f, 0.3f, 1f);
-    private static readonly Color PositiveColor = new Color(0.22f, 0.58f, 0.34f, 1f);
-    private static readonly Color NegativeColor = new Color(0.68f, 0.28f, 0.28f, 1f);
-    private static readonly Color ToggleOffColor = new Color(0.26f, 0.26f, 0.32f, 1f);
-    private static readonly Color ToggleOnColor = new Color(0.24f, 0.54f, 0.76f, 1f);
-    private static readonly Color TextColor = new Color(0.92f, 0.92f, 0.92f);
+    private static readonly Color BackdropColor = new Color(0.03f, 0.02f, 0.02f, 0.56f);
+    private static readonly Color BackgroundColor = new Color32(0x17, 0x13, 0x1D, 0xF3);
+    private static readonly Color HeaderColor = new Color32(0x21, 0x1B, 0x29, 0xFC);
+    private static readonly Color SidebarColor = new Color32(0x1C, 0x17, 0x24, 0xFA);
+    private static readonly Color ContentColor = new Color32(0x1B, 0x16, 0x23, 0xF2);
+    private static readonly Color CardColor = new Color32(0x27, 0x20, 0x30, 0xFA);
+    private static readonly Color BorderColor = new Color32(0x73, 0x5C, 0x46, 0xD6);
+    private static readonly Color ButtonColor = new Color32(0x7A, 0x56, 0x35, 0xFF);
+    private static readonly Color ButtonHighlightColor = new Color32(0x9D, 0x75, 0x49, 0xFF);
+    private static readonly Color TabNormalColor = new Color32(0x2A, 0x24, 0x33, 0xFF);
+    private static readonly Color TabSelectedColor = new Color32(0x4F, 0x39, 0x2A, 0xFF);
+    private static readonly Color AccentColor = new Color32(0xF2, 0xC5, 0x68, 0xFF);
+    private static readonly Color AccentSoftColor = new Color32(0xD6, 0xB2, 0x7C, 0xFF);
+    private static readonly Color PositiveColor = new Color32(0x3D, 0x7E, 0x57, 0xFF);
+    private static readonly Color NegativeColor = new Color32(0x9E, 0x4E, 0x4B, 0xFF);
+    private static readonly Color ToggleOffColor = new Color32(0x46, 0x40, 0x4E, 0xFF);
+    private static readonly Color ToggleOnColor = new Color32(0x9B, 0x75, 0x48, 0xFF);
+    private static readonly Color TextColor = new Color32(0xF1, 0xEA, 0xDB, 0xFF);
+    private static readonly Color TextMutedColor = new Color32(0xB8, 0xA7, 0x92, 0xFF);
 
     private static readonly string[] TabNames =
     {
@@ -156,6 +160,11 @@ public class DebugConsoleUI : MonoBehaviour
         canvasObject.AddComponent<GraphicRaycaster>();
         rootCanvasGroup = canvasObject.AddComponent<CanvasGroup>();
 
+        GameObject backdrop = CreateRect("Backdrop", canvasObject.transform).gameObject;
+        StretchFull(backdrop.GetComponent<RectTransform>());
+        Image backdropImage = backdrop.AddComponent<Image>();
+        backdropImage.color = BackdropColor;
+
         GameObject background = CreatePanel("Background", canvasObject.transform, BackgroundColor);
         StretchFull(background.GetComponent<RectTransform>());
 
@@ -187,24 +196,36 @@ public class DebugConsoleUI : MonoBehaviour
         titleRect.anchorMin = new Vector2(0f, 1f);
         titleRect.anchorMax = new Vector2(0f, 1f);
         titleRect.pivot = new Vector2(0f, 1f);
-        titleRect.sizeDelta = new Vector2(280f, 34f);
-        titleRect.anchoredPosition = new Vector2(18f, -12f);
+        title.fontSize = 28f;
+        titleRect.sizeDelta = new Vector2(320f, 36f);
+        titleRect.anchoredPosition = new Vector2(20f, -14f);
 
-        TextMeshProUGUI subtitle = CreateText("Subtitle", topBar.transform, "快速测试，清晰切换，把调试台收拾得更利落。", 12f, TextColor, TextAlignmentOptions.MidlineLeft);
+        TextMeshProUGUI subtitle = CreateText("Subtitle", topBar.transform, "局内调试、速编与状态修正统一收口在这里。", 12f, TextMutedColor, TextAlignmentOptions.MidlineLeft);
         RectTransform subtitleRect = subtitle.rectTransform;
         subtitleRect.anchorMin = new Vector2(0f, 1f);
-        subtitleRect.anchorMax = new Vector2(1f, 1f);
+        subtitleRect.anchorMax = new Vector2(0f, 1f);
         subtitleRect.pivot = new Vector2(0f, 1f);
-        subtitleRect.sizeDelta = new Vector2(-40f, 28f);
-        subtitleRect.anchoredPosition = new Vector2(18f, -40f);
+        subtitleRect.sizeDelta = new Vector2(460f, 24f);
+        subtitleRect.anchoredPosition = new Vector2(20f, -46f);
+
+        GameObject badgeObject = CreatePanel("RuntimeBadge", topBar.transform, CardColor);
+        RectTransform badgeRect = badgeObject.GetComponent<RectTransform>();
+        badgeRect.anchorMin = new Vector2(1f, 1f);
+        badgeRect.anchorMax = new Vector2(1f, 1f);
+        badgeRect.pivot = new Vector2(1f, 1f);
+        badgeRect.sizeDelta = new Vector2(168f, 30f);
+        badgeRect.anchoredPosition = new Vector2(-18f, -14f);
+        AddOutline(badgeObject, BorderColor, new Vector2(1f, -1f));
+
+        TextMeshProUGUI badgeText = CreateText("BadgeText", badgeObject.transform, "运行时调试台", 12f, AccentSoftColor, TextAlignmentOptions.Center);
+        StretchFull(badgeText.rectTransform);
 
         Transform primaryRow = CreateHorizontalRow("PrimaryRow", topBar.transform, 8f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleLeft);
         RectTransform primaryRect = primaryRow.GetComponent<RectTransform>();
         primaryRect.anchorMin = new Vector2(0f, 0f);
         primaryRect.anchorMax = new Vector2(1f, 0f);
-        primaryRect.pivot = new Vector2(0.5f, 0f);
-        primaryRect.anchoredPosition = new Vector2(0f, 46f);
-        primaryRect.sizeDelta = new Vector2(-36f, 34f);
+        primaryRect.offsetMin = new Vector2(610f, 44f);
+        primaryRect.offsetMax = new Vector2(-18f, 78f);
 
         prevDialogueButton = CreateButton(primaryRow, "上一句", ButtonColor, () =>
         {
@@ -228,9 +249,8 @@ public class DebugConsoleUI : MonoBehaviour
         RectTransform toggleRect = toggleRow.GetComponent<RectTransform>();
         toggleRect.anchorMin = new Vector2(0f, 0f);
         toggleRect.anchorMax = new Vector2(1f, 0f);
-        toggleRect.pivot = new Vector2(0.5f, 0f);
-        toggleRect.anchoredPosition = new Vector2(0f, 8f);
-        toggleRect.sizeDelta = new Vector2(-36f, 34f);
+        toggleRect.offsetMin = new Vector2(18f, 10f);
+        toggleRect.offsetMax = new Vector2(-18f, 44f);
 
         skipSplashToggle = CreateLabeledToggle(toggleRow, "跳过开屏", StartupFlowSettings.SkipSplashLogo, value =>
         {
@@ -264,30 +284,39 @@ public class DebugConsoleUI : MonoBehaviour
         sidebarRect.offsetMax = new Vector2(SidebarWidth, -TopBarHeight - SectionGap);
 
         VerticalLayoutGroup layout = sidebar.AddComponent<VerticalLayoutGroup>();
-        layout.spacing = 6f;
-        layout.padding = new RectOffset(8, 8, 10, 10);
+        layout.spacing = 8f;
+        layout.padding = new RectOffset(10, 10, 10, 10);
         layout.childAlignment = TextAnchor.UpperCenter;
         layout.childControlWidth = true;
         layout.childControlHeight = false;
         layout.childForceExpandWidth = true;
         layout.childForceExpandHeight = false;
 
+        GameObject labelObject = CreateRect("SidebarLabel", sidebar.transform).gameObject;
+        LayoutElement labelLayout = labelObject.AddComponent<LayoutElement>();
+        labelLayout.preferredHeight = 24f;
+        TextMeshProUGUI sidebarLabel = CreateText("Label", labelObject.transform, "模块导航", 12f, TextMutedColor, TextAlignmentOptions.MidlineLeft);
+        StretchFull(sidebarLabel.rectTransform);
+        sidebarLabel.margin = new Vector4(10f, 2f, 2f, 2f);
+
         for (int i = 0; i < TabNames.Length; i++)
         {
             int capturedIndex = i;
             GameObject tabObject = CreateRect($"Tab_{TabNames[i]}", sidebar.transform).gameObject;
             RectTransform tabRect = tabObject.GetComponent<RectTransform>();
-            tabRect.sizeDelta = new Vector2(SidebarWidth - 16f, 40f);
+            tabRect.sizeDelta = new Vector2(SidebarWidth - 20f, 42f);
 
             Image background = tabObject.AddComponent<Image>();
             background.color = TabNormalColor;
             tabImages.Add(background);
+            AddOutline(tabObject, BorderColor, new Vector2(1f, -1f));
 
             Button button = tabObject.AddComponent<Button>();
             button.onClick.AddListener(() => SwitchTab(capturedIndex));
 
-            TextMeshProUGUI label = CreateText("Label", tabObject.transform, TabNames[i], 14f, TextColor, TextAlignmentOptions.Center);
+            TextMeshProUGUI label = CreateText("Label", tabObject.transform, TabNames[i], 14f, TextColor, TextAlignmentOptions.MidlineLeft);
             StretchFull(label.rectTransform);
+            label.margin = new Vector4(16f, 4f, 8f, 4f);
         }
     }
 
@@ -314,7 +343,7 @@ public class DebugConsoleUI : MonoBehaviour
 
         VerticalLayoutGroup layout = bottomBar.AddComponent<VerticalLayoutGroup>();
         layout.spacing = 8f;
-        layout.padding = new RectOffset(12, 12, 10, 10);
+        layout.padding = new RectOffset(14, 14, 10, 10);
         layout.childAlignment = TextAnchor.UpperLeft;
         layout.childControlWidth = true;
         layout.childControlHeight = false;
@@ -323,8 +352,8 @@ public class DebugConsoleUI : MonoBehaviour
 
         Transform stepRow = CreateHorizontalRow("StepRow", bottomBar.transform, 8f, new RectOffset(0, 0, 0, 0), TextAnchor.MiddleLeft);
         stepRow.gameObject.AddComponent<LayoutElement>().preferredHeight = 32f;
-        TextMeshProUGUI stepLabel = CreateText("StepLabel", stepRow, "步进", 14f, AccentColor, TextAlignmentOptions.MidlineLeft);
-        SetLayoutSize(stepLabel.gameObject, 44f, 28f);
+        TextMeshProUGUI stepLabel = CreateText("StepLabel", stepRow, "微调步进", 14f, AccentColor, TextAlignmentOptions.MidlineLeft);
+        SetLayoutSize(stepLabel.gameObject, 70f, 28f);
 
         int[] steps = DebugPresets.GetStepOptions();
         for (int i = 0; i < steps.Length; i++)
@@ -336,13 +365,13 @@ public class DebugConsoleUI : MonoBehaviour
                 RefreshStepButtons();
             });
             stepButtonImages.Add(stepButton.GetComponent<Image>());
-            SetLayoutSize(stepButton.gameObject, 58f, 28f);
+            SetLayoutSize(stepButton.gameObject, 64f, 30f);
         }
 
         Transform gridRoot = CreateRect("AdjustGridRoot", bottomBar.transform);
-        gridRoot.gameObject.AddComponent<LayoutElement>().preferredHeight = 76f;
+        gridRoot.gameObject.AddComponent<LayoutElement>().preferredHeight = 68f;
         GridLayoutGroup grid = gridRoot.gameObject.AddComponent<GridLayoutGroup>();
-        grid.cellSize = new Vector2(154f, 34f);
+        grid.cellSize = new Vector2(142f, 30f);
         grid.spacing = new Vector2(8f, 8f);
         grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
         grid.constraintCount = 5;
@@ -357,8 +386,9 @@ public class DebugConsoleUI : MonoBehaviour
     {
         GameObject cell = CreatePanel($"Adjust_{key}", parent, CardColor);
         LayoutElement cellLayout = cell.AddComponent<LayoutElement>();
-        cellLayout.preferredWidth = 154f;
-        cellLayout.preferredHeight = 34f;
+        cellLayout.preferredWidth = 142f;
+        cellLayout.preferredHeight = 30f;
+        AddOutline(cell, BorderColor, new Vector2(1f, -1f));
 
         Transform row = CreateHorizontalRow($"AdjustRow_{key}", cell.transform, 4f, new RectOffset(8, 8, 6, 6), TextAnchor.MiddleCenter);
         StretchFull(row.GetComponent<RectTransform>());
@@ -369,13 +399,13 @@ public class DebugConsoleUI : MonoBehaviour
             RefreshQuickAdjustValues();
             RefreshActiveModule();
         });
-        SetLayoutSize(minusButton.gameObject, 24f, 22f);
+        SetLayoutSize(minusButton.gameObject, 22f, 20f);
 
-        TextMeshProUGUI labelText = CreateText("Name", row, label, 12f, TextColor, TextAlignmentOptions.MidlineLeft);
-        SetLayoutSize(labelText.gameObject, 46f, 24f);
+        TextMeshProUGUI labelText = CreateText("Name", row, label, 12f, TextMutedColor, TextAlignmentOptions.MidlineLeft);
+        SetLayoutSize(labelText.gameObject, 42f, 22f);
 
         TextMeshProUGUI valueText = CreateText("Value", row, "0", 13f, AccentColor, TextAlignmentOptions.Center);
-        SetLayoutSize(valueText.gameObject, 44f, 24f);
+        SetLayoutSize(valueText.gameObject, 48f, 22f);
         quickAdjustItems.Add(new QuickAdjustItem
         {
             key = key,
@@ -388,7 +418,7 @@ public class DebugConsoleUI : MonoBehaviour
             RefreshQuickAdjustValues();
             RefreshActiveModule();
         });
-        SetLayoutSize(plusButton.gameObject, 24f, 22f);
+        SetLayoutSize(plusButton.gameObject, 22f, 20f);
     }
 
     private void CreateModulePanels()
@@ -525,6 +555,12 @@ public class DebugConsoleUI : MonoBehaviour
         {
             bg.color = value ? ToggleOnColor : ToggleOffColor;
         }
+
+        if (toggle.graphic != null)
+        {
+            RectTransform knobRect = toggle.graphic.rectTransform;
+            knobRect.anchoredPosition = new Vector2(value ? 24f : 4f, 0f);
+        }
     }
 
     private Toggle CreateLabeledToggle(Transform parent, string label, bool initialValue, UnityEngine.Events.UnityAction<bool> onChanged)
@@ -537,34 +573,37 @@ public class DebugConsoleUI : MonoBehaviour
         layout.childControlHeight = true;
         layout.childForceExpandWidth = false;
         layout.childForceExpandHeight = false;
-        SetLayoutSize(toggleObject, 132f, 34f);
+        SetLayoutSize(toggleObject, 138f, 34f);
 
         GameObject backgroundObject = CreateRect("Background", toggleObject.transform).gameObject;
-        SetLayoutSize(backgroundObject, 44f, 22f);
+        SetLayoutSize(backgroundObject, 44f, 24f);
         Image background = backgroundObject.AddComponent<Image>();
         background.color = initialValue ? ToggleOnColor : ToggleOffColor;
+        AddOutline(backgroundObject, BorderColor, new Vector2(1f, -1f));
 
         Toggle toggle = backgroundObject.AddComponent<Toggle>();
         toggle.targetGraphic = background;
 
-        GameObject checkmarkObject = CreateRect("Checkmark", backgroundObject.transform).gameObject;
+        GameObject checkmarkObject = CreateRect("Knob", backgroundObject.transform).gameObject;
         RectTransform checkmarkRect = checkmarkObject.GetComponent<RectTransform>();
-        checkmarkRect.anchorMin = new Vector2(0f, 0f);
-        checkmarkRect.anchorMax = new Vector2(0f, 1f);
+        checkmarkRect.anchorMin = new Vector2(0f, 0.5f);
+        checkmarkRect.anchorMax = new Vector2(0f, 0.5f);
         checkmarkRect.pivot = new Vector2(0f, 0.5f);
-        checkmarkRect.sizeDelta = new Vector2(18f, 0f);
+        checkmarkRect.sizeDelta = new Vector2(16f, 16f);
+        checkmarkRect.anchoredPosition = new Vector2(initialValue ? 24f : 4f, 0f);
         Image checkmark = checkmarkObject.AddComponent<Image>();
-        checkmark.color = Color.white;
+        checkmark.color = new Color(0.98f, 0.96f, 0.92f, 1f);
         toggle.graphic = checkmark;
         toggle.isOn = initialValue;
         toggle.onValueChanged.AddListener(value =>
         {
             background.color = value ? ToggleOnColor : ToggleOffColor;
+            checkmarkRect.anchoredPosition = new Vector2(value ? 24f : 4f, 0f);
             onChanged?.Invoke(value);
         });
 
-        TextMeshProUGUI labelText = CreateText("Label", toggleObject.transform, label, 12f, TextColor, TextAlignmentOptions.MidlineLeft);
-        SetLayoutSize(labelText.gameObject, 78f, 28f);
+        TextMeshProUGUI labelText = CreateText("Label", toggleObject.transform, label, 12f, TextMutedColor, TextAlignmentOptions.MidlineLeft);
+        SetLayoutSize(labelText.gameObject, 84f, 28f);
 
         return toggle;
     }
@@ -574,16 +613,18 @@ public class DebugConsoleUI : MonoBehaviour
         GameObject buttonObject = CreateRect($"Button_{label}", parent).gameObject;
         Image background = buttonObject.AddComponent<Image>();
         background.color = color;
+        AddOutline(buttonObject, BorderColor, new Vector2(1f, -1f));
 
         Button button = buttonObject.AddComponent<Button>();
         ColorBlock colors = button.colors;
         colors.normalColor = color;
-        colors.highlightedColor = color * 1.1f;
-        colors.pressedColor = color * 0.85f;
+        colors.highlightedColor = Color.Lerp(color, ButtonHighlightColor, 0.55f);
+        colors.pressedColor = Color.Lerp(color, Color.black, 0.2f);
+        colors.selectedColor = colors.highlightedColor;
         button.colors = colors;
         button.onClick.AddListener(onClick);
 
-        TextMeshProUGUI text = CreateText("Label", buttonObject.transform, label, 13f, Color.white, TextAlignmentOptions.Center);
+        TextMeshProUGUI text = CreateText("Label", buttonObject.transform, label, 13f, TextColor, TextAlignmentOptions.Center);
         StretchFull(text.rectTransform);
         return button;
     }
@@ -607,6 +648,7 @@ public class DebugConsoleUI : MonoBehaviour
         GameObject panel = CreateRect(name, parent).gameObject;
         Image background = panel.AddComponent<Image>();
         background.color = color;
+        AddOutline(panel, BorderColor, new Vector2(1f, -1f));
         return panel;
     }
 
@@ -651,6 +693,18 @@ public class DebugConsoleUI : MonoBehaviour
         LayoutElement layout = objectRef.AddComponent<LayoutElement>();
         layout.preferredWidth = width;
         layout.preferredHeight = height;
+    }
+
+    private void AddOutline(GameObject target, Color color, Vector2 effectDistance)
+    {
+        Outline outline = target.GetComponent<Outline>();
+        if (outline == null)
+        {
+            outline = target.AddComponent<Outline>();
+        }
+
+        outline.effectColor = color;
+        outline.effectDistance = effectDistance;
     }
 
     private void EnsureEventSystem()

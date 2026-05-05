@@ -154,12 +154,14 @@ public class MissionRuntimeData
 [Serializable]
 public class MissionSaveData
 {
+    public List<string> availableMissionIds = new List<string>();
     public List<MissionRuntimeData> activeMissions = new List<MissionRuntimeData>();
     public List<string> completedMissionIds = new List<string>();
     public List<string> failedMissionIds = new List<string>();
 
     public void EnsureInitialized()
     {
+        availableMissionIds ??= new List<string>();
         activeMissions ??= new List<MissionRuntimeData>();
         completedMissionIds ??= new List<string>();
         failedMissionIds ??= new List<string>();

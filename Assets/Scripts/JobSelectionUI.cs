@@ -1,38 +1,27 @@
+using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
-using UnityEngine.EventSystems;
-using TMPro;
-using System.Collections.Generic;
 
 /// <summary>
-/// 兼职实习选择界面，纯代码构建UI，挂载于独立Canvas (sortingOrder=200)
-/// 包含实习和副业两个标签页，硬编码临时数据
+/// 兼职/实习选择界面。数据由 JobSystem 从 jobs.json 加载。
 /// </summary>
 public class JobSelectionUI : MonoBehaviour
 {
     public static JobSelectionUI Instance { get; private set; }
 
-    [Header("UI Components")]
     private GameObject canvasObj;
-    private Canvas canvas;
-    private GraphicRaycaster raycaster;
-
-    private GameObject panelObj;
     private Button btnInternship;
     private Button btnSideHustle;
-    private TextMeshProUGUI txtInternship;
-    private TextMeshProUGUI txtSideHustle;
     private TextMeshProUGUI txtLockMessage;
     private RectTransform contentContainer;
     private ScrollRect scrollRect;
-
     private bool isShowingInternship = true;
 
-    // 颜色规范
     private readonly Color PanelBgColor = new Color(0.12f, 0.12f, 0.15f, 0.95f);
     private readonly Color TopBarColor = new Color(0.08f, 0.08f, 0.1f, 1f);
     private readonly Color CardBgColor = new Color(0.18f, 0.18f, 0.22f, 1f);
-    private readonly Color TextTitleColor = new Color(0.95f, 0.85f, 0.6f, 1f); // Gold
+    private readonly Color TextTitleColor = new Color(0.95f, 0.85f, 0.6f, 1f);
     private readonly Color TextNormalColor = new Color(0.9f, 0.9f, 0.9f, 1f);
     private readonly Color TextSubColor = new Color(0.7f, 0.7f, 0.7f, 1f);
     private readonly Color TextWarningColor = new Color(0.9f, 0.4f, 0.4f, 1f);
@@ -42,31 +31,6 @@ public class JobSelectionUI : MonoBehaviour
     private readonly Color BtnExecColor = new Color(0.3f, 0.5f, 0.8f, 1f);
     private readonly Color BtnDisabledColor = new Color(0.3f, 0.3f, 0.3f, 1f);
 
-    // ================== 数据定义 ==================
-    public struct JobDef
-    {
-        public string id;
-        public string name;
-        public bool isInternship;
-        public int income;
-        public int apCost;
-
-        public int reqStudy;
-        public int reqCharm;
-        public int reqLeadership;
-        public int reqDarkness;
-
-        public int effectStudy;
-        public int effectCharm;
-        public int effectPhysique;
-        public int effectLeadership;
-        public int effectStress;
-        public int effectMood;
-        public int effectDarkness;
-    }
-
-    private List<JobDef> allJobs = new List<JobDef>();
-
     private void Awake()
     {
         if (Instance != null && Instance != this)
@@ -74,37 +38,44 @@ public class JobSelectionUI : MonoBehaviour
             Destroy(gameObject);
             return;
         }
+
         Instance = this;
         DontDestroyOnLoad(gameObject);
-
-        InitJobData();
         BuildUI();
         Hide();
     }
 
-    private void InitJobData()
+    public void Show()
     {
-        // 实习
-        allJobs.Add(new JobDef { id = "intern_tech", name = "技术开发实习", isInternship = true, income = 1500, apCost = 4, reqStudy = 70, effectStudy = 5, effectPhysique = -3, effectStress = 10 });
-        allJobs.Add(new JobDef { id = "intern_finance", name = "金融助理实习", isInternship = true, income = 2000, apCost = 4, reqLeadership = 60, effectCharm = 3, effectLeadership = 5, effectStress = 15 });
-        allJobs.Add(new JobDef { id = "intern_media", name = "新媒体运营", isInternship = true, income = 1200, apCost = 3, reqCharm = 60, effectCharm = 8, effectMood = -5 });
-        allJobs.Add(new JobDef { id = "intern_research", name = "实验室助理", isInternship = true, income = 800, apCost = 3, reqStudy = 80, effectStudy = 10, effectStress = -5 });
+        if (!UIFlowGuard.PrepareForExclusiveWindow(UIFlowGuard.WindowJobSelection))
+        {
+            if (MissionUI.Instance != null)
+            {
+                MissionUI.Instance.ShowSystemNotification("无法打开工作面板", "当前有其他独占界面正在占用输入，稍后再试。", new Color(0.82f, 0.38f, 0.30f), 2.8f);
+            }
+            return;
+        }
 
-        // 副业
-        allJobs.Add(new JobDef { id = "side_tutor", name = "家教兼职", isInternship = false, income = 500, apCost = 2, reqStudy = 60, effectStudy = 2, effectStress = 5 });
-        allJobs.Add(new JobDef { id = "side_delivery", name = "外卖骑手", isInternship = false, income = 300, apCost = 2, effectPhysique = 5, effectStress = 8 });
-        allJobs.Add(new JobDef { id = "side_freelance", name = "自由撰稿人", isInternship = false, income = 800, apCost = 3, reqCharm = 50, effectCharm = 5, effectStress = -2 });
-        allJobs.Add(new JobDef { id = "side_campus_agent", name = "校园代理", isInternship = false, income = 1000, apCost = 3, reqDarkness = 20, effectLeadership = 8, effectDarkness = 5 });
+        canvasObj.SetActive(true);
+        SwitchTab(isShowingInternship);
     }
 
-    // ================== UI 构建 ==================
+    public void Hide()
+    {
+        if (canvasObj != null)
+        {
+            canvasObj.SetActive(false);
+        }
+    }
+
+    public bool IsOpen => canvasObj != null && canvasObj.activeSelf;
+
     private void BuildUI()
     {
-        // 1. Canvas
         canvasObj = new GameObject("JobSelectionCanvas");
         canvasObj.transform.SetParent(transform);
 
-        canvas = canvasObj.AddComponent<Canvas>();
+        Canvas canvas = canvasObj.AddComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
         canvas.sortingOrder = 200;
 
@@ -113,110 +84,75 @@ public class JobSelectionUI : MonoBehaviour
         scaler.referenceResolution = new Vector2(1920, 1080);
         scaler.matchWidthOrHeight = 0.5f;
 
-        raycaster = canvasObj.AddComponent<GraphicRaycaster>();
+        canvasObj.AddComponent<GraphicRaycaster>();
 
-        // 2. Background (Black overlay)
-        GameObject bgObj = new GameObject("Background");
-        bgObj.transform.SetParent(canvasObj.transform, false);
-        Image bgImg = bgObj.AddComponent<Image>();
-        bgImg.color = new Color(0, 0, 0, 0.7f);
-        RectTransform bgRect = bgObj.GetComponent<RectTransform>();
-        bgRect.anchorMin = Vector2.zero;
-        bgRect.anchorMax = Vector2.one;
-        bgRect.sizeDelta = Vector2.zero;
+        GameObject bgObj = CreatePanel("Background", canvasObj.transform, new Color(0f, 0f, 0f, 0.7f));
+        StretchFull(bgObj.GetComponent<RectTransform>());
+        bgObj.AddComponent<Button>().onClick.AddListener(Hide);
 
-        Button bgBtn = bgObj.AddComponent<Button>();
-        bgBtn.onClick.AddListener(Hide);
-
-        // 3. Main Panel (~70% screen)
-        panelObj = new GameObject("MainPanel");
-        panelObj.transform.SetParent(canvasObj.transform, false);
-        Image panelImg = panelObj.AddComponent<Image>();
-        panelImg.color = PanelBgColor;
+        GameObject panelObj = CreatePanel("MainPanel", canvasObj.transform, PanelBgColor);
         RectTransform panelRect = panelObj.GetComponent<RectTransform>();
         panelRect.anchorMin = new Vector2(0.5f, 0.5f);
         panelRect.anchorMax = new Vector2(0.5f, 0.5f);
         panelRect.sizeDelta = new Vector2(1300, 800);
-
-        // 阻止点击穿透到背景
         panelObj.AddComponent<Button>();
 
-        // 4. Title Bar
-        GameObject titleBarObj = new GameObject("TitleBar");
-        titleBarObj.transform.SetParent(panelObj.transform, false);
-        Image titleBg = titleBarObj.AddComponent<Image>();
-        titleBg.color = TopBarColor;
+        GameObject titleBarObj = CreatePanel("TitleBar", panelObj.transform, TopBarColor);
         RectTransform titleBarRect = titleBarObj.GetComponent<RectTransform>();
         titleBarRect.anchorMin = new Vector2(0, 1);
         titleBarRect.anchorMax = new Vector2(1, 1);
-        titleBarRect.pivot = new Vector2(0.5f, 1);
+        titleBarRect.pivot = new Vector2(0.5f, 1f);
         titleBarRect.sizeDelta = new Vector2(0, 80);
         titleBarRect.anchoredPosition = Vector2.zero;
+        CreateText("Title", titleBarObj.transform, "兼职与实习", 36, TextTitleColor, TextAlignmentOptions.Center, new Vector2(400, 80), Vector2.zero);
 
-        CreateText("txtTitle", titleBarObj.transform, "兼职与实习", 36, TextTitleColor, TextAlignmentOptions.Center, new Vector2(400, 80), Vector2.zero);
-
-        // Close Button
-        GameObject closeBtnObj = new GameObject("btnClose");
-        closeBtnObj.transform.SetParent(titleBarObj.transform, false);
-        Image closeImg = closeBtnObj.AddComponent<Image>();
-        closeImg.color = new Color(0.8f, 0.3f, 0.3f, 1f);
-        RectTransform closeRect = closeBtnObj.GetComponent<RectTransform>();
-        closeRect.anchorMin = new Vector2(1, 0.5f);
-        closeRect.anchorMax = new Vector2(1, 0.5f);
-        closeRect.sizeDelta = new Vector2(60, 60);
+        Button closeButton = CreateButton("Close", titleBarObj.transform, "X", new Vector2(60, 60), new Color(0.8f, 0.3f, 0.3f, 1f), 30f);
+        RectTransform closeRect = closeButton.GetComponent<RectTransform>();
+        closeRect.anchorMin = new Vector2(1f, 0.5f);
+        closeRect.anchorMax = new Vector2(1f, 0.5f);
         closeRect.anchoredPosition = new Vector2(-40, 0);
-        Button closeBtn = closeBtnObj.AddComponent<Button>();
-        closeBtn.onClick.AddListener(Hide);
-        CreateText("txtX", closeBtnObj.transform, "X", 30, Color.white, TextAlignmentOptions.Center, new Vector2(60, 60), Vector2.zero);
+        closeButton.onClick.AddListener(Hide);
 
-        // 5. Tab Bar
         GameObject tabBarObj = new GameObject("TabBar");
         tabBarObj.transform.SetParent(panelObj.transform, false);
         RectTransform tabBarRect = tabBarObj.AddComponent<RectTransform>();
         tabBarRect.anchorMin = new Vector2(0, 1);
         tabBarRect.anchorMax = new Vector2(1, 1);
-        tabBarRect.pivot = new Vector2(0.5f, 1);
+        tabBarRect.pivot = new Vector2(0.5f, 1f);
         tabBarRect.sizeDelta = new Vector2(0, 60);
         tabBarRect.anchoredPosition = new Vector2(0, -80);
         HorizontalLayoutGroup tabLayout = tabBarObj.AddComponent<HorizontalLayoutGroup>();
         tabLayout.childControlWidth = true;
         tabLayout.childControlHeight = true;
 
-        (btnInternship, txtInternship) = CreateTabButton("btnTabIntern", tabBarObj.transform, "实习项目");
-        (btnSideHustle, txtSideHustle) = CreateTabButton("btnTabHustle", tabBarObj.transform, "副业兼职");
-
+        btnInternship = CreateTabButton("btnTabIntern", tabBarObj.transform, "实习项目");
+        btnSideHustle = CreateTabButton("btnTabHustle", tabBarObj.transform, "副业兼职");
         btnInternship.onClick.AddListener(() => SwitchTab(true));
         btnSideHustle.onClick.AddListener(() => SwitchTab(false));
 
-        // 6. Lock Message
         GameObject lockMsgObj = new GameObject("LockMessage");
         lockMsgObj.transform.SetParent(panelObj.transform, false);
         RectTransform lockRect = lockMsgObj.AddComponent<RectTransform>();
         lockRect.anchorMin = new Vector2(0, 0);
         lockRect.anchorMax = new Vector2(1, 1);
-        lockRect.offsetMin = new Vector2(0, 0);
+        lockRect.offsetMin = Vector2.zero;
         lockRect.offsetMax = new Vector2(0, -140);
-        txtLockMessage = CreateText("txtLock", lockMsgObj.transform, "该功能尚未解锁。\n\n实习要求：大二下学期，通过四级或GPA≥2.5\n副业要求：大二，黑暗值≥15或朋友≥3", 30, TextSubColor, TextAlignmentOptions.Center, Vector2.zero, Vector2.zero);
-        txtLockMessage.GetComponent<RectTransform>().anchorMin = Vector2.zero;
-        txtLockMessage.GetComponent<RectTransform>().anchorMax = Vector2.one;
+        txtLockMessage = CreateText("txtLock", lockMsgObj.transform, string.Empty, 30, TextSubColor, TextAlignmentOptions.Center, Vector2.zero, Vector2.zero);
+        txtLockMessage.rectTransform.anchorMin = Vector2.zero;
+        txtLockMessage.rectTransform.anchorMax = Vector2.one;
 
-        // 7. Scroll View
-        GameObject scrollObj = new GameObject("ScrollView");
-        scrollObj.transform.SetParent(panelObj.transform, false);
-        RectTransform scrollRootRect = scrollObj.AddComponent<RectTransform>();
+        GameObject scrollObj = CreatePanel("ScrollView", panelObj.transform, new Color(0f, 0f, 0f, 0.2f));
+        RectTransform scrollRootRect = scrollObj.GetComponent<RectTransform>();
         scrollRootRect.anchorMin = new Vector2(0, 0);
         scrollRootRect.anchorMax = new Vector2(1, 1);
-        scrollRootRect.offsetMin = new Vector2(20, 20); // bottom left
-        scrollRootRect.offsetMax = new Vector2(-20, -150); // top right
+        scrollRootRect.offsetMin = new Vector2(20, 20);
+        scrollRootRect.offsetMax = new Vector2(-20, -150);
 
-        Image scrollBg = scrollObj.AddComponent<Image>();
-        scrollBg.color = new Color(0, 0, 0, 0.2f);
         scrollRect = scrollObj.AddComponent<ScrollRect>();
         scrollRect.horizontal = false;
         scrollRect.vertical = true;
         scrollRect.scrollSensitivity = 30f;
 
-        // Viewport
         GameObject viewportObj = new GameObject("Viewport");
         viewportObj.transform.SetParent(scrollObj.transform, false);
         RectTransform viewportRect = viewportObj.AddComponent<RectTransform>();
@@ -225,14 +161,12 @@ public class JobSelectionUI : MonoBehaviour
         viewportRect.sizeDelta = Vector2.zero;
         viewportObj.AddComponent<RectMask2D>();
 
-        // Content
         GameObject contentObj = new GameObject("Content");
         contentObj.transform.SetParent(viewportObj.transform, false);
         contentContainer = contentObj.AddComponent<RectTransform>();
         contentContainer.anchorMin = new Vector2(0, 1);
         contentContainer.anchorMax = new Vector2(1, 1);
-        contentContainer.pivot = new Vector2(0.5f, 1);
-        contentContainer.sizeDelta = new Vector2(0, 0);
+        contentContainer.pivot = new Vector2(0.5f, 1f);
 
         VerticalLayoutGroup vlg = contentObj.AddComponent<VerticalLayoutGroup>();
         vlg.padding = new RectOffset(20, 20, 20, 20);
@@ -245,19 +179,278 @@ public class JobSelectionUI : MonoBehaviour
         csf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
         scrollRect.viewport = viewportRect;
-        scrollRect.content = (RectTransform)contentContainer;
+        scrollRect.content = contentContainer;
     }
 
-    private (Button, TextMeshProUGUI) CreateTabButton(string name, Transform parent, string text)
+    private void SwitchTab(bool showInternship)
+    {
+        isShowingInternship = showInternship;
+        btnInternship.GetComponent<Image>().color = isShowingInternship ? TabActiveColor : TabInactiveColor;
+        btnSideHustle.GetComponent<Image>().color = !isShowingInternship ? TabActiveColor : TabInactiveColor;
+
+        bool unlocked = JobSystem.Instance != null &&
+            (isShowingInternship ? JobSystem.Instance.IsInternshipUnlocked() : JobSystem.Instance.IsSideHustleUnlocked());
+
+        if (!unlocked)
+        {
+            txtLockMessage.gameObject.SetActive(true);
+            scrollRect.gameObject.SetActive(false);
+            txtLockMessage.text = isShowingInternship
+                ? "实习尚未解锁。\n\n要求：大二下学期，并且通过英语四级或 GPA≥2.5"
+                : "副业尚未解锁。\n\n要求：大二及以上，并且黑暗值≥15或朋友(好感≥40)人数≥3";
+            return;
+        }
+
+        txtLockMessage.gameObject.SetActive(false);
+        scrollRect.gameObject.SetActive(true);
+        RefreshJobList();
+    }
+
+    private void RefreshJobList()
+    {
+        foreach (Transform child in contentContainer)
+        {
+            Destroy(child.gameObject);
+        }
+
+        if (JobSystem.Instance == null)
+        {
+            CreateEmptyHint("工作情报暂时还没汇总到这里。\n先推进学期、提升属性，新的工作机会会逐步整理出来。");
+            return;
+        }
+
+        List<JobDefinitionData> jobs = JobSystem.Instance.GetJobs(isShowingInternship);
+        if (jobs.Count == 0)
+        {
+            CreateEmptyHint(isShowingInternship
+                ? "这一阶段还没有可执行的实习项目。\n先继续提升学业或证书进度，后续会出现更正式的岗位。"
+                : "这一阶段还没有合适的副业兼职。\n多推进人际、黑暗值或学年进度，新的赚钱路子会慢慢打开。");
+            return;
+        }
+
+        for (int i = 0; i < jobs.Count; i++)
+        {
+            CreateJobCard(jobs[i]);
+        }
+    }
+
+    private void CreateJobCard(JobDefinitionData job)
+    {
+        GameObject cardObj = CreatePanel($"Card_{job.id}", contentContainer, CardBgColor);
+        LayoutElement le = cardObj.AddComponent<LayoutElement>();
+        le.minHeight = 168;
+        le.preferredHeight = 168;
+
+        CreateText("Name", cardObj.transform, job.name, 28, TextTitleColor, TextAlignmentOptions.Left, new Vector2(320, 40), new Vector2(30, 48))
+            .rectTransform.pivot = new Vector2(0f, 0.5f);
+        CreateText("Description", cardObj.transform, job.description, 18, TextSubColor, TextAlignmentOptions.Left, new Vector2(640, 48), new Vector2(30, 10))
+            .enableWordWrapping = true;
+
+        CreateText("Income", cardObj.transform, $"收益: +{job.baseIncome}元", 24, TextIncomeColor, TextAlignmentOptions.Left, new Vector2(200, 30), new Vector2(30, -34))
+            .rectTransform.pivot = new Vector2(0f, 0.5f);
+        CreateText("AP", cardObj.transform, $"消耗: {job.apCost} AP", 24, TextWarningColor, TextAlignmentOptions.Left, new Vector2(180, 30), new Vector2(250, -34))
+            .rectTransform.pivot = new Vector2(0f, 0.5f);
+
+        CreateText("Req", cardObj.transform, $"要求: {BuildRequirementText(job)}", 20, TextSubColor, TextAlignmentOptions.Left, new Vector2(620, 28), new Vector2(30, -70))
+            .rectTransform.pivot = new Vector2(0f, 0.5f);
+        CreateText("Eff", cardObj.transform, $"效果: {BuildEffectText(job)}", 20, TextNormalColor, TextAlignmentOptions.Left, new Vector2(620, 28), new Vector2(30, -102))
+            .rectTransform.pivot = new Vector2(0f, 0.5f);
+
+        string failReason = string.Empty;
+        bool canExecute = JobSystem.Instance != null && JobSystem.Instance.CanExecuteJob(job, out failReason);
+        Button executeButton = CreateButton("Execute", cardObj.transform, canExecute ? "执行" : failReason, new Vector2(180, 64), canExecute ? BtnExecColor : BtnDisabledColor, 24f);
+        RectTransform btnRect = executeButton.GetComponent<RectTransform>();
+        btnRect.anchorMin = new Vector2(1f, 0.5f);
+        btnRect.anchorMax = new Vector2(1f, 0.5f);
+        btnRect.pivot = new Vector2(1f, 0.5f);
+        btnRect.anchoredPosition = new Vector2(-30, -4);
+        executeButton.interactable = canExecute;
+        if (canExecute)
+        {
+            executeButton.onClick.AddListener(() => ExecuteJob(job));
+        }
+    }
+
+    private void ExecuteJob(JobDefinitionData job)
+    {
+        if (JobSystem.Instance == null)
+        {
+            if (MissionUI.Instance != null)
+            {
+                MissionUI.Instance.ShowSystemNotification("工作系统不可用", "兼职与实习系统还没有准备好，现在暂时无法执行这个项目。", new Color(0.85f, 0.34f, 0.24f), 2.8f);
+            }
+            return;
+        }
+
+        if (!JobSystem.Instance.ExecuteJob(job, out string failReason))
+        {
+            if (MissionUI.Instance != null && !string.IsNullOrEmpty(failReason))
+            {
+                MissionUI.Instance.ShowSystemNotification("工作执行失败", failReason, new Color(0.85f, 0.34f, 0.24f), 2.8f);
+            }
+            SwitchTab(isShowingInternship);
+            return;
+        }
+
+        if (MissionUI.Instance != null)
+        {
+            MissionUI.Instance.ShowSystemNotification(
+                job.name,
+                BuildJobExecutionSummary(job),
+                new Color(0.22f, 0.72f, 0.34f),
+                3.2f);
+        }
+
+        Debug.Log($"[JobSelectionUI] 执行了 {job.name}");
+        SwitchTab(isShowingInternship);
+        Hide();
+    }
+
+    private string BuildRequirementText(JobDefinitionData job)
+    {
+        if (job == null || job.requirements == null || job.requirements.Count == 0)
+        {
+            return "无额外要求";
+        }
+
+        List<string> parts = new List<string>();
+        for (int i = 0; i < job.requirements.Count; i++)
+        {
+            JobRequirementData requirement = job.requirements[i];
+            if (requirement == null)
+            {
+                continue;
+            }
+
+            string type = string.IsNullOrWhiteSpace(requirement.type)
+                ? "attribute"
+                : requirement.type.Trim().ToLowerInvariant();
+
+            if (type == "attribute")
+            {
+                parts.Add($"{GetDisplayName(requirement.target)}≥{requirement.min}");
+            }
+            else if (type == "cet4")
+            {
+                parts.Add("通过四级");
+            }
+            else if (type == "gpa")
+            {
+                parts.Add($"GPA≥{requirement.min / 100f:F1}");
+            }
+            else if (type == "semester")
+            {
+                parts.Add($"第{requirement.min}学期起");
+            }
+            else
+            {
+                parts.Add($"{requirement.type}:{requirement.min}");
+            }
+        }
+
+        return parts.Count == 0 ? "无额外要求" : string.Join("，", parts);
+    }
+
+    private string BuildEffectText(JobDefinitionData job)
+    {
+        if (job == null || job.effects == null || job.effects.Count == 0)
+        {
+            return "主要获得收入";
+        }
+
+        List<string> parts = new List<string>();
+        for (int i = 0; i < job.effects.Count; i++)
+        {
+            JobEffectData effect = job.effects[i];
+            if (effect == null)
+            {
+                continue;
+            }
+
+            string type = string.IsNullOrWhiteSpace(effect.type)
+                ? "attribute"
+                : effect.type.Trim().ToLowerInvariant();
+
+            if (type == "attribute")
+            {
+                string sign = effect.value >= 0 ? "+" : string.Empty;
+                parts.Add($"{GetDisplayName(effect.target)}{sign}{effect.value}");
+            }
+            else if (type == "money")
+            {
+                string sign = effect.value >= 0 ? "+" : string.Empty;
+                parts.Add($"金钱{sign}{effect.value}");
+            }
+        }
+
+        return parts.Count == 0 ? "主要获得收入" : string.Join("，", parts);
+    }
+
+    private string BuildJobExecutionSummary(JobDefinitionData job)
+    {
+        if (job == null)
+        {
+            return "已完成本回合工作安排。";
+        }
+
+        List<string> parts = new List<string>
+        {
+            $"收入 +{job.baseIncome}"
+        };
+
+        if (job.apCost > 0)
+        {
+            parts.Add($"消耗 {job.apCost} 行动点");
+        }
+
+        string effectText = BuildEffectText(job);
+        if (!string.IsNullOrEmpty(effectText) && effectText != "主要获得收入")
+        {
+            parts.Add(effectText);
+        }
+
+        return string.Join("，", parts) + "。";
+    }
+
+    private void CreateEmptyHint(string text)
+    {
+        TextMeshProUGUI tmp = CreateText("Empty", contentContainer, text, 24, TextSubColor, TextAlignmentOptions.Center, new Vector2(600, 120), Vector2.zero);
+        LayoutElement le = tmp.gameObject.AddComponent<LayoutElement>();
+        le.preferredHeight = 160;
+    }
+
+    private GameObject CreatePanel(string name, Transform parent, Color color)
     {
         GameObject obj = new GameObject(name);
         obj.transform.SetParent(parent, false);
+        obj.AddComponent<RectTransform>();
         Image img = obj.AddComponent<Image>();
+        img.color = color;
+        return obj;
+    }
+
+    private Button CreateTabButton(string name, Transform parent, string text)
+    {
+        Button btn = CreateButton(name, parent, text, Vector2.zero, TabInactiveColor, 28f);
+        btn.GetComponentInChildren<TextMeshProUGUI>().color = TextNormalColor;
+        RectTransform rt = btn.GetComponent<RectTransform>();
+        rt.anchorMin = Vector2.zero;
+        rt.anchorMax = Vector2.one;
+        return btn;
+    }
+
+    private Button CreateButton(string name, Transform parent, string text, Vector2 size, Color bgColor, float fontSize)
+    {
+        GameObject obj = new GameObject(name);
+        obj.transform.SetParent(parent, false);
+        RectTransform rt = obj.AddComponent<RectTransform>();
+        rt.sizeDelta = size;
+        Image img = obj.AddComponent<Image>();
+        img.color = bgColor;
         Button btn = obj.AddComponent<Button>();
-        TextMeshProUGUI tmp = CreateText("txt", obj.transform, text, 28, TextNormalColor, TextAlignmentOptions.Center, Vector2.zero, Vector2.zero);
-        tmp.GetComponent<RectTransform>().anchorMin = Vector2.zero;
-        tmp.GetComponent<RectTransform>().anchorMax = Vector2.one;
-        return (btn, tmp);
+        TextMeshProUGUI label = CreateText("Text", obj.transform, text, (int)fontSize, Color.white, TextAlignmentOptions.Center, size, Vector2.zero);
+        StretchFull(label.rectTransform);
+        return btn;
     }
 
     private TextMeshProUGUI CreateText(string name, Transform parent, string text, int fontSize, Color color, TextAlignmentOptions alignment, Vector2 size, Vector2 pos)
@@ -273,227 +466,54 @@ public class JobSelectionUI : MonoBehaviour
         tmp.fontSize = fontSize;
         tmp.color = color;
         tmp.alignment = alignment;
+        tmp.enableWordWrapping = false;
 
         if (FontManager.Instance != null)
+        {
             tmp.font = FontManager.Instance.ChineseFont;
+        }
 
         return tmp;
     }
 
-    // ================== 逻辑更新 ==================
-    public void Show()
+    private void StretchFull(RectTransform rt)
     {
-        if (!UIFlowGuard.PrepareForExclusiveWindow(UIFlowGuard.WindowJobSelection)) return;
-        canvasObj.SetActive(true);
-        SwitchTab(isShowingInternship); // 刷新当前tab内容
+        rt.anchorMin = Vector2.zero;
+        rt.anchorMax = Vector2.one;
+        rt.offsetMin = Vector2.zero;
+        rt.offsetMax = Vector2.zero;
     }
 
-    public void Hide()
+    private string GetDisplayName(string target)
     {
-        canvasObj.SetActive(false);
-    }
-
-    public bool IsOpen => canvasObj != null && canvasObj.activeSelf;
-
-    private void SwitchTab(bool showInternship)
-    {
-        isShowingInternship = showInternship;
-
-        // 更新Tab外观
-        btnInternship.GetComponent<Image>().color = isShowingInternship ? TabActiveColor : TabInactiveColor;
-        btnSideHustle.GetComponent<Image>().color = !isShowingInternship ? TabActiveColor : TabInactiveColor;
-
-        bool isUnlocked = false;
-        if (JobSystem.Instance != null)
+        switch (target)
         {
-            isUnlocked = isShowingInternship ? JobSystem.Instance.IsInternshipUnlocked() : JobSystem.Instance.IsSideHustleUnlocked();
-        }
-
-        if (!isUnlocked)
-        {
-            txtLockMessage.gameObject.SetActive(true);
-            scrollRect.gameObject.SetActive(false);
-            if (isShowingInternship)
-            {
-                txtLockMessage.text = "实习尚未解锁。\n\n要求：大二下学期，并且通过英语四级或GPA≥2.5";
-            }
-            else
-            {
-                txtLockMessage.text = "副业尚未解锁。\n\n要求：大二及以上，并且黑暗值≥15或朋友(好感≥40)人数≥3";
-            }
-        }
-        else
-        {
-            txtLockMessage.gameObject.SetActive(false);
-            scrollRect.gameObject.SetActive(true);
-            RefreshJobList();
+            case "Study": return "学力";
+            case "Charm": return "魅力";
+            case "Physique": return "体魄";
+            case "Leadership": return "领导力";
+            case "Stress": return "压力";
+            case "Mood": return "心情";
+            case "Darkness": return "黑暗值";
+            case "Guilt": return "负罪感";
+            case "Luck": return "幸运";
+            default: return target;
         }
     }
 
-    private void RefreshJobList()
-    {
-        // 清理旧列表
-        foreach (Transform child in contentContainer)
-        {
-            Destroy(child.gameObject);
-        }
-
-        foreach (var job in allJobs)
-        {
-            if (job.isInternship == isShowingInternship)
-            {
-                CreateJobCard(job);
-            }
-        }
-    }
-
-    private void CreateJobCard(JobDef job)
-    {
-        GameObject cardObj = new GameObject($"Card_{job.id}");
-        cardObj.transform.SetParent(contentContainer, false);
-        Image bg = cardObj.AddComponent<Image>();
-        bg.color = CardBgColor;
-
-        LayoutElement le = cardObj.AddComponent<LayoutElement>();
-        le.minHeight = 120;
-        le.preferredHeight = 120;
-
-        RectTransform cardRect = cardObj.GetComponent<RectTransform>();
-
-        // 名称
-        CreateText("txtName", cardObj.transform, job.name, 28, TextTitleColor, TextAlignmentOptions.Left, new Vector2(300, 40), new Vector2(30, 25))
-            .GetComponent<RectTransform>().pivot = new Vector2(0, 0.5f);
-
-        // 收益
-        CreateText("txtIncome", cardObj.transform, $"收益: +{job.income}元", 24, TextIncomeColor, TextAlignmentOptions.Left, new Vector2(200, 30), new Vector2(30, -20))
-            .GetComponent<RectTransform>().pivot = new Vector2(0, 0.5f);
-
-        // 消耗
-        CreateText("txtAP", cardObj.transform, $"消耗: {job.apCost} AP", 24, TextWarningColor, TextAlignmentOptions.Left, new Vector2(200, 30), new Vector2(250, -20))
-            .GetComponent<RectTransform>().pivot = new Vector2(0, 0.5f);
-
-        // 需求与效果文字拼接
-        string reqText = "要求: ";
-        List<string> reqs = new List<string>();
-        if (job.reqStudy > 0) reqs.Add($"学力>{job.reqStudy}");
-        if (job.reqCharm > 0) reqs.Add($"魅力>{job.reqCharm}");
-        if (job.reqLeadership > 0) reqs.Add($"领导力>{job.reqLeadership}");
-        if (job.reqDarkness > 0) reqs.Add($"黑暗值>{job.reqDarkness}");
-        reqText += reqs.Count > 0 ? string.Join(", ", reqs) : "无";
-
-        string effText = "效果: ";
-        List<string> effs = new List<string>();
-        if (job.effectStudy != 0) effs.Add($"学力{(job.effectStudy > 0 ? "+" : "")}{job.effectStudy}");
-        if (job.effectCharm != 0) effs.Add($"魅力{(job.effectCharm > 0 ? "+" : "")}{job.effectCharm}");
-        if (job.effectPhysique != 0) effs.Add($"体魄{(job.effectPhysique > 0 ? "+" : "")}{job.effectPhysique}");
-        if (job.effectLeadership != 0) effs.Add($"领导力{(job.effectLeadership > 0 ? "+" : "")}{job.effectLeadership}");
-        if (job.effectStress != 0) effs.Add($"压力{(job.effectStress > 0 ? "+" : "")}{job.effectStress}");
-        if (job.effectMood != 0) effs.Add($"心情{(job.effectMood > 0 ? "+" : "")}{job.effectMood}");
-        if (job.effectDarkness != 0) effs.Add($"黑暗值{(job.effectDarkness > 0 ? "+" : "")}{job.effectDarkness}");
-        effText += effs.Count > 0 ? string.Join(", ", effs) : "无";
-
-        CreateText("txtReq", cardObj.transform, reqText, 22, TextSubColor, TextAlignmentOptions.Left, new Vector2(400, 30), new Vector2(400, 20))
-            .GetComponent<RectTransform>().pivot = new Vector2(0, 0.5f);
-
-        CreateText("txtEff", cardObj.transform, effText, 22, TextNormalColor, TextAlignmentOptions.Left, new Vector2(400, 30), new Vector2(400, -20))
-            .GetComponent<RectTransform>().pivot = new Vector2(0, 0.5f);
-
-        // 判断是否满足要求
-        bool canExecute = true;
-        string failReason = "";
-
-        if (GameState.Instance != null && GameState.Instance.ActionPoints < job.apCost)
-        {
-            canExecute = false;
-            failReason = "行动点不足";
-        }
-        else if (PlayerAttributes.Instance != null)
-        {
-            if (job.reqStudy > 0 && PlayerAttributes.Instance.Study <= job.reqStudy) { canExecute = false; failReason = "学力不足"; }
-            if (job.reqCharm > 0 && PlayerAttributes.Instance.Charm <= job.reqCharm) { canExecute = false; failReason = "魅力不足"; }
-            if (job.reqLeadership > 0 && PlayerAttributes.Instance.Leadership <= job.reqLeadership) { canExecute = false; failReason = "领导力不足"; }
-            if (job.reqDarkness > 0 && PlayerAttributes.Instance.Darkness <= job.reqDarkness) { canExecute = false; failReason = "黑暗值不足"; }
-        }
-
-        // 按钮
-        GameObject btnObj = new GameObject("btnExecute");
-        btnObj.transform.SetParent(cardObj.transform, false);
-        Image btnImg = btnObj.AddComponent<Image>();
-        btnImg.color = canExecute ? BtnExecColor : BtnDisabledColor;
-        RectTransform btnRect = btnObj.GetComponent<RectTransform>();
-        btnRect.anchorMin = new Vector2(1, 0.5f);
-        btnRect.anchorMax = new Vector2(1, 0.5f);
-        btnRect.pivot = new Vector2(1, 0.5f);
-        btnRect.sizeDelta = new Vector2(160, 60);
-        btnRect.anchoredPosition = new Vector2(-30, 0);
-
-        Button btn = btnObj.AddComponent<Button>();
-        CreateText("txtBtn", btnObj.transform, canExecute ? "执行" : failReason, 24, Color.white, TextAlignmentOptions.Center, btnRect.sizeDelta, Vector2.zero);
-
-        if (canExecute)
-        {
-            btn.onClick.AddListener(() => ExecuteJob(job));
-        }
-        else
-        {
-            btn.interactable = false;
-        }
-    }
-
-    private void ExecuteJob(JobDef job)
-    {
-        if (GameState.Instance == null || PlayerAttributes.Instance == null || EconomyManager.Instance == null) return;
-
-        // 扣除AP
-        GameState.Instance.ActionPoints -= job.apCost;
-
-        // 发放金钱
-        EconomyManager.Instance.Earn(job.income, TransactionRecord.TransactionType.PositionSalary, job.name + "收入");
-
-        // 增加属性
-        if (job.effectStudy != 0) PlayerAttributes.Instance.Study += job.effectStudy;
-        if (job.effectCharm != 0) PlayerAttributes.Instance.Charm += job.effectCharm;
-        if (job.effectPhysique != 0) PlayerAttributes.Instance.Physique += job.effectPhysique;
-        if (job.effectLeadership != 0) PlayerAttributes.Instance.Leadership += job.effectLeadership;
-        if (job.effectStress != 0) PlayerAttributes.Instance.Stress += job.effectStress;
-        if (job.effectMood != 0) PlayerAttributes.Instance.Mood += job.effectMood;
-        if (job.effectDarkness != 0) PlayerAttributes.Instance.Darkness += job.effectDarkness;
-
-        // 记录系统
-        if (JobSystem.Instance != null)
-        {
-            if (job.isInternship)
-                JobSystem.Instance.RecordInternshipExecution(job.id);
-            else
-                JobSystem.Instance.RecordSideHustleExecution(job.id);
-        }
-
-        // 提示与关闭
-        Debug.Log($"[JobSelectionUI] 执行了 {job.name}");
-        Hide();
-    }
-
-    // ================== 给外部的 API ==================
-    /// <summary>
-    /// HUDManager 可调用此方法创建一个入口按钮
-    /// </summary>
     public static GameObject AddJobButton(Transform parent)
     {
-        // 检查解锁学期 (大二下及以上)
-        bool isSemesterReached = false;
-        if (GameState.Instance != null)
+        bool shouldShow = JobSystem.Instance != null &&
+            (JobSystem.Instance.IsInternshipUnlocked() || JobSystem.Instance.IsSideHustleUnlocked());
+        if (!shouldShow)
         {
-            isSemesterReached = GameState.Instance.CurrentYear > 2 ||
-                               (GameState.Instance.CurrentYear == 2 && GameState.Instance.CurrentSemester == 2);
+            return null;
         }
-
-        if (!isSemesterReached) return null;
 
         GameObject btnObj = new GameObject("btnJob");
         btnObj.transform.SetParent(parent, false);
-
         Image img = btnObj.AddComponent<Image>();
-        img.color = new Color(0.2f, 0.4f, 0.6f, 1f); // 独特颜色区分
+        img.color = new Color(0.2f, 0.4f, 0.6f, 1f);
 
         RectTransform rt = btnObj.GetComponent<RectTransform>();
         rt.sizeDelta = new Vector2(100, 100);
@@ -507,7 +527,6 @@ public class JobSelectionUI : MonoBehaviour
             }
         });
 
-        // 文本
         GameObject txtObj = new GameObject("Text");
         txtObj.transform.SetParent(btnObj.transform, false);
         RectTransform txtRt = txtObj.AddComponent<RectTransform>();
@@ -522,7 +541,9 @@ public class JobSelectionUI : MonoBehaviour
         tmp.alignment = TextAlignmentOptions.Center;
 
         if (FontManager.Instance != null)
+        {
             tmp.font = FontManager.Instance.ChineseFont;
+        }
 
         return btnObj;
     }

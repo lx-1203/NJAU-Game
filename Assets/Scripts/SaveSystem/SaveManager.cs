@@ -1,6 +1,8 @@
 using UnityEngine;
 using System;
 using System.IO;
+using System.Collections.Generic;
+using System.Collections;
 
 /// <summary>
 /// 存档管理器 —— 负责存档的读写、删除、自动存档等
@@ -19,6 +21,7 @@ public class SaveManager : MonoBehaviour
     /// 在标题界面读档后设置，由 GameSceneInitializer 消费并清空。
     /// </summary>
     public static SaveData PendingLoadData { get; set; }
+    public static int PendingLoadSlot { get; set; } = -1;
 
     // ========== 事件 ==========
 
@@ -31,6 +34,7 @@ public class SaveManager : MonoBehaviour
     // ========== 路径与命名 ==========
 
     private string saveFolderPath;
+    private string thumbnailFolderPath;
 
     /// <summary>槽位数量: 0=autosave, 1-3=手动</summary>
     private const int SlotCount = 4;
@@ -39,6 +43,7 @@ public class SaveManager : MonoBehaviour
 
     private float sessionStartTime;
     private float previousTotalPlayTime;
+    private readonly Dictionary<int, SaveData> slotDataCache = new Dictionary<int, SaveData>();
 
     // ========== 生命周期 ==========
 
@@ -53,6 +58,7 @@ public class SaveManager : MonoBehaviour
         DontDestroyOnLoad(gameObject);
 
         saveFolderPath = Path.Combine(Application.persistentDataPath, "saves");
+        thumbnailFolderPath = Path.Combine(saveFolderPath, "thumbnails");
         EnsureSaveFolder();
     }
 
@@ -70,9 +76,15 @@ public class SaveManager : MonoBehaviour
     /// <param name="slot">0=自动存档, 1-3=手动存档</param>
     public void SaveToSlot(int slot)
     {
+        SaveToSlot(slot, null);
+    }
+
+    public void SaveToSlot(int slot, Texture2D thumbnailTexture)
+    {
         if (slot < 0 || slot >= SlotCount)
         {
             Debug.LogWarning($"[SaveManager] 无效的存档槽位: {slot}");
+            ShowSaveNotification("存档失败", "目标存档槽位无效，这次保存没有执行。");
             return;
         }
 
@@ -105,6 +117,11 @@ public class SaveManager : MonoBehaviour
         // 记录总游戏时长
         data.totalPlayTimeSeconds = data.meta.playTimeSeconds;
 
+        if (thumbnailTexture != null)
+        {
+            data.thumbnailFileName = $"thumb_{slot}.png";
+        }
+
         // 序列化并写入文件
         string json = JsonUtility.ToJson(data, true);
         string filePath = GetSlotFilePath(slot);
@@ -112,13 +129,20 @@ public class SaveManager : MonoBehaviour
 
         try
         {
+            if (thumbnailTexture != null)
+            {
+                WriteThumbnail(slot, data.thumbnailFileName, thumbnailTexture);
+            }
+
             File.WriteAllText(filePath, json);
+            CacheSlotData(slot, data);
             Debug.Log($"[SaveManager] 存档成功: 槽位{slot} -> {filePath}");
             OnSaveCompleted?.Invoke(slot);
         }
         catch (Exception e)
         {
             Debug.LogError($"[SaveManager] 存档写入失败: {e.Message}");
+            ShowSaveNotification("存档失败", "写入存档文件时发生异常，这次进度没有成功保存。");
         }
     }
 
@@ -129,33 +153,7 @@ public class SaveManager : MonoBehaviour
     /// <returns>存档数据，读取失败返回 null</returns>
     public SaveData LoadFromSlot(int slot)
     {
-        if (slot < 0 || slot >= SlotCount)
-        {
-            Debug.LogWarning($"[SaveManager] 无效的存档槽位: {slot}");
-            return null;
-        }
-
-        string filePath = GetSlotFilePath(slot);
-        if (!File.Exists(filePath))
-        {
-            Debug.LogWarning($"[SaveManager] 存档文件不存在: {filePath}");
-            return null;
-        }
-
-        try
-        {
-            string json = File.ReadAllText(filePath);
-            SaveData data = JsonUtility.FromJson<SaveData>(json);
-            data?.EnsureInitialized();
-            Debug.Log($"[SaveManager] 读档成功: 槽位{slot}");
-            OnLoadCompleted?.Invoke(slot);
-            return data;
-        }
-        catch (Exception e)
-        {
-            Debug.LogError($"[SaveManager] 读档失败: {e.Message}");
-            return null;
-        }
+        return ReadSlotData(slot, true);
     }
 
     /// <summary>
@@ -166,6 +164,7 @@ public class SaveManager : MonoBehaviour
         if (data == null)
         {
             Debug.LogWarning("[SaveManager] 无法应用空的存档数据");
+            ShowSaveNotification("读档失败", "读到的存档数据为空，当前进度不会被覆盖。");
             return;
         }
 
@@ -184,6 +183,12 @@ public class SaveManager : MonoBehaviour
         }
 
         Debug.Log("[SaveManager] 存档数据已应用到所有系统");
+
+        if (PendingLoadSlot >= 0)
+        {
+            OnLoadCompleted?.Invoke(PendingLoadSlot);
+            PendingLoadSlot = -1;
+        }
     }
 
     /// <summary>
@@ -194,6 +199,7 @@ public class SaveManager : MonoBehaviour
         if (slot < 0 || slot >= SlotCount)
         {
             Debug.LogWarning($"[SaveManager] 无效的存档槽位: {slot}");
+            ShowSaveNotification("删除失败", "目标存档槽位无效，这次删除没有执行。");
             return;
         }
 
@@ -203,11 +209,13 @@ public class SaveManager : MonoBehaviour
             try
             {
                 File.Delete(filePath);
+                slotDataCache.Remove(slot);
                 Debug.Log($"[SaveManager] 已删除存档: 槽位{slot}");
             }
             catch (Exception e)
             {
                 Debug.LogError($"[SaveManager] 删除存档失败: {e.Message}");
+                ShowSaveNotification("删除失败", "清理存档文件时发生异常，这个槽位暂时没有删除成功。");
             }
         }
     }
@@ -227,10 +235,22 @@ public class SaveManager : MonoBehaviour
     /// <returns>元信息，无存档返回 null</returns>
     public SaveMetaInfo GetSlotMeta(int slot)
     {
-        if (!HasSaveData(slot)) return null;
-
-        SaveData data = LoadFromSlot(slot);
+        SaveData data = GetSlotSaveData(slot);
         return data?.meta;
+    }
+
+    /// <summary>
+    /// 读取槽位的完整存档数据（仅供 UI 展示使用，不产生通知）
+    /// </summary>
+    /// <returns>完整存档数据，无存档返回 null</returns>
+    public SaveData GetSlotSaveData(int slot)
+    {
+        if (slotDataCache.TryGetValue(slot, out SaveData cachedData))
+        {
+            return cachedData;
+        }
+
+        return ReadSlotData(slot, false);
     }
 
     /// <summary>
@@ -251,7 +271,12 @@ public class SaveManager : MonoBehaviour
     /// </summary>
     public void AutoSave()
     {
-        SaveToSlot(0);
+        CaptureAndSaveToSlot(0);
+    }
+
+    public Coroutine CaptureAndSaveToSlot(int slot, Action<bool> onCompleted = null)
+    {
+        return StartCoroutine(CaptureAndSaveRoutine(slot, onCompleted));
     }
 
     // ========== 内部方法 ==========
@@ -265,6 +290,46 @@ public class SaveManager : MonoBehaviour
         return Path.Combine(saveFolderPath, fileName);
     }
 
+    private SaveData ReadSlotData(int slot, bool logSuccess)
+    {
+        if (slot < 0 || slot >= SlotCount)
+        {
+            Debug.LogWarning($"[SaveManager] 无效的存档槽位: {slot}");
+            ShowSaveNotification("读档失败", "目标存档槽位无效，无法读取这份进度。");
+            return null;
+        }
+
+        string filePath = GetSlotFilePath(slot);
+        if (!File.Exists(filePath))
+        {
+            Debug.LogWarning($"[SaveManager] 存档文件不存在: {filePath}");
+            if (logSuccess)
+            {
+                ShowSaveNotification("读档失败", "这个槽位还没有可读取的存档记录。");
+            }
+            return null;
+        }
+
+        try
+        {
+            string json = File.ReadAllText(filePath);
+            SaveData data = JsonUtility.FromJson<SaveData>(json);
+            data?.EnsureInitialized();
+            CacheSlotData(slot, data);
+            if (logSuccess)
+            {
+                Debug.Log($"[SaveManager] 读档成功: 槽位{slot}");
+            }
+            return data;
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"[SaveManager] 读档失败: {e.Message}");
+            ShowSaveNotification("读档失败", "读取存档文件时发生异常，请换一个槽位再试。");
+            return null;
+        }
+    }
+
     /// <summary>
     /// 确保存档文件夹存在
     /// </summary>
@@ -275,6 +340,12 @@ public class SaveManager : MonoBehaviour
             Directory.CreateDirectory(saveFolderPath);
             Debug.Log($"[SaveManager] 创建存档目录: {saveFolderPath}");
         }
+
+        if (!Directory.Exists(thumbnailFolderPath))
+        {
+            Directory.CreateDirectory(thumbnailFolderPath);
+            Debug.Log($"[SaveManager] 创建缩略图目录: {thumbnailFolderPath}");
+        }
     }
 
     /// <summary>
@@ -284,5 +355,107 @@ public class SaveManager : MonoBehaviour
     {
         float sessionTime = Time.realtimeSinceStartup - sessionStartTime;
         return previousTotalPlayTime + sessionTime;
+    }
+
+    private void CacheSlotData(int slot, SaveData data)
+    {
+        if (data == null)
+        {
+            slotDataCache.Remove(slot);
+            return;
+        }
+
+        slotDataCache[slot] = data;
+    }
+
+    private void ShowSaveNotification(string title, string message, float duration = 2.8f)
+    {
+        if (MissionUI.Instance != null)
+        {
+            MissionUI.Instance.ShowSystemNotification(title, message, new Color(0.82f, 0.38f, 0.30f), duration);
+        }
+    }
+
+    public string GetThumbnailPath(string thumbnailFileName)
+    {
+        if (string.IsNullOrWhiteSpace(thumbnailFileName))
+        {
+            return null;
+        }
+
+        EnsureSaveFolder();
+        return Path.Combine(thumbnailFolderPath, thumbnailFileName);
+    }
+
+    private IEnumerator CaptureAndSaveRoutine(int slot, Action<bool> onCompleted)
+    {
+        yield return new WaitForEndOfFrame();
+
+        Texture2D capturedTexture = null;
+        bool succeeded = true;
+
+        try
+        {
+            capturedTexture = ScreenCapture.CaptureScreenshotAsTexture();
+            SaveToSlot(slot, capturedTexture);
+        }
+        catch (Exception e)
+        {
+            succeeded = false;
+            Debug.LogError($"[SaveManager] 截图存档失败: {e.Message}");
+            SaveToSlot(slot);
+        }
+        finally
+        {
+            if (capturedTexture != null)
+            {
+                Destroy(capturedTexture);
+            }
+        }
+
+        onCompleted?.Invoke(succeeded);
+    }
+
+    private void WriteThumbnail(int slot, string thumbnailFileName, Texture2D sourceTexture)
+    {
+        if (sourceTexture == null || string.IsNullOrWhiteSpace(thumbnailFileName))
+        {
+            return;
+        }
+
+        EnsureSaveFolder();
+
+        Texture2D resizedTexture = ResizeTexture(sourceTexture, 480, 270);
+        byte[] pngBytes = resizedTexture.EncodeToPNG();
+        string thumbnailPath = GetThumbnailPath(thumbnailFileName);
+
+        File.WriteAllBytes(thumbnailPath, pngBytes);
+
+        if (resizedTexture != sourceTexture)
+        {
+            Destroy(resizedTexture);
+        }
+    }
+
+    private Texture2D ResizeTexture(Texture2D source, int targetWidth, int targetHeight)
+    {
+        if (source == null)
+        {
+            return null;
+        }
+
+        RenderTexture rt = RenderTexture.GetTemporary(targetWidth, targetHeight, 0, RenderTextureFormat.ARGB32);
+        RenderTexture previous = RenderTexture.active;
+
+        Graphics.Blit(source, rt);
+        RenderTexture.active = rt;
+
+        Texture2D resized = new Texture2D(targetWidth, targetHeight, TextureFormat.RGB24, false);
+        resized.ReadPixels(new Rect(0, 0, targetWidth, targetHeight), 0, 0);
+        resized.Apply();
+
+        RenderTexture.active = previous;
+        RenderTexture.ReleaseTemporary(rt);
+        return resized;
     }
 }
