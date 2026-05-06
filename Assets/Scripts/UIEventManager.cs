@@ -165,7 +165,25 @@ public class UIEventManager : MonoBehaviour
     
     private void PlayButtonClickSound()
     {
-        if (enableSoundEffects && buttonClickSound != null)
+        if (!enableSoundEffects)
+        {
+            return;
+        }
+
+        if (AudioManager.Instance != null)
+        {
+            if (buttonClickSound != null)
+            {
+                AudioManager.Instance.PlaySFXClip(buttonClickSound);
+            }
+            else
+            {
+                AudioManager.Instance.PlaySFX("button_click");
+            }
+            return;
+        }
+
+        if (buttonClickSound != null)
         {
             audioSource.PlayOneShot(buttonClickSound);
         }
@@ -173,7 +191,25 @@ public class UIEventManager : MonoBehaviour
     
     private void PlayButtonHoverSound()
     {
-        if (enableSoundEffects && buttonHoverSound != null)
+        if (!enableSoundEffects)
+        {
+            return;
+        }
+
+        if (AudioManager.Instance != null)
+        {
+            if (buttonHoverSound != null)
+            {
+                AudioManager.Instance.PlaySFXClip(buttonHoverSound, 0.65f);
+            }
+            else
+            {
+                AudioManager.Instance.PlaySFX("button_hover", 0.65f);
+            }
+            return;
+        }
+
+        if (buttonHoverSound != null)
         {
             audioSource.PlayOneShot(buttonHoverSound);
         }

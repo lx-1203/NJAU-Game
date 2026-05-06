@@ -69,7 +69,11 @@ public class NPCController : MonoBehaviour
         Sprite npcSprite = null;
         if (!string.IsNullOrEmpty(npcData.portraitId))
         {
-            npcSprite = Resources.Load<Sprite>(npcData.portraitId);
+            npcSprite = Resources.Load<Sprite>("NPCPortraits/" + npcData.portraitId);
+            if (npcSprite == null)
+            {
+                npcSprite = Resources.Load<Sprite>(npcData.portraitId);
+            }
         }
 
         if (npcSprite == null)

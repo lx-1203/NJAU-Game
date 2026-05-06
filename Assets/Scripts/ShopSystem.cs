@@ -17,6 +17,7 @@ public class ShopItemDefinition
     public bool consumeOnUse;
     public int maxStack;
     public string useVerb;
+    public string iconResourcePath;
 
     public ShopItemDefinition(
         string id,
@@ -29,7 +30,8 @@ public class ShopItemDefinition
         bool canUse = true,
         bool consumeOnUse = true,
         int maxStack = 99,
-        string useVerb = "使用")
+        string useVerb = "使用",
+        string iconResourcePath = "")
     {
         this.id = id;
         this.displayName = displayName;
@@ -42,6 +44,12 @@ public class ShopItemDefinition
         this.consumeOnUse = consumeOnUse;
         this.maxStack = maxStack;
         this.useVerb = useVerb;
+        this.iconResourcePath = iconResourcePath;
+    }
+
+    public string GetIconResourcePath()
+    {
+        return string.IsNullOrWhiteSpace(iconResourcePath) ? $"ItemIcons/{id}" : iconResourcePath;
     }
 }
 
@@ -235,76 +243,15 @@ public class ShopSystem : MonoBehaviour
 
     public bool CanBuyItem(string itemId)
     {
-        return string.IsNullOrEmpty(GetCannotBuyReason(itemId));
-    }
-
-    public bool BuyItem(string itemId)
-    {
-        if (!CanBuyItem(itemId))
-        {
-            Debug.LogWarning($"[ShopSystem] Cannot buy item: {itemId}");
-            ShowShopNotification("无法购买", GetCannotBuyReason(itemId), new Color(0.82f, 0.38f, 0.30f), 3f);
-            return false;
-        }
-
         ShopItemDefinition item = GetItemDefinition(itemId);
         if (item == null)
         {
             return false;
         }
 
-        if (item.canStore && InventorySystem.Instance == null)
+        if (EconomyManager.Instance == null || !EconomyManager.Instance.CanAfford(item.price))
         {
-            Debug.LogWarning($"[ShopSystem] InventorySystem missing, cannot buy storable item: {item.id}");
-            ShowShopNotification("购买失败", "背包系统暂时不可用，无法接收这件物品。", new Color(0.82f, 0.38f, 0.30f), 3f);
             return false;
-        }
-
-        bool spent = EconomyManager.Instance != null &&
-                     EconomyManager.Instance.Spend(item.price, CategoryToTransactionType(item.category), item.displayName);
-        if (!spent)
-        {
-            ShowShopNotification("购买失败", "这次交易没有扣款成功，请稍后再试。", new Color(0.82f, 0.38f, 0.30f), 3f);
-            return false;
-        }
-
-        if (item.canStore && !InventorySystem.Instance.AddItem(item.id, 1))
-        {
-            Debug.LogWarning($"[ShopSystem] Failed to add item to inventory: {item.id}");
-
-            if (EconomyManager.Instance != null)
-            {
-                EconomyManager.Instance.Earn(item.price, TransactionRecord.TransactionType.OtherIncome, $"购买回滚: {item.displayName}");
-            }
-            else if (GameState.Instance != null)
-            {
-                GameState.Instance.AddMoney(item.price);
-            }
-
-            ShowShopNotification("购买失败", "物品没有成功放入背包，款项已经原路退回。", new Color(0.82f, 0.38f, 0.30f), 3f);
-            return false;
-        }
-
-        OnItemPurchased?.Invoke(item);
-        return true;
-    }
-
-    public string GetCannotBuyReason(string itemId)
-    {
-        ShopItemDefinition item = GetItemDefinition(itemId);
-        if (item == null)
-        {
-            return "商品资料不存在。";
-        }
-
-        if (EconomyManager.Instance == null)
-        {
-            return "当前无法读取余额。";
-        }
-
-        if (!EconomyManager.Instance.CanAfford(item.price))
-        {
-            return $"余额不足，需要 ¥{item.price}。";
         }
 
         if (InventorySystem.Instance != null && item.canStore)
@@ -312,7 +259,7 @@ public class ShopSystem : MonoBehaviour
             int ownedCount = InventorySystem.Instance.GetItemCount(itemId);
             if (ownedCount >= Mathf.Max(1, item.maxStack))
             {
-                return $"这件商品已经达到持有上限（{item.maxStack}）。";
+                return false;
             }
         }
 
@@ -321,15 +268,40 @@ public class ShopSystem : MonoBehaviour
 
         if (isFoodRestricted && item.category == "food" && item.price > 3)
         {
-            return "当前资金紧张，只能购买最便宜的食品。";
+            return false;
         }
 
         if (isOverdrafted && item.category != "food" && item.category != "study")
         {
-            return "透支期间只能购买食品和学习类物品。";
+            return false;
         }
 
-        return string.Empty;
+        return true;
+    }
+
+    public bool BuyItem(string itemId)
+    {
+        if (!CanBuyItem(itemId))
+        {
+            Debug.LogWarning($"[ShopSystem] Cannot buy item: {itemId}");
+            return false;
+        }
+
+        ShopItemDefinition item = GetItemDefinition(itemId);
+        EconomyManager.Instance.Spend(item.price, CategoryToTransactionType(item.category), item.displayName);
+
+        if (InventorySystem.Instance == null || !InventorySystem.Instance.AddItem(item.id, 1))
+        {
+            Debug.LogWarning($"[ShopSystem] Failed to add item to inventory: {item.id}");
+            return false;
+        }
+
+        OnItemPurchased?.Invoke(item);
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.PlaySFX("purchase");
+        }
+        return true;
     }
 
     private TransactionRecord.TransactionType CategoryToTransactionType(string category)
@@ -343,14 +315,6 @@ public class ShopSystem : MonoBehaviour
             case "entertainment": return TransactionRecord.TransactionType.Entertainment;
             case "social": return TransactionRecord.TransactionType.SocialExpense;
             default: return TransactionRecord.TransactionType.OtherExpense;
-        }
-    }
-
-    private void ShowShopNotification(string title, string message, Color color, float duration)
-    {
-        if (MissionUI.Instance != null && !string.IsNullOrEmpty(message))
-        {
-            MissionUI.Instance.ShowSystemNotification(title, message, color, duration);
         }
     }
 }

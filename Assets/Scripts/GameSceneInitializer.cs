@@ -50,6 +50,7 @@ public class GameSceneInitializer : MonoBehaviour
         SetupMissionSystem();
         SetupEventScheduler();
         SetupDialogueSystem();
+        SetupLocationRandomEventSystem();
 
         // 加载对话 JSON 数据（必须在 DialogueSystem 初始化之后）
         DialogueParser.LoadAllDialogues();
@@ -80,6 +81,7 @@ public class GameSceneInitializer : MonoBehaviour
 
         // 游戏内功能 UI / 管理器
         SetupSettingsManager();
+        SetupAudioManager();
         SetupPauseMenuUI();
         SetupUIEscapeRouter();
         SetupInfoPanelManager();
@@ -294,6 +296,15 @@ public class GameSceneInitializer : MonoBehaviour
         {
             GameObject dialogueObj = new GameObject("DialogueSystem");
             dialogueObj.AddComponent<DialogueSystem>();
+        }
+    }
+
+    private void SetupLocationRandomEventSystem()
+    {
+        if (LocationRandomEventSystem.Instance == null)
+        {
+            GameObject obj = new GameObject("LocationRandomEventSystem");
+            obj.AddComponent<LocationRandomEventSystem>();
         }
     }
 
@@ -542,6 +553,15 @@ public class GameSceneInitializer : MonoBehaviour
         {
             GameObject obj = new GameObject("SettingsManager");
             obj.AddComponent<SettingsManager>();
+        }
+    }
+
+    private void SetupAudioManager()
+    {
+        if (AudioManager.Instance == null)
+        {
+            GameObject obj = new GameObject("AudioManager");
+            obj.AddComponent<AudioManager>();
         }
     }
 

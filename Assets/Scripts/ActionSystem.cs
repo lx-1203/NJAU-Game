@@ -291,6 +291,121 @@ public class ActionSystem : MonoBehaviour
                 new AttributeEffect("体魄", -1)
             }
         });
+
+        AddLocationContentActions();
+    }
+
+    private void AddLocationContentActions()
+    {
+        actionDefinitions.Add(new ActionDefinition
+        {
+            id = "tidy_desk",
+            displayName = "整理书桌",
+            actionPointCost = 1,
+            moneyCost = 0,
+            endsRound = false,
+            isGlobal = false,
+            effects = new AttributeEffect[] { new AttributeEffect("学力", 1), new AttributeEffect("压力", -3), new AttributeEffect("心情", 2) }
+        });
+
+        actionDefinitions.Add(new ActionDefinition
+        {
+            id = "hear_canteen_gossip",
+            displayName = "听食堂传闻",
+            actionPointCost = 1,
+            moneyCost = 5,
+            endsRound = false,
+            isGlobal = false,
+            effects = new AttributeEffect[] { new AttributeEffect("魅力", 1), new AttributeEffect("心情", 2) }
+        });
+
+        actionDefinitions.Add(new ActionDefinition
+        {
+            id = "evening_walk",
+            displayName = "操场散步",
+            actionPointCost = 1,
+            moneyCost = 0,
+            endsRound = false,
+            isGlobal = false,
+            effects = new AttributeEffect[] { new AttributeEffect("压力", -4), new AttributeEffect("心情", 3) }
+        });
+
+        actionDefinitions.Add(new ActionDefinition
+        {
+            id = "buy_stationery",
+            displayName = "买学习用品",
+            actionPointCost = 1,
+            moneyCost = 20,
+            endsRound = false,
+            isGlobal = false,
+            effects = new AttributeEffect[] { new AttributeEffect("学力", 2), new AttributeEffect("心情", 1) }
+        });
+
+        actionDefinitions.Add(new ActionDefinition
+        {
+            id = "help_sort_express",
+            displayName = "帮忙分拣",
+            actionPointCost = 1,
+            moneyCost = 0,
+            endsRound = false,
+            isGlobal = false,
+            effects = new AttributeEffect[] { new AttributeEffect("领导力", 1), new AttributeEffect("压力", 2), new AttributeEffect("心情", 2) }
+        });
+
+        actionDefinitions.Add(new ActionDefinition
+        {
+            id = "share_takeout",
+            displayName = "拼单外卖",
+            actionPointCost = 1,
+            moneyCost = 18,
+            endsRound = false,
+            isGlobal = false,
+            effects = new AttributeEffect[] { new AttributeEffect("魅力", 1), new AttributeEffect("心情", 5) }
+        });
+
+        actionDefinitions.Add(new ActionDefinition
+        {
+            id = "review_notes",
+            displayName = "整理课堂笔记",
+            actionPointCost = 1,
+            moneyCost = 0,
+            endsRound = false,
+            isGlobal = false,
+            effects = new AttributeEffect[] { new AttributeEffect("学力", 4), new AttributeEffect("压力", 2) }
+        });
+
+        actionDefinitions.Add(new ActionDefinition
+        {
+            id = "ask_teacher",
+            displayName = "请教老师",
+            actionPointCost = 1,
+            moneyCost = 0,
+            endsRound = false,
+            isGlobal = false,
+            effects = new AttributeEffect[] { new AttributeEffect("学力", 3), new AttributeEffect("领导力", 1), new AttributeEffect("压力", 1) }
+        });
+
+        actionDefinitions.Add(new ActionDefinition
+        {
+            id = "search_materials",
+            displayName = "查阅资料",
+            actionPointCost = 1,
+            moneyCost = 0,
+            endsRound = false,
+            isGlobal = false,
+            effects = new AttributeEffect[] { new AttributeEffect("学力", 3), new AttributeEffect("压力", 1) }
+        });
+
+        actionDefinitions.Add(new ActionDefinition
+        {
+            id = "quiet_reading",
+            displayName = "安静阅读",
+            actionPointCost = 1,
+            moneyCost = 0,
+            endsRound = false,
+            isGlobal = false,
+            effects = new AttributeEffect[] { new AttributeEffect("学力", 2), new AttributeEffect("压力", -2), new AttributeEffect("心情", 2) }
+        });
     }
 
     // ========== 公共方法 ==========

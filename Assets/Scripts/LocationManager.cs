@@ -31,7 +31,6 @@ public class LocationManager : MonoBehaviour
         { "教超", LocationId.Store },
         { "快递站", LocationId.ExpressStation },
         { "外卖站", LocationId.TakeoutStation },
-        { "体育馆", LocationId.TakeoutStation },
         { "社团活动室", LocationId.TeachingBuilding },
         { "实验室", LocationId.TeachingBuilding },
         { "校门口", LocationId.TakeoutStation },
@@ -81,7 +80,7 @@ public class LocationManager : MonoBehaviour
             LocationId.Dormitory,
             "宿舍", "你的大学宿舍，温馨的小窝。可以休息、社交或打游戏。",
             "🏠", new Vector2(0.55f, 0.45f),
-            new string[] { "sleep", "social", "play_game" },
+            new string[] { "sleep", "social", "play_game", "tidy_desk" },
             new LocationId[] { LocationId.Canteen, LocationId.Playground, LocationId.TeachingBuilding, LocationId.TakeoutStation },
             "全天开放",
             worldCenterX: 5f, worldMinX: -10f, worldMaxX: 20f
@@ -92,7 +91,7 @@ public class LocationManager : MonoBehaviour
             LocationId.Canteen,
             "食堂", "各种美食应有尽有。吃饭是每天的固定活动。",
             "🍜", new Vector2(0.30f, 0.45f),
-            new string[] { "eat" },
+            new string[] { "eat", "hear_canteen_gossip" },
             new LocationId[] { LocationId.TeachingBuilding, LocationId.Dormitory, LocationId.Store },
             "06:30-21:00",
             worldCenterX: 35f, worldMinX: 20f, worldMaxX: 50f
@@ -103,7 +102,7 @@ public class LocationManager : MonoBehaviour
             LocationId.Store,
             "教超", "校内超市，日用品和零食的天堂。",
             "🏪", new Vector2(0.15f, 0.25f),
-            new string[] { "shop" },
+            new string[] { "shop", "buy_stationery" },
             new LocationId[] { LocationId.Canteen, LocationId.ExpressStation },
             "全天开放",
             worldCenterX: 62f, worldMinX: 50f, worldMaxX: 75f
@@ -114,7 +113,7 @@ public class LocationManager : MonoBehaviour
             LocationId.TeachingBuilding,
             "教学楼", "课程和考试的主要场所。上课是大学生活的核心。",
             "🏫", new Vector2(0.30f, 0.75f),
-            new string[] { "attend_class", "study" },
+            new string[] { "attend_class", "study", "review_notes", "ask_teacher" },
             new LocationId[] { LocationId.Library, LocationId.Canteen, LocationId.Dormitory },
             "08:00-22:00",
             worldCenterX: 90f, worldMinX: 75f, worldMaxX: 105f
@@ -125,7 +124,7 @@ public class LocationManager : MonoBehaviour
             LocationId.Library,
             "图书馆", "安静的学习圣地。自习效率最高的地方。",
             "📚", new Vector2(0.55f, 0.80f),
-            new string[] { "study" },
+            new string[] { "study", "search_materials", "quiet_reading" },
             new LocationId[] { LocationId.TeachingBuilding, LocationId.Playground },
             "07:00-22:30",
             worldCenterX: 120f, worldMinX: 105f, worldMaxX: 135f
@@ -136,7 +135,7 @@ public class LocationManager : MonoBehaviour
             LocationId.Playground,
             "操场", "跑步、锻炼和体测的场所。保持健康很重要！",
             "🏃", new Vector2(0.75f, 0.65f),
-            new string[] { "exercise", "sports_test" },
+            new string[] { "exercise", "sports_test", "evening_walk" },
             new LocationId[] { LocationId.Dormitory, LocationId.Library },
             "全天开放",
             worldCenterX: 150f, worldMinX: 135f, worldMaxX: 165f
@@ -147,20 +146,20 @@ public class LocationManager : MonoBehaviour
             LocationId.ExpressStation,
             "快递站", "收发快递的地方。网购到货别忘了取！",
             "📦", new Vector2(0.40f, 0.15f),
-            new string[] { "pickup_express" },
+            new string[] { "pickup_express", "help_sort_express" },
             new LocationId[] { LocationId.Store, LocationId.TakeoutStation },
             "全天开放",
             worldCenterX: 177f, worldMinX: 165f, worldMaxX: 190f
         ));
 
-        // 体育馆
+        // 外卖站
         Register(new LocationDefinition(
             LocationId.TakeoutStation,
-            "体育馆", "室内运动和球类活动的主要场所。适合在这里系统锻炼。",
-            "🏟", new Vector2(0.65f, 0.15f),
-            new string[] { "exercise" },
+            "外卖站", "点外卖的取餐点。懒得去食堂时的救星。",
+            "🛵", new Vector2(0.65f, 0.15f),
+            new string[] { "order_takeout", "share_takeout" },
             new LocationId[] { LocationId.ExpressStation, LocationId.Dormitory },
-            "06:00-22:00",
+            "全天开放",
             worldCenterX: 202f, worldMinX: 190f, worldMaxX: 215f
         ));
     }
@@ -365,9 +364,14 @@ public class LocationManager : MonoBehaviour
     {
         if (!CanMoveTo(target))
         {
-            string reason = GetMoveBlockReason(target);
+            string reason = GameState.Instance == null
+                ? "GameState missing"
+                : !locationDefs.ContainsKey(target)
+                    ? "unknown target"
+                    : GameState.Instance.CurrentLocation == target
+                        ? "already at target"
+                        : "blocked";
             Debug.LogWarning($"[LocationManager] Cannot move to {target}: {reason}");
-            ShowLocationNotification("无法前往", reason, new Color(0.82f, 0.38f, 0.30f), 2.8f);
             return false;
         }
 
@@ -401,7 +405,6 @@ public class LocationManager : MonoBehaviour
         if (player == null)
         {
             Debug.LogWarning("[LocationManager] PlayerController and Player tag not found, cannot teleport player after map navigation.");
-            ShowLocationNotification("场景定位失败", "地点已经切换，但角色落点没有同步成功，重新移动一次通常可以恢复。", new Color(0.86f, 0.62f, 0.24f), 3f);
             return;
         }
 
@@ -421,27 +424,5 @@ public class LocationManager : MonoBehaviour
     private void OnRoundAdvanced(GameState.RoundAdvanceResult result)
     {
         Debug.Log("[LocationManager] 回合推进，刷新地点状态");
-    }
-
-    public string GetMoveBlockReason(LocationId target)
-    {
-        if (GameState.Instance == null)
-            return "当前核心状态还没准备好，暂时不能切换地点。";
-
-        if (!locationDefs.ContainsKey(target))
-            return "目标地点数据没有成功载入，这次导航无法完成。";
-
-        if (GameState.Instance.CurrentLocation == target)
-            return $"你已经在{GetLocation(target)?.displayName ?? "该地点"}了。";
-
-        return "这次导航没有通过校验，请稍后再试一次。";
-    }
-
-    private void ShowLocationNotification(string title, string message, Color color, float duration)
-    {
-        if (MissionUI.Instance != null)
-        {
-            MissionUI.Instance.ShowSystemNotification(title, message, color, duration);
-        }
     }
 }

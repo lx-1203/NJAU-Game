@@ -82,12 +82,24 @@ public class NPCScheduleEntry
 [Serializable]
 public class NPCData
 {
-    public string id;               // "NPC_RoommateA"
-    public string displayName;      // "林知秋"
+    public string id;               // "NPC_GuJinghe"
+    public string displayName;      // "顾景和"
     public string type;             // "Roommate"
     public string personality;      // "Introvert"
+    public string grade;
+    public string identity;
+    public string roleType;
+    public string mainActivityArea;
+    public string visualDesign;
+    public string languageStyle;
     public string description;      // 简介
     public string portraitId;       // 立绘资源ID
+    public string profileSummary;   // 档案短介绍
+    public string personalityKeywords; // 性格关键词
+    public string likesDescription;  // 喜好描述
+    public string dislikesDescription; // 雷区描述
+    public string storyHooks;        // 适合剧情/功能定位
+    public string affinityGuide;     // 好感互动方向
 
     public string[] likedActionIds;     // 喜好行动（+好感修正）
     public string[] dislikedActionIds;  // 厌恶行动（-好感修正）

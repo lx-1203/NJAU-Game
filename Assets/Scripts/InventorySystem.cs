@@ -27,6 +27,13 @@ public class InventorySystem : MonoBehaviour, ISaveable
         public int quantity;
     }
 
+    public int GetCategoryItemCount(string category)
+    {
+        return GetAllEntries()
+            .Where(entry => entry.definition.category == category)
+            .Sum(entry => entry.quantity);
+    }
+
     private void Awake()
     {
         if (Instance != null && Instance != this)
@@ -184,6 +191,27 @@ public class InventorySystem : MonoBehaviour, ISaveable
             .OrderBy(entry => entry.definition.category)
             .ThenBy(entry => entry.definition.displayName)
             .ToList();
+    }
+
+    public List<InventoryEntry> GetEntriesByCategory(string category)
+    {
+        List<InventoryEntry> entries = GetAllEntries();
+        if (string.IsNullOrEmpty(category) || category == "all")
+        {
+            return entries;
+        }
+
+        return entries
+            .Where(entry => entry.definition.category == category)
+            .ToList();
+    }
+
+    public string[] GetOwnedCategories()
+    {
+        return GetAllEntries()
+            .Select(entry => entry.definition.category)
+            .Distinct()
+            .ToArray();
     }
 
     public void SaveToData(SaveData data)

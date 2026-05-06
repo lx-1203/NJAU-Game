@@ -1,301 +1,547 @@
 {
-  "npcs": [
-    {
-      "id": "NPC_RoommateA",
-      "displayName": "林知秋",
-      "type": "Roommate",
-      "personality": "Introvert",
-      "description": "你的室友，安静的学霸，总是埋头看书。话不多但很靠谱。",
-      "dialogueId": "lin_zhiqiu",
-      "portraitId": "NPC_RoommateA",
-      "allowedPlayerGenders": ["Female"],
-      "likedActionIds": ["deep_talk", "study_together", "help"],
-      "dislikedActionIds": ["go_party", "karaoke"],
-      "schedule": [
-        { "timeSlot": "Morning",   "location": "图书馆" },
-        { "timeSlot": "Afternoon", "location": "教室" },
-        { "timeSlot": "Evening",   "location": "宿舍" }
-      ],
-      "greetingLines": [
-        "……嗯？你找我有事吗？",
-        "（她从书本后抬起头）啊，是你。",
-        "安静点比较好……不过你来了也行。"
-      ]
-    },
-    {
-      "id": "NPC_RoommateB",
-      "displayName": "苏小晴",
-      "type": "Roommate",
-      "personality": "Extrovert",
-      "description": "你的室友，社交达人，活泼外向，认识全校的人。",
-      "dialogueId": "su_xiaoting",
-      "portraitId": "NPC_RoommateB",
-      "allowedPlayerGenders": ["Female"],
-      "likedActionIds": ["chat", "eat_together", "go_party", "karaoke"],
-      "dislikedActionIds": ["deep_talk"],
-      "schedule": [
-        { "timeSlot": "Morning",   "location": "食堂" },
-        { "timeSlot": "Afternoon", "location": "社团活动室" },
-        { "timeSlot": "Evening",   "location": "宿舍" }
-      ],
-      "greetingLines": [
-        "嘿！你来啦！今天有什么计划？",
-        "走走走，一起去吃饭呀～",
-        "我跟你说个八卦！超级劲爆的那种！"
-      ]
-    },
-    {
-      "id": "NPC_RoommateC",
-      "displayName": "周然",
-      "type": "Roommate",
-      "personality": "Easygoing",
-      "description": "你的室友，佛系青年，万事随缘，打游戏睡觉两不误。",
-      "dialogueId": "zhou_ran",
-      "portraitId": "NPC_RoommateC",
-      "allowedPlayerGenders": ["Female"],
-      "likedActionIds": ["eat_together", "hang_out", "chat"],
-      "dislikedActionIds": ["study_together"],
-      "schedule": [
-        { "timeSlot": "Morning",   "location": "宿舍" },
-        { "timeSlot": "Afternoon", "location": "操场" },
-        { "timeSlot": "Evening",   "location": "宿舍" }
-      ],
-      "greetingLines": [
-        "哟，来了。坐，随便坐。",
-        "（打了个哈欠）今天也是平和的一天呢。",
-        "有啥事儿？没事儿就一起摸鱼吧。"
-      ]
-    },
-    {
-      "id": "NPC_MaleRoommateA",
-      "displayName": "陈一鸣",
-      "type": "Roommate",
-      "personality": "Serious",
-      "description": "你的室友，作息规律，做事很稳，课表和任务总记得一清二楚。",
-      "portraitId": "",
-      "allowedPlayerGenders": ["Male"],
-      "likedActionIds": ["study_together", "help", "deep_talk"],
-      "dislikedActionIds": ["go_party", "karaoke"],
-      "schedule": [
-        { "timeSlot": "Morning",   "location": "教室" },
-        { "timeSlot": "Afternoon", "location": "图书馆" },
-        { "timeSlot": "Evening",   "location": "宿舍" }
-      ],
-      "greetingLines": [
-        "你来了？我正准备整理今天的课堂笔记。",
-        "要一起去自习吗？我刚好也要出门。",
-        "晚上别熬太晚，明天还有课。"
-      ]
-    },
-    {
-      "id": "NPC_MaleRoommateB",
-      "displayName": "顾泽",
-      "type": "Roommate",
-      "personality": "Cheerful",
-      "description": "你的室友，气氛担当，嘴上停不下来，宿舍里大多数热闹都和他有关。",
-      "portraitId": "",
-      "allowedPlayerGenders": ["Male"],
-      "likedActionIds": ["chat", "eat_together", "hang_out", "go_party"],
-      "dislikedActionIds": ["deep_talk"],
-      "schedule": [
-        { "timeSlot": "Morning",   "location": "食堂" },
-        { "timeSlot": "Afternoon", "location": "操场" },
-        { "timeSlot": "Evening",   "location": "宿舍" }
-      ],
-      "greetingLines": [
-        "刚好，走走走，陪我去吃点东西。",
-        "你回来得正好，宿舍刚有新八卦。",
-        "晚上打不打球？不打也来旁边看我发挥。"
-      ]
-    },
-    {
-      "id": "NPC_MaleRoommateC",
-      "displayName": "宋远",
-      "type": "Roommate",
-      "personality": "Easygoing",
-      "description": "你的室友，慢热但随和，平时最擅长把紧张气氛一句话化开。",
-      "portraitId": "",
-      "allowedPlayerGenders": ["Male"],
-      "likedActionIds": ["chat", "eat_together", "encourage"],
-      "dislikedActionIds": ["study_together"],
-      "schedule": [
-        { "timeSlot": "Morning",   "location": "宿舍" },
-        { "timeSlot": "Afternoon", "location": "教学楼" },
-        { "timeSlot": "Evening",   "location": "宿舍" }
-      ],
-      "greetingLines": [
-        "回来了？先坐会儿，别急着卷。",
-        "今天看你状态一般，要不要出去透口气？",
-        "宿舍这会儿还挺安静，难得。"
-      ]
-    },
-    {
-      "id": "NPC_Senior",
-      "displayName": "谢凌云",
-      "type": "Senior",
-      "personality": "Mysterious",
-      "description": "传说中的全能学长/学姐，成绩优异、社交广泛，却总是神出鬼没。",
-      "dialogueId": "xie_lingyun",
-      "portraitId": "NPC_Senior",
-      "allowedPlayerGenders": ["Male", "Female"],
-      "likedActionIds": ["deep_talk", "help", "give_gift"],
-      "dislikedActionIds": ["greet"],
-      "schedule": [
-        { "timeSlot": "Morning",   "location": "实验室" },
-        { "timeSlot": "Afternoon", "location": "图书馆" },
-        { "timeSlot": "Evening",   "location": "校门口" }
-      ],
-      "greetingLines": [
-        "你……倒是挺有眼缘的。",
-        "（微微一笑）又见面了，缘分呐。",
-        "时间不多，有话直说吧。"
-      ]
-    }
-  ],
-  "socialActions": [
-    {
-      "id": "greet",
-      "displayName": "打招呼",
-      "actionPointCost": 1,
-      "moneyCost": 0,
-      "minAffinityLevel": "Stranger",
-      "baseAffinityMin": 3,
-      "baseAffinityMax": 5,
-      "attributeEffects": [
-        { "attributeName": "心情", "amount": 2 }
-      ]
-    },
-    {
-      "id": "chat",
-      "displayName": "聊天",
-      "actionPointCost": 2,
-      "moneyCost": 0,
-      "minAffinityLevel": "Stranger",
-      "baseAffinityMin": 5,
-      "baseAffinityMax": 8,
-      "attributeEffects": [
-        { "attributeName": "魅力", "amount": 1 },
-        { "attributeName": "心情", "amount": 5 }
-      ]
-    },
-    {
-      "id": "eat_together",
-      "displayName": "一起吃饭",
-      "actionPointCost": 2,
-      "moneyCost": 30,
-      "minAffinityLevel": "Acquaintance",
-      "baseAffinityMin": 5,
-      "baseAffinityMax": 10,
-      "attributeEffects": [
-        { "attributeName": "魅力", "amount": 1 },
-        { "attributeName": "心情", "amount": 8 }
-      ]
-    },
-    {
-      "id": "give_gift",
-      "displayName": "赠送礼物",
-      "actionPointCost": 1,
-      "moneyCost": 100,
-      "minAffinityLevel": "Acquaintance",
-      "baseAffinityMin": 8,
-      "baseAffinityMax": 15,
-      "attributeEffects": [
-        { "attributeName": "魅力", "amount": 2 }
-      ]
-    },
-    {
-      "id": "help",
-      "displayName": "帮助",
-      "actionPointCost": 3,
-      "moneyCost": 0,
-      "minAffinityLevel": "Friend",
-      "baseAffinityMin": 10,
-      "baseAffinityMax": 15,
-      "attributeEffects": [
-        { "attributeName": "领导力", "amount": 2 },
-        { "attributeName": "心情", "amount": 5 }
-      ]
-    },
-    {
-      "id": "hang_out",
-      "displayName": "约出去玩",
-      "actionPointCost": 3,
-      "moneyCost": 80,
-      "minAffinityLevel": "Friend",
-      "baseAffinityMin": 10,
-      "baseAffinityMax": 20,
-      "attributeEffects": [
-        { "attributeName": "魅力", "amount": 2 },
-        { "attributeName": "心情", "amount": 10 },
-        { "attributeName": "压力", "amount": -5 }
-      ]
-    },
-    {
-      "id": "deep_talk",
-      "displayName": "深度交谈",
-      "actionPointCost": 3,
-      "moneyCost": 0,
-      "minAffinityLevel": "CloseFriend",
-      "baseAffinityMin": 8,
-      "baseAffinityMax": 12,
-      "attributeEffects": [
-        { "attributeName": "魅力", "amount": 1 },
-        { "attributeName": "领导力", "amount": 1 },
-        { "attributeName": "心情", "amount": 6 }
-      ]
-    },
-    {
-      "id": "study_together",
-      "displayName": "一起自习",
-      "actionPointCost": 2,
-      "moneyCost": 0,
-      "minAffinityLevel": "Acquaintance",
-      "baseAffinityMin": 4,
-      "baseAffinityMax": 8,
-      "attributeEffects": [
-        { "attributeName": "学力", "amount": 2 },
-        { "attributeName": "压力", "amount": 3 }
-      ]
-    },
-    {
-      "id": "go_party",
-      "displayName": "一起参加活动",
-      "actionPointCost": 2,
-      "moneyCost": 50,
-      "minAffinityLevel": "Friend",
-      "baseAffinityMin": 6,
-      "baseAffinityMax": 12,
-      "attributeEffects": [
-        { "attributeName": "魅力", "amount": 2 },
-        { "attributeName": "领导力", "amount": 1 },
-        { "attributeName": "心情", "amount": 8 }
-      ]
-    },
-    {
-      "id": "karaoke",
-      "displayName": "一起唱歌",
-      "actionPointCost": 2,
-      "moneyCost": 60,
-      "minAffinityLevel": "Friend",
-      "baseAffinityMin": 7,
-      "baseAffinityMax": 14,
-      "attributeEffects": [
-        { "attributeName": "心情", "amount": 12 },
-        { "attributeName": "压力", "amount": -8 }
-      ]
-    },
-    {
-      "id": "encourage",
-      "displayName": "鼓励",
-      "actionPointCost": 1,
-      "moneyCost": 0,
-      "minAffinityLevel": "Friend",
-      "baseAffinityMin": 4,
-      "baseAffinityMax": 8,
-      "attributeEffects": [
-        { "attributeName": "心情", "amount": 5 },
-        { "attributeName": "领导力", "amount": 1 }
-      ]
-    }
-  ]
+    "npcs":  [
+                 {
+                     "id":  "NPC_GuJinghe",
+                     "displayName":  "顾景和",
+                     "type":  "Senior",
+                     "personality":  "Serious",
+                     "grade":  "大三",
+                     "identity":  "学生会副部长 / 图书馆志愿者 / 新生学习指导员",
+                     "roleType":  "温柔学长型",
+                     "mainActivityArea":  "图书馆、教学楼、学生会办公室、自习室",
+                     "description":  "顾景和是玩家进入校园后较早接触到的学长型 NPC。他负责帮助玩家熟悉校园规则、学习安排、图书馆系统、学生会事务和基础任务流程。他说话温和，做事稳妥，习惯先听完别人的问题再给出建议。",
+                     "profileSummary":  "温柔可靠的学长型 NPC，适合作为规则引导者、学习指导者和任务协助者。",
+                     "personalityKeywords":  "温柔、可靠、耐心、稳重、礼貌、有责任感、边界感强",
+                     "likesDescription":  "喜欢安静、有秩序的环境，例如图书馆、自习室、教学楼走廊和校园长椅。喜欢阅读、整理资料、做计划、帮助别人解决实际问题、温热饮品和整洁的笔记。欣赏认真、守时、有礼貌的人。",
+                     "dislikesDescription":  "不喜欢随意爽约、不守时、临时甩锅，也不喜欢别人一边请求帮助，一边完全不愿意自己努力。他的雷区不是被麻烦，而是被理所当然地依赖。",
+                     "storyHooks":  "适合图书馆使用说明、课程安排任务、学生会基础任务、迎新活动支线、复习资料整理和活动表格协助等剧情。",
+                     "affinityGuide":  "好感线适合从信任与协作开始。玩家认真完成任务、尊重他的时间、主动分担压力，会比单纯表达依赖更有效。",
+                     "visualDesign":  "浅米色针织开衫、白衬衫、深色长裤，手持书本或文件夹。整体颜色干净柔和，体现文雅可靠的校园学长感。表情以温和微笑为主，眼神亲切、有耐心。",
+                     "languageStyle":  "说话温和、清楚、有条理，常用提醒式、建议式表达，不使用夸张语气，也不会过度调侃玩家。",
+                     "dialogueId":  "gu_jinghe",
+                     "portraitId":  "NPC_GuJinghe",
+                     "allowedPlayerGenders":  [
+                                                  "Male",
+                                                  "Female"
+                                              ],
+                     "likedActionIds":  [
+                                            "study_together",
+                                            "help",
+                                            "deep_talk",
+                                            "encourage"
+                                        ],
+                     "dislikedActionIds":  [
+                                               "go_party",
+                                               "karaoke"
+                                           ],
+                     "schedule":  [
+                                      {
+                                          "timeSlot":  "Morning",
+                                          "location":  "图书馆"
+                                      },
+                                      {
+                                          "timeSlot":  "Afternoon",
+                                          "location":  "教学楼"
+                                      },
+                                      {
+                                          "timeSlot":  "Evening",
+                                          "location":  "图书馆"
+                                      }
+                                  ],
+                     "greetingLines":  [
+                                           "不用着急，先把要处理的事情按顺序列出来，会清楚很多。",
+                                           "如果你不确定怎么做，可以先从最简单的一步开始。",
+                                           "我可以帮你看一遍，但下次记得提前准备。",
+                                           "答应别人的事情，最好不要轻易拖到最后一刻。"
+                                       ]
+                 },
+                 {
+                     "id":  "NPC_LuXiangyang",
+                     "displayName":  "陆向阳",
+                     "type":  "Classmate",
+                     "personality":  "Cheerful",
+                     "grade":  "大二",
+                     "identity":  "篮球社成员 / 体育部干事 / 运动会志愿者",
+                     "roleType":  "阳光运动型",
+                     "mainActivityArea":  "操场、篮球场、体育馆、社团活动区",
+                     "description":  "陆向阳是校园中的运动系活力角色。他热情直接，行动力强，不太喜欢把事情想得太复杂，更相信先试试看。无论是在篮球场还是运动会报名点，他总能把气氛重新带热。",
+                     "profileSummary":  "阳光运动型 NPC，适合运动会、操场探索、篮球社任务、校园活动挑战和青春热血支线。",
+                     "personalityKeywords":  "阳光、开朗、直率、行动派、讲义气、有活力、亲和力强",
+                     "likesDescription":  "喜欢篮球、跑步、运动会、社团团建、热闹的校园活动、冰饮、运动饮料、食堂大份套餐、校园打卡和团队挑战。喜欢玩家积极回应他的邀请。",
+                     "dislikesDescription":  "不喜欢消极抱怨、临阵退缩、敷衍团队和还没开始就说不可能。也不喜欢被评价为只会运动、没脑子或太吵。",
+                     "storyHooks":  "适合校园探索、运动会报名与训练、篮球社招新、社团挑战、操场跑腿和轻松支线。",
+                     "affinityGuide":  "好感提升相对直接。玩家愿意参与活动、积极回应他的热情、在比赛中认真配合，就会明显增加好感。",
+                     "visualDesign":  "蓝白运动外套、深色运动裤、运动鞋和篮球。姿态自然开朗，可以挥手、单手拿篮球、插兜或叉腰，体现运动社团成员的亲和力。",
+                     "languageStyle":  "说话直接、明快、轻松，经常用鼓励式表达，喜欢带动气氛。",
+                     "dialogueId":  "lu_xiangyang",
+                     "portraitId":  "NPC_LuXiangyang",
+                     "allowedPlayerGenders":  [
+                                                  "Male",
+                                                  "Female"
+                                              ],
+                     "likedActionIds":  [
+                                            "chat",
+                                            "eat_together",
+                                            "hang_out",
+                                            "go_party",
+                                            "encourage"
+                                        ],
+                     "dislikedActionIds":  [
+                                               "deep_talk"
+                                           ],
+                     "schedule":  [
+                                      {
+                                          "timeSlot":  "Morning",
+                                          "location":  "操场"
+                                      },
+                                      {
+                                          "timeSlot":  "Afternoon",
+                                          "location":  "操场"
+                                      },
+                                      {
+                                          "timeSlot":  "Evening",
+                                          "location":  "食堂"
+                                      }
+                                  ],
+                     "greetingLines":  [
+                                           "别站着想啦，先试试看！",
+                                           "输了也没事，下次赢回来就行。",
+                                           "走，我带你去操场，那边今天可热闹了。",
+                                           "你这不是做得挺好吗？再自信一点啊。"
+                                       ]
+                 },
+                 {
+                     "id":  "NPC_ChengYanzhou",
+                     "displayName":  "程砚舟",
+                     "type":  "Classmate",
+                     "personality":  "Introvert",
+                     "grade":  "大二或大三",
+                     "identity":  "AI 工坊成员 / 计算机社团核心成员 / 程序设计竞赛队成员",
+                     "roleType":  "冷静技术型",
+                     "mainActivityArea":  "AI 工坊、机房、实验室、社团工作室",
+                     "description":  "程砚舟是技术型 NPC，常出现在机房、实验室或社团工作室。他不擅长寒暄，说话直接，但涉及程序、设备、数据或系统故障时，总能很快抓住关键点。",
+                     "profileSummary":  "冷静技术型 NPC，适合 AI 工坊、程序社团、系统故障、代码任务和隐藏信息解锁。",
+                     "personalityKeywords":  "冷静、理性、聪明、专注、内敛、技术感、嘴硬心软、可靠",
+                     "likesDescription":  "喜欢编程、算法、游戏开发、电子设备、机械键盘、简洁 UI、结构清晰的文档、安静的工作环境和高效率沟通。欣赏愿意动脑、能提供有效信息的人。",
+                     "dislikesDescription":  "不喜欢无效沟通、不看说明就乱操作、只说坏了却不给细节、乱动设备、打断思路，以及随意评价技术工作很简单。",
+                     "storyHooks":  "适合 AI 工坊支线、机房任务、程序社团挑战、设备故障排查、小游戏 Bug 修复和隐藏任务解锁。",
+                     "affinityGuide":  "好感提升依赖能力认可。玩家认真分析问题、提供有效信息、尊重他的工作方式、不打断他的思路，会逐渐获得信任。",
+                     "visualDesign":  "深色轻便外套、白色或浅灰 T 恤、深色工装裤、细框眼镜，手持平板或笔记本电脑。整体偏深色但保持校园清爽感，姿态克制安静。",
+                     "languageStyle":  "说话简短、准确、略带吐槽感，不太主动安慰别人，但会通过解决问题表达关心。",
+                     "dialogueId":  "cheng_yanzhou",
+                     "portraitId":  "NPC_ChengYanzhou",
+                     "allowedPlayerGenders":  [
+                                                  "Male",
+                                                  "Female"
+                                              ],
+                     "likedActionIds":  [
+                                            "study_together",
+                                            "help",
+                                            "deep_talk"
+                                        ],
+                     "dislikedActionIds":  [
+                                               "go_party",
+                                               "karaoke"
+                                           ],
+                     "schedule":  [
+                                      {
+                                          "timeSlot":  "Morning",
+                                          "location":  "教学楼"
+                                      },
+                                      {
+                                          "timeSlot":  "Afternoon",
+                                          "location":  "实验室"
+                                      },
+                                      {
+                                          "timeSlot":  "Evening",
+                                          "location":  "图书馆"
+                                      }
+                                  ],
+                     "greetingLines":  [
+                                           "你先别点了，再点日志就更乱了。",
+                                           "问题不在系统，在你刚才跳过的那一步。",
+                                           "我没说不帮你，只是你至少先把报错信息发完整。",
+                                           "……算了，站旁边看着，别乱动。"
+                                       ]
+                 },
+                 {
+                     "id":  "NPC_LinZhiwan",
+                     "displayName":  "林知晚",
+                     "type":  "Classmate",
+                     "personality":  "Introvert",
+                     "grade":  "大一或大二",
+                     "identity":  "传统文化社团成员",
+                     "roleType":  "温柔治愈型",
+                     "mainActivityArea":  "社团活动室、校园花墙、湖边、文化节活动区",
+                     "description":  "林知晚是温柔治愈型女性 NPC，代表校园生活中柔和、安静、情绪陪伴的一面。她说话轻声细语，做事认真细致，不擅长主动站到人群中心，却会默默坚持自己在意的事情。",
+                     "profileSummary":  "传统文化社团的温柔少女，安静、细腻、亲切，喜欢汉服、花草、手工和安静的校园角落。",
+                     "personalityKeywords":  "温柔、治愈、细腻、慢热、亲切、传统文化、共情力强",
+                     "likesDescription":  "喜欢汉服、古风音乐、花草、茶点、手工饰品、拍校园风景、整理社团小物件，以及慢节奏的交流和安静的陪伴。欣赏真诚、耐心、细心的人。",
+                     "dislikesDescription":  "不喜欢被嘲笑穿着、被随意评价传统文化、被强行推到人群中心，也不喜欢被催促、打断或敷衍。",
+                     "storyHooks":  "适合传统文化社团、春日校园、手作活动、汉服游园、文化节、花朝节和情绪陪伴类剧情。",
+                     "affinityGuide":  "好感线适合慢热推进。玩家需要通过耐心、真诚和细节关心逐步获得她的信任。",
+                     "visualDesign":  "浅绿色短外衫、米白色内衬、浅黄色蝴蝶结、浅橙色半身裙和双麻花辫。整体颜色偏暖、柔和、亲近，动作以双手自然交叠为主。",
+                     "languageStyle":  "说话柔和、委婉，常带一点犹豫感。不会强势表达请求，而是小心确认对方是否方便。",
+                     "dialogueId":  "lin_zhiwan",
+                     "portraitId":  "NPC_LinZhiwan",
+                     "allowedPlayerGenders":  [
+                                                  "Male",
+                                                  "Female"
+                                              ],
+                     "likedActionIds":  [
+                                            "deep_talk",
+                                            "study_together",
+                                            "help",
+                                            "encourage"
+                                        ],
+                     "dislikedActionIds":  [
+                                               "go_party",
+                                               "karaoke"
+                                           ],
+                     "schedule":  [
+                                      {
+                                          "timeSlot":  "Morning",
+                                          "location":  "图书馆"
+                                      },
+                                      {
+                                          "timeSlot":  "Afternoon",
+                                          "location":  "社团活动室"
+                                      },
+                                      {
+                                          "timeSlot":  "Evening",
+                                          "location":  "湖边"
+                                      }
+                                  ],
+                     "greetingLines":  [
+                                           "如果你不忙的话……可以陪我去一下社团活动室吗？",
+                                           "这件衣服不是很显眼吧？我只是觉得这个颜色很温柔。",
+                                           "谢谢你还记得，我以为只是随口说过。",
+                                           "没关系的，我慢慢来就好。"
+                                       ]
+                 },
+                 {
+                     "id":  "NPC_ShenQingyan",
+                     "displayName":  "沈清妍",
+                     "type":  "Senior",
+                     "personality":  "Serious",
+                     "grade":  "大二或大三",
+                     "identity":  "学生会成员 / 文学社负责人 / 活动策划者",
+                     "roleType":  "文雅漂亮学姐型",
+                     "mainActivityArea":  "学生会办公室、图书馆、文学社、活动中心",
+                     "description":  "沈清妍是文雅学姐型 NPC，适合承担主线推进、活动策划、任务发布和校园规则说明功能。她外表从容，处理事务有条不紊，但内心也承受着学业和活动安排的压力。",
+                     "profileSummary":  "文雅学姐型 NPC，做事有条理，说话得体，适合作为校园规则引导者、活动负责人和主线推进角色。",
+                     "personalityKeywords":  "文雅、端庄、秀气、可靠、自律、克制、细心、有责任感",
+                     "likesDescription":  "喜欢文学作品、手账、整洁计划表、安静咖啡馆、图书馆、古典或轻音乐、有仪式感的小礼物。欣赏有分寸、守时、认真负责的人。",
+                     "dislikesDescription":  "不喜欢不守时、不负责任、临时甩锅和打乱计划。也不喜欢别人只关注她的外貌，而忽略她的能力、努力和压力。",
+                     "storyHooks":  "适合主线任务、学生会事务、文学社活动、大型校园活动策划、报名表整理、活动审批和晚会筹备。",
+                     "affinityGuide":  "好感线适合从尊重与协作开始。玩家认真完成承诺、理解她的压力、认可她的努力，会比单纯夸奖外貌更有效。",
+                     "visualDesign":  "深棕色学院风西装外套、白衬衫、灰棕格纹蝴蝶结、格纹半身裙。动作是右手轻扶胸前蝴蝶结或整理衣襟，体现克制、优雅和学姐感。",
+                     "languageStyle":  "说话清楚、礼貌、克制，语气端庄。不会大声表达情绪，而是用理性方式推进事情。",
+                     "dialogueId":  "shen_qingyan",
+                     "portraitId":  "NPC_ShenQingyan",
+                     "allowedPlayerGenders":  [
+                                                  "Male",
+                                                  "Female"
+                                              ],
+                     "likedActionIds":  [
+                                            "study_together",
+                                            "help",
+                                            "deep_talk"
+                                        ],
+                     "dislikedActionIds":  [
+                                               "go_party",
+                                               "karaoke"
+                                           ],
+                     "schedule":  [
+                                      {
+                                          "timeSlot":  "Morning",
+                                          "location":  "教学楼"
+                                      },
+                                      {
+                                          "timeSlot":  "Afternoon",
+                                          "location":  "图书馆"
+                                      },
+                                      {
+                                          "timeSlot":  "Evening",
+                                          "location":  "教学楼"
+                                      }
+                                  ],
+                     "greetingLines":  [
+                                           "这份安排我已经整理过一遍，你可以先从第一项开始。",
+                                           "如果临时改变计划，请提前告诉我。",
+                                           "谢谢你的关心，不过我还可以处理。",
+                                           "我希望大家看到的不只是结果，也包括过程里的努力。"
+                                       ]
+                 },
+                 {
+                     "id":  "NPC_ChenShuqian",
+                     "displayName":  "陈书仟",
+                     "type":  "Classmate",
+                     "personality":  "Cheerful",
+                     "grade":  "大一或大二",
+                     "identity":  "运动社团成员 / 校园活动志愿者 / 迎新负责人",
+                     "roleType":  "元气校园型",
+                     "mainActivityArea":  "操场、食堂、社团广场、迎新点",
+                     "description":  "陈书仟是元气行动型女性 NPC，适合承担校园探索、新手引导、社团活动报名、跑腿任务和轻松剧情。她总是充满活力，喜欢认识新朋友，也喜欢带别人参与校园活动。",
+                     "profileSummary":  "元气校园型 NPC，适合新手引导、校园探索、运动社团、迎新活动和轻松明快的互动剧情。",
+                     "personalityKeywords":  "元气、开朗、主动、热情、行动派、亲和力强、直率、乐观",
+                     "likesDescription":  "喜欢运动、户外活动、校园比赛、社团团建、食堂美食、冰饮、拍照打卡和热闹活动现场。喜欢积极回应和一起行动。",
+                     "dislikesDescription":  "不喜欢冷场、消极抱怨和一直拒绝她的人。也不喜欢别人说她太吵、幼稚或不稳重。",
+                     "storyHooks":  "适合带玩家熟悉食堂、操场、社团广场，参与迎新、社团招新、运动会准备、跑腿任务、买饮料和拍照打卡。",
+                     "affinityGuide":  "好感增长直接且明快。玩家积极回应她、参与她的活动、在她受挫时鼓励她，就能快速拉近关系。",
+                     "visualDesign":  "高马尾、浅色运动外套、白 T 恤、深蓝百褶裙和运动鞋。动作是挥手或叉腰，表情开朗有活力，体现主动和亲和力。",
+                     "languageStyle":  "说话活泼、直接，常用感叹和鼓励式表达，能让剧情节奏变快。",
+                     "dialogueId":  "chen_shuqian",
+                     "portraitId":  "NPC_ChenShuqian",
+                     "allowedPlayerGenders":  [
+                                                  "Male",
+                                                  "Female"
+                                              ],
+                     "likedActionIds":  [
+                                            "chat",
+                                            "eat_together",
+                                            "hang_out",
+                                            "go_party",
+                                            "encourage"
+                                        ],
+                     "dislikedActionIds":  [
+                                               "deep_talk"
+                                           ],
+                     "schedule":  [
+                                      {
+                                          "timeSlot":  "Morning",
+                                          "location":  "操场"
+                                      },
+                                      {
+                                          "timeSlot":  "Afternoon",
+                                          "location":  "食堂"
+                                      },
+                                      {
+                                          "timeSlot":  "Evening",
+                                          "location":  "社团广场"
+                                      }
+                                  ],
+                     "greetingLines":  [
+                                           "走啦走啦，再晚就赶不上活动开始了！",
+                                           "你别紧张，我带你去，保证不会迷路。",
+                                           "失败一次又不代表结束，我们再来一次！",
+                                           "今天操场那边超热闹，你一定要去看看！"
+                                       ]
+                 }
+             ],
+    "socialActions":  [
+                          {
+                              "id":  "greet",
+                              "displayName":  "打招呼",
+                              "actionPointCost":  1,
+                              "moneyCost":  0,
+                              "minAffinityLevel":  "Stranger",
+                              "baseAffinityMin":  3,
+                              "baseAffinityMax":  5,
+                              "attributeEffects":  [
+                                                       {
+                                                           "attributeName":  "心情",
+                                                           "amount":  2
+                                                       }
+                                                   ]
+                          },
+                          {
+                              "id":  "chat",
+                              "displayName":  "聊天",
+                              "actionPointCost":  2,
+                              "moneyCost":  0,
+                              "minAffinityLevel":  "Stranger",
+                              "baseAffinityMin":  5,
+                              "baseAffinityMax":  8,
+                              "attributeEffects":  [
+                                                       {
+                                                           "attributeName":  "魅力",
+                                                           "amount":  1
+                                                       },
+                                                       {
+                                                           "attributeName":  "心情",
+                                                           "amount":  5
+                                                       }
+                                                   ]
+                          },
+                          {
+                              "id":  "eat_together",
+                              "displayName":  "一起吃饭",
+                              "actionPointCost":  2,
+                              "moneyCost":  30,
+                              "minAffinityLevel":  "Acquaintance",
+                              "baseAffinityMin":  5,
+                              "baseAffinityMax":  10,
+                              "attributeEffects":  [
+                                                       {
+                                                           "attributeName":  "魅力",
+                                                           "amount":  1
+                                                       },
+                                                       {
+                                                           "attributeName":  "心情",
+                                                           "amount":  8
+                                                       }
+                                                   ]
+                          },
+                          {
+                              "id":  "give_gift",
+                              "displayName":  "赠送礼物",
+                              "actionPointCost":  1,
+                              "moneyCost":  100,
+                              "minAffinityLevel":  "Acquaintance",
+                              "baseAffinityMin":  8,
+                              "baseAffinityMax":  15,
+                              "attributeEffects":  [
+                                                       {
+                                                           "attributeName":  "魅力",
+                                                           "amount":  2
+                                                       }
+                                                   ]
+                          },
+                          {
+                              "id":  "help",
+                              "displayName":  "帮助",
+                              "actionPointCost":  3,
+                              "moneyCost":  0,
+                              "minAffinityLevel":  "Friend",
+                              "baseAffinityMin":  10,
+                              "baseAffinityMax":  15,
+                              "attributeEffects":  [
+                                                       {
+                                                           "attributeName":  "领导力",
+                                                           "amount":  2
+                                                       },
+                                                       {
+                                                           "attributeName":  "心情",
+                                                           "amount":  5
+                                                       }
+                                                   ]
+                          },
+                          {
+                              "id":  "hang_out",
+                              "displayName":  "约出去玩",
+                              "actionPointCost":  3,
+                              "moneyCost":  80,
+                              "minAffinityLevel":  "Friend",
+                              "baseAffinityMin":  10,
+                              "baseAffinityMax":  20,
+                              "attributeEffects":  [
+                                                       {
+                                                           "attributeName":  "魅力",
+                                                           "amount":  2
+                                                       },
+                                                       {
+                                                           "attributeName":  "心情",
+                                                           "amount":  10
+                                                       },
+                                                       {
+                                                           "attributeName":  "压力",
+                                                           "amount":  -5
+                                                       }
+                                                   ]
+                          },
+                          {
+                              "id":  "deep_talk",
+                              "displayName":  "深度交谈",
+                              "actionPointCost":  3,
+                              "moneyCost":  0,
+                              "minAffinityLevel":  "CloseFriend",
+                              "baseAffinityMin":  8,
+                              "baseAffinityMax":  12,
+                              "attributeEffects":  [
+                                                       {
+                                                           "attributeName":  "魅力",
+                                                           "amount":  1
+                                                       },
+                                                       {
+                                                           "attributeName":  "领导力",
+                                                           "amount":  1
+                                                       },
+                                                       {
+                                                           "attributeName":  "心情",
+                                                           "amount":  6
+                                                       }
+                                                   ]
+                          },
+                          {
+                              "id":  "study_together",
+                              "displayName":  "一起自习",
+                              "actionPointCost":  2,
+                              "moneyCost":  0,
+                              "minAffinityLevel":  "Acquaintance",
+                              "baseAffinityMin":  4,
+                              "baseAffinityMax":  8,
+                              "attributeEffects":  [
+                                                       {
+                                                           "attributeName":  "学力",
+                                                           "amount":  2
+                                                       },
+                                                       {
+                                                           "attributeName":  "压力",
+                                                           "amount":  3
+                                                       }
+                                                   ]
+                          },
+                          {
+                              "id":  "go_party",
+                              "displayName":  "一起参加活动",
+                              "actionPointCost":  2,
+                              "moneyCost":  50,
+                              "minAffinityLevel":  "Friend",
+                              "baseAffinityMin":  6,
+                              "baseAffinityMax":  12,
+                              "attributeEffects":  [
+                                                       {
+                                                           "attributeName":  "魅力",
+                                                           "amount":  2
+                                                       },
+                                                       {
+                                                           "attributeName":  "领导力",
+                                                           "amount":  1
+                                                       },
+                                                       {
+                                                           "attributeName":  "心情",
+                                                           "amount":  8
+                                                       }
+                                                   ]
+                          },
+                          {
+                              "id":  "karaoke",
+                              "displayName":  "一起唱歌",
+                              "actionPointCost":  2,
+                              "moneyCost":  60,
+                              "minAffinityLevel":  "Friend",
+                              "baseAffinityMin":  7,
+                              "baseAffinityMax":  14,
+                              "attributeEffects":  [
+                                                       {
+                                                           "attributeName":  "心情",
+                                                           "amount":  12
+                                                       },
+                                                       {
+                                                           "attributeName":  "压力",
+                                                           "amount":  -8
+                                                       }
+                                                   ]
+                          },
+                          {
+                              "id":  "encourage",
+                              "displayName":  "鼓励",
+                              "actionPointCost":  1,
+                              "moneyCost":  0,
+                              "minAffinityLevel":  "Friend",
+                              "baseAffinityMin":  4,
+                              "baseAffinityMax":  8,
+                              "attributeEffects":  [
+                                                       {
+                                                           "attributeName":  "心情",
+                                                           "amount":  5
+                                                       },
+                                                       {
+                                                           "attributeName":  "领导力",
+                                                           "amount":  1
+                                                       }
+                                                   ]
+                          }
+                      ]
 }

@@ -30,6 +30,7 @@ public class HUDManager : MonoBehaviour
 
     // ========== 社团面板 ==========
     private ClubPanelManager clubPanelManager;
+    private NPCArchivePanel npcArchivePanel;
 
     // ========== 动画参数 ==========
     private AnimationCurve easingCurve = AnimationCurve.EaseInOut(0, 0, 1, 1);
@@ -86,6 +87,7 @@ public class HUDManager : MonoBehaviour
 
         builder = gameObject.AddComponent<HUDBuilder>();
         builder.BuildHUD();
+        npcArchivePanel = CreateNPCArchivePanel();
         CreateActionMenuUI();
 
         InitMapUI();
@@ -153,6 +155,15 @@ public class HUDManager : MonoBehaviour
             return;
         }
 
+        if (npcArchivePanel != null && npcArchivePanel.IsOpen())
+        {
+            if (Input.GetKeyDown(KeyCode.N) || Input.GetKeyDown(KeyCode.Escape))
+            {
+                npcArchivePanel.Close();
+            }
+            return;
+        }
+
         if (!CanProcessHotkeys())
         {
             return;
@@ -173,6 +184,10 @@ public class HUDManager : MonoBehaviour
         else if (HotkeyManager.IsPressed(HotkeyActionId.ToggleTalentPanel))
         {
             ToggleTalentPanel();
+        }
+        else if (Input.GetKeyDown(KeyCode.N))
+        {
+            ToggleNPCArchivePanel();
         }
     }
 
@@ -541,6 +556,25 @@ public class HUDManager : MonoBehaviour
         {
             InfoPanelManager.Instance.OpenPanel(0);
         }
+    }
+
+    private void ToggleNPCArchivePanel()
+    {
+        if (npcArchivePanel == null)
+        {
+            npcArchivePanel = CreateNPCArchivePanel();
+        }
+
+        npcArchivePanel.Toggle();
+    }
+
+    private NPCArchivePanel CreateNPCArchivePanel()
+    {
+        GameObject panelHost = new GameObject("NPCArchivePanelHost");
+        panelHost.transform.SetParent(transform, false);
+        NPCArchivePanel panel = panelHost.AddComponent<NPCArchivePanel>();
+        panel.Initialize();
+        return panel;
     }
 
     private bool IsActionMenuOpen => isActionRowExpanded;
