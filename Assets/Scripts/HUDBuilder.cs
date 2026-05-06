@@ -64,6 +64,9 @@ public class HUDBuilder : MonoBehaviour
     [HideInInspector] public GameObject actionButtonRow;
     [HideInInspector] public Button btnInventory;
     [HideInInspector] public Button btnActionToggle;
+    [HideInInspector] public Button btnInfo;
+    [HideInInspector] public Button btnGrowth;
+    [HideInInspector] public Button btnGraduationRequirements;
 
     // --- 底部右下：快捷键提示 + 功能按钮 ---
     [HideInInspector] public GameObject hotkeyPanel;
@@ -659,9 +662,12 @@ public class HUDBuilder : MonoBehaviour
 
         actionButtonRow.SetActive(false);
 
-        btnInventory = CreateBottomQuickButton("InventoryButton", "背包", new Vector2(-92f, 12f));
-        btnActionToggle = CreateBottomQuickButton("ActionToggleButton", "行动", new Vector2(0f, 12f));
-        btnGoOut = CreateBottomQuickButton("GoOutButton", "出校", new Vector2(92f, 12f));
+        btnInfo = CreateBottomQuickButton("InfoButton", "信息", new Vector2(-230f, 12f));
+        btnInventory = CreateBottomQuickButton("InventoryButton", "背包", new Vector2(-138f, 12f));
+        btnActionToggle = CreateBottomQuickButton("ActionToggleButton", "行动", new Vector2(-46f, 12f));
+        btnGrowth = CreateBottomQuickButton("GrowthButton", "成长", new Vector2(46f, 12f));
+        btnGraduationRequirements = CreateBottomQuickButton("MissionButton", "任务", new Vector2(138f, 12f));
+        btnGoOut = CreateBottomQuickButton("GoOutButton", "出校", new Vector2(230f, 12f));
     }
 
     private Button CreateBottomQuickButton(string name, string label, Vector2 anchoredPosition)
@@ -724,12 +730,7 @@ public class HUDBuilder : MonoBehaviour
         hlg.childForceExpandWidth = false;
         hlg.childForceExpandHeight = true;
 
-        CreateHotkeyLabel(hotkeyPanel.transform, "Tab", "信息");
-        CreateHotkeyLabel(hotkeyPanel.transform, "I", "背包");
-        CreateHotkeyLabel(hotkeyPanel.transform, "1", "行动");
-        CreateHotkeyLabel(hotkeyPanel.transform, "2", "成长");
-        CreateHotkeyLabel(hotkeyPanel.transform, "N", "NPC");
-        CreateHotkeyLabel(hotkeyPanel.transform, "Esc", "菜单");
+        RefreshHotkeyHints();
 
         // 右下功能按钮
         GameObject featureObj = new GameObject("FeatureButton");
@@ -793,6 +794,35 @@ public class HUDBuilder : MonoBehaviour
         // Label
         CreateTMPText("LabelText", obj.transform, label,
             13f, new Color(0.75f, 0.75f, 0.80f), TextAlignmentOptions.Left, new Vector2(36, 24));
+    }
+
+    public void RefreshHotkeyHints()
+    {
+        if (hotkeyPanel == null)
+        {
+            return;
+        }
+
+        for (int i = hotkeyPanel.transform.childCount - 1; i >= 0; i--)
+        {
+            Destroy(hotkeyPanel.transform.GetChild(i).gameObject);
+        }
+
+        SettingsData settings = SettingsManager.Instance != null ? SettingsManager.Instance.CurrentSettings : null;
+        CreateHotkeyLabel(hotkeyPanel.transform, GetHotkeyText(settings, HotkeyActionId.ToggleInfoPanel), "信息");
+        CreateHotkeyLabel(hotkeyPanel.transform, GetHotkeyText(settings, HotkeyActionId.ToggleInventory), "背包");
+        CreateHotkeyLabel(hotkeyPanel.transform, GetHotkeyText(settings, HotkeyActionId.ToggleActionMenu), "行动");
+        CreateHotkeyLabel(hotkeyPanel.transform, GetHotkeyText(settings, HotkeyActionId.ToggleTalentPanel), "成长");
+        CreateHotkeyLabel(hotkeyPanel.transform, GetHotkeyText(settings, HotkeyActionId.ToggleMissionPanel), "任务");
+        CreateHotkeyLabel(hotkeyPanel.transform, "Esc", "菜单");
+    }
+
+    private string GetHotkeyText(SettingsData settings, HotkeyActionId action)
+    {
+        string text = settings != null
+            ? HotkeyManager.GetDisplayString(settings, action)
+            : HotkeyManager.GetDefaultBinding(action).ToDisplayString();
+        return string.IsNullOrWhiteSpace(text) ? "-" : text;
     }
 
     // ====================================================================
