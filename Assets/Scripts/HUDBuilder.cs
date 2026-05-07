@@ -67,6 +67,7 @@ public class HUDBuilder : MonoBehaviour
     [HideInInspector] public Button btnInfo;
     [HideInInspector] public Button btnGrowth;
     [HideInInspector] public Button btnGraduationRequirements;
+    [HideInInspector] public Button btnNPCArchive;
 
     // --- 底部右下：快捷键提示 + 功能按钮 ---
     [HideInInspector] public GameObject hotkeyPanel;
@@ -662,12 +663,13 @@ public class HUDBuilder : MonoBehaviour
 
         actionButtonRow.SetActive(false);
 
-        btnInfo = CreateBottomQuickButton("InfoButton", "信息", new Vector2(-230f, 12f));
-        btnInventory = CreateBottomQuickButton("InventoryButton", "背包", new Vector2(-138f, 12f));
-        btnActionToggle = CreateBottomQuickButton("ActionToggleButton", "行动", new Vector2(-46f, 12f));
-        btnGrowth = CreateBottomQuickButton("GrowthButton", "成长", new Vector2(46f, 12f));
-        btnGraduationRequirements = CreateBottomQuickButton("MissionButton", "任务", new Vector2(138f, 12f));
-        btnGoOut = CreateBottomQuickButton("GoOutButton", "出校", new Vector2(230f, 12f));
+        btnInfo = CreateBottomQuickButton("InfoButton", "信息", new Vector2(-276f, 12f));
+        btnInventory = CreateBottomQuickButton("InventoryButton", "背包", new Vector2(-184f, 12f));
+        btnActionToggle = CreateBottomQuickButton("ActionToggleButton", "行动", new Vector2(-92f, 12f));
+        btnGrowth = CreateBottomQuickButton("GrowthButton", "成长", new Vector2(0f, 12f));
+        btnGraduationRequirements = CreateBottomQuickButton("MissionButton", "任务", new Vector2(92f, 12f));
+        btnNPCArchive = CreateBottomQuickButton("NPCArchiveButton", "NPC", new Vector2(184f, 12f));
+        btnGoOut = CreateBottomQuickButton("GoOutButton", "出校", new Vector2(276f, 12f));
     }
 
     private Button CreateBottomQuickButton(string name, string label, Vector2 anchoredPosition)
@@ -814,6 +816,7 @@ public class HUDBuilder : MonoBehaviour
         CreateHotkeyLabel(hotkeyPanel.transform, GetHotkeyText(settings, HotkeyActionId.ToggleActionMenu), "行动");
         CreateHotkeyLabel(hotkeyPanel.transform, GetHotkeyText(settings, HotkeyActionId.ToggleTalentPanel), "成长");
         CreateHotkeyLabel(hotkeyPanel.transform, GetHotkeyText(settings, HotkeyActionId.ToggleMissionPanel), "任务");
+        CreateHotkeyLabel(hotkeyPanel.transform, "N", "NPC");
         CreateHotkeyLabel(hotkeyPanel.transform, "Esc", "菜单");
     }
 

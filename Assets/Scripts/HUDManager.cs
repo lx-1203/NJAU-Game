@@ -401,6 +401,24 @@ public class HUDManager : MonoBehaviour
                 ToggleGraduationRequirementsPanel();
             });
         }
+
+        if (builder.btnNPCArchive != null)
+        {
+            builder.btnNPCArchive.onClick.AddListener(() =>
+            {
+                if (!CanProcessHotkeys())
+                {
+                    return;
+                }
+
+                if (builder.hudAnimator != null)
+                {
+                    builder.hudAnimator.ButtonPressEffect(builder.btnNPCArchive);
+                }
+
+                ToggleNPCArchivePanel();
+            });
+        }
     }
 
     private IEnumerator DeferredSubscriptions()
@@ -1544,6 +1562,11 @@ public class HUDManager : MonoBehaviour
         if (builder.btnGraduationRequirements != null)
         {
             builder.btnGraduationRequirements.interactable = MissionPanelBuilder.Instance != null && !IsModalOpen;
+        }
+
+        if (builder.btnNPCArchive != null)
+        {
+            builder.btnNPCArchive.interactable = npcArchivePanel != null && !IsModalOpen;
         }
 
         if (builder.btnGoOut != null)

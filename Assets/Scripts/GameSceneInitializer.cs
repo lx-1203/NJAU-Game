@@ -207,6 +207,33 @@ public class GameSceneInitializer : MonoBehaviour
         {
             mainCamera.gameObject.AddComponent<CameraFollow>();
         }
+
+        EnsureAudioListener(mainCamera);
+    }
+
+    private void EnsureAudioListener(Camera mainCamera)
+    {
+        if (mainCamera == null)
+        {
+            return;
+        }
+
+        AudioListener mainListener = mainCamera.GetComponent<AudioListener>();
+        if (mainListener == null)
+        {
+            mainListener = mainCamera.gameObject.AddComponent<AudioListener>();
+        }
+
+        mainListener.enabled = true;
+
+        AudioListener[] listeners = FindObjectsOfType<AudioListener>(true);
+        foreach (AudioListener listener in listeners)
+        {
+            if (listener != null && listener != mainListener)
+            {
+                listener.enabled = false;
+            }
+        }
     }
 
     private void SetupActionSystem()
@@ -563,6 +590,8 @@ public class GameSceneInitializer : MonoBehaviour
             GameObject obj = new GameObject("AudioManager");
             obj.AddComponent<AudioManager>();
         }
+
+        AudioManager.Instance.RefreshBGMForActiveScene(0.2f);
     }
 
     private void SetupPauseMenuUI()

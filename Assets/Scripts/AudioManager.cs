@@ -7,20 +7,20 @@ public class AudioManager : MonoBehaviour
 {
     public static AudioManager Instance { get; private set; }
 
-    private const string DefaultGameBgmPath = "Audio/BGM/Campus";
-    private const string TitleBgmPath = "Audio/BGM/Title";
+    private const string DefaultGameBgmPath = "Audio/BGM/bgm";
+    private const string TitleBgmPath = DefaultGameBgmPath;
     private const float DefaultFadeDuration = 0.8f;
 
     private readonly Dictionary<LocationId, string> locationBgmPaths = new Dictionary<LocationId, string>
     {
-        { LocationId.Dormitory, "Audio/BGM/Dormitory" },
-        { LocationId.TeachingBuilding, "Audio/BGM/TeachingBuilding" },
-        { LocationId.Library, "Audio/BGM/Library" },
-        { LocationId.Canteen, "Audio/BGM/Canteen" },
-        { LocationId.Playground, "Audio/BGM/Playground" },
-        { LocationId.Store, "Audio/BGM/Store" },
-        { LocationId.ExpressStation, "Audio/BGM/ExpressStation" },
-        { LocationId.TakeoutStation, "Audio/BGM/TakeoutStation" }
+        { LocationId.Dormitory, DefaultGameBgmPath },
+        { LocationId.TeachingBuilding, DefaultGameBgmPath },
+        { LocationId.Library, DefaultGameBgmPath },
+        { LocationId.Canteen, DefaultGameBgmPath },
+        { LocationId.Playground, DefaultGameBgmPath },
+        { LocationId.Store, DefaultGameBgmPath },
+        { LocationId.ExpressStation, DefaultGameBgmPath },
+        { LocationId.TakeoutStation, DefaultGameBgmPath }
     };
 
     private readonly Dictionary<string, string> sfxAliases = new Dictionary<string, string>
@@ -45,9 +45,28 @@ public class AudioManager : MonoBehaviour
     private AudioSource sfxSource;
     private Coroutine fadeRoutine;
     private LocationManager subscribedLocationManager;
+    private SettingsManager subscribedSettingsManager;
     private string currentBgmPath;
     private float musicVolume = 0.7f;
     private float sfxVolume = 0.8f;
+    private float lastAppliedListenerVolume = -1f;
+
+    public static AudioManager EnsureInstance()
+    {
+        if (Instance != null)
+        {
+            return Instance;
+        }
+
+        GameObject obj = new GameObject("AudioManager");
+        return obj.AddComponent<AudioManager>();
+    }
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+    private static void Bootstrap()
+    {
+        EnsureInstance();
+    }
 
     private void Awake()
     {
@@ -60,6 +79,7 @@ public class AudioManager : MonoBehaviour
         Instance = this;
         DontDestroyOnLoad(gameObject);
         BuildAudioSources();
+        PreloadCommonSFX();
     }
 
     private void Start()
@@ -82,6 +102,11 @@ public class AudioManager : MonoBehaviour
         }
     }
 
+    private void Update()
+    {
+        TrySubscribeSettings();
+    }
+
     public void PlayBGM(string resourcePath, float fadeDuration = DefaultFadeDuration, bool loop = true)
     {
         if (string.IsNullOrWhiteSpace(resourcePath))
@@ -102,6 +127,14 @@ public class AudioManager : MonoBehaviour
 
         if (currentBgmPath == resourcePath && activeMusicSource.clip == clip && activeMusicSource.isPlaying)
         {
+            if (fadeRoutine != null)
+            {
+                StopCoroutine(fadeRoutine);
+                fadeRoutine = null;
+            }
+
+            activeMusicSource.loop = loop;
+            activeMusicSource.volume = musicVolume;
             return;
         }
 
@@ -128,6 +161,14 @@ public class AudioManager : MonoBehaviour
         }
 
         PlayLocationBGM(GameState.Instance.CurrentLocation, fadeDuration);
+    }
+
+    public void RefreshBGMForActiveScene(float fadeDuration = DefaultFadeDuration)
+    {
+        EnsureSceneAudioListener();
+        TrySubscribeSettings();
+        TrySubscribeLocationManager();
+        PlayDefaultBGMForScene(SceneManager.GetActiveScene().name, fadeDuration);
     }
 
     public void PlayLocationBGM(LocationId locationId, float fadeDuration = DefaultFadeDuration)
@@ -167,6 +208,7 @@ public class AudioManager : MonoBehaviour
             return;
         }
 
+        sfxSource.volume = 1f;
         sfxSource.PlayOneShot(clip, Mathf.Clamp01(volumeScale) * sfxVolume);
     }
 
@@ -178,6 +220,13 @@ public class AudioManager : MonoBehaviour
         }
 
         sfxAliases[sfxId] = resourcePath;
+        LoadClip(resourcePath);
+    }
+
+    private void PreloadCommonSFX()
+    {
+        LoadClip("Audio/SFX/UI/ButtonClick");
+        LoadClip("Audio/SFX/UI/ButtonHover");
     }
 
     private void BuildAudioSources()
@@ -189,6 +238,10 @@ public class AudioManager : MonoBehaviour
         musicSourceA.loop = true;
         musicSourceB.loop = true;
         sfxSource.loop = false;
+        musicSourceA.priority = 0;
+        musicSourceB.priority = 0;
+        sfxSource.priority = 64;
+        sfxSource.volume = 1f;
 
         activeMusicSource = musicSourceA;
         inactiveMusicSource = musicSourceB;
@@ -210,12 +263,20 @@ public class AudioManager : MonoBehaviour
 
     private void HandleSceneLoaded(Scene scene, LoadSceneMode mode)
     {
+        EnsureSceneAudioListener();
+        TrySubscribeSettings();
         TrySubscribeLocationManager();
         PlayDefaultBGMForScene(scene.name, DefaultFadeDuration);
     }
 
     private void PlayDefaultBGMForScene(string sceneName, float fadeDuration)
     {
+        if (sceneName == "SplashScreen" || sceneName == "LoadingScreen")
+        {
+            StopBGM(0f);
+            return;
+        }
+
         if (sceneName == "TitleScreen")
         {
             PlayBGM(TitleBgmPath, fadeDuration);
@@ -229,7 +290,7 @@ public class AudioManager : MonoBehaviour
             return;
         }
 
-        StopBGM(fadeDuration);
+        PlayBGM(DefaultGameBgmPath, fadeDuration);
     }
 
     private void TrySubscribeLocationManager()
@@ -263,24 +324,34 @@ public class AudioManager : MonoBehaviour
 
     private void SubscribeSettings()
     {
-        if (SettingsManager.Instance != null)
+        TrySubscribeSettings();
+        ApplyVolumesFromSettings();
+    }
+
+    private void TrySubscribeSettings()
+    {
+        if (SettingsManager.Instance == null || subscribedSettingsManager == SettingsManager.Instance)
         {
-            SettingsManager.Instance.OnMusicVolumeChanged += HandleMusicVolumeChanged;
-            SettingsManager.Instance.OnSFXVolumeChanged += HandleSFXVolumeChanged;
+            return;
         }
 
+        UnsubscribeSettings();
+        subscribedSettingsManager = SettingsManager.Instance;
+        subscribedSettingsManager.OnMusicVolumeChanged += HandleMusicVolumeChanged;
+        subscribedSettingsManager.OnSFXVolumeChanged += HandleSFXVolumeChanged;
         ApplyVolumesFromSettings();
     }
 
     private void UnsubscribeSettings()
     {
-        if (SettingsManager.Instance == null)
+        if (subscribedSettingsManager == null)
         {
             return;
         }
 
-        SettingsManager.Instance.OnMusicVolumeChanged -= HandleMusicVolumeChanged;
-        SettingsManager.Instance.OnSFXVolumeChanged -= HandleSFXVolumeChanged;
+        subscribedSettingsManager.OnMusicVolumeChanged -= HandleMusicVolumeChanged;
+        subscribedSettingsManager.OnSFXVolumeChanged -= HandleSFXVolumeChanged;
+        subscribedSettingsManager = null;
     }
 
     private void HandleMusicVolumeChanged(float ignored)
@@ -295,13 +366,25 @@ public class AudioManager : MonoBehaviour
 
     private void ApplyVolumesFromSettings()
     {
-        SettingsData settings = SettingsManager.Instance != null ? SettingsManager.Instance.CurrentSettings : null;
-        musicVolume = settings != null ? Mathf.Clamp01(settings.musicVolume) : 0.7f;
-        sfxVolume = settings != null ? Mathf.Clamp01(settings.sfxVolume) : 0.8f;
+        SettingsManager settingsManager = SettingsManager.Instance;
+        if (settingsManager != null)
+        {
+            settingsManager.EnsureLoaded();
+        }
+
+        SettingsData settings = settingsManager != null ? settingsManager.CurrentSettings : null;
+        musicVolume = settings != null ? Mathf.Clamp01(settings.GetEffectiveMusicVolume()) : Mathf.Clamp01(PlayerPrefs.GetFloat("MusicVolume", 0.7f));
+        sfxVolume = settings != null ? Mathf.Clamp01(settings.GetEffectiveSFXVolume()) : Mathf.Clamp01(PlayerPrefs.GetFloat("SFXVolume", 0.8f));
+        EnsureAudioListenerIsAudible();
 
         if (activeMusicSource != null)
         {
             activeMusicSource.volume = activeMusicSource.isPlaying ? musicVolume : 0f;
+        }
+
+        if (sfxSource != null)
+        {
+            sfxSource.volume = 1f;
         }
     }
 
@@ -397,5 +480,44 @@ public class AudioManager : MonoBehaviour
         AudioSource oldActive = activeMusicSource;
         activeMusicSource = inactiveMusicSource;
         inactiveMusicSource = oldActive;
+    }
+
+    private void EnsureAudioListenerIsAudible()
+    {
+        EnsureSceneAudioListener();
+
+        float targetVolume;
+        if (SettingsManager.Instance != null && SettingsManager.Instance.CurrentSettings != null)
+        {
+            targetVolume = SettingsManager.Instance.CurrentSettings.isMuted ? 0f : 1f;
+        }
+        else if (AudioListener.volume <= 0.001f && musicVolume > 0.001f)
+        {
+            targetVolume = 1f;
+        }
+        else
+        {
+            targetVolume = AudioListener.volume;
+        }
+
+        if (!Mathf.Approximately(lastAppliedListenerVolume, targetVolume) || !Mathf.Approximately(AudioListener.volume, targetVolume))
+        {
+            AudioListener.volume = targetVolume;
+            lastAppliedListenerVolume = targetVolume;
+        }
+    }
+
+    private void EnsureSceneAudioListener()
+    {
+        if (FindObjectOfType<AudioListener>() != null)
+        {
+            return;
+        }
+
+        Camera mainCamera = Camera.main;
+        if (mainCamera != null)
+        {
+            mainCamera.gameObject.AddComponent<AudioListener>();
+        }
     }
 }

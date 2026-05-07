@@ -385,7 +385,7 @@
                           },
                           {
                               "id":  "give_gift",
-                              "displayName":  "赠送礼物",
+                              "displayName":  "赠送",
                               "actionPointCost":  1,
                               "moneyCost":  100,
                               "minAffinityLevel":  "Acquaintance",
@@ -419,7 +419,7 @@
                           },
                           {
                               "id":  "hang_out",
-                              "displayName":  "约出去玩",
+                              "displayName":  "邀约",
                               "actionPointCost":  3,
                               "moneyCost":  80,
                               "minAffinityLevel":  "Friend",
@@ -465,7 +465,7 @@
                           },
                           {
                               "id":  "study_together",
-                              "displayName":  "一起自习",
+                              "displayName":  "请教",
                               "actionPointCost":  2,
                               "moneyCost":  0,
                               "minAffinityLevel":  "Acquaintance",

@@ -95,11 +95,7 @@ public class InventoryUIManager : MonoBehaviour
 
     private void Update()
     {
-        if (HotkeyManager.IsPressed(HotkeyActionId.ToggleInventory))
-        {
-            TogglePanel();
-        }
-        else if (IsOpen && PauseMenuUI.ShouldBlockUnderlyingEscape())
+        if (IsOpen && PauseMenuUI.ShouldBlockUnderlyingEscape())
         {
             return;
         }

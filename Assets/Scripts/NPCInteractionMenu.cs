@@ -24,11 +24,14 @@ public class NPCInteractionMenu : MonoBehaviour
 
     // ========== 运行时缓存 ==========
     private Transform contentContainer;
+    private Transform actionButtonContainer;
+    private RectTransform contentRect;
     private TextMeshProUGUI titleText;
     private TextMeshProUGUI levelText;
     private Image affinityFill;
     private GameObject headerGroup;
     private List<GameObject> spawnedButtons = new List<GameObject>();
+    private int actionItemIndex;
 
     // ========== 颜色方案（与 HUDBuilder 一致） ==========
     private static readonly Color PanelBg          = new Color(0.08f, 0.08f, 0.12f, 0.95f);
@@ -51,8 +54,12 @@ public class NPCInteractionMenu : MonoBehaviour
     // ========== 布局常量 ==========
     private const float PanelWidth = 600f;
     private const float PanelHeight = 500f;
-    private const float ButtonHeight = 56f;
-    private const float ButtonSpacing = 6f;
+    private const float ButtonHeight = 48f;
+    private const float ButtonSpacing = 8f;
+    private const float ActionAreaHeight = 320f;
+    private const float ActionAreaPaddingX = 18f;
+    private const float ActionAreaPaddingY = 14f;
+    private const float InfoLabelHeight = 42f;
 
     // ========== 属性 ==========
     public bool IsMenuOpen => isMenuOpen;
@@ -107,6 +114,7 @@ public class NPCInteractionMenu : MonoBehaviour
         isMenuOpen = true;
         maskObj.SetActive(true);
         menuPanel.SetActive(true);
+        RefreshContentLayout();
         UITransitionUtility.Show(this, maskObj, Vector2.zero, 1f, 0.18f);
         UITransitionUtility.Show(this, menuPanel, new Vector2(0f, 26f), 0.985f, 0.22f);
     }
@@ -184,6 +192,7 @@ public class NPCInteractionMenu : MonoBehaviour
         headerGroup.transform.SetParent(menuPanel.transform, false);
         RectTransform headerRT = headerGroup.AddComponent<RectTransform>();
         headerRT.sizeDelta = new Vector2(0, 70f);
+        AddFixedLayout(headerGroup, 70f);
 
         // NPC 名字
         titleText = CreateTMPText("TitleText", headerGroup.transform, "选择NPC",
@@ -230,6 +239,7 @@ public class NPCInteractionMenu : MonoBehaviour
 
         // ----- 底部：关闭按钮 -----
         CreateCloseButton();
+        CreateFixedActionButtonLayer();
 
         // 默认隐藏
         maskObj.SetActive(false);
@@ -244,6 +254,7 @@ public class NPCInteractionMenu : MonoBehaviour
 
         RectTransform scrollRT = scrollObj.AddComponent<RectTransform>();
         scrollRT.sizeDelta = new Vector2(0, 320f);
+        AddFixedLayout(scrollObj, 320f);
 
         ScrollRect scrollRect = scrollObj.AddComponent<ScrollRect>();
         scrollRect.horizontal = false;
@@ -294,6 +305,7 @@ public class NPCInteractionMenu : MonoBehaviour
         csf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
         scrollRect.content = contentRT;
+        contentRect = contentRT;
         contentContainer = content.transform;
     }
 
@@ -304,6 +316,7 @@ public class NPCInteractionMenu : MonoBehaviour
 
         RectTransform rt = btnObj.AddComponent<RectTransform>();
         rt.sizeDelta = new Vector2(0, 42f);
+        AddFixedLayout(btnObj, 42f);
 
         Image btnBg = btnObj.AddComponent<Image>();
         btnBg.color = CloseButtonColor;
@@ -326,6 +339,24 @@ public class NPCInteractionMenu : MonoBehaviour
         textRT.offsetMin = Vector2.zero;
         textRT.offsetMax = Vector2.zero;
         ApplyChineseFont(btnText);
+    }
+
+    private void CreateFixedActionButtonLayer()
+    {
+        GameObject layerObj = new GameObject("FixedActionButtons");
+        layerObj.transform.SetParent(menuPanel.transform, false);
+
+        RectTransform rt = layerObj.AddComponent<RectTransform>();
+        rt.anchorMin = new Vector2(0.5f, 0.5f);
+        rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.sizeDelta = new Vector2(540f, 300f);
+        rt.anchoredPosition = new Vector2(0f, -42f);
+
+        LayoutElement layout = layerObj.AddComponent<LayoutElement>();
+        layout.ignoreLayout = true;
+
+        actionButtonContainer = layerObj.transform;
     }
 
     // ====================================================================
@@ -376,6 +407,7 @@ public class NPCInteractionMenu : MonoBehaviour
         if (visibleNPCs.Count == 0)
         {
             CreateInfoLabel("这个时段这里还没有人停留。\n先去别的地点转转，或等下一轮再回来看看。");
+            RefreshContentLayout();
             return;
         }
 
@@ -399,6 +431,8 @@ public class NPCInteractionMenu : MonoBehaviour
                 ShowForNPC(capturedId);
             });
         }
+
+        RefreshContentLayout();
     }
 
     // ====================================================================
@@ -434,48 +468,45 @@ public class NPCInteractionMenu : MonoBehaviour
 
         ClearButtons();
 
-        // 返回按钮（回到NPC列表）
-        CreateListButton("返回NPC列表", ShowNPCList);
-        AddFeaturedInteractionButtons(npcId);
+        CreateInfoLabel("想和对方做什么？");
+        AddCoreInteractionButtons(npcId);
+        RefreshContentLayout();
+    }
 
-        // 获取可用社交行动
-        List<SocialActionDefinition> actions = AffinitySystem.Instance.GetAvailableSocialActions(npcId);
-        bool hasGeneralAction = false;
+    private void AddCoreInteractionButtons(string npcId)
+    {
+        AddCoreSocialButton(npcId, "chat", "聊天");
+        AddCoreSocialButton(npcId, "study_together", "请教");
+        AddCoreSocialButton(npcId, "give_gift", "赠送");
+        AddCoreSocialButton(npcId, "hang_out", "邀约", "需要达到朋友关系");
+        CreateActionButton("没事", true, CloseMenu);
+    }
 
-        for (int i = 0; i < actions.Count; i++)
+    private void AddCoreSocialButton(string npcId, string actionId, string labelText, string lockedHintOverride = null)
+    {
+        SocialActionDefinition action = NPCDatabase.Instance != null ? NPCDatabase.Instance.GetSocialAction(actionId) : null;
+        bool interactable = IsSocialActionAvailable(npcId, actionId, out string requirementHint);
+        string label = interactable
+            ? BuildCoreActionLabel(action, labelText)
+            : $"{labelText}    {(!string.IsNullOrWhiteSpace(lockedHintOverride) ? lockedHintOverride : requirementHint)}";
+
+        CreateActionButton(label, interactable, interactable ? (UnityEngine.Events.UnityAction)(() => OnSocialActionClicked(npcId, actionId)) : null);
+    }
+
+    private string BuildCoreActionLabel(SocialActionDefinition action, string labelText)
+    {
+        if (action == null)
         {
-            SocialActionDefinition action = actions[i];
-            if (action.id == "chat" || action.id == "give_gift" || action.id == "debate")
-            {
-                continue;
-            }
-
-            hasGeneralAction = true;
-            string capturedActionId = action.id;
-            string capturedNpcId = npcId;
-
-            // 按钮文字：行动名 + AP消耗 + 金钱消耗 + 预期好感范围
-            string costInfo = $"AP:{action.actionPointCost}";
-            if (action.moneyCost > 0)
-            {
-                costInfo += $"  ￥{action.moneyCost}";
-            }
-            string affinityRange = $"好感+{action.baseAffinityMin}~{action.baseAffinityMax}";
-            string label = $"{action.displayName}    {costInfo}    {affinityRange}";
-
-            CreateActionButton(label, () =>
-            {
-                OnSocialActionClicked(capturedNpcId, capturedActionId);
-            });
+            return labelText;
         }
 
-        if (!hasGeneralAction)
+        string label = $"{labelText}    AP:{action.actionPointCost}";
+        if (action.moneyCost > 0)
         {
-            CreateInfoLabel("这位角色当前没有更多可执行的互动了。\n可以先聊天、提升好感，或等行动点恢复后再来。");
+            label += $"    ¥{action.moneyCost}";
         }
 
-        // ===== 恋爱系统按钮 =====
-        AddRomanceButtons(npcId);
+        return label;
     }
 
     private void AddFeaturedInteractionButtons(string npcId)
@@ -840,6 +871,7 @@ public class NPCInteractionMenu : MonoBehaviour
 
         RectTransform rt = btnObj.AddComponent<RectTransform>();
         rt.sizeDelta = new Vector2(0, ButtonHeight);
+        AddFixedLayout(btnObj, ButtonHeight);
 
         Color breakupColor = new Color(0.55f, 0.18f, 0.18f, 1.0f);
         Color breakupHover = new Color(0.65f, 0.25f, 0.25f, 1.0f);
@@ -953,6 +985,7 @@ public class NPCInteractionMenu : MonoBehaviour
 
         RectTransform rt = btnObj.AddComponent<RectTransform>();
         rt.sizeDelta = new Vector2(0, ButtonHeight);
+        AddFixedLayout(btnObj, ButtonHeight);
 
         Image btnBg = btnObj.AddComponent<Image>();
         btnBg.color = interactable ? RomanceButtonColor : new Color(0.25f, 0.20f, 0.25f, 0.7f);
@@ -1204,6 +1237,7 @@ public class NPCInteractionMenu : MonoBehaviour
             Destroy(spawnedButtons[i]);
         }
         spawnedButtons.Clear();
+        actionItemIndex = 0;
     }
 
     private void SetAffinityBar(float normalized)
@@ -1217,10 +1251,10 @@ public class NPCInteractionMenu : MonoBehaviour
     private void CreateListButton(string label, UnityEngine.Events.UnityAction onClick)
     {
         GameObject btnObj = new GameObject("ListBtn");
-        btnObj.transform.SetParent(contentContainer, false);
+        btnObj.transform.SetParent(GetActionParent(), false);
 
         RectTransform rt = btnObj.AddComponent<RectTransform>();
-        rt.sizeDelta = new Vector2(0, ButtonHeight);
+        ConfigureActionItemRect(rt, ButtonHeight);
 
         Image btnBg = btnObj.AddComponent<Image>();
         btnBg.color = ButtonNormal;
@@ -1257,13 +1291,19 @@ public class NPCInteractionMenu : MonoBehaviour
     private void CreateActionButton(string label, bool interactable, UnityEngine.Events.UnityAction onClick)
     {
         GameObject btnObj = new GameObject("ActionBtn");
-        btnObj.transform.SetParent(contentContainer, false);
+        btnObj.transform.SetParent(GetActionParent(), false);
 
         RectTransform rt = btnObj.AddComponent<RectTransform>();
-        rt.sizeDelta = new Vector2(0, ButtonHeight);
+        ConfigureActionItemRect(rt, ButtonHeight);
 
         Image btnBg = btnObj.AddComponent<Image>();
         btnBg.color = interactable ? ButtonNormal : new Color(0.22f, 0.22f, 0.28f, 0.75f);
+        Sprite buttonSprite = LoadOptionalUISprite("NPCInteraction/ButtonBg");
+        if (buttonSprite != null)
+        {
+            btnBg.sprite = buttonSprite;
+            btnBg.type = Image.Type.Sliced;
+        }
 
         Button btn = btnObj.AddComponent<Button>();
         btn.interactable = interactable;
@@ -1280,13 +1320,15 @@ public class NPCInteractionMenu : MonoBehaviour
             btn.onClick.AddListener(onClick);
         }
 
+        CreateButtonIcon(btnObj.transform, interactable);
+
         TextMeshProUGUI btnText = CreateTMPText("Label", btnObj.transform, label,
-            18f, interactable ? TextWhite : DisabledTextColor, TextAlignmentOptions.Center, new Vector2(0, ButtonHeight));
+            18f, interactable ? TextWhite : DisabledTextColor, TextAlignmentOptions.Left, new Vector2(0, ButtonHeight));
         RectTransform textRT = btnText.GetComponent<RectTransform>();
         textRT.anchorMin = Vector2.zero;
         textRT.anchorMax = Vector2.one;
-        textRT.offsetMin = new Vector2(12, 0);
-        textRT.offsetMax = new Vector2(-12, 0);
+        textRT.offsetMin = new Vector2(58, 0);
+        textRT.offsetMax = new Vector2(-18, 0);
         ApplyChineseFont(btnText);
 
         btnObj.AddComponent<CanvasGroup>();
@@ -1297,13 +1339,15 @@ public class NPCInteractionMenu : MonoBehaviour
     private void CreateInfoLabel(string text)
     {
         GameObject labelObj = new GameObject("InfoLabel");
-        labelObj.transform.SetParent(contentContainer, false);
+        labelObj.transform.SetParent(GetActionParent(), false);
 
         RectTransform rt = labelObj.AddComponent<RectTransform>();
-        rt.sizeDelta = new Vector2(0, 80f);
+        ConfigureActionItemRect(rt, InfoLabelHeight);
+        Image labelBg = labelObj.AddComponent<Image>();
+        labelBg.color = InfoLabelBg;
 
         TextMeshProUGUI tmp = CreateTMPText("InfoText", labelObj.transform, text,
-            20f, new Color(0.6f, 0.6f, 0.65f), TextAlignmentOptions.Center, new Vector2(0, 80f));
+            18f, new Color(0.72f, 0.72f, 0.78f), TextAlignmentOptions.Center, new Vector2(0, InfoLabelHeight));
         RectTransform textRT = tmp.GetComponent<RectTransform>();
         textRT.anchorMin = Vector2.zero;
         textRT.anchorMax = Vector2.one;
@@ -1335,7 +1379,74 @@ public class NPCInteractionMenu : MonoBehaviour
         return tmp;
     }
 
+    private void AddFixedLayout(GameObject obj, float height)
+    {
+        LayoutElement layout = obj.GetComponent<LayoutElement>();
+        if (layout == null)
+        {
+            layout = obj.AddComponent<LayoutElement>();
+        }
+
+        layout.minHeight = height;
+        layout.preferredHeight = height;
+        layout.flexibleHeight = 0f;
+        layout.flexibleWidth = 1f;
+    }
+
+    private void RefreshContentLayout()
+    {
+        if (contentRect != null)
+        {
+            Canvas.ForceUpdateCanvases();
+            LayoutRebuilder.ForceRebuildLayoutImmediate(contentRect);
+        }
+
+    }
+
     /// <summary>应用中文字体</summary>
+    private Transform GetActionParent()
+    {
+        return actionButtonContainer != null ? actionButtonContainer : contentContainer;
+    }
+
+    private void ConfigureActionItemRect(RectTransform rt, float height)
+    {
+        if (rt == null) return;
+
+        rt.anchorMin = new Vector2(0f, 1f);
+        rt.anchorMax = new Vector2(1f, 1f);
+        rt.pivot = new Vector2(0.5f, 1f);
+        rt.offsetMin = new Vector2(ActionAreaPaddingX, 0f);
+        rt.offsetMax = new Vector2(-ActionAreaPaddingX, 0f);
+        rt.sizeDelta = new Vector2(-(ActionAreaPaddingX * 2f), height);
+        rt.anchoredPosition = new Vector2(0f, -ActionAreaPaddingY - actionItemIndex * (height + ButtonSpacing));
+        actionItemIndex++;
+    }
+
+    private Image CreateButtonIcon(Transform parent, bool interactable)
+    {
+        GameObject iconObj = new GameObject("IconSlot");
+        iconObj.transform.SetParent(parent, false);
+
+        RectTransform iconRT = iconObj.AddComponent<RectTransform>();
+        iconRT.anchorMin = new Vector2(0f, 0.5f);
+        iconRT.anchorMax = new Vector2(0f, 0.5f);
+        iconRT.pivot = new Vector2(0.5f, 0.5f);
+        iconRT.anchoredPosition = new Vector2(30f, 0f);
+        iconRT.sizeDelta = new Vector2(26f, 26f);
+
+        Image iconImage = iconObj.AddComponent<Image>();
+        iconImage.color = interactable ? new Color(1f, 0.86f, 0.32f, 0.95f) : new Color(0.42f, 0.42f, 0.48f, 0.75f);
+        iconImage.sprite = LoadOptionalUISprite("NPCInteraction/ButtonIcon");
+        iconImage.raycastTarget = false;
+        return iconImage;
+    }
+
+    private Sprite LoadOptionalUISprite(string resourcePath)
+    {
+        return Resources.Load<Sprite>(resourcePath);
+    }
+
     private void ApplyChineseFont(TextMeshProUGUI tmp)
     {
         if (FontManager.Instance != null)

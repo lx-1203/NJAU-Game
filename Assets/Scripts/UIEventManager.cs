@@ -1,32 +1,56 @@
-using UnityEngine;
-using UnityEngine.UI;
-using UnityEngine.EventSystems;
 using System;
 using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.UI;
 
 public class UIEventManager : MonoBehaviour
 {
+    public static UIEventManager Instance { get; private set; }
+
     [Header("Event Settings")]
-    [Tooltip("是否启用音效反馈")]
     public bool enableSoundEffects = true;
-    
-    [Tooltip("是否启用震动反馈")]
-    public bool enableHapticFeedback = true;
-    
-    [Tooltip("按钮点击音效")]
+    public bool enableHapticFeedback = false;
+
+    [Header("Optional Clips")]
     public AudioClip buttonClickSound;
-    
-    [Tooltip("按钮悬停音效")]
     public AudioClip buttonHoverSound;
-    
-    [Header("References")]
-    private AudioSource audioSource;
-    private Dictionary<Button, ButtonEventData> buttonEvents = new Dictionary<Button, ButtonEventData>();
-    
+
+    private const float ButtonScanInterval = 0.5f;
+
+    private readonly Dictionary<Button, ButtonEventData> buttonEvents = new Dictionary<Button, ButtonEventData>();
+    private AudioSource fallbackAudioSource;
+    private float nextButtonScanTime;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+    private static void Bootstrap()
+    {
+        EnsureInstance();
+    }
+
+    public static UIEventManager EnsureInstance()
+    {
+        if (Instance != null)
+        {
+            return Instance;
+        }
+
+        GameObject obj = new GameObject("UIEventManager");
+        return obj.AddComponent<UIEventManager>();
+    }
+
     private void Awake()
     {
-        InitializeAudio();
-        FindAllButtons();
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+
+        Instance = this;
+        DontDestroyOnLoad(gameObject);
+        InitializeFallbackAudio();
+        ScanButtons();
     }
 
     private void Start()
@@ -39,230 +63,58 @@ public class UIEventManager : MonoBehaviour
         }
     }
 
+    private void Update()
+    {
+        if (Time.unscaledTime < nextButtonScanTime)
+        {
+            return;
+        }
+
+        nextButtonScanTime = Time.unscaledTime + ButtonScanInterval;
+        RemoveDestroyedButtons();
+        ScanButtons();
+    }
+
     private void OnDestroy()
     {
         if (SettingsManager.Instance != null)
         {
             SettingsManager.Instance.OnSFXVolumeChanged -= HandleSfxVolumeChanged;
         }
-    }
-    
-    private void InitializeAudio()
-    {
-        audioSource = gameObject.AddComponent<AudioSource>();
-        audioSource.playOnAwake = false;
-        audioSource.volume = 0.7f;
-    }
 
-    private void ApplySettingsVolume()
-    {
-        if (audioSource == null)
+        if (Instance == this)
         {
-            return;
-        }
-
-        if (SettingsManager.Instance != null && SettingsManager.Instance.CurrentSettings != null)
-        {
-            audioSource.volume = SettingsManager.Instance.CurrentSettings.GetEffectiveSFXVolume();
+            Instance = null;
         }
     }
 
-    private void HandleSfxVolumeChanged(float volume)
-    {
-        if (audioSource != null)
-        {
-            audioSource.volume = volume;
-        }
-    }
-    
-    private void FindAllButtons()
-    {
-        Button[] buttons = FindObjectsOfType<Button>();
-        foreach (Button button in buttons)
-        {
-            SetupButtonEvents(button);
-        }
-    }
-    
-    private void SetupButtonEvents(Button button)
-    {
-        ButtonEventData eventData = new ButtonEventData();
-        
-        // 注册点击事件
-        button.onClick.AddListener(() => OnButtonClick(button));
-        
-        // 获取Button的Selectable组件来注册悬停事件
-        Selectable selectable = button.GetComponent<Selectable>();
-        if (selectable != null)
-        {
-            // 使用EventTrigger来处理悬停事件
-            EventTrigger trigger = button.gameObject.GetComponent<EventTrigger>();
-            if (trigger == null)
-            {
-                trigger = button.gameObject.AddComponent<EventTrigger>();
-            }
-            
-            // 添加进入事件
-            EventTrigger.Entry enterEntry = new EventTrigger.Entry();
-            enterEntry.eventID = EventTriggerType.PointerEnter;
-            enterEntry.callback.AddListener((data) => OnButtonHover(button));
-            trigger.triggers.Add(enterEntry);
-            
-            // 添加离开事件
-            EventTrigger.Entry exitEntry = new EventTrigger.Entry();
-            exitEntry.eventID = EventTriggerType.PointerExit;
-            exitEntry.callback.AddListener((data) => OnButtonExit(button));
-            trigger.triggers.Add(exitEntry);
-        }
-        
-        buttonEvents[button] = eventData;
-    }
-    
-    #region Button Event Handlers
-    
-    private void OnButtonClick(Button button)
-    {
-        PlayButtonClickSound();
-        TriggerHapticFeedback();
-        
-        // 触发按钮按下动画
-        UIAnimator animator = FindObjectOfType<UIAnimator>();
-        if (animator != null)
-        {
-            animator.ButtonPressEffect(button);
-        }
-        
-        // 触发自定义事件
-        ButtonEventData eventData = buttonEvents[button];
-        eventData.InvokeClick(button);
-        
-        Debug.Log($"Button clicked: {button.gameObject.name}");
-    }
-    
-    private void OnButtonHover(Button button)
-    {
-        PlayButtonHoverSound();
-        
-        // 触发悬停动画效果
-        ButtonEventData eventData = buttonEvents[button];
-        eventData.InvokeHover(button);
-        
-        Debug.Log($"Button hovered: {button.gameObject.name}");
-    }
-    
-    private void OnButtonExit(Button button)
-    {
-        // 触发离开动画效果
-        ButtonEventData eventData = buttonEvents[button];
-        eventData.InvokeExit(button);
-        
-        Debug.Log($"Button exited: {button.gameObject.name}");
-    }
-    
-    #endregion
-    
-    #region Feedback Methods
-    
-    private void PlayButtonClickSound()
-    {
-        if (!enableSoundEffects)
-        {
-            return;
-        }
-
-        if (AudioManager.Instance != null)
-        {
-            if (buttonClickSound != null)
-            {
-                AudioManager.Instance.PlaySFXClip(buttonClickSound);
-            }
-            else
-            {
-                AudioManager.Instance.PlaySFX("button_click");
-            }
-            return;
-        }
-
-        if (buttonClickSound != null)
-        {
-            audioSource.PlayOneShot(buttonClickSound);
-        }
-    }
-    
-    private void PlayButtonHoverSound()
-    {
-        if (!enableSoundEffects)
-        {
-            return;
-        }
-
-        if (AudioManager.Instance != null)
-        {
-            if (buttonHoverSound != null)
-            {
-                AudioManager.Instance.PlaySFXClip(buttonHoverSound, 0.65f);
-            }
-            else
-            {
-                AudioManager.Instance.PlaySFX("button_hover", 0.65f);
-            }
-            return;
-        }
-
-        if (buttonHoverSound != null)
-        {
-            audioSource.PlayOneShot(buttonHoverSound);
-        }
-    }
-    
-    private void TriggerHapticFeedback()
-    {
-        if (enableHapticFeedback && SystemInfo.supportsVibration)
-        {
-            Handheld.Vibrate();
-        }
-    }
-    
-    #endregion
-    
-    #region Public API
-    
     public void RegisterButtonClick(Button button, Action<Button> callback)
     {
-        if (buttonEvents.ContainsKey(button))
+        EnsureButtonRegistered(button);
+        if (button != null && buttonEvents.TryGetValue(button, out ButtonEventData eventData))
         {
-            buttonEvents[button].AddClickListener(callback);
-        }
-        else
-        {
-            Debug.LogWarning($"Button {button.gameObject.name} not found in event manager");
+            eventData.AddClickListener(callback);
         }
     }
-    
+
     public void RegisterButtonHover(Button button, Action<Button> callback)
     {
-        if (buttonEvents.ContainsKey(button))
+        EnsureButtonRegistered(button);
+        if (button != null && buttonEvents.TryGetValue(button, out ButtonEventData eventData))
         {
-            buttonEvents[button].AddHoverListener(callback);
-        }
-        else
-        {
-            Debug.LogWarning($"Button {button.gameObject.name} not found in event manager");
+            eventData.AddHoverListener(callback);
         }
     }
-    
+
     public void RegisterButtonExit(Button button, Action<Button> callback)
     {
-        if (buttonEvents.ContainsKey(button))
+        EnsureButtonRegistered(button);
+        if (button != null && buttonEvents.TryGetValue(button, out ButtonEventData eventData))
         {
-            buttonEvents[button].AddExitListener(callback);
-        }
-        else
-        {
-            Debug.LogWarning($"Button {button.gameObject.name} not found in event manager");
+            eventData.AddExitListener(callback);
         }
     }
-    
+
     public void SetButtonInteractable(Button button, bool interactable)
     {
         if (button != null)
@@ -270,56 +122,296 @@ public class UIEventManager : MonoBehaviour
             button.interactable = interactable;
         }
     }
-    
+
     public void SetAllButtonsInteractable(bool interactable)
     {
         foreach (Button button in buttonEvents.Keys)
         {
-            button.interactable = interactable;
+            if (button != null)
+            {
+                button.interactable = interactable;
+            }
         }
     }
-    
-    #endregion
-    
-    #region Button Event Data Class
-    
+
+    public void NotifyButtonClick(Button button)
+    {
+        if (!IsUsableButton(button))
+        {
+            return;
+        }
+
+        PlayButtonClickSound();
+        TriggerHapticFeedback();
+
+        UIAnimator animator = FindObjectOfType<UIAnimator>();
+        if (animator != null)
+        {
+            animator.ButtonPressEffect(button);
+        }
+
+        if (buttonEvents.TryGetValue(button, out ButtonEventData eventData))
+        {
+            eventData.InvokeClick(button);
+        }
+    }
+
+    public void NotifyButtonHover(Button button)
+    {
+        if (!IsUsableButton(button))
+        {
+            return;
+        }
+
+        PlayButtonHoverSound();
+
+        if (buttonEvents.TryGetValue(button, out ButtonEventData eventData))
+        {
+            eventData.InvokeHover(button);
+        }
+    }
+
+    public void NotifyButtonExit(Button button)
+    {
+        if (button == null)
+        {
+            return;
+        }
+
+        if (buttonEvents.TryGetValue(button, out ButtonEventData eventData))
+        {
+            eventData.InvokeExit(button);
+        }
+    }
+
+    private void InitializeFallbackAudio()
+    {
+        fallbackAudioSource = gameObject.AddComponent<AudioSource>();
+        fallbackAudioSource.playOnAwake = false;
+        fallbackAudioSource.spatialBlend = 0f;
+        fallbackAudioSource.volume = 0.8f;
+    }
+
+    private void ApplySettingsVolume()
+    {
+        if (fallbackAudioSource == null)
+        {
+            return;
+        }
+
+        SettingsData settings = SettingsManager.Instance != null ? SettingsManager.Instance.CurrentSettings : null;
+        fallbackAudioSource.volume = settings != null ? settings.GetEffectiveSFXVolume() : PlayerPrefs.GetFloat("SFXVolume", 0.8f);
+    }
+
+    private void HandleSfxVolumeChanged(float volume)
+    {
+        if (fallbackAudioSource != null)
+        {
+            fallbackAudioSource.volume = volume;
+        }
+    }
+
+    private void ScanButtons()
+    {
+        Button[] buttons = FindObjectsOfType<Button>(true);
+        foreach (Button button in buttons)
+        {
+            EnsureButtonRegistered(button);
+        }
+    }
+
+    private void EnsureButtonRegistered(Button button)
+    {
+        if (button == null)
+        {
+            return;
+        }
+
+        if (!buttonEvents.ContainsKey(button))
+        {
+            buttonEvents[button] = new ButtonEventData();
+        }
+
+        UIButtonSfxProxy proxy = button.GetComponent<UIButtonSfxProxy>();
+        if (proxy == null)
+        {
+            proxy = button.gameObject.AddComponent<UIButtonSfxProxy>();
+        }
+
+        proxy.Configure(this, button);
+    }
+
+    private void RemoveDestroyedButtons()
+    {
+        List<Button> staleButtons = null;
+        foreach (Button button in buttonEvents.Keys)
+        {
+            if (button != null)
+            {
+                continue;
+            }
+
+            if (staleButtons == null)
+            {
+                staleButtons = new List<Button>();
+            }
+
+            staleButtons.Add(button);
+        }
+
+        if (staleButtons == null)
+        {
+            return;
+        }
+
+        foreach (Button button in staleButtons)
+        {
+            buttonEvents.Remove(button);
+        }
+    }
+
+    private bool IsUsableButton(Button button)
+    {
+        return button != null && button.IsActive() && button.interactable;
+    }
+
+    private void PlayButtonClickSound()
+    {
+        if (!enableSoundEffects)
+        {
+            return;
+        }
+
+        AudioManager audioManager = AudioManager.EnsureInstance();
+        if (audioManager != null)
+        {
+            if (buttonClickSound != null)
+            {
+                audioManager.PlaySFXClip(buttonClickSound);
+            }
+            else
+            {
+                audioManager.PlaySFX("button_click");
+            }
+
+            return;
+        }
+
+        if (buttonClickSound != null && fallbackAudioSource != null)
+        {
+            fallbackAudioSource.PlayOneShot(buttonClickSound);
+        }
+    }
+
+    private void PlayButtonHoverSound()
+    {
+        if (!enableSoundEffects)
+        {
+            return;
+        }
+
+        AudioManager audioManager = AudioManager.EnsureInstance();
+        if (audioManager != null)
+        {
+            if (buttonHoverSound != null)
+            {
+                audioManager.PlaySFXClip(buttonHoverSound, 0.65f);
+            }
+
+            return;
+        }
+
+        if (buttonHoverSound != null && fallbackAudioSource != null)
+        {
+            fallbackAudioSource.PlayOneShot(buttonHoverSound, 0.65f);
+        }
+    }
+
+    private void TriggerHapticFeedback()
+    {
+        if (enableHapticFeedback && SystemInfo.supportsVibration)
+        {
+            Handheld.Vibrate();
+        }
+    }
+
     [Serializable]
     private class ButtonEventData
     {
         private event Action<Button> onClick;
         private event Action<Button> onHover;
         private event Action<Button> onExit;
-        
+
         public void InvokeClick(Button button)
         {
             onClick?.Invoke(button);
         }
-        
+
         public void InvokeHover(Button button)
         {
             onHover?.Invoke(button);
         }
-        
+
         public void InvokeExit(Button button)
         {
             onExit?.Invoke(button);
         }
-        
+
         public void AddClickListener(Action<Button> callback)
         {
             onClick += callback;
         }
-        
+
         public void AddHoverListener(Action<Button> callback)
         {
             onHover += callback;
         }
-        
+
         public void AddExitListener(Action<Button> callback)
         {
             onExit += callback;
         }
     }
-    
-    #endregion
+}
+
+public class UIButtonSfxProxy : MonoBehaviour, IPointerDownHandler, IPointerEnterHandler, IPointerExitHandler
+{
+    private UIEventManager manager;
+    private Button button;
+
+    public void Configure(UIEventManager eventManager, Button targetButton)
+    {
+        manager = eventManager;
+        button = targetButton;
+    }
+
+    public void OnPointerDown(PointerEventData eventData)
+    {
+        if (manager == null)
+        {
+            manager = UIEventManager.EnsureInstance();
+        }
+
+        manager.NotifyButtonClick(button);
+    }
+
+    public void OnPointerEnter(PointerEventData eventData)
+    {
+        if (manager == null)
+        {
+            manager = UIEventManager.EnsureInstance();
+        }
+
+        manager.NotifyButtonHover(button);
+    }
+
+    public void OnPointerExit(PointerEventData eventData)
+    {
+        if (manager == null)
+        {
+            manager = UIEventManager.EnsureInstance();
+        }
+
+        manager.NotifyButtonExit(button);
+    }
 }
