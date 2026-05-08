@@ -15,7 +15,7 @@ public static class UIBackActionRouter
         if (saveLoadUI != null)
         {
             PauseMenuUI.MarkEscapeHandledThisFrame();
-            Object.Destroy(saveLoadUI.gameObject);
+            saveLoadUI.ClosePanel();
             return true;
         }
 

@@ -13,6 +13,7 @@ public class LocationRandomEventSystem : MonoBehaviour
     [SerializeField, Range(0f, 1f)] private float moveEventChance = 0.28f;
     [SerializeField, Range(0f, 1f)] private float actionEventChance = 0.18f;
     [SerializeField] private int minActionsBetweenEvents = 2;
+    [SerializeField] private bool useLegacyAmbientEvents = false;
 
     private readonly Dictionary<LocationId, List<LocationAmbientEvent>> eventsByLocation =
         new Dictionary<LocationId, List<LocationAmbientEvent>>();
@@ -99,6 +100,11 @@ public class LocationRandomEventSystem : MonoBehaviour
 
     private void TryTrigger(LocationId location, float chance)
     {
+        if (!useLegacyAmbientEvents)
+        {
+            return;
+        }
+
         if (!CanTrigger(location, chance))
         {
             return;

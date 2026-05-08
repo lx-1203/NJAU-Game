@@ -24,10 +24,10 @@ public class EventModule : MonoBehaviour, IDebugModule
     private static readonly Color BtnBlue = new Color(0.23f, 0.43f, 0.72f, 1.0f);
     private static readonly Color Panel = new Color(0.11f, 0.11f, 0.17f, 0.92f);
 
-    private static readonly string[] EventTypeOptions = { "Fixed", "MainStory", "Conditional", "Dark" };
+    private static readonly string[] EventTypeOptions = { "Fixed", "MainStory", "Conditional", "Random", "Dark" };
     private static readonly string[] PhaseOptions = { "RoundStart", "ActionComplete", "RoundEnd" };
     private static readonly string[] TimelinePhaseOptions = { "All", "RoundStart", "ActionComplete", "RoundEnd" };
-    private static readonly string[] LibraryGroupOptions = { "全部", "考试结果", "证书考试", "补考", "NPC关系", "恋爱", "社团", "主线", "黑暗", "有场景演出" };
+    private static readonly string[] LibraryGroupOptions = { "全部", "随机事件", "主线", "黑暗", "考试结果", "证书考试", "补考", "NPC关系", "恋爱", "社团", "有场景演出" };
 
     private TMP_InputField eventIdInput;
     private TMP_InputField flagInput;
@@ -100,6 +100,8 @@ public class EventModule : MonoBehaviour, IDebugModule
     private TMP_InputField choiceCNextInput;
     private TMP_InputField choiceCShowConditionsInput;
     private TMP_Dropdown roundEventDropdown;
+    private TMP_Dropdown randomPhaseDropdown;
+    private Toggle randomEventsEnabledToggle;
     private TMP_InputField timelineYearInput;
     private TMP_InputField timelineSemesterInput;
     private TMP_InputField timelineRoundInput;
@@ -108,6 +110,8 @@ public class EventModule : MonoBehaviour, IDebugModule
     private TMP_Dropdown libraryGroupDropdown;
     private Transform roundEventListContent;
     private Transform libraryEventListContent;
+    private Transform randomEventListContent;
+    private TextMeshProUGUI randomEventSummaryText;
 
     private readonly List<EventSelectionOption> eventSelectionOptions = new List<EventSelectionOption>();
     private readonly List<EventSelectionOption> runtimeSelectionOptions = new List<EventSelectionOption>();
@@ -117,6 +121,8 @@ public class EventModule : MonoBehaviour, IDebugModule
 
     public void Init(RectTransform parent)
     {
+        EnsureEventRuntime();
+
         GameObject scrollObj = CreateUIElement("ScrollView", parent);
         StretchFull(scrollObj.GetComponent<RectTransform>());
 
@@ -148,12 +154,13 @@ public class EventModule : MonoBehaviour, IDebugModule
         fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
         scrollRect.content = contentRT;
 
-        CreateLabel(content.transform, "事件调试与剧情速编", 18f, TextGold, 30f);
+        CreateLabel(content.transform, "事件调试与剧情速编 / 随机事件控制", 18f, TextGold, 30f);
         statusText = CreateLabel(content.transform, string.Empty, 14f, TextGray, 44f);
 
+        BuildQuickActions(content.transform);
+        BuildRandomEventControlPanel(content.transform);
         BuildBrowserPanel(content.transform);
         BuildAuthoringPanel(content.transform);
-        BuildQuickActions(content.transform);
 
         queueText = CreateBlockLabel(content.transform, 170f);
         historyText = CreateBlockLabel(content.transform, 260f);
@@ -162,13 +169,41 @@ public class EventModule : MonoBehaviour, IDebugModule
 
     public void Refresh()
     {
+        EnsureEventRuntime();
         RefreshStatus();
         RefreshRuntimeEventDropdown();
         RefreshQueue();
         RefreshHistory();
         RefreshRoundEventPanel();
+        RefreshRandomEventPanel();
         RefreshEventLibraryPanel();
         RefreshPreview();
+    }
+
+    private void EnsureEventRuntime()
+    {
+        if (EventHistory.Instance == null)
+        {
+            GameObject historyObj = new GameObject("EventHistory");
+            historyObj.AddComponent<EventHistory>();
+        }
+
+        if (EventScheduler.Instance == null)
+        {
+            GameObject schedulerObj = new GameObject("EventScheduler");
+            schedulerObj.AddComponent<EventScheduler>();
+        }
+
+        if (EventScheduler.Instance != null && EventScheduler.Instance.GetLoadedEventCount() == 0)
+        {
+            EventScheduler.Instance.LoadEvents();
+        }
+
+        if (EventExecutor.Instance == null)
+        {
+            GameObject executorObj = new GameObject("EventExecutor");
+            executorObj.AddComponent<EventExecutor>();
+        }
     }
 
     private void BuildQuickActions(Transform parent)
@@ -245,6 +280,7 @@ public class EventModule : MonoBehaviour, IDebugModule
         CreateLabel(libraryRow.transform, "搜索", 14f, TextWhite, 30f, 44f);
         librarySearchInput = CreateInputField(libraryRow.transform, "输入事件 ID / 标题 / 类型", 320f, 30f);
         SetFlexibleWidth(librarySearchInput.gameObject, 220f);
+        libraryGroupDropdown = CreateDropdown(libraryRow.transform, LibraryGroupOptions, 130f, 30f);
         CreateButton(libraryRow.transform, "新增事件", 100f, BtnGreen, BeginCreateNewEvent);
         CreateButton(libraryRow.transform, "刷新列表", 100f, BtnBlue, Refresh);
 
@@ -253,6 +289,46 @@ public class EventModule : MonoBehaviour, IDebugModule
         eventCatalogText.overflowMode = TextOverflowModes.Overflow;
 
         libraryEventListContent = CreateListHost(libraryPanel.transform, 350f);
+    }
+
+    private void BuildRandomEventControlPanel(Transform parent)
+    {
+        CreateSectionTitle(parent, "随机事件控制");
+
+        GameObject randomPanel = CreatePanel(parent, 360f);
+        VerticalLayoutGroup randomLayout = randomPanel.AddComponent<VerticalLayoutGroup>();
+        randomLayout.spacing = 8f;
+        randomLayout.padding = new RectOffset(12, 12, 12, 12);
+        randomLayout.childControlWidth = true;
+        randomLayout.childControlHeight = false;
+        randomLayout.childForceExpandHeight = false;
+
+        CreateLabel(randomPanel.transform, "制作随机事件时用这里：可以临时关闭自然随机、查看当前地点可触发事件，或直接抽取一条进行测试。", 13f, TextGray, 24f);
+
+        GameObject controlRow = CreateRow(randomPanel.transform, 34f);
+        randomEventsEnabledToggle = CreateToggle(controlRow.transform, "自然随机", true);
+        randomEventsEnabledToggle.onValueChanged.AddListener(value =>
+        {
+            if (EventScheduler.Instance != null)
+            {
+                EventScheduler.Instance.RandomEventsEnabled = value;
+            }
+            RefreshRandomEventPanel();
+        });
+        CreateLabel(controlRow.transform, "阶段", 14f, TextWhite, 30f, 44f);
+        randomPhaseDropdown = CreateDropdown(controlRow.transform, PhaseOptions, 150f, 30f);
+        CreateButton(controlRow.transform, "刷新", 80f, BtnBlue, Refresh);
+
+        GameObject actionRow = CreateRow(randomPanel.transform, 34f);
+        CreateButton(actionRow.transform, "按概率抽取", 110f, BtnGreen, () => DrawRandomEvent(includeProbabilityCheck: true));
+        CreateButton(actionRow.transform, "忽略概率抽取", 120f, BtnBlue, () => DrawRandomEvent(includeProbabilityCheck: false));
+        CreateButton(actionRow.transform, "执行阶段判定", 120f, BtnGreen, CheckSelectedRandomPhase);
+
+        randomEventSummaryText = CreateLabel(randomPanel.transform, string.Empty, 13f, TextGray, 52f);
+        randomEventSummaryText.enableWordWrapping = true;
+        randomEventSummaryText.overflowMode = TextOverflowModes.Overflow;
+
+        randomEventListContent = CreateListHost(randomPanel.transform, 200f);
     }
 
     private void BuildAuthoringPanel(Transform parent)
@@ -462,6 +538,49 @@ public class EventModule : MonoBehaviour, IDebugModule
         EventScheduler.Instance.EnqueueEvent(eventId);
         statusText.text = $"已加入触发队列：{eventId}";
         DebugConsoleManager.Log("Event", $"Force trigger {eventId}");
+        Refresh();
+    }
+
+    private void DrawRandomEvent(bool includeProbabilityCheck)
+    {
+        if (EventScheduler.Instance == null)
+        {
+            statusText.text = "EventScheduler 尚未就绪";
+            return;
+        }
+
+        TriggerPhase phase = GetSelectedRandomPhase();
+        EventDefinition selected = EventScheduler.Instance.EnqueueRandomEvent(
+            phase,
+            includeProbabilityCheck,
+            ignoreRandomEnabled: true);
+
+        if (selected == null)
+        {
+            statusText.text = includeProbabilityCheck
+                ? $"阶段 {phase} 没有通过概率与条件检定的随机事件"
+                : $"阶段 {phase} 没有满足当前条件的随机事件";
+            RefreshRandomEventPanel();
+            return;
+        }
+
+        statusText.text = $"已抽取随机事件：{selected.id} | {selected.title}";
+        DebugConsoleManager.Log("Event", $"Draw random event {selected.id} phase={phase} probability={includeProbabilityCheck}");
+        Refresh();
+    }
+
+    private void CheckSelectedRandomPhase()
+    {
+        if (EventScheduler.Instance == null)
+        {
+            statusText.text = "EventScheduler 尚未就绪";
+            return;
+        }
+
+        TriggerPhase phase = GetSelectedRandomPhase();
+        EventScheduler.Instance.CheckAndTriggerEvents(phase);
+        statusText.text = $"已执行阶段判定：{phase}";
+        DebugConsoleManager.Log("Event", $"Check phase from random panel {phase}");
         Refresh();
     }
 
@@ -1144,6 +1263,54 @@ public class EventModule : MonoBehaviour, IDebugModule
         }
     }
 
+    private void RefreshRandomEventPanel()
+    {
+        if (randomEventSummaryText == null || randomEventListContent == null)
+        {
+            return;
+        }
+
+        ClearChildren(randomEventListContent);
+
+        if (EventScheduler.Instance == null)
+        {
+            randomEventSummaryText.text = "EventScheduler 尚未就绪";
+            CreateListPlaceholder(randomEventListContent, "随机事件系统尚未初始化");
+            return;
+        }
+
+        if (randomEventsEnabledToggle != null && randomEventsEnabledToggle.isOn != EventScheduler.Instance.RandomEventsEnabled)
+        {
+            randomEventsEnabledToggle.SetIsOnWithoutNotify(EventScheduler.Instance.RandomEventsEnabled);
+        }
+
+        TriggerPhase phase = GetSelectedRandomPhase();
+        List<EventDefinition> randomEvents = EventScheduler.Instance.GetAllEventsSnapshot()
+            .Where(evt => evt.GetEventType() == EventType.Random)
+            .ToList();
+        List<EventDefinition> candidates = EventScheduler.Instance.GetRandomEventCandidates(phase, includeProbabilityCheck: false);
+        string location = GameState.Instance != null ? GameState.Instance.CurrentLocation.ToString() : "未知";
+
+        randomEventSummaryText.text =
+            $"自然随机：{(EventScheduler.Instance.RandomEventsEnabled ? "开启" : "关闭")}   当前地点：{location}   阶段：{phase}\n" +
+            $"随机事件总数 {randomEvents.Count} 条，当前条件可进入抽取池 {candidates.Count} 条。";
+
+        if (candidates.Count == 0)
+        {
+            CreateListPlaceholder(randomEventListContent, "当前地点/状态没有可抽取的随机事件。可以切换阶段，或用事件库直接强制触发指定事件。");
+            return;
+        }
+
+        for (int i = 0; i < candidates.Count; i++)
+        {
+            EventDefinition evt = candidates[i];
+            float chance = evt.trigger != null ? evt.trigger.triggerChance : 1f;
+            CreateRandomEventRow(
+                evt,
+                $"{BuildRandomLocationLabel(evt.trigger)} | {BuildTimeWindowLabel(evt.trigger)} | p={chance:0.##} | {BuildCostSummary(evt)}");
+        }
+    }
+
     private void RefreshEventLibraryPanel()
     {
         if (eventCatalogText == null || libraryEventListContent == null)
@@ -1152,6 +1319,9 @@ public class EventModule : MonoBehaviour, IDebugModule
         }
 
         string keyword = SafeText(librarySearchInput).ToLowerInvariant();
+        string group = libraryGroupDropdown != null && libraryGroupDropdown.options.Count > 0
+            ? libraryGroupDropdown.options[libraryGroupDropdown.value].text
+            : "全部";
         eventSelectionOptions.Clear();
         ClearChildren(libraryEventListContent);
 
@@ -1159,7 +1329,9 @@ public class EventModule : MonoBehaviour, IDebugModule
         {
             foreach (EventDefinition evt in EventScheduler.Instance.GetAllEventsSnapshot())
             {
-                if (MatchesLibrarySearch(evt.id, evt.title, evt.eventType, keyword))
+                string source = GetEventSourceLabel(evt);
+                if (MatchesLibraryGroup(evt, group) &&
+                    MatchesLibrarySearch(evt.id, evt.title, $"{evt.eventType} {source}", keyword))
                 {
                     eventSelectionOptions.Add(new EventSelectionOption
                     {
@@ -1175,7 +1347,7 @@ public class EventModule : MonoBehaviour, IDebugModule
         for (int i = 0; i < authoredEntries.Count; i++)
         {
             ZhongshanDeckEventEntry entry = authoredEntries[i];
-            if (entry == null || !MatchesLibrarySearch(entry.eventId, entry.title, "草稿", keyword))
+            if (entry == null || !MatchesLibrarySearch(entry.eventId, entry.title, "草稿 zhongshan_deck", keyword))
             {
                 continue;
             }
@@ -1188,7 +1360,7 @@ public class EventModule : MonoBehaviour, IDebugModule
             });
         }
 
-        eventCatalogText.text = $"事件库结果：{eventSelectionOptions.Count} 条";
+        eventCatalogText.text = $"事件库结果：{eventSelectionOptions.Count} 条   分组：{group}   提示：随机事件来自 random_events.json，事件 ID 以 R_ 开头";
 
         if (eventSelectionOptions.Count == 0)
         {
@@ -1519,7 +1691,65 @@ public class EventModule : MonoBehaviour, IDebugModule
         }
 
         EventDefinition runtime = EventScheduler.Instance != null ? EventScheduler.Instance.GetEvent(option.eventId) : null;
-        return runtime == null ? "运行时事件" : $"运行时 | {runtime.eventType} | {BuildCostSummary(runtime)}";
+        return runtime == null ? "运行时事件" : $"运行时 | {runtime.eventType} | {GetEventSourceLabel(runtime)} | {BuildCostSummary(runtime)}";
+    }
+
+    private string GetEventSourceLabel(EventDefinition evt)
+    {
+        if (evt == null || string.IsNullOrWhiteSpace(evt.sourceFileName))
+        {
+            return "来源未知";
+        }
+
+        return evt.sourceFileName.EndsWith(".json", StringComparison.OrdinalIgnoreCase)
+            ? evt.sourceFileName
+            : $"{evt.sourceFileName}.json";
+    }
+
+    private bool MatchesLibraryGroup(EventDefinition evt, string group)
+    {
+        if (evt == null || string.IsNullOrEmpty(group) || group == "全部")
+        {
+            return true;
+        }
+
+        EventType type = evt.GetEventType();
+        switch (group)
+        {
+            case "随机事件":
+                return type == EventType.Random || string.Equals(evt.sourceFileName, "random_events", StringComparison.OrdinalIgnoreCase);
+            case "主线":
+                return type == EventType.MainStory;
+            case "黑暗":
+                return type == EventType.Dark;
+            case "有场景演出":
+                return evt.presentation != null;
+            case "考试结果":
+                return ContainsEventKeyword(evt, "考试") || ContainsEventKeyword(evt, "exam");
+            case "证书考试":
+                return ContainsEventKeyword(evt, "证书") || ContainsEventKeyword(evt, "CET") || ContainsEventKeyword(evt, "四级") || ContainsEventKeyword(evt, "六级");
+            case "补考":
+                return ContainsEventKeyword(evt, "补考");
+            case "NPC关系":
+                return evt.trigger != null && evt.trigger.affinityConditions != null && evt.trigger.affinityConditions.Length > 0;
+            case "恋爱":
+                return evt.trigger != null && evt.trigger.romanceConditions != null && evt.trigger.romanceConditions.Length > 0;
+            case "社团":
+                return evt.trigger != null && evt.trigger.clubConditions != null && evt.trigger.clubConditions.Length > 0;
+            default:
+                return true;
+        }
+    }
+
+    private bool ContainsEventKeyword(EventDefinition evt, string keyword)
+    {
+        if (evt == null || string.IsNullOrEmpty(keyword))
+        {
+            return false;
+        }
+
+        string haystack = $"{evt.id} {evt.title} {evt.description} {evt.eventType} {evt.sourceFileName}";
+        return haystack.IndexOf(keyword, StringComparison.OrdinalIgnoreCase) >= 0;
     }
 
     private void UseCurrentTimelineValues()
@@ -1702,6 +1932,19 @@ public class EventModule : MonoBehaviour, IDebugModule
         return selected == "All" ? PhaseOptions[0] : selected;
     }
 
+    private TriggerPhase GetSelectedRandomPhase()
+    {
+        string phaseName = PhaseOptions[0];
+        if (randomPhaseDropdown != null && randomPhaseDropdown.options.Count > 0)
+        {
+            phaseName = randomPhaseDropdown.options[randomPhaseDropdown.value].text;
+        }
+
+        return Enum.TryParse(phaseName, true, out TriggerPhase phase)
+            ? phase
+            : TriggerPhase.ActionComplete;
+    }
+
     private void EnsureRoundBinding(EventDefinition evt, int year, int semester, int round, string phase)
     {
         if (evt.trigger == null)
@@ -1777,6 +2020,8 @@ public class EventModule : MonoBehaviour, IDebugModule
             minDarkness = source != null ? source.minDarkness : 0,
             triggerBehavior = source != null ? source.triggerBehavior : string.Empty,
             triggerChance = source != null ? source.triggerChance : 1f,
+            requiredLocationId = source != null ? source.requiredLocationId : string.Empty,
+            requiredLocationIds = source != null ? source.requiredLocationIds : Array.Empty<string>(),
             phase = source != null ? source.phase : string.Empty
         };
     }
@@ -1805,6 +2050,9 @@ public class EventModule : MonoBehaviour, IDebugModule
             bits.Add($"排除标记 {string.Join(",", trigger.excludedFlags)}");
         if (trigger.affinityConditions != null && trigger.affinityConditions.Length > 0)
             bits.Add("好感条件");
+        string locationLabel = BuildRandomLocationLabel(trigger);
+        if (locationLabel != "地点不限")
+            bits.Add(locationLabel);
 
         return bits.Count > 0 ? string.Join(" | ", bits) : "条件不满足";
     }
@@ -1881,6 +2129,62 @@ public class EventModule : MonoBehaviour, IDebugModule
             parts.Add($"NPC {(!string.IsNullOrEmpty(presentation.npcPortraitResourcePath) ? presentation.npcPortraitResourcePath : presentation.npcSlotName)}");
 
         return parts.Count > 0 ? string.Join(" | ", parts) : "未配置";
+    }
+
+    private string BuildRandomLocationLabel(EventTriggerCondition trigger)
+    {
+        if (trigger == null)
+        {
+            return "地点不限";
+        }
+
+        List<string> locations = new List<string>();
+        if (!string.IsNullOrWhiteSpace(trigger.requiredLocationId))
+        {
+            locations.Add(trigger.requiredLocationId);
+        }
+
+        if (trigger.requiredLocationIds != null)
+        {
+            for (int i = 0; i < trigger.requiredLocationIds.Length; i++)
+            {
+                string locationId = trigger.requiredLocationIds[i];
+                if (!string.IsNullOrWhiteSpace(locationId) && !locations.Contains(locationId))
+                {
+                    locations.Add(locationId);
+                }
+            }
+        }
+
+        return locations.Count == 0 ? "地点不限" : $"地点 {string.Join("/", locations)}";
+    }
+
+    private void CreateRandomEventRow(EventDefinition evt, string subtitle)
+    {
+        GameObject row = CreatePanel(randomEventListContent, 58f);
+        HorizontalLayoutGroup layout = row.AddComponent<HorizontalLayoutGroup>();
+        layout.spacing = 8f;
+        layout.padding = new RectOffset(10, 10, 8, 8);
+        layout.childAlignment = TextAnchor.MiddleLeft;
+        layout.childControlWidth = false;
+        layout.childControlHeight = true;
+        layout.childForceExpandWidth = false;
+        layout.childForceExpandHeight = false;
+
+        TextMeshProUGUI title = CreateLabel(row.transform, $"{evt.id} | {evt.title}", 13f, TextWhite, 20f, 360f);
+        title.enableWordWrapping = false;
+        title.overflowMode = TextOverflowModes.Ellipsis;
+
+        TextMeshProUGUI meta = CreateLabel(row.transform, subtitle, 12f, TextGray, 20f, 300f);
+        meta.enableWordWrapping = false;
+        meta.overflowMode = TextOverflowModes.Ellipsis;
+
+        CreateButton(row.transform, "触发", 70f, BtnGreen, () =>
+        {
+            eventIdInput.text = evt.id;
+            ForceTriggerEvent();
+        });
+        CreateButton(row.transform, "编辑", 70f, BtnBlue, () => EditRuntimeEventById(evt.id));
     }
 
     private void CreateLibraryRow(EventSelectionOption option, string subtitle)

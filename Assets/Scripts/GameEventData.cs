@@ -14,6 +14,7 @@ public enum EventType
     Fixed,          // FE - 固定事件（每回合触发）
     MainStory,      // ME - 主线事件（特定回合触发）
     Conditional,    // CE - 条件事件（满足条件触发）
+    Random,         // R - 随机事件（地点/状态驱动，从事件池抽取）
     Dark            // DE - 黑暗事件（黑暗值/行为触发）
 }
 
@@ -23,7 +24,8 @@ public enum EventPriority
     Forced = 0,         // 强制（黑暗事件中的强制类型）
     MainStory = 1,      // 主线
     Conditional = 2,    // 条件
-    Fixed = 3           // 固定
+    Fixed = 3,          // 固定
+    Random = 4          // 随机
 }
 
 /// <summary>事件触发阶段</summary>
@@ -145,6 +147,8 @@ public class EventTriggerCondition
 
     /// <summary>要求玩家处于指定地点；留空表示不限。</summary>
     public string requiredLocationId;
+    /// <summary>要求玩家处于任意一个指定地点；为空表示不限。</summary>
+    public string[] requiredLocationIds;
 
     // ----- 触发阶段 -----
     /// <summary>在哪个阶段检查："RoundStart", "ActionComplete", "RoundEnd"</summary>
@@ -231,7 +235,7 @@ public class EventDefinition
 {
     /// <summary>事件ID，如 "ME_001"</summary>
     public string id;
-    /// <summary>事件类型字符串："Fixed", "MainStory", "Conditional", "Dark"</summary>
+    /// <summary>事件类型字符串："Fixed", "MainStory", "Conditional", "Random", "Dark"</summary>
     public string eventType;
     /// <summary>事件标题</summary>
     public string title;
@@ -267,6 +271,7 @@ public class EventDefinition
 
     // ========== 运行时缓存 ==========
 
+    [NonSerialized] public string sourceFileName;
     [NonSerialized] private EventType? _parsedType;
     [NonSerialized] private TriggerPhase? _parsedPhase;
 

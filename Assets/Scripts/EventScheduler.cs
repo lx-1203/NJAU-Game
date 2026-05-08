@@ -60,6 +60,11 @@ public class EventScheduler : MonoBehaviour
     private readonly HashSet<string> notifiedIssues = new HashSet<string>();
     private readonly List<EventValidationIssue> validationIssues = new List<EventValidationIssue>();
 
+    /// <summary>
+    /// 调试/制作开关：关闭后常规阶段扫描不会自动抽取 Random 事件。
+    /// </summary>
+    public bool RandomEventsEnabled { get; set; } = true;
+
     // ========== JSON 文件名 ==========
 
     /// <summary>
@@ -70,6 +75,7 @@ public class EventScheduler : MonoBehaviour
         "main_events",
         "fixed_events",
         "conditional_events",
+        "random_events",
         "dark_events"
     };
 
@@ -116,6 +122,7 @@ public class EventScheduler : MonoBehaviour
                 }
 
                 NormalizeEventDefinition(evt, treatZeroChanceAsLegacyDefault: true);
+                evt.sourceFileName = fileName;
 
                 if (allEvents.ContainsKey(evt.id))
                 {
@@ -164,6 +171,7 @@ public class EventScheduler : MonoBehaviour
                 }
 
                 NormalizeEventDefinition(evt, treatZeroChanceAsLegacyDefault: false);
+                evt.sourceFileName = "zhongshan_deck";
                 allEvents[evt.id] = evt;
                 totalLoaded++;
             }
@@ -297,6 +305,33 @@ public class EventScheduler : MonoBehaviour
             }
 
             if (gs.CurrentLocation != requiredLocation)
+                return false;
+        }
+
+        if (trigger.requiredLocationIds != null && trigger.requiredLocationIds.Length > 0)
+        {
+            bool matchedAnyLocation = false;
+            for (int i = 0; i < trigger.requiredLocationIds.Length; i++)
+            {
+                string locationId = trigger.requiredLocationIds[i];
+                if (string.IsNullOrWhiteSpace(locationId))
+                {
+                    continue;
+                }
+
+                if (!Enum.TryParse(locationId, true, out LocationId requiredLocation))
+                {
+                    continue;
+                }
+
+                if (gs.CurrentLocation == requiredLocation)
+                {
+                    matchedAnyLocation = true;
+                    break;
+                }
+            }
+
+            if (!matchedAnyLocation)
                 return false;
         }
 
@@ -438,6 +473,7 @@ public class EventScheduler : MonoBehaviour
         }
 
         List<EventDefinition> candidates = new List<EventDefinition>();
+        List<EventDefinition> randomCandidates = new List<EventDefinition>();
 
         foreach (EventDefinition evt in allEvents.Values)
         {
@@ -464,6 +500,16 @@ public class EventScheduler : MonoBehaviour
             if (!CheckCondition(evt.trigger))
                 continue;
 
+            if (evt.GetEventType() == EventType.Random)
+            {
+                if (RandomEventsEnabled && PassProbabilityCheck(evt))
+                {
+                    randomCandidates.Add(evt);
+                }
+
+                continue;
+            }
+
             if (!PassProbabilityCheck(evt))
                 continue;
 
@@ -476,6 +522,12 @@ public class EventScheduler : MonoBehaviour
         foreach (EventDefinition evt in candidates)
         {
             eventQueue.Enqueue(evt);
+        }
+
+        if (randomCandidates.Count > 0)
+        {
+            randomCandidates.Sort((a, b) => a.priority.CompareTo(b.priority));
+            eventQueue.Enqueue(randomCandidates[UnityEngine.Random.Range(0, randomCandidates.Count)]);
         }
 
         if (eventQueue.Count > 0 && !isProcessingQueue)
@@ -576,6 +628,81 @@ public class EventScheduler : MonoBehaviour
             .OrderBy(evt => evt.priority)
             .ThenBy(evt => evt.id)
             .ToList();
+    }
+
+    public List<EventDefinition> GetRandomEventCandidates(TriggerPhase phase, bool includeProbabilityCheck)
+    {
+        if (GameState.Instance == null || EventHistory.Instance == null)
+        {
+            return new List<EventDefinition>();
+        }
+
+        List<EventDefinition> candidates = new List<EventDefinition>();
+        foreach (EventDefinition evt in allEvents.Values)
+        {
+            if (!IsRandomEventCandidate(evt, phase))
+                continue;
+
+            if (includeProbabilityCheck && !PassProbabilityCheck(evt))
+                continue;
+
+            candidates.Add(evt);
+        }
+
+        return candidates
+            .OrderBy(evt => evt.priority)
+            .ThenBy(evt => evt.id)
+            .ToList();
+    }
+
+    public EventDefinition EnqueueRandomEvent(TriggerPhase phase, bool includeProbabilityCheck, bool ignoreRandomEnabled = false)
+    {
+        if (!RandomEventsEnabled && !ignoreRandomEnabled)
+        {
+            return null;
+        }
+
+        List<EventDefinition> candidates = GetRandomEventCandidates(phase, includeProbabilityCheck);
+        if (candidates.Count == 0)
+        {
+            return null;
+        }
+
+        EventDefinition selected = candidates[UnityEngine.Random.Range(0, candidates.Count)];
+        eventQueue.Enqueue(selected);
+        Debug.Log($"[EventScheduler] 钟山台抽取随机事件: {selected.id} - {selected.title}");
+
+        if (!isProcessingQueue)
+        {
+            ProcessNextEvent();
+        }
+
+        return selected;
+    }
+
+    private bool IsRandomEventCandidate(EventDefinition evt, TriggerPhase phase)
+    {
+        if (evt == null || evt.GetEventType() != EventType.Random)
+            return false;
+
+        if (evt.GetTriggerPhase() != phase)
+            return false;
+
+        if (evt.trigger != null && !string.IsNullOrEmpty(evt.trigger.triggerBehavior))
+            return false;
+
+        if (!evt.isRepeatable && EventHistory.Instance != null && EventHistory.Instance.HasTriggered(evt.id))
+            return false;
+
+        if (evt.maxTriggersPerRound > 0 &&
+            EventHistory.Instance != null &&
+            GameState.Instance != null &&
+            EventHistory.Instance.GetTriggerCountForRound(evt.id, GameState.Instance.CurrentYear, GameState.Instance.CurrentSemester, GameState.Instance.CurrentRound) >= evt.maxTriggersPerRound)
+        {
+            return false;
+        }
+
+        return CheckCondition(evt.trigger);
     }
 
     public void RegisterOrReplaceRuntimeEvent(EventDefinition evt)
@@ -703,6 +830,9 @@ public class EventScheduler : MonoBehaviour
             evt.trigger.specificRounds = Array.Empty<int>();
 
         evt.trigger.requiredLocationId = evt.trigger.requiredLocationId ?? string.Empty;
+
+        if (evt.trigger.requiredLocationIds == null)
+            evt.trigger.requiredLocationIds = Array.Empty<string>();
 
         if (evt.trigger.attributeConditions == null)
             evt.trigger.attributeConditions = Array.Empty<AttributeCondition>();
@@ -852,6 +982,19 @@ public class EventScheduler : MonoBehaviour
                 !Enum.TryParse(evt.trigger.requiredLocationId, true, out LocationId _))
             {
                 AddValidationIssue(evt.id, "warning", $"触发地点 {evt.trigger.requiredLocationId} 不是有效的 LocationId。");
+            }
+
+            if (evt.trigger.requiredLocationIds != null)
+            {
+                for (int i = 0; i < evt.trigger.requiredLocationIds.Length; i++)
+                {
+                    string locationId = evt.trigger.requiredLocationIds[i];
+                    if (!string.IsNullOrWhiteSpace(locationId) &&
+                        !Enum.TryParse(locationId, true, out LocationId _))
+                    {
+                        AddValidationIssue(evt.id, "warning", $"触发地点 {locationId} 不是有效的 LocationId。");
+                    }
+                }
             }
 
             if (evt.trigger.specificRounds != null)

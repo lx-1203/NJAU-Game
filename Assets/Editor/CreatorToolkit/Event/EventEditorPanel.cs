@@ -24,8 +24,14 @@ namespace Zhongshan.CreatorToolkit.Event
             title.style.unityFontStyleAndWeight = FontStyle.Bold;
             leftPanel.Add(title);
 
-            // Mock categories
-            string[] files = { "main_events.json", "fixed_events.json", "conditional_events.json", "dark_events.json" };
+            string[] files =
+            {
+                "main_events.json",
+                "fixed_events.json",
+                "conditional_events.json",
+                "random_events.json",
+                "dark_events.json"
+            };
             var listView = new ListView(files, 25, () => new Label(), (e, i) => (e as Label).text = files[i]);
             listView.selectionChanged += OnFileSelected;
             listView.style.flexGrow = 1;
@@ -63,7 +69,67 @@ namespace Zhongshan.CreatorToolkit.Event
             if (GUILayout.Button("+ 新增事件"))
             {
                 var list = new List<EventDefinition>(currentDatabase.events);
-                list.Add(new EventDefinition { id = "NEW_EVENT", priority = 1 });
+
+                string prefix = "EV";
+                string eventType = "Conditional";
+
+                switch (currentFileName)
+                {
+                    case "main_events.json":
+                        prefix = "ME";
+                        eventType = "MainStory";
+                        break;
+
+                    case "fixed_events.json":
+                        prefix = "FE";
+                        eventType = "Fixed";
+                        break;
+
+                    case "conditional_events.json":
+                        prefix = "CE";
+                        eventType = "Conditional";
+                        break;
+
+                    case "random_events.json":
+                        prefix = "R";
+                        eventType = "Random";
+                        break;
+
+                    case "dark_events.json":
+                        prefix = "DE";
+                        eventType = "Dark";
+                        break;
+                }
+
+                int nextIndex = list.Count + 1;
+                string newId = $"{prefix}_{nextIndex:000}";
+
+                list.Add(new EventDefinition
+                {
+                    id = newId,
+                    eventType = eventType,
+                    priority = eventType == "Random" ? 4 : 1,
+                    isForced = eventType != "Random",
+                    isRepeatable = false,
+                    trigger = new EventTriggerCondition
+                    {
+                        phase = eventType == "Random" ? "ActionComplete" : "RoundStart",
+                        triggerChance = eventType == "Random" ? 0.055f : 1f
+                    },
+                    dialogues = new EventDialogue[]
+                    {
+                        new EventDialogue
+                        {
+                            speaker = "旁白",
+                            lines = new string[] { "请输入事件文案。" },
+                            portraitId = ""
+                        }
+                    },
+                    choices = new EventChoice[0],
+                    defaultEffects = new EventEffect[0],
+                    chainEventIds = new string[0]
+                });
+
                 currentDatabase.events = list.ToArray();
             }
 

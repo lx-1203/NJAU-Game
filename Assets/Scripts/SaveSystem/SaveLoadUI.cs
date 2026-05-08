@@ -96,6 +96,8 @@ public class SaveLoadUI : MonoBehaviour
     private static Sprite cachedSpringBoardSprite;
     private static readonly Dictionary<string, Sprite> PreviewSpriteCache = new Dictionary<string, Sprite>();
 
+    public bool IsOpen => this != null && gameObject != null && gameObject.activeInHierarchy;
+
     private sealed class PendingPreviewRequest
     {
         public Image targetImage;
@@ -133,7 +135,7 @@ public class SaveLoadUI : MonoBehaviour
 
         if (Input.GetKeyDown(KeyCode.Escape))
         {
-            Close();
+            ClosePanel();
         }
     }
 
@@ -843,20 +845,22 @@ public class SaveLoadUI : MonoBehaviour
         rt.anchorMin = new Vector2(1f, 1f);
         rt.anchorMax = new Vector2(1f, 1f);
         rt.pivot = new Vector2(1f, 1f);
-        rt.sizeDelta = new Vector2(170f, 86f);
-        rt.anchoredPosition = new Vector2(-126f, -126f);
+        rt.sizeDelta = new Vector2(150f, 86f);
+        rt.anchoredPosition = new Vector2(-112f, -62f);
 
         Image btnBg = btnGO.AddComponent<Image>();
         btnBg.color = new Color(1f, 1f, 1f, 0.01f);
+        btnBg.raycastTarget = true;
 
         Button btn = btnGO.AddComponent<Button>();
         btn.targetGraphic = btnBg;
         ColorBlock cb = btn.colors;
         cb.normalColor = Color.white;
-        cb.highlightedColor = new Color(1f, 1f, 1f, 0.10f);
-        cb.pressedColor = new Color(1f, 1f, 1f, 0.18f);
+        cb.highlightedColor = new Color(1f, 1f, 1f, 0.08f);
+        cb.pressedColor = new Color(1f, 1f, 1f, 0.14f);
+        cb.selectedColor = Color.white;
         btn.colors = cb;
-        btn.onClick.AddListener(Close);
+        btn.onClick.AddListener(ClosePanel);
     }
 
     // ========== 交互逻辑 ==========
@@ -922,8 +926,13 @@ public class SaveLoadUI : MonoBehaviour
         SaveManager.PendingLoadSlot = slot;
 
         Debug.Log($"[SaveLoadUI] 已设置 PendingLoadData，准备跳转 GameScene");
-        Close();
+        ClosePanel();
         SceneLoader.LoadScene("GameScene");
+    }
+
+    public void ClosePanel()
+    {
+        Close();
     }
 
     private void Close()
@@ -951,7 +960,7 @@ public class SaveLoadUI : MonoBehaviour
         Debug.Log($"[SaveLoadUI] 已保存到槽位{slot}");
         string slotName = slot == 0 ? "自动存档" : $"存档 {slot:D2}";
         ShowSystemNotification("存档完成", $"{slotName} 已保存。");
-        Close();
+        ClosePanel();
     }
 
     // ========== 确认对话框（春季风格） ==========

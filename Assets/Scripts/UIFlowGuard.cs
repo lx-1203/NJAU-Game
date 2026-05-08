@@ -170,7 +170,7 @@ public static class UIFlowGuard
         SaveLoadUI saveLoadUI = Object.FindObjectOfType<SaveLoadUI>();
         if (exceptWindowKey != WindowSaveLoad && saveLoadUI != null)
         {
-            Object.Destroy(saveLoadUI.gameObject);
+            saveLoadUI.ClosePanel();
         }
 
         if (exceptWindowKey != WindowSettings &&
