@@ -364,18 +364,10 @@ public class ExamSystem : MonoBehaviour, IExamResultProvider, ISaveable
             return;
         }
 
-        // 通知 UI 开始考试序列
-        if (ExamUIManager.Instance != null)
-        {
-            ExamUIManager.Instance.StartExamSequence(courses, ExamType.Final);
-        }
-        else
-        {
-            Debug.LogWarning("[ExamSystem] ExamUIManager 不存在，自动生成考试结果");
-            ShowExamNotificationOnce("missing-exam-ui-final", "考试界面未就绪", "期末考试界面没有成功初始化，系统将自动生成本学期考试结果。");
-            AutoGenerateResults(courses, ExamType.Final);
-            FinalizeSemesterExam(year, semester);
-        }
+        Debug.Log("[ExamSystem] 已跳过期末做题环节，改为按学力和复习状态自动结算成绩");
+        ShowExamNotification("期末成绩已结算", "本次期末考试已根据学力、复习次数和当前状态自动判定成绩。", new Color(0.36f, 0.64f, 0.92f), 3f);
+        AutoGenerateResults(courses, ExamType.Final);
+        FinalizeSemesterExam(year, semester);
     }
 
     // ========== 期中考试 ==========
@@ -410,18 +402,10 @@ public class ExamSystem : MonoBehaviour, IExamResultProvider, ISaveable
 
         Debug.Log($"[ExamSystem] 期中考试选取 {midtermCount}/{allCourses.Length} 门课程");
 
-        // 通知 UI 开始考试序列
-        if (ExamUIManager.Instance != null)
-        {
-            ExamUIManager.Instance.StartExamSequence(midtermCourses, ExamType.Midterm);
-        }
-        else
-        {
-            Debug.LogWarning("[ExamSystem] ExamUIManager 不存在，自动生成期中考试结果");
-            ShowExamNotificationOnce("missing-exam-ui-midterm", "考试界面未就绪", "期中考试界面没有成功初始化，系统将自动生成本次考试结果。");
-            AutoGenerateResults(midtermCourses, ExamType.Midterm);
-            FinalizeMidtermExam();
-        }
+        Debug.Log("[ExamSystem] 已跳过期中做题环节，改为按学力和复习状态自动结算成绩");
+        ShowExamNotification("期中成绩已结算", "本次期中考试已根据学力、复习次数和当前状态自动判定成绩。", new Color(0.36f, 0.64f, 0.92f), 3f);
+        AutoGenerateResults(midtermCourses, ExamType.Midterm);
+        FinalizeMidtermExam();
     }
 
     /// <summary>
@@ -528,17 +512,10 @@ public class ExamSystem : MonoBehaviour, IExamResultProvider, ISaveable
 
         CourseDefinition[] courses = new CourseDefinition[] { certCourse };
 
-        if (ExamUIManager.Instance != null)
-        {
-            ExamUIManager.Instance.StartExamSequence(courses, examType);
-        }
-        else
-        {
-            Debug.LogWarning("[ExamSystem] ExamUIManager 不存在，自动生成证书考试结果");
-            ShowExamNotificationOnce($"missing-exam-ui-cert:{examType}", "考试界面未就绪", $"{courseName} 的考试界面没有成功初始化，系统将自动生成本次成绩。");
-            AutoGenerateResults(courses, examType);
-            FinalizeCertificateExam(examType);
-        }
+        Debug.Log($"[ExamSystem] 已跳过 {courseName} 做题环节，改为按学力和复习状态自动结算成绩");
+        ShowExamNotification($"{courseName}成绩已结算", "本次证书考试已根据学力、复习次数和当前状态自动判定成绩。", new Color(0.36f, 0.64f, 0.92f), 3f);
+        AutoGenerateResults(courses, examType);
+        FinalizeCertificateExam(examType);
     }
 
     /// <summary>
@@ -596,16 +573,11 @@ public class ExamSystem : MonoBehaviour, IExamResultProvider, ISaveable
             }
         }
 
-        if (ExamUIManager.Instance != null)
-        {
-            ExamUIManager.Instance.StartExamSequence(makeupCourses.ToArray(), ExamType.Makeup);
-        }
-        else
-        {
-            AutoGenerateResults(makeupCourses.ToArray(), ExamType.Makeup);
-            // 补考结果直接更新到历史记录中
-            ProcessMakeupResults();
-        }
+        Debug.Log("[ExamSystem] 已跳过补考做题环节，改为按学力和复习状态自动结算成绩");
+        ShowExamNotification("补考成绩已结算", "本次补考已根据学力、复习次数和当前状态自动判定成绩。", new Color(0.36f, 0.64f, 0.92f), 3f);
+        AutoGenerateResults(makeupCourses.ToArray(), ExamType.Makeup);
+        // 补考结果直接更新到历史记录中
+        ProcessMakeupResults();
     }
 
     /// <summary>
@@ -978,14 +950,71 @@ public class ExamSystem : MonoBehaviour, IExamResultProvider, ISaveable
         return null;
     }
 
-    /// <summary>当无 UI 时自动生成考试结果</summary>
+    private float CalculateAttributeBasedPassRate(ExamType examType, CourseDefinition course)
+    {
+        float scoreEstimate = 50f;
+
+        if (PlayerAttributes.Instance != null)
+        {
+            PlayerAttributes attr = PlayerAttributes.Instance;
+            scoreEstimate = attr.Study * 0.78f;
+            scoreEstimate += attr.Mood * 0.08f;
+            scoreEstimate += attr.Luck * 0.05f;
+            scoreEstimate -= attr.Stress * 0.12f;
+            scoreEstimate -= attr.Guilt * 0.08f;
+        }
+
+        int cappedStudyCount = Mathf.Min(studyCountThisSemester, 3);
+        scoreEstimate += cappedStudyCount * 4f;
+
+        if (course != null)
+        {
+            int subjectStudyCount = GetSubjectStudyCount(course.subjectTag);
+            int focusedCourseStudyCount = GetFocusedCourseStudyCount(course.id);
+            scoreEstimate += Mathf.Min(subjectStudyCount, 2) * 3f;
+            scoreEstimate += Mathf.Min(focusedCourseStudyCount, 2) * 2f;
+            scoreEstimate += GetMakeupRecoveryBonus(examType, course.id, focusedCourseStudyCount) * 100f;
+        }
+
+        switch (examType)
+        {
+            case ExamType.Midterm:
+                scoreEstimate -= 2f;
+                break;
+            case ExamType.Makeup:
+                scoreEstimate += 8f;
+                break;
+            case ExamType.CET4:
+                scoreEstimate -= 5f;
+                break;
+            case ExamType.CET6:
+                scoreEstimate -= 15f;
+                break;
+            case ExamType.ComputerLevel:
+                scoreEstimate -= 8f;
+                break;
+        }
+
+        return Mathf.Clamp(scoreEstimate / 100f, 0.05f, 0.99f);
+    }
+
+    private int CalculateAttributeBasedScore(ExamType examType, CourseDefinition course, out float passRate)
+    {
+        passRate = CalculateAttributeBasedPassRate(examType, course);
+        float baseScore = passRate * 100f;
+        float variance = UnityEngine.Random.Range(-4f, 4f);
+        return Mathf.Clamp(Mathf.RoundToInt(baseScore + variance), 0, 100);
+    }
+
+    /// <summary>自动按学力、复习和状态生成考试结果</summary>
     private void AutoGenerateResults(CourseDefinition[] courses, ExamType examType)
     {
         for (int i = 0; i < courses.Length; i++)
         {
             CourseDefinition course = courses[i];
-            float passRate = CalculatePassRate(examType, course, UnityEngine.Random.Range(0, 4), 3);
-            int score = CalculateScore(passRate);
+            float passRate;
+            int score = CalculateAttributeBasedScore(examType, course, out passRate);
+            int estimatedCorrectCount = Mathf.Clamp(Mathf.RoundToInt(passRate * 3f), 0, 3);
 
             ExamResult result = new ExamResult
             {
@@ -995,7 +1024,7 @@ public class ExamSystem : MonoBehaviour, IExamResultProvider, ISaveable
                 subjectTag = course.subjectTag,
                 score = score,
                 gradePoint = GPACalculator.ScoreToGradePoint(score),
-                correctCount = 0,
+                correctCount = estimatedCorrectCount,
                 cheated = false,
                 cheatCaught = false,
                 examType = examType,
@@ -1132,7 +1161,7 @@ public class ExamSystem : MonoBehaviour, IExamResultProvider, ISaveable
     {
         if (course == null)
         {
-            return "这次按当前角色状态与现场答题表现直接结算。";
+            return "这次按当前学力、复习积累和角色状态直接结算。";
         }
 
         int semesterStudyCount = Mathf.Min(studyCountThisSemester, 3);
@@ -1178,12 +1207,13 @@ public class ExamSystem : MonoBehaviour, IExamResultProvider, ISaveable
             return "作弊被抓，本科直接判 0 分。";
         }
 
-        string performance = result.correctCount switch
+        string performance = result.passRateEstimate switch
         {
-            >= 3 => "答题手感很好",
-            2 => "答题状态稳定",
-            1 => "只抓住了一部分题点",
-            _ => "现场发挥偏弱"
+            >= 0.90f => "平时积累非常扎实",
+            >= 0.75f => "学习状态比较稳定",
+            >= 0.60f => "基础准备基本够用",
+            >= 0.45f => "复习和状态都有些吃紧",
+            _ => "当前学力积累明显不足"
         };
 
         if (result.score >= 90)
@@ -1196,7 +1226,7 @@ public class ExamSystem : MonoBehaviour, IExamResultProvider, ISaveable
             return $"{performance}，顺利过线。";
         }
 
-        string weakness = result.correctCount <= 1 ? "知识点没站稳" : "运气和状态都差了点";
+        string weakness = result.passRateEstimate < 0.45f ? "学力基础还没站稳" : "复习节奏和状态都差了点";
         return $"{performance}，但{weakness}，这门课挂了。";
     }
 

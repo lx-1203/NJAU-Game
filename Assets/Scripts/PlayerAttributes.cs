@@ -158,6 +158,15 @@ public class PlayerAttributes : MonoBehaviour, ISaveable
             case "黑暗值": Darkness += amount; break;
             case "负罪感": Guilt += amount; break;
             case "幸运":   Luck += amount; break;
+            case "Study": Study += amount; break;
+            case "Charm": Charm += amount; break;
+            case "Physique": Physique += amount; break;
+            case "Leadership": Leadership += amount; break;
+            case "Stress": Stress += amount; break;
+            case "Mood": Mood += amount; break;
+            case "Darkness": Darkness += amount; break;
+            case "Guilt": Guilt += amount; break;
+            case "Luck": Luck += amount; break;
             default:
                 Debug.LogWarning($"[PlayerAttributes] 未知属性名: {attrName}");
                 break;

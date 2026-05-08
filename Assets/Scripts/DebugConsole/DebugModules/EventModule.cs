@@ -218,6 +218,10 @@ public class EventModule : MonoBehaviour, IDebugModule
         CreateButton(eventButtons.transform, "触发", 100f, BtnGreen, ForceTriggerEvent);
         CreateButton(eventButtons.transform, "跳过", 100f, BtnRed, SkipEvent);
 
+        CreateButton(eventButtons.transform, "触发END_000", 110f, BtnBlue, TriggerGraduationAnswerEvent);
+        CreateButton(eventButtons.transform, "判定结局", 100f, BtnBlue, EvaluateNarrativeEnding);
+        CreateButton(eventButtons.transform, "锁定路线", 100f, BtnBlue, ResolveStoryRoute);
+
         GameObject flagRow = CreateRow(parent, 34f);
         CreateLabel(flagRow.transform, "标记", 14f, TextWhite, 30f, 72f);
         flagInput = CreateInputField(flagRow.transform, "输入标记名", 260f, 30f);
@@ -538,6 +542,48 @@ public class EventModule : MonoBehaviour, IDebugModule
         EventScheduler.Instance.EnqueueEvent(eventId);
         statusText.text = $"已加入触发队列：{eventId}";
         DebugConsoleManager.Log("Event", $"Force trigger {eventId}");
+        Refresh();
+    }
+
+    private void TriggerGraduationAnswerEvent()
+    {
+        if (EventScheduler.Instance == null)
+        {
+            statusText.text = "EventScheduler 尚未就绪";
+            return;
+        }
+
+        EventScheduler.Instance.EnqueueEvent("END_000");
+        statusText.text = "已触发毕业答卷 END_000";
+        DebugConsoleManager.Log("Event", "Force trigger END_000");
+        Refresh();
+    }
+
+    private void EvaluateNarrativeEnding()
+    {
+        if (EndingEvaluator.Instance == null)
+        {
+            statusText.text = "EndingEvaluator 尚未就绪";
+            return;
+        }
+
+        EndingEvaluator.Instance.EvaluateAndTriggerEnding();
+        statusText.text = $"已判定结局：{EndingEvaluator.Instance.LastEvaluatedEnding}";
+        DebugConsoleManager.Log("Event", $"Evaluate narrative ending {EndingEvaluator.Instance.LastEvaluatedEnding}");
+        Refresh();
+    }
+
+    private void ResolveStoryRoute()
+    {
+        if (StoryRouteResolver.Instance == null)
+        {
+            statusText.text = "StoryRouteResolver 尚未就绪";
+            return;
+        }
+
+        StoryRouteResolver.Instance.ResolveAndLockRoute();
+        statusText.text = "已执行路线锁定";
+        DebugConsoleManager.Log("Event", "Resolve and lock story route");
         Refresh();
     }
 

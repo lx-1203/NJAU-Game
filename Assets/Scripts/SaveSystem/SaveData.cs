@@ -205,6 +205,18 @@ public class SaveData
     public int guilt = 0;
     public int luck = 50;
 
+    // ========== 主线路线状态 ==========
+    public string currentRoute = "None";
+    public string lockedRoute = "None";
+    public int researchTendency = 0;
+    public int civilServiceTendency = 0;
+    public int startupTendency = 0;
+    public int educationTendency = 0;
+    public int employmentTendency = 0;
+    public int confusedTendency = 0;
+    public int routeProgress = 0;
+    public int endingQualityBonus = 0;
+
     // ========== NPC 关系数据 ==========
     public List<NPCRelationshipSaveData> npcRelationships = new List<NPCRelationshipSaveData>();
 

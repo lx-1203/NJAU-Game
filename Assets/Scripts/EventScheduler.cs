@@ -57,6 +57,7 @@ public class EventScheduler : MonoBehaviour
     /// 标记当前是否正在逐个处理队列中的事件。
     /// </summary>
     private bool isProcessingQueue = false;
+    private readonly List<Action> queueDrainedCallbacks = new List<Action>();
     private readonly HashSet<string> notifiedIssues = new HashSet<string>();
     private readonly List<EventValidationIssue> validationIssues = new List<EventValidationIssue>();
 
@@ -76,6 +77,7 @@ public class EventScheduler : MonoBehaviour
         "fixed_events",
         "conditional_events",
         "random_events",
+        "ending_events",
         "dark_events"
     };
 
@@ -248,6 +250,53 @@ public class EventScheduler : MonoBehaviour
             }
         }
 
+        // --- Story route conditions ---
+        if (HasRouteCondition(trigger))
+        {
+            StoryRouteState routeState = StoryRouteState.Instance;
+            if (routeState == null)
+                return false;
+
+            if (!string.IsNullOrWhiteSpace(trigger.requiredRoute))
+            {
+                if (!StoryRouteState.TryParseRoute(trigger.requiredRoute, out MainRoute requiredRoute))
+                    return false;
+
+                if (routeState.currentRoute != requiredRoute)
+                    return false;
+            }
+
+            if (!string.IsNullOrWhiteSpace(trigger.requiredLockedRoute))
+            {
+                if (!StoryRouteState.TryParseRoute(trigger.requiredLockedRoute, out MainRoute requiredLockedRoute))
+                    return false;
+
+                if (routeState.lockedRoute != requiredLockedRoute)
+                    return false;
+            }
+
+            if (trigger.minResearchTendency > 0 && routeState.researchTendency < trigger.minResearchTendency)
+                return false;
+
+            if (trigger.minCivilServiceTendency > 0 && routeState.civilServiceTendency < trigger.minCivilServiceTendency)
+                return false;
+
+            if (trigger.minStartupTendency > 0 && routeState.startupTendency < trigger.minStartupTendency)
+                return false;
+
+            if (trigger.minEducationTendency > 0 && routeState.educationTendency < trigger.minEducationTendency)
+                return false;
+
+            if (trigger.minEmploymentTendency > 0 && routeState.employmentTendency < trigger.minEmploymentTendency)
+                return false;
+
+            if (trigger.minConfusedTendency > 0 && routeState.confusedTendency < trigger.minConfusedTendency)
+                return false;
+
+            if (trigger.minRouteProgress > 0 && routeState.routeProgress < trigger.minRouteProgress)
+                return false;
+        }
+
         // --- 金钱条件 (0 表示不限) ---
         if (trigger.minMoney > 0 && gs.Money < trigger.minMoney)
             return false;
@@ -281,6 +330,22 @@ public class EventScheduler : MonoBehaviour
                 if (!string.IsNullOrEmpty(flag) && !history.GetFlag(flag))
                     return false;
             }
+        }
+
+        if (trigger.anyRequiredFlags != null && trigger.anyRequiredFlags.Length > 0)
+        {
+            bool hasAnyRequiredFlag = false;
+            foreach (string flag in trigger.anyRequiredFlags)
+            {
+                if (!string.IsNullOrEmpty(flag) && history.GetFlag(flag))
+                {
+                    hasAnyRequiredFlag = true;
+                    break;
+                }
+            }
+
+            if (!hasAnyRequiredFlag)
+                return false;
         }
 
         if (trigger.excludedFlags != null)
@@ -420,6 +485,19 @@ public class EventScheduler : MonoBehaviour
     /// <summary>
     /// 根据属性名称从 PlayerAttributes 获取对应数值。
     /// </summary>
+    private bool HasRouteCondition(EventTriggerCondition trigger)
+    {
+        return !string.IsNullOrWhiteSpace(trigger.requiredRoute)
+            || !string.IsNullOrWhiteSpace(trigger.requiredLockedRoute)
+            || trigger.minResearchTendency > 0
+            || trigger.minCivilServiceTendency > 0
+            || trigger.minStartupTendency > 0
+            || trigger.minEducationTendency > 0
+            || trigger.minEmploymentTendency > 0
+            || trigger.minConfusedTendency > 0
+            || trigger.minRouteProgress > 0;
+    }
+
     private int GetAttributeValue(string attrName)
     {
         PlayerAttributes pa = PlayerAttributes.Instance;
@@ -435,6 +513,15 @@ public class EventScheduler : MonoBehaviour
             case "黑暗值": return pa.Darkness;
             case "负罪感": return pa.Guilt;
             case "幸运":   return pa.Luck;
+            case "Study": return pa.Study;
+            case "Charm": return pa.Charm;
+            case "Physique": return pa.Physique;
+            case "Leadership": return pa.Leadership;
+            case "Stress": return pa.Stress;
+            case "Mood": return pa.Mood;
+            case "Darkness": return pa.Darkness;
+            case "Guilt": return pa.Guilt;
+            case "Luck": return pa.Luck;
             default:
                 Debug.LogWarning($"[EventScheduler] 未知属性名称: {attrName}");
                 return 0;
@@ -467,8 +554,14 @@ public class EventScheduler : MonoBehaviour
     /// </summary>
     public void CheckAndTriggerEvents(TriggerPhase phase)
     {
+        CheckAndTriggerEvents(phase, null);
+    }
+
+    public void CheckAndTriggerEvents(TriggerPhase phase, Action onComplete)
+    {
         if (GameState.Instance == null || EventHistory.Instance == null)
         {
+            onComplete?.Invoke();
             return;
         }
 
@@ -477,6 +570,9 @@ public class EventScheduler : MonoBehaviour
 
         foreach (EventDefinition evt in allEvents.Values)
         {
+            if (ShouldSkipAutoTrigger(evt))
+                continue;
+
             // 阶段筛选
             if (evt.GetTriggerPhase() != phase)
                 continue;
@@ -524,16 +620,40 @@ public class EventScheduler : MonoBehaviour
             eventQueue.Enqueue(evt);
         }
 
+        bool enqueuedAnyEvent = candidates.Count > 0;
         if (randomCandidates.Count > 0)
         {
             randomCandidates.Sort((a, b) => a.priority.CompareTo(b.priority));
             eventQueue.Enqueue(randomCandidates[UnityEngine.Random.Range(0, randomCandidates.Count)]);
+            enqueuedAnyEvent = true;
+        }
+
+        if (onComplete != null)
+        {
+            if (enqueuedAnyEvent || isProcessingQueue || eventQueue.Count > 0)
+            {
+                queueDrainedCallbacks.Add(onComplete);
+            }
+            else
+            {
+                onComplete.Invoke();
+            }
         }
 
         if (eventQueue.Count > 0 && !isProcessingQueue)
         {
             ProcessNextEvent();
         }
+    }
+
+    private bool ShouldSkipAutoTrigger(EventDefinition evt)
+    {
+        if (evt == null || string.IsNullOrEmpty(evt.id))
+            return true;
+
+        // Concrete ending events are manual-only. END_000 is the graduation answer
+        // entry event and remains eligible for its strictly authored RoundStart trigger.
+        return evt.id.StartsWith("END_", StringComparison.Ordinal) && evt.id != "END_000";
     }
 
     // ========== 队列处理 ==========
@@ -547,6 +667,7 @@ public class EventScheduler : MonoBehaviour
         if (eventQueue.Count == 0)
         {
             isProcessingQueue = false;
+            NotifyQueueDrained();
             return;
         }
 
@@ -579,6 +700,22 @@ public class EventScheduler : MonoBehaviour
     /// <summary>
     /// 按事件 ID 查找定义并加入执行队列。若当前无事件在执行则立即开始处理。
     /// </summary>
+    private void NotifyQueueDrained()
+    {
+        if (queueDrainedCallbacks.Count == 0)
+        {
+            return;
+        }
+
+        List<Action> callbacks = new List<Action>(queueDrainedCallbacks);
+        queueDrainedCallbacks.Clear();
+
+        for (int i = 0; i < callbacks.Count; i++)
+        {
+            callbacks[i]?.Invoke();
+        }
+    }
+
     public void EnqueueEvent(string eventId)
     {
         EventDefinition evt = GetEvent(eventId);
@@ -854,6 +991,9 @@ public class EventScheduler : MonoBehaviour
 
         if (evt.trigger.requiredFlags == null)
             evt.trigger.requiredFlags = Array.Empty<string>();
+
+        if (evt.trigger.anyRequiredFlags == null)
+            evt.trigger.anyRequiredFlags = Array.Empty<string>();
 
         if (evt.trigger.excludedFlags == null)
             evt.trigger.excludedFlags = Array.Empty<string>();

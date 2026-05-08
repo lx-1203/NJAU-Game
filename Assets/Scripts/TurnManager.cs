@@ -77,8 +77,17 @@ public class TurnManager : MonoBehaviour
         // 行动完成后通知事件系统检查
         if (EventScheduler.Instance != null)
         {
-            EventScheduler.Instance.CheckAndTriggerEvents(TriggerPhase.ActionComplete);
+            EventScheduler.Instance.CheckAndTriggerEvents(TriggerPhase.ActionComplete, CheckAdvanceRoundAfterActionEvents);
         }
+        else
+        {
+            CheckAdvanceRoundAfterActionEvents();
+        }
+    }
+
+    private void CheckAdvanceRoundAfterActionEvents()
+    {
+        if (GameState.Instance == null) return;
 
         int remaining = GameState.Instance.ActionPoints;
         Debug.Log($"[TurnManager] 行动完成，剩余行动点: {remaining}");
@@ -162,20 +171,8 @@ public class TurnManager : MonoBehaviour
                 Debug.Log($"[TurnManager] 学期中间检测到，触发期中考试 —— {GameState.Instance.GetYearName()}{GameState.Instance.GetSemesterName()}");
 
                 waitingForExam = true;
-
-                // 订阅考试完成事件
-                if (ExamUIManager.Instance != null)
-                {
-                    ExamUIManager.Instance.OnExamUICompleted += HandleMidtermCompleted;
-                }
-                else
-                {
-                    GameObject examUIObj = new GameObject("ExamUIManager");
-                    ExamUIManager examUI = examUIObj.AddComponent<ExamUIManager>();
-                    examUI.OnExamUICompleted += HandleMidtermCompleted;
-                }
-
                 ExamSystem.Instance.StartMidtermExam(year, semester);
+                HandleMidtermCompleted();
                 return; // 暂停推进，等期中考试完成
             }
         }
@@ -193,21 +190,8 @@ public class TurnManager : MonoBehaviour
                 Debug.Log($"[TurnManager] 学期末检测到，触发期末考试 —— {GameState.Instance.GetYearName()}{GameState.Instance.GetSemesterName()}");
 
                 waitingForExam = true;
-
-                // 订阅考试完成事件
-                if (ExamUIManager.Instance != null)
-                {
-                    ExamUIManager.Instance.OnExamUICompleted += HandleExamCompleted;
-                }
-                else
-                {
-                    // 如果 ExamUIManager 不存在，动态创建
-                    GameObject examUIObj = new GameObject("ExamUIManager");
-                    ExamUIManager examUI = examUIObj.AddComponent<ExamUIManager>();
-                    examUI.OnExamUICompleted += HandleExamCompleted;
-                }
-
                 ExamSystem.Instance.StartSemesterExam(year, semester);
+                HandleExamCompleted();
                 return; // 暂停推进，等考试完成
             }
         }
@@ -272,8 +256,17 @@ public class TurnManager : MonoBehaviour
         // 回合结算事件检查
         if (EventScheduler.Instance != null)
         {
-            EventScheduler.Instance.CheckAndTriggerEvents(TriggerPhase.RoundEnd);
+            EventScheduler.Instance.CheckAndTriggerEvents(TriggerPhase.RoundEnd, ContinueAdvanceRoundAfterRoundEndEvents);
         }
+        else
+        {
+            ContinueAdvanceRoundAfterRoundEndEvents();
+        }
+    }
+
+    private void ContinueAdvanceRoundAfterRoundEndEvents()
+    {
+        if (GameState.Instance == null) return;
 
         GameState.RoundAdvanceResult result = GameState.Instance.AdvanceRound();
 
@@ -351,7 +344,14 @@ public class TurnManager : MonoBehaviour
             SaveManager.Instance.AutoSave();
         }
 
-        BeginRoundStartPhase(result == GameState.RoundAdvanceResult.Graduated);
+        if (result == GameState.RoundAdvanceResult.Graduated)
+        {
+            BeginRoundStartPhase(true);
+        }
+        else
+        {
+            StartCoroutine(BeginRoundStartPhaseWhenReady());
+        }
     }
 
     /// <summary>
@@ -392,6 +392,23 @@ public class TurnManager : MonoBehaviour
         ContinueRoundStartPhaseAfterBlockingSteps();
     }
 
+    private IEnumerator BeginRoundStartPhaseWhenReady()
+    {
+        yield return null;
+
+        while (IsRoundTransitionWindowOpen())
+        {
+            yield return null;
+        }
+
+        BeginRoundStartPhase(false);
+    }
+
+    private bool IsRoundTransitionWindowOpen()
+    {
+        return SemesterSummaryUI.Instance != null && SemesterSummaryUI.Instance.isShowing;
+    }
+
     private void BeginRoundStartPhase(bool isGraduated)
     {
         if (GameState.Instance == null)
@@ -419,6 +436,14 @@ public class TurnManager : MonoBehaviour
                     GameState.Instance.CurrentSemester,
                     GameState.Instance.CurrentRound,
                     HandleScheduleCompleted);
+
+                if (!CourseScheduleUI.Instance.IsOpen)
+                {
+                    Debug.LogWarning("[TurnManager] 课程表未能打开，自动跳过课程表并继续回合开始流程，避免回合卡死。");
+                    waitingForSchedule = false;
+                    CompleteRoundStartPhase();
+                }
+
                 return;
             }
         }
@@ -441,10 +466,12 @@ public class TurnManager : MonoBehaviour
 
         if (EventScheduler.Instance != null)
         {
-            EventScheduler.Instance.CheckAndTriggerEvents(TriggerPhase.RoundStart);
+            EventScheduler.Instance.CheckAndTriggerEvents(TriggerPhase.RoundStart, ContinueRoundStartPhaseAfterBlockingSteps);
         }
-
-        ContinueRoundStartPhaseAfterBlockingSteps();
+        else
+        {
+            ContinueRoundStartPhaseAfterBlockingSteps();
+        }
     }
 
     private void ContinueRoundStartPhaseAfterBlockingSteps()
@@ -483,15 +510,8 @@ public class TurnManager : MonoBehaviour
         Debug.Log("[TurnManager] 新学期第1回合，检测到挂科课程，触发补考");
         lastMakeupExamRoundKey = roundKey;
         waitingForExam = true;
-
-        ExamUIManager examUI = EnsureExamUIManager();
-        if (examUI != null)
-        {
-            examUI.OnExamUICompleted -= HandleMakeupCompleted;
-            examUI.OnExamUICompleted += HandleMakeupCompleted;
-        }
-
         ExamSystem.Instance.StartMakeupExam(ExamSystem.Instance.GetFailedCourses());
+        HandleMakeupCompleted();
         return true;
     }
 
@@ -546,12 +566,8 @@ public class TurnManager : MonoBehaviour
             hasPendingCertificateExam = true;
             pendingCertificateExamType = ExamType.CET4;
             lastCertificateExamRoundKey = roundKey;
-
-            ExamUIManager examUI = EnsureExamUIManager();
-            examUI.OnExamUICompleted -= HandleCertExamCompleted;
-            examUI.OnExamUICompleted += HandleCertExamCompleted;
-
             ExamSystem.Instance.StartCET4Exam();
+            HandleCertExamCompleted();
             return true; // 一次只触发一个证书考试
         }
 
@@ -563,12 +579,8 @@ public class TurnManager : MonoBehaviour
             hasPendingCertificateExam = true;
             pendingCertificateExamType = ExamType.CET6;
             lastCertificateExamRoundKey = roundKey;
-
-            ExamUIManager examUI = EnsureExamUIManager();
-            examUI.OnExamUICompleted -= HandleCertExamCompleted;
-            examUI.OnExamUICompleted += HandleCertExamCompleted;
-
             ExamSystem.Instance.StartCET6Exam();
+            HandleCertExamCompleted();
             return true;
         }
 
@@ -581,12 +593,8 @@ public class TurnManager : MonoBehaviour
             hasPendingCertificateExam = true;
             pendingCertificateExamType = ExamType.ComputerLevel;
             lastCertificateExamRoundKey = roundKey;
-
-            ExamUIManager examUI = EnsureExamUIManager();
-            examUI.OnExamUICompleted -= HandleCertExamCompleted;
-            examUI.OnExamUICompleted += HandleCertExamCompleted;
-
             ExamSystem.Instance.StartComputerLevelExam();
+            HandleCertExamCompleted();
             return true;
         }
 

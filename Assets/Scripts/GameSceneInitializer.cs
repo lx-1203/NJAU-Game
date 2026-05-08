@@ -24,6 +24,8 @@ public class GameSceneInitializer : MonoBehaviour
         // 初始化核心系统（顺序重要：GameState → PlayerAttributes → LocationManager → ActionSystem → ClubSystem → EconomyManager → DebtSystem → ShopSystem → RomanceSystem → ConfessionSystem → AchievementSystem → AchievementUI → SemesterSummarySystem → EndingDeterminer → TurnManager → ExamSystem → CheatingSystem → EventHistory → EventScheduler → DialogueSystem → EventExecutor）
         SetupGameState();
         SetupPlayerAttributes();
+        SetupStoryRouteState();
+        SetupStoryRouteResolver();
         SetupLocationManager();
         SetupLocationSceneController();
         SetupLocationSceneBuilder();
@@ -43,6 +45,7 @@ public class GameSceneInitializer : MonoBehaviour
         SetupSemesterSummarySystem();
         SetupEndingDeterminer();
         SetupGameEndingManager();
+        SetupEndingEvaluator();
         SetupTurnManager();
         SetupExamSystem();
         SetupCheatingSystem();
@@ -57,6 +60,7 @@ public class GameSceneInitializer : MonoBehaviour
 
         // 初始化事件执行器（必须在 DialogueSystem 之后，因为它依赖 IDialogueTrigger）
         SetupEventExecutor();
+        SetupStoryMainEventHooks();
 
         // 初始化 NPC 相关系统（顺序重要：NPCEventHub → NPCDatabase → AffinitySystem → NPCManager）
         SetupNPCEventHub();
@@ -169,6 +173,24 @@ public class GameSceneInitializer : MonoBehaviour
         if (SaveManager.PendingLoadData == null && PlayerAttributes.Instance != null)
         {
             StartupFlowSettings.ApplyStartupPlayerAttributes(PlayerAttributes.Instance);
+        }
+    }
+
+    private void SetupStoryRouteState()
+    {
+        if (StoryRouteState.Instance == null)
+        {
+            GameObject obj = new GameObject("StoryRouteState");
+            obj.AddComponent<StoryRouteState>();
+        }
+    }
+
+    private void SetupStoryRouteResolver()
+    {
+        if (StoryRouteResolver.Instance == null)
+        {
+            GameObject obj = new GameObject("StoryRouteResolver");
+            obj.AddComponent<StoryRouteResolver>();
         }
     }
 
@@ -479,6 +501,15 @@ public class GameSceneInitializer : MonoBehaviour
         }
     }
 
+    private void SetupEndingEvaluator()
+    {
+        if (EndingEvaluator.Instance == null)
+        {
+            GameObject obj = new GameObject("EndingEvaluator");
+            obj.AddComponent<EndingEvaluator>();
+        }
+    }
+
     // ========== 考试系统 ==========
 
     private void SetupExamSystem()
@@ -722,6 +753,15 @@ public class GameSceneInitializer : MonoBehaviour
         {
             GameObject obj = new GameObject("EventExecutor");
             obj.AddComponent<EventExecutor>();
+        }
+    }
+
+    private void SetupStoryMainEventHooks()
+    {
+        if (StoryMainEventHooks.Instance == null)
+        {
+            GameObject obj = new GameObject("StoryMainEventHooks");
+            obj.AddComponent<StoryMainEventHooks>();
         }
     }
 }

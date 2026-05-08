@@ -277,6 +277,15 @@ public class EventExecutor : MonoBehaviour
             case "黑暗值": return pa.Darkness;
             case "负罪感": return pa.Guilt;
             case "幸运":   return pa.Luck;
+            case "Study": return pa.Study;
+            case "Charm": return pa.Charm;
+            case "Physique": return pa.Physique;
+            case "Leadership": return pa.Leadership;
+            case "Stress": return pa.Stress;
+            case "Mood": return pa.Mood;
+            case "Darkness": return pa.Darkness;
+            case "Guilt": return pa.Guilt;
+            case "Luck": return pa.Luck;
             default:
                 if (attrName == "金钱" && GameState.Instance != null)
                     return GameState.Instance.Money;
@@ -338,7 +347,7 @@ public class EventExecutor : MonoBehaviour
         {
             if (effect == null) continue;
 
-            switch (effect.type)
+            switch (effect.type?.Trim().ToLowerInvariant())
             {
                 case "attribute":
                     PlayerAttributes.Instance.AddAttribute(effect.target, effect.value);
@@ -372,12 +381,48 @@ public class EventExecutor : MonoBehaviour
                     Debug.Log($"[EventExecutor] 效果: 解锁 {effect.target}");
                     break;
 
+                case "tendency":
+                    GetOrCreateStoryRouteState().AddTendency(effect.target, effect.value);
+                    Debug.Log($"[EventExecutor] Effect: tendency {effect.target} {(effect.value >= 0 ? "+" : "")}{effect.value}");
+                    break;
+
+                case "route":
+                    GetOrCreateStoryRouteState().SetRoute(effect.target);
+                    Debug.Log($"[EventExecutor] Effect: route = {effect.target}");
+                    break;
+
+                case "lock_route":
+                    GetOrCreateStoryRouteState().LockRoute(effect.target);
+                    Debug.Log($"[EventExecutor] Effect: locked route = {effect.target}");
+                    break;
+
+                case "route_progress":
+                    GetOrCreateStoryRouteState().AddRouteProgress(effect.value);
+                    Debug.Log($"[EventExecutor] Effect: route progress {(effect.value >= 0 ? "+" : "")}{effect.value}");
+                    break;
+
+                case "ending_bonus":
+                    GetOrCreateStoryRouteState().AddEndingQualityBonus(effect.value);
+                    Debug.Log($"[EventExecutor] Effect: ending bonus {(effect.value >= 0 ? "+" : "")}{effect.value}");
+                    break;
+
                 default:
                     Debug.LogWarning($"[EventExecutor] 未知效果类型: {effect.type}");
                     ShowEventSystemNotification("事件效果未识别", $"检测到未识别的效果类型：{effect.type}，这部分影响已被跳过。");
                     break;
             }
         }
+    }
+
+    private StoryRouteState GetOrCreateStoryRouteState()
+    {
+        if (StoryRouteState.Instance != null)
+        {
+            return StoryRouteState.Instance;
+        }
+
+        GameObject obj = new GameObject("StoryRouteState");
+        return obj.AddComponent<StoryRouteState>();
     }
 
     private void ApplyEventCosts(int actionPointCost, int moneyCost, string eventId, string sourceLabel)

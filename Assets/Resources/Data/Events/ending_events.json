@@ -1,0 +1,1750 @@
+{
+  "events": [
+    {
+      "id": "END_GRAD_S",
+      "eventType": "MainStory",
+      "title": "钟山下的研究者",
+      "description": "考研深造 S 级结局",
+      "priority": 99,
+      "isForced": true,
+      "isRepeatable": false,
+      "actionPointCost": 0,
+      "moneyCost": 0,
+      "maxTriggersPerRound": 1,
+      "trigger": {
+        "year": 99,
+        "semester": 9,
+        "roundMin": 99,
+        "roundMax": 99,
+        "specificRounds": [
+          99
+        ],
+        "attributeConditions": [],
+        "requiredRoute": "",
+        "requiredLockedRoute": "",
+        "minResearchTendency": 0,
+        "minCivilServiceTendency": 0,
+        "minStartupTendency": 0,
+        "minEducationTendency": 0,
+        "minEmploymentTendency": 0,
+        "minConfusedTendency": 0,
+        "minRouteProgress": 0,
+        "minMoney": 0,
+        "maxMoney": 0,
+        "affinityConditions": [],
+        "romanceConditions": [],
+        "clubConditions": [],
+        "requiredEventIds": [],
+        "excludedEventIds": [],
+        "requiredFlags": [],
+        "anyRequiredFlags": [],
+        "excludedFlags": [],
+        "minDarkness": 0,
+        "triggerBehavior": "",
+        "triggerChance": 0,
+        "requiredLocationId": "",
+        "requiredLocationIds": [],
+        "phase": "RoundEnd"
+      },
+      "dialogues": [
+        {
+          "speaker": "旁白",
+          "lines": [
+            "初试成绩出来的那天，你盯着屏幕看了很久。",
+            "不是因为不敢相信，而是因为那些独自在图书馆坐到闭馆的夜晚，那些背了又忘的知识点，那些怀疑过自己的瞬间，终于在这一刻有了回应。",
+            "你成功考上了理想的研究生院校。",
+            "毕业典礼结束后，你最后一次走过图书馆。阳光透过树叶落在台阶上，像四年前开学那天一样。",
+            "你知道，自己的大学生活并不是结束了。",
+            "它只是把你送向了更远的问题和更大的世界。"
+          ],
+          "portraitId": ""
+        }
+      ],
+      "choices": [
+        {
+          "text": "结束游戏",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "flag",
+              "target": "ending_seen",
+              "value": 1,
+              "description": "已查看毕业结局"
+            },
+            {
+              "type": "flag",
+              "target": "ending_graduate_s",
+              "value": 1,
+              "description": "ending_graduate_s"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        }
+      ],
+      "defaultEffects": [],
+      "chainEventIds": [],
+      "presentation": {
+        "sceneKey": "ending",
+        "sceneDisplayName": "钟山下的研究者",
+        "locationId": "",
+        "backgroundResourcePath": "",
+        "protagonistPortraitResourcePath": "",
+        "npcPortraitResourcePath": "",
+        "backgroundSlotName": "结局背景",
+        "protagonistSlotName": "",
+        "npcSlotName": ""
+      }
+    },
+    {
+      "id": "END_GRAD_A",
+      "eventType": "MainStory",
+      "title": "继续向前的答案",
+      "description": "考研深造 A 级结局",
+      "priority": 99,
+      "isForced": true,
+      "isRepeatable": false,
+      "actionPointCost": 0,
+      "moneyCost": 0,
+      "maxTriggersPerRound": 1,
+      "trigger": {
+        "year": 99,
+        "semester": 9,
+        "roundMin": 99,
+        "roundMax": 99,
+        "specificRounds": [
+          99
+        ],
+        "attributeConditions": [],
+        "requiredRoute": "",
+        "requiredLockedRoute": "",
+        "minResearchTendency": 0,
+        "minCivilServiceTendency": 0,
+        "minStartupTendency": 0,
+        "minEducationTendency": 0,
+        "minEmploymentTendency": 0,
+        "minConfusedTendency": 0,
+        "minRouteProgress": 0,
+        "minMoney": 0,
+        "maxMoney": 0,
+        "affinityConditions": [],
+        "romanceConditions": [],
+        "clubConditions": [],
+        "requiredEventIds": [],
+        "excludedEventIds": [],
+        "requiredFlags": [],
+        "anyRequiredFlags": [],
+        "excludedFlags": [],
+        "minDarkness": 0,
+        "triggerBehavior": "",
+        "triggerChance": 0,
+        "requiredLocationId": "",
+        "requiredLocationIds": [],
+        "phase": "RoundEnd"
+      },
+      "dialogues": [
+        {
+          "speaker": "旁白",
+          "lines": [
+            "结果公布的时候，你没有立刻欢呼。",
+            "这并不是你最初想象中最完美的答案。也许目标院校换过，也许过程里有过犹豫，也许最终的结果和理想之间仍然隔着一点距离。",
+            "可你还是走到了这里。你通过了考试，拿到了继续深造的机会。",
+            "这四年里，你并不是每一天都坚定，也不是每一次努力都有回报。",
+            "毕业那天，你走过图书馆前的台阶，忽然觉得自己比四年前更安静，也更清楚。",
+            "你还没有抵达终点。但你已经找到了继续向前的方向。"
+          ],
+          "portraitId": ""
+        }
+      ],
+      "choices": [
+        {
+          "text": "结束游戏",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "flag",
+              "target": "ending_seen",
+              "value": 1,
+              "description": "已查看毕业结局"
+            },
+            {
+              "type": "flag",
+              "target": "ending_graduate_a",
+              "value": 1,
+              "description": "ending_graduate_a"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        }
+      ],
+      "defaultEffects": [],
+      "chainEventIds": [],
+      "presentation": {
+        "sceneKey": "ending",
+        "sceneDisplayName": "继续向前的答案",
+        "locationId": "",
+        "backgroundResourcePath": "",
+        "protagonistPortraitResourcePath": "",
+        "npcPortraitResourcePath": "",
+        "backgroundSlotName": "结局背景",
+        "protagonistSlotName": "",
+        "npcSlotName": ""
+      }
+    },
+    {
+      "id": "END_GRAD_C",
+      "eventType": "MainStory",
+      "title": "再试一次的人",
+      "description": "考研深造 C 级结局",
+      "priority": 99,
+      "isForced": true,
+      "isRepeatable": false,
+      "actionPointCost": 0,
+      "moneyCost": 0,
+      "maxTriggersPerRound": 1,
+      "trigger": {
+        "year": 99,
+        "semester": 9,
+        "roundMin": 99,
+        "roundMax": 99,
+        "specificRounds": [
+          99
+        ],
+        "attributeConditions": [],
+        "requiredRoute": "",
+        "requiredLockedRoute": "",
+        "minResearchTendency": 0,
+        "minCivilServiceTendency": 0,
+        "minStartupTendency": 0,
+        "minEducationTendency": 0,
+        "minEmploymentTendency": 0,
+        "minConfusedTendency": 0,
+        "minRouteProgress": 0,
+        "minMoney": 0,
+        "maxMoney": 0,
+        "affinityConditions": [],
+        "romanceConditions": [],
+        "clubConditions": [],
+        "requiredEventIds": [],
+        "excludedEventIds": [],
+        "requiredFlags": [],
+        "anyRequiredFlags": [],
+        "excludedFlags": [],
+        "minDarkness": 0,
+        "triggerBehavior": "",
+        "triggerChance": 0,
+        "requiredLocationId": "",
+        "requiredLocationIds": [],
+        "phase": "RoundEnd"
+      },
+      "dialogues": [
+        {
+          "speaker": "旁白",
+          "lines": [
+            "成绩出来的时候，你沉默了很久。",
+            "屏幕上的数字没有给你想要的答案。那些复习到深夜的日子，那些写满笔记的书页，好像突然都安静了下来。",
+            "你失败了。",
+            "可是，当最难受的那阵情绪过去之后，你发现自己并没有完全被打倒。",
+            "毕业典礼那天，你站在人群里，没有拿到最理想的结果。",
+            "但你知道，这不是故事的终点。有些路不是一次就能走通，而你仍然愿意再走一次。"
+          ],
+          "portraitId": ""
+        }
+      ],
+      "choices": [
+        {
+          "text": "结束游戏",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "flag",
+              "target": "ending_seen",
+              "value": 1,
+              "description": "已查看毕业结局"
+            },
+            {
+              "type": "flag",
+              "target": "ending_graduate_c",
+              "value": 1,
+              "description": "ending_graduate_c"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        }
+      ],
+      "defaultEffects": [],
+      "chainEventIds": [],
+      "presentation": {
+        "sceneKey": "ending",
+        "sceneDisplayName": "再试一次的人",
+        "locationId": "",
+        "backgroundResourcePath": "",
+        "protagonistPortraitResourcePath": "",
+        "npcPortraitResourcePath": "",
+        "backgroundSlotName": "结局背景",
+        "protagonistSlotName": "",
+        "npcSlotName": ""
+      }
+    },
+    {
+      "id": "END_CIVIL_S",
+      "eventType": "MainStory",
+      "title": "稳稳走向人群中",
+      "description": "考公考编 S 级结局",
+      "priority": 99,
+      "isForced": true,
+      "isRepeatable": false,
+      "actionPointCost": 0,
+      "moneyCost": 0,
+      "maxTriggersPerRound": 1,
+      "trigger": {
+        "year": 99,
+        "semester": 9,
+        "roundMin": 99,
+        "roundMax": 99,
+        "specificRounds": [
+          99
+        ],
+        "attributeConditions": [],
+        "requiredRoute": "",
+        "requiredLockedRoute": "",
+        "minResearchTendency": 0,
+        "minCivilServiceTendency": 0,
+        "minStartupTendency": 0,
+        "minEducationTendency": 0,
+        "minEmploymentTendency": 0,
+        "minConfusedTendency": 0,
+        "minRouteProgress": 0,
+        "minMoney": 0,
+        "maxMoney": 0,
+        "affinityConditions": [],
+        "romanceConditions": [],
+        "clubConditions": [],
+        "requiredEventIds": [],
+        "excludedEventIds": [],
+        "requiredFlags": [],
+        "anyRequiredFlags": [],
+        "excludedFlags": [],
+        "minDarkness": 0,
+        "triggerBehavior": "",
+        "triggerChance": 0,
+        "requiredLocationId": "",
+        "requiredLocationIds": [],
+        "phase": "RoundEnd"
+      },
+      "dialogues": [
+        {
+          "speaker": "旁白",
+          "lines": [
+            "录用名单公布的时候，你没有想象中那样激动。",
+            "你只是安静地看着自己的名字，然后长长地松了一口气。",
+            "这几年里，你参加过活动，写过材料，协调过争执，也在无数个夜晚对着题库和申论材料怀疑自己。",
+            "你曾经以为稳定是一种逃避。后来才明白，稳定也可以是一种选择，一种承担。",
+            "毕业后，你走向新的岗位。",
+            "校园渐渐远去，但你知道，这四年教会你的，不只是如何通过考试，还有如何认真对待每一件具体的事。"
+          ],
+          "portraitId": ""
+        }
+      ],
+      "choices": [
+        {
+          "text": "结束游戏",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "flag",
+              "target": "ending_seen",
+              "value": 1,
+              "description": "已查看毕业结局"
+            },
+            {
+              "type": "flag",
+              "target": "ending_civil_s",
+              "value": 1,
+              "description": "ending_civil_s"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        }
+      ],
+      "defaultEffects": [],
+      "chainEventIds": [],
+      "presentation": {
+        "sceneKey": "ending",
+        "sceneDisplayName": "稳稳走向人群中",
+        "locationId": "",
+        "backgroundResourcePath": "",
+        "protagonistPortraitResourcePath": "",
+        "npcPortraitResourcePath": "",
+        "backgroundSlotName": "结局背景",
+        "protagonistSlotName": "",
+        "npcSlotName": ""
+      }
+    },
+    {
+      "id": "END_CIVIL_A",
+      "eventType": "MainStory",
+      "title": "一份踏实的去处",
+      "description": "考公考编 A 级结局",
+      "priority": 99,
+      "isForced": true,
+      "isRepeatable": false,
+      "actionPointCost": 0,
+      "moneyCost": 0,
+      "maxTriggersPerRound": 1,
+      "trigger": {
+        "year": 99,
+        "semester": 9,
+        "roundMin": 99,
+        "roundMax": 99,
+        "specificRounds": [
+          99
+        ],
+        "attributeConditions": [],
+        "requiredRoute": "",
+        "requiredLockedRoute": "",
+        "minResearchTendency": 0,
+        "minCivilServiceTendency": 0,
+        "minStartupTendency": 0,
+        "minEducationTendency": 0,
+        "minEmploymentTendency": 0,
+        "minConfusedTendency": 0,
+        "minRouteProgress": 0,
+        "minMoney": 0,
+        "maxMoney": 0,
+        "affinityConditions": [],
+        "romanceConditions": [],
+        "clubConditions": [],
+        "requiredEventIds": [],
+        "excludedEventIds": [],
+        "requiredFlags": [],
+        "anyRequiredFlags": [],
+        "excludedFlags": [],
+        "minDarkness": 0,
+        "triggerBehavior": "",
+        "triggerChance": 0,
+        "requiredLocationId": "",
+        "requiredLocationIds": [],
+        "phase": "RoundEnd"
+      },
+      "dialogues": [
+        {
+          "speaker": "旁白",
+          "lines": [
+            "毕业前，你终于等来一个踏实的结果。",
+            "它也许不是最热门的岗位，也不是所有人眼中最耀眼的选择，但对你来说，已经足够真实。",
+            "你回想起这几年里做过的事情：班级事务、活动组织、材料整理、考试准备、一次次和人沟通协调。",
+            "它们看起来都不像惊天动地的大事，却一点点塑造了你处理问题的方式。",
+            "你开始明白，人生并不一定要轰轰烈烈才算有价值。",
+            "毕业那天，你走出校门，只是觉得未来终于有了一份可以慢慢走下去的踏实。"
+          ],
+          "portraitId": ""
+        }
+      ],
+      "choices": [
+        {
+          "text": "结束游戏",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "flag",
+              "target": "ending_seen",
+              "value": 1,
+              "description": "已查看毕业结局"
+            },
+            {
+              "type": "flag",
+              "target": "ending_civil_a",
+              "value": 1,
+              "description": "ending_civil_a"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        }
+      ],
+      "defaultEffects": [],
+      "chainEventIds": [],
+      "presentation": {
+        "sceneKey": "ending",
+        "sceneDisplayName": "一份踏实的去处",
+        "locationId": "",
+        "backgroundResourcePath": "",
+        "protagonistPortraitResourcePath": "",
+        "npcPortraitResourcePath": "",
+        "backgroundSlotName": "结局背景",
+        "protagonistSlotName": "",
+        "npcSlotName": ""
+      }
+    },
+    {
+      "id": "END_CIVIL_C",
+      "eventType": "MainStory",
+      "title": "备考路上的停顿",
+      "description": "考公考编 C 级结局",
+      "priority": 99,
+      "isForced": true,
+      "isRepeatable": false,
+      "actionPointCost": 0,
+      "moneyCost": 0,
+      "maxTriggersPerRound": 1,
+      "trigger": {
+        "year": 99,
+        "semester": 9,
+        "roundMin": 99,
+        "roundMax": 99,
+        "specificRounds": [
+          99
+        ],
+        "attributeConditions": [],
+        "requiredRoute": "",
+        "requiredLockedRoute": "",
+        "minResearchTendency": 0,
+        "minCivilServiceTendency": 0,
+        "minStartupTendency": 0,
+        "minEducationTendency": 0,
+        "minEmploymentTendency": 0,
+        "minConfusedTendency": 0,
+        "minRouteProgress": 0,
+        "minMoney": 0,
+        "maxMoney": 0,
+        "affinityConditions": [],
+        "romanceConditions": [],
+        "clubConditions": [],
+        "requiredEventIds": [],
+        "excludedEventIds": [],
+        "requiredFlags": [],
+        "anyRequiredFlags": [],
+        "excludedFlags": [],
+        "minDarkness": 0,
+        "triggerBehavior": "",
+        "triggerChance": 0,
+        "requiredLocationId": "",
+        "requiredLocationIds": [],
+        "phase": "RoundEnd"
+      },
+      "dialogues": [
+        {
+          "speaker": "旁白",
+          "lines": [
+            "考试结果出来后，你没有看到自己的名字。",
+            "那一刻，你说不清是失望更多，还是疲惫更多。",
+            "备考的日子很长，长到你曾经以为只要坚持到最后，就一定会得到一个明确的答案。",
+            "可现实并没有那么简单。",
+            "但这场失败没有抹掉你这几年积累的东西。",
+            "毕业那天，你还没有真正上岸，但你没有立刻否定自己。你只是停下来，重新看了一眼前面的路。"
+          ],
+          "portraitId": ""
+        }
+      ],
+      "choices": [
+        {
+          "text": "结束游戏",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "flag",
+              "target": "ending_seen",
+              "value": 1,
+              "description": "已查看毕业结局"
+            },
+            {
+              "type": "flag",
+              "target": "ending_civil_c",
+              "value": 1,
+              "description": "ending_civil_c"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        }
+      ],
+      "defaultEffects": [],
+      "chainEventIds": [],
+      "presentation": {
+        "sceneKey": "ending",
+        "sceneDisplayName": "备考路上的停顿",
+        "locationId": "",
+        "backgroundResourcePath": "",
+        "protagonistPortraitResourcePath": "",
+        "npcPortraitResourcePath": "",
+        "backgroundSlotName": "结局背景",
+        "protagonistSlotName": "",
+        "npcSlotName": ""
+      }
+    },
+    {
+      "id": "END_STARTUP_S",
+      "eventType": "MainStory",
+      "title": "把想法种进现实",
+      "description": "创业实践 S 级结局",
+      "priority": 99,
+      "isForced": true,
+      "isRepeatable": false,
+      "actionPointCost": 0,
+      "moneyCost": 0,
+      "maxTriggersPerRound": 1,
+      "trigger": {
+        "year": 99,
+        "semester": 9,
+        "roundMin": 99,
+        "roundMax": 99,
+        "specificRounds": [
+          99
+        ],
+        "attributeConditions": [],
+        "requiredRoute": "",
+        "requiredLockedRoute": "",
+        "minResearchTendency": 0,
+        "minCivilServiceTendency": 0,
+        "minStartupTendency": 0,
+        "minEducationTendency": 0,
+        "minEmploymentTendency": 0,
+        "minConfusedTendency": 0,
+        "minRouteProgress": 0,
+        "minMoney": 0,
+        "maxMoney": 0,
+        "affinityConditions": [],
+        "romanceConditions": [],
+        "clubConditions": [],
+        "requiredEventIds": [],
+        "excludedEventIds": [],
+        "requiredFlags": [],
+        "anyRequiredFlags": [],
+        "excludedFlags": [],
+        "minDarkness": 0,
+        "triggerBehavior": "",
+        "triggerChance": 0,
+        "requiredLocationId": "",
+        "requiredLocationIds": [],
+        "phase": "RoundEnd"
+      },
+      "dialogues": [
+        {
+          "speaker": "旁白",
+          "lines": [
+            "项目路演结束后，评委问了最后一个问题：“你们真的准备继续做下去吗？”",
+            "你看向身边的队友。那些争论、熬夜、推翻重做、临近截止前的崩溃，好像都浓缩在这一秒里。",
+            "你点了点头。",
+            "毕业前，你们的项目获得了孵化机会。",
+            "它还不成熟，也远远谈不上真正成功，但它已经不再只是文档里的一个想法。",
+            "你终于明白，所谓创业，不是突然改变世界，而是在某个普通的夜晚，依然愿意把一个想法继续往前推。"
+          ],
+          "portraitId": ""
+        }
+      ],
+      "choices": [
+        {
+          "text": "结束游戏",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "flag",
+              "target": "ending_seen",
+              "value": 1,
+              "description": "已查看毕业结局"
+            },
+            {
+              "type": "flag",
+              "target": "ending_startup_s",
+              "value": 1,
+              "description": "ending_startup_s"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        }
+      ],
+      "defaultEffects": [],
+      "chainEventIds": [],
+      "presentation": {
+        "sceneKey": "ending",
+        "sceneDisplayName": "把想法种进现实",
+        "locationId": "",
+        "backgroundResourcePath": "",
+        "protagonistPortraitResourcePath": "",
+        "npcPortraitResourcePath": "",
+        "backgroundSlotName": "结局背景",
+        "protagonistSlotName": "",
+        "npcSlotName": ""
+      }
+    },
+    {
+      "id": "END_STARTUP_A",
+      "eventType": "MainStory",
+      "title": "项目没有结束",
+      "description": "创业实践 A 级结局",
+      "priority": 99,
+      "isForced": true,
+      "isRepeatable": false,
+      "actionPointCost": 0,
+      "moneyCost": 0,
+      "maxTriggersPerRound": 1,
+      "trigger": {
+        "year": 99,
+        "semester": 9,
+        "roundMin": 99,
+        "roundMax": 99,
+        "specificRounds": [
+          99
+        ],
+        "attributeConditions": [],
+        "requiredRoute": "",
+        "requiredLockedRoute": "",
+        "minResearchTendency": 0,
+        "minCivilServiceTendency": 0,
+        "minStartupTendency": 0,
+        "minEducationTendency": 0,
+        "minEmploymentTendency": 0,
+        "minConfusedTendency": 0,
+        "minRouteProgress": 0,
+        "minMoney": 0,
+        "maxMoney": 0,
+        "affinityConditions": [],
+        "romanceConditions": [],
+        "clubConditions": [],
+        "requiredEventIds": [],
+        "excludedEventIds": [],
+        "requiredFlags": [],
+        "anyRequiredFlags": [],
+        "excludedFlags": [],
+        "minDarkness": 0,
+        "triggerBehavior": "",
+        "triggerChance": 0,
+        "requiredLocationId": "",
+        "requiredLocationIds": [],
+        "phase": "RoundEnd"
+      },
+      "dialogues": [
+        {
+          "speaker": "旁白",
+          "lines": [
+            "毕业的时候，你们的项目还没有真正成功。",
+            "它没有立刻变成公司，也没有拿到足够耀眼的成绩。甚至很多功能还不完善，很多设想也停留在计划表里。",
+            "但它没有结束。",
+            "你们保留了项目资料，也保留了继续推进的可能。",
+            "这几年里，你第一次如此清楚地感受到，把一个想法变成现实有多难。",
+            "毕业那天，你没有拿着一个完美的成果离开，但你带走了一段真正从零开始做事的经历。"
+          ],
+          "portraitId": ""
+        }
+      ],
+      "choices": [
+        {
+          "text": "结束游戏",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "flag",
+              "target": "ending_seen",
+              "value": 1,
+              "description": "已查看毕业结局"
+            },
+            {
+              "type": "flag",
+              "target": "ending_startup_a",
+              "value": 1,
+              "description": "ending_startup_a"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        }
+      ],
+      "defaultEffects": [],
+      "chainEventIds": [],
+      "presentation": {
+        "sceneKey": "ending",
+        "sceneDisplayName": "项目没有结束",
+        "locationId": "",
+        "backgroundResourcePath": "",
+        "protagonistPortraitResourcePath": "",
+        "npcPortraitResourcePath": "",
+        "backgroundSlotName": "结局背景",
+        "protagonistSlotName": "",
+        "npcSlotName": ""
+      }
+    },
+    {
+      "id": "END_STARTUP_C",
+      "eventType": "MainStory",
+      "title": "散场之后的经验",
+      "description": "创业实践 C 级结局",
+      "priority": 99,
+      "isForced": true,
+      "isRepeatable": false,
+      "actionPointCost": 0,
+      "moneyCost": 0,
+      "maxTriggersPerRound": 1,
+      "trigger": {
+        "year": 99,
+        "semester": 9,
+        "roundMin": 99,
+        "roundMax": 99,
+        "specificRounds": [
+          99
+        ],
+        "attributeConditions": [],
+        "requiredRoute": "",
+        "requiredLockedRoute": "",
+        "minResearchTendency": 0,
+        "minCivilServiceTendency": 0,
+        "minStartupTendency": 0,
+        "minEducationTendency": 0,
+        "minEmploymentTendency": 0,
+        "minConfusedTendency": 0,
+        "minRouteProgress": 0,
+        "minMoney": 0,
+        "maxMoney": 0,
+        "affinityConditions": [],
+        "romanceConditions": [],
+        "clubConditions": [],
+        "requiredEventIds": [],
+        "excludedEventIds": [],
+        "requiredFlags": [],
+        "anyRequiredFlags": [],
+        "excludedFlags": [],
+        "minDarkness": 0,
+        "triggerBehavior": "",
+        "triggerChance": 0,
+        "requiredLocationId": "",
+        "requiredLocationIds": [],
+        "phase": "RoundEnd"
+      },
+      "dialogues": [
+        {
+          "speaker": "旁白",
+          "lines": [
+            "项目最终还是停下了。",
+            "队友有了新的安排，比赛没有继续推进，最初兴奋讨论过的功能也慢慢没人再提。",
+            "你曾经为此难过过。毕竟那些熬夜、争论、修改和期待都是真的。",
+            "可当你重新翻看项目文件的时候，你发现自己并不是什么都没有留下。",
+            "你学会了合作、分歧、执行，也学会了有些事情不是努力过就一定会成功。",
+            "它不会立刻改变你的人生，可在未来某个需要重新开始的时刻，你会知道自己曾经真的尝试过。"
+          ],
+          "portraitId": ""
+        }
+      ],
+      "choices": [
+        {
+          "text": "结束游戏",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "flag",
+              "target": "ending_seen",
+              "value": 1,
+              "description": "已查看毕业结局"
+            },
+            {
+              "type": "flag",
+              "target": "ending_startup_c",
+              "value": 1,
+              "description": "ending_startup_c"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        }
+      ],
+      "defaultEffects": [],
+      "chainEventIds": [],
+      "presentation": {
+        "sceneKey": "ending",
+        "sceneDisplayName": "散场之后的经验",
+        "locationId": "",
+        "backgroundResourcePath": "",
+        "protagonistPortraitResourcePath": "",
+        "npcPortraitResourcePath": "",
+        "backgroundSlotName": "结局背景",
+        "protagonistSlotName": "",
+        "npcSlotName": ""
+      }
+    },
+    {
+      "id": "END_EDU_S",
+      "eventType": "MainStory",
+      "title": "站上讲台的人",
+      "description": "教育成长 S 级结局",
+      "priority": 99,
+      "isForced": true,
+      "isRepeatable": false,
+      "actionPointCost": 0,
+      "moneyCost": 0,
+      "maxTriggersPerRound": 1,
+      "trigger": {
+        "year": 99,
+        "semester": 9,
+        "roundMin": 99,
+        "roundMax": 99,
+        "specificRounds": [
+          99
+        ],
+        "attributeConditions": [],
+        "requiredRoute": "",
+        "requiredLockedRoute": "",
+        "minResearchTendency": 0,
+        "minCivilServiceTendency": 0,
+        "minStartupTendency": 0,
+        "minEducationTendency": 0,
+        "minEmploymentTendency": 0,
+        "minConfusedTendency": 0,
+        "minRouteProgress": 0,
+        "minMoney": 0,
+        "maxMoney": 0,
+        "affinityConditions": [],
+        "romanceConditions": [],
+        "clubConditions": [],
+        "requiredEventIds": [],
+        "excludedEventIds": [],
+        "requiredFlags": [],
+        "anyRequiredFlags": [],
+        "excludedFlags": [],
+        "minDarkness": 0,
+        "triggerBehavior": "",
+        "triggerChance": 0,
+        "requiredLocationId": "",
+        "requiredLocationIds": [],
+        "phase": "RoundEnd"
+      },
+      "dialogues": [
+        {
+          "speaker": "旁白",
+          "lines": [
+            "第一次真正站上讲台的时候，你还是有一点紧张。",
+            "台下的学生看着你，和你当年坐在教室里看老师时并没有太大不同。",
+            "你想起大学里第一次试讲的失误，想起志愿活动中那个认真问问题的孩子。",
+            "后来你慢慢明白，教育不是把所有答案都交给别人。",
+            "而是陪他们一起，把看不懂的地方一点点看清楚。",
+            "毕业后，你选择走向教育行业。四年过去，你不只是学会了知识，也学会了如何把光递给别人。"
+          ],
+          "portraitId": ""
+        }
+      ],
+      "choices": [
+        {
+          "text": "结束游戏",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "flag",
+              "target": "ending_seen",
+              "value": 1,
+              "description": "已查看毕业结局"
+            },
+            {
+              "type": "flag",
+              "target": "ending_education_s",
+              "value": 1,
+              "description": "ending_education_s"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        }
+      ],
+      "defaultEffects": [],
+      "chainEventIds": [],
+      "presentation": {
+        "sceneKey": "ending",
+        "sceneDisplayName": "站上讲台的人",
+        "locationId": "",
+        "backgroundResourcePath": "",
+        "protagonistPortraitResourcePath": "",
+        "npcPortraitResourcePath": "",
+        "backgroundSlotName": "结局背景",
+        "protagonistSlotName": "",
+        "npcSlotName": ""
+      }
+    },
+    {
+      "id": "END_EDU_A",
+      "eventType": "MainStory",
+      "title": "去更远的地方点灯",
+      "description": "教育成长 A 级结局",
+      "priority": 99,
+      "isForced": true,
+      "isRepeatable": false,
+      "actionPointCost": 0,
+      "moneyCost": 0,
+      "maxTriggersPerRound": 1,
+      "trigger": {
+        "year": 99,
+        "semester": 9,
+        "roundMin": 99,
+        "roundMax": 99,
+        "specificRounds": [
+          99
+        ],
+        "attributeConditions": [],
+        "requiredRoute": "",
+        "requiredLockedRoute": "",
+        "minResearchTendency": 0,
+        "minCivilServiceTendency": 0,
+        "minStartupTendency": 0,
+        "minEducationTendency": 0,
+        "minEmploymentTendency": 0,
+        "minConfusedTendency": 0,
+        "minRouteProgress": 0,
+        "minMoney": 0,
+        "maxMoney": 0,
+        "affinityConditions": [],
+        "romanceConditions": [],
+        "clubConditions": [],
+        "requiredEventIds": [],
+        "excludedEventIds": [],
+        "requiredFlags": [],
+        "anyRequiredFlags": [],
+        "excludedFlags": [],
+        "minDarkness": 0,
+        "triggerBehavior": "",
+        "triggerChance": 0,
+        "requiredLocationId": "",
+        "requiredLocationIds": [],
+        "phase": "RoundEnd"
+      },
+      "dialogues": [
+        {
+          "speaker": "旁白",
+          "lines": [
+            "毕业前，你做出了一个并不算轻松的决定。",
+            "你没有立刻走向最热闹的城市，也没有选择一条看起来最容易的路。",
+            "你选择去更远一点的地方，继续做和教育有关的事。",
+            "也许是支教，也许是基层教育项目，也许是一段短期却认真投入的陪伴。",
+            "你还记得第一次志愿教学时的紧张，也记得有学生终于听懂题目时抬起头的表情。",
+            "毕业那天，你站在校门前，没有觉得自己走向了一条轻松的路。但你知道，那是一条值得走的路。"
+          ],
+          "portraitId": ""
+        }
+      ],
+      "choices": [
+        {
+          "text": "结束游戏",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "flag",
+              "target": "ending_seen",
+              "value": 1,
+              "description": "已查看毕业结局"
+            },
+            {
+              "type": "flag",
+              "target": "ending_education_a",
+              "value": 1,
+              "description": "ending_education_a"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        }
+      ],
+      "defaultEffects": [],
+      "chainEventIds": [],
+      "presentation": {
+        "sceneKey": "ending",
+        "sceneDisplayName": "去更远的地方点灯",
+        "locationId": "",
+        "backgroundResourcePath": "",
+        "protagonistPortraitResourcePath": "",
+        "npcPortraitResourcePath": "",
+        "backgroundSlotName": "结局背景",
+        "protagonistSlotName": "",
+        "npcSlotName": ""
+      }
+    },
+    {
+      "id": "END_EDU_B",
+      "eventType": "MainStory",
+      "title": "教育行业的新人",
+      "description": "教育成长 B 级结局",
+      "priority": 99,
+      "isForced": true,
+      "isRepeatable": false,
+      "actionPointCost": 0,
+      "moneyCost": 0,
+      "maxTriggersPerRound": 1,
+      "trigger": {
+        "year": 99,
+        "semester": 9,
+        "roundMin": 99,
+        "roundMax": 99,
+        "specificRounds": [
+          99
+        ],
+        "attributeConditions": [],
+        "requiredRoute": "",
+        "requiredLockedRoute": "",
+        "minResearchTendency": 0,
+        "minCivilServiceTendency": 0,
+        "minStartupTendency": 0,
+        "minEducationTendency": 0,
+        "minEmploymentTendency": 0,
+        "minConfusedTendency": 0,
+        "minRouteProgress": 0,
+        "minMoney": 0,
+        "maxMoney": 0,
+        "affinityConditions": [],
+        "romanceConditions": [],
+        "clubConditions": [],
+        "requiredEventIds": [],
+        "excludedEventIds": [],
+        "requiredFlags": [],
+        "anyRequiredFlags": [],
+        "excludedFlags": [],
+        "minDarkness": 0,
+        "triggerBehavior": "",
+        "triggerChance": 0,
+        "requiredLocationId": "",
+        "requiredLocationIds": [],
+        "phase": "RoundEnd"
+      },
+      "dialogues": [
+        {
+          "speaker": "旁白",
+          "lines": [
+            "毕业后，你进入了教育相关行业。",
+            "这不是一个立刻闪闪发光的开始。",
+            "你要学习如何备课，如何表达，如何面对不同的学生，也要慢慢适应从学生身份变成教育工作者的过程。",
+            "一开始，你会紧张，会出错，也会怀疑自己是不是足够合适。",
+            "但你并不讨厌这个过程。",
+            "你还只是一个新人，但你已经站在了这条路的入口。"
+          ],
+          "portraitId": ""
+        }
+      ],
+      "choices": [
+        {
+          "text": "结束游戏",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "flag",
+              "target": "ending_seen",
+              "value": 1,
+              "description": "已查看毕业结局"
+            },
+            {
+              "type": "flag",
+              "target": "ending_education_b",
+              "value": 1,
+              "description": "ending_education_b"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        }
+      ],
+      "defaultEffects": [],
+      "chainEventIds": [],
+      "presentation": {
+        "sceneKey": "ending",
+        "sceneDisplayName": "教育行业的新人",
+        "locationId": "",
+        "backgroundResourcePath": "",
+        "protagonistPortraitResourcePath": "",
+        "npcPortraitResourcePath": "",
+        "backgroundSlotName": "结局背景",
+        "protagonistSlotName": "",
+        "npcSlotName": ""
+      }
+    },
+    {
+      "id": "END_EMP_S",
+      "eventType": "MainStory",
+      "title": "奔向城市的风",
+      "description": "企业就业 S 级结局",
+      "priority": 99,
+      "isForced": true,
+      "isRepeatable": false,
+      "actionPointCost": 0,
+      "moneyCost": 0,
+      "maxTriggersPerRound": 1,
+      "trigger": {
+        "year": 99,
+        "semester": 9,
+        "roundMin": 99,
+        "roundMax": 99,
+        "specificRounds": [
+          99
+        ],
+        "attributeConditions": [],
+        "requiredRoute": "",
+        "requiredLockedRoute": "",
+        "minResearchTendency": 0,
+        "minCivilServiceTendency": 0,
+        "minStartupTendency": 0,
+        "minEducationTendency": 0,
+        "minEmploymentTendency": 0,
+        "minConfusedTendency": 0,
+        "minRouteProgress": 0,
+        "minMoney": 0,
+        "maxMoney": 0,
+        "affinityConditions": [],
+        "romanceConditions": [],
+        "clubConditions": [],
+        "requiredEventIds": [],
+        "excludedEventIds": [],
+        "requiredFlags": [],
+        "anyRequiredFlags": [],
+        "excludedFlags": [],
+        "minDarkness": 0,
+        "triggerBehavior": "",
+        "triggerChance": 0,
+        "requiredLocationId": "",
+        "requiredLocationIds": [],
+        "phase": "RoundEnd"
+      },
+      "dialogues": [
+        {
+          "speaker": "旁白",
+          "lines": [
+            "签下 offer 的那天，你把消息告诉了几个朋友。",
+            "有人替你高兴，有人开玩笑说以后去你的城市找你玩。",
+            "你笑着回应，却在关掉手机后安静了很久。",
+            "这几年里，你写过简历，投过岗位，被拒绝过，也在一次次面试里重新介绍自己。",
+            "你终于要离开校园，去一个更大的城市，开始真正独立的生活。",
+            "毕业典礼后，你拖着行李走出校门。这一次，不是报到，而是出发。"
+          ],
+          "portraitId": ""
+        }
+      ],
+      "choices": [
+        {
+          "text": "结束游戏",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "flag",
+              "target": "ending_seen",
+              "value": 1,
+              "description": "已查看毕业结局"
+            },
+            {
+              "type": "flag",
+              "target": "ending_employment_s",
+              "value": 1,
+              "description": "ending_employment_s"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        }
+      ],
+      "defaultEffects": [],
+      "chainEventIds": [],
+      "presentation": {
+        "sceneKey": "ending",
+        "sceneDisplayName": "奔向城市的风",
+        "locationId": "",
+        "backgroundResourcePath": "",
+        "protagonistPortraitResourcePath": "",
+        "npcPortraitResourcePath": "",
+        "backgroundSlotName": "结局背景",
+        "protagonistSlotName": "",
+        "npcSlotName": ""
+      }
+    },
+    {
+      "id": "END_EMP_A",
+      "eventType": "MainStory",
+      "title": "第一份工作",
+      "description": "企业就业 A 级结局",
+      "priority": 99,
+      "isForced": true,
+      "isRepeatable": false,
+      "actionPointCost": 0,
+      "moneyCost": 0,
+      "maxTriggersPerRound": 1,
+      "trigger": {
+        "year": 99,
+        "semester": 9,
+        "roundMin": 99,
+        "roundMax": 99,
+        "specificRounds": [
+          99
+        ],
+        "attributeConditions": [],
+        "requiredRoute": "",
+        "requiredLockedRoute": "",
+        "minResearchTendency": 0,
+        "minCivilServiceTendency": 0,
+        "minStartupTendency": 0,
+        "minEducationTendency": 0,
+        "minEmploymentTendency": 0,
+        "minConfusedTendency": 0,
+        "minRouteProgress": 0,
+        "minMoney": 0,
+        "maxMoney": 0,
+        "affinityConditions": [],
+        "romanceConditions": [],
+        "clubConditions": [],
+        "requiredEventIds": [],
+        "excludedEventIds": [],
+        "requiredFlags": [],
+        "anyRequiredFlags": [],
+        "excludedFlags": [],
+        "minDarkness": 0,
+        "triggerBehavior": "",
+        "triggerChance": 0,
+        "requiredLocationId": "",
+        "requiredLocationIds": [],
+        "phase": "RoundEnd"
+      },
+      "dialogues": [
+        {
+          "speaker": "旁白",
+          "lines": [
+            "毕业前，你拿到了第一份工作机会。",
+            "它不是最完美的 offer，也许薪资普通，也许城市不是最理想，也许岗位和最初想象中仍然有些差距。",
+            "但它是真实的。",
+            "你终于要从校园走向社会，从课程表走向工作日程，从作业和考试走向更具体的责任。",
+            "回头看这几年，你也许没有一直走得很顺，但你还是一点点往前走到了这里。",
+            "毕业那天，你把工牌确认邮件又看了一遍。那不是终点，只是你第一次真正站到生活的入口。"
+          ],
+          "portraitId": ""
+        }
+      ],
+      "choices": [
+        {
+          "text": "结束游戏",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "flag",
+              "target": "ending_seen",
+              "value": 1,
+              "description": "已查看毕业结局"
+            },
+            {
+              "type": "flag",
+              "target": "ending_employment_a",
+              "value": 1,
+              "description": "ending_employment_a"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        }
+      ],
+      "defaultEffects": [],
+      "chainEventIds": [],
+      "presentation": {
+        "sceneKey": "ending",
+        "sceneDisplayName": "第一份工作",
+        "locationId": "",
+        "backgroundResourcePath": "",
+        "protagonistPortraitResourcePath": "",
+        "npcPortraitResourcePath": "",
+        "backgroundSlotName": "结局背景",
+        "protagonistSlotName": "",
+        "npcSlotName": ""
+      }
+    },
+    {
+      "id": "END_EMP_B_HOME",
+      "eventType": "MainStory",
+      "title": "回到熟悉的地方",
+      "description": "企业就业 B 级家乡结局",
+      "priority": 99,
+      "isForced": true,
+      "isRepeatable": false,
+      "actionPointCost": 0,
+      "moneyCost": 0,
+      "maxTriggersPerRound": 1,
+      "trigger": {
+        "year": 99,
+        "semester": 9,
+        "roundMin": 99,
+        "roundMax": 99,
+        "specificRounds": [
+          99
+        ],
+        "attributeConditions": [],
+        "requiredRoute": "",
+        "requiredLockedRoute": "",
+        "minResearchTendency": 0,
+        "minCivilServiceTendency": 0,
+        "minStartupTendency": 0,
+        "minEducationTendency": 0,
+        "minEmploymentTendency": 0,
+        "minConfusedTendency": 0,
+        "minRouteProgress": 0,
+        "minMoney": 0,
+        "maxMoney": 0,
+        "affinityConditions": [],
+        "romanceConditions": [],
+        "clubConditions": [],
+        "requiredEventIds": [],
+        "excludedEventIds": [],
+        "requiredFlags": [],
+        "anyRequiredFlags": [],
+        "excludedFlags": [],
+        "minDarkness": 0,
+        "triggerBehavior": "",
+        "triggerChance": 0,
+        "requiredLocationId": "",
+        "requiredLocationIds": [],
+        "phase": "RoundEnd"
+      },
+      "dialogues": [
+        {
+          "speaker": "旁白",
+          "lines": [
+            "毕业后，你选择回到一个熟悉的地方。",
+            "也许是家乡，也许是离家更近的城市，也许是一个生活节奏没有那么快、却让你感到安心的地方。",
+            "这不是逃避。你只是终于明白，人生不只有一种向前的方式。",
+            "有人去更大的城市追赶机会，也有人在熟悉的地方重新扎根。",
+            "你开始了一份普通却稳定的工作。日子没有突然变得轰轰烈烈，但你慢慢学会了和生活相处。",
+            "那些在食堂、操场、图书馆度过的日子没有消失，它们只是变成了你继续生活下去的一部分。"
+          ],
+          "portraitId": ""
+        }
+      ],
+      "choices": [
+        {
+          "text": "结束游戏",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "flag",
+              "target": "ending_seen",
+              "value": 1,
+              "description": "已查看毕业结局"
+            },
+            {
+              "type": "flag",
+              "target": "ending_employment_b_hometown",
+              "value": 1,
+              "description": "ending_employment_b_hometown"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        }
+      ],
+      "defaultEffects": [],
+      "chainEventIds": [],
+      "presentation": {
+        "sceneKey": "ending",
+        "sceneDisplayName": "回到熟悉的地方",
+        "locationId": "",
+        "backgroundResourcePath": "",
+        "protagonistPortraitResourcePath": "",
+        "npcPortraitResourcePath": "",
+        "backgroundSlotName": "结局背景",
+        "protagonistSlotName": "",
+        "npcSlotName": ""
+      }
+    },
+    {
+      "id": "END_OPEN_A",
+      "eventType": "MainStory",
+      "title": "尚未命名的明天",
+      "description": "开放迷茫 A 级结局",
+      "priority": 99,
+      "isForced": true,
+      "isRepeatable": false,
+      "actionPointCost": 0,
+      "moneyCost": 0,
+      "maxTriggersPerRound": 1,
+      "trigger": {
+        "year": 99,
+        "semester": 9,
+        "roundMin": 99,
+        "roundMax": 99,
+        "specificRounds": [
+          99
+        ],
+        "attributeConditions": [],
+        "requiredRoute": "",
+        "requiredLockedRoute": "",
+        "minResearchTendency": 0,
+        "minCivilServiceTendency": 0,
+        "minStartupTendency": 0,
+        "minEducationTendency": 0,
+        "minEmploymentTendency": 0,
+        "minConfusedTendency": 0,
+        "minRouteProgress": 0,
+        "minMoney": 0,
+        "maxMoney": 0,
+        "affinityConditions": [],
+        "romanceConditions": [],
+        "clubConditions": [],
+        "requiredEventIds": [],
+        "excludedEventIds": [],
+        "requiredFlags": [],
+        "anyRequiredFlags": [],
+        "excludedFlags": [],
+        "minDarkness": 0,
+        "triggerBehavior": "",
+        "triggerChance": 0,
+        "requiredLocationId": "",
+        "requiredLocationIds": [],
+        "phase": "RoundEnd"
+      },
+      "dialogues": [
+        {
+          "speaker": "旁白",
+          "lines": [
+            "毕业前，你并没有得到一个特别清晰的答案。",
+            "有人上岸，有人签约，有人继续做项目，也有人已经去了新的城市。",
+            "而你还在整理自己的方向。",
+            "如果是以前，你可能会因此焦虑。但现在你知道，人生并不总是在毕业那一刻就被完全决定。",
+            "你也认真生活过，也努力尝试过，也在失败、犹豫和反复选择里慢慢认识了自己。",
+            "明天还没有名字。可它仍然值得你走过去。"
+          ],
+          "portraitId": ""
+        }
+      ],
+      "choices": [
+        {
+          "text": "结束游戏",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "flag",
+              "target": "ending_seen",
+              "value": 1,
+              "description": "已查看毕业结局"
+            },
+            {
+              "type": "flag",
+              "target": "ending_open_a",
+              "value": 1,
+              "description": "ending_open_a"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        }
+      ],
+      "defaultEffects": [],
+      "chainEventIds": [],
+      "presentation": {
+        "sceneKey": "ending",
+        "sceneDisplayName": "尚未命名的明天",
+        "locationId": "",
+        "backgroundResourcePath": "",
+        "protagonistPortraitResourcePath": "",
+        "npcPortraitResourcePath": "",
+        "backgroundSlotName": "结局背景",
+        "protagonistSlotName": "",
+        "npcSlotName": ""
+      }
+    },
+    {
+      "id": "END_BALANCED_B",
+      "eventType": "MainStory",
+      "title": "四年之后，仍在路上",
+      "description": "综合成长 B 级结局",
+      "priority": 99,
+      "isForced": true,
+      "isRepeatable": false,
+      "actionPointCost": 0,
+      "moneyCost": 0,
+      "maxTriggersPerRound": 1,
+      "trigger": {
+        "year": 99,
+        "semester": 9,
+        "roundMin": 99,
+        "roundMax": 99,
+        "specificRounds": [
+          99
+        ],
+        "attributeConditions": [],
+        "requiredRoute": "",
+        "requiredLockedRoute": "",
+        "minResearchTendency": 0,
+        "minCivilServiceTendency": 0,
+        "minStartupTendency": 0,
+        "minEducationTendency": 0,
+        "minEmploymentTendency": 0,
+        "minConfusedTendency": 0,
+        "minRouteProgress": 0,
+        "minMoney": 0,
+        "maxMoney": 0,
+        "affinityConditions": [],
+        "romanceConditions": [],
+        "clubConditions": [],
+        "requiredEventIds": [],
+        "excludedEventIds": [],
+        "requiredFlags": [],
+        "anyRequiredFlags": [],
+        "excludedFlags": [],
+        "minDarkness": 0,
+        "triggerBehavior": "",
+        "triggerChance": 0,
+        "requiredLocationId": "",
+        "requiredLocationIds": [],
+        "phase": "RoundEnd"
+      },
+      "dialogues": [
+        {
+          "speaker": "旁白",
+          "lines": [
+            "你没有成为某一种特别标准的“成功模板”。",
+            "没有最耀眼的成绩，也没有最戏剧化的逆袭。",
+            "但你认真上过课，认真交过朋友，认真参加过活动，也认真面对过几次失败。",
+            "四年之后，你回头看，发现自己并不是没有变化。",
+            "你比刚入学时更知道如何和人相处，更知道如何安排生活，也更知道失败之后该怎么重新开始。",
+            "毕业不是答案。毕业只是把你送到下一道题目前。四年之后，你仍在路上，但这一次走得比刚开始时更稳。"
+          ],
+          "portraitId": ""
+        }
+      ],
+      "choices": [
+        {
+          "text": "结束游戏",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "flag",
+              "target": "ending_seen",
+              "value": 1,
+              "description": "已查看毕业结局"
+            },
+            {
+              "type": "flag",
+              "target": "ending_balanced_b",
+              "value": 1,
+              "description": "ending_balanced_b"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        }
+      ],
+      "defaultEffects": [],
+      "chainEventIds": [],
+      "presentation": {
+        "sceneKey": "ending",
+        "sceneDisplayName": "四年之后，仍在路上",
+        "locationId": "",
+        "backgroundResourcePath": "",
+        "protagonistPortraitResourcePath": "",
+        "npcPortraitResourcePath": "",
+        "backgroundSlotName": "结局背景",
+        "protagonistSlotName": "",
+        "npcSlotName": ""
+      }
+    },
+    {
+      "id": "END_BAD_C",
+      "eventType": "MainStory",
+      "title": "被时间推着走",
+      "description": "低质量 C 级结局",
+      "priority": 99,
+      "isForced": true,
+      "isRepeatable": false,
+      "actionPointCost": 0,
+      "moneyCost": 0,
+      "maxTriggersPerRound": 1,
+      "trigger": {
+        "year": 99,
+        "semester": 9,
+        "roundMin": 99,
+        "roundMax": 99,
+        "specificRounds": [
+          99
+        ],
+        "attributeConditions": [],
+        "requiredRoute": "",
+        "requiredLockedRoute": "",
+        "minResearchTendency": 0,
+        "minCivilServiceTendency": 0,
+        "minStartupTendency": 0,
+        "minEducationTendency": 0,
+        "minEmploymentTendency": 0,
+        "minConfusedTendency": 0,
+        "minRouteProgress": 0,
+        "minMoney": 0,
+        "maxMoney": 0,
+        "affinityConditions": [],
+        "romanceConditions": [],
+        "clubConditions": [],
+        "requiredEventIds": [],
+        "excludedEventIds": [],
+        "requiredFlags": [],
+        "anyRequiredFlags": [],
+        "excludedFlags": [],
+        "minDarkness": 0,
+        "triggerBehavior": "",
+        "triggerChance": 0,
+        "requiredLocationId": "",
+        "requiredLocationIds": [],
+        "phase": "RoundEnd"
+      },
+      "dialogues": [
+        {
+          "speaker": "旁白",
+          "lines": [
+            "毕业这件事，比你想象中来得更快。",
+            "很多事情还没来得及认真开始，就已经走到了结束。",
+            "你没有特别明确的方向，也没有拿到特别理想的结果。",
+            "很多选择像是被时间推着做完的：选课、考试、活动、实习、毕业设计，一个接一个地来，又一个接一个地过去。",
+            "你当然也不是完全没有努力过，只是很多时候都在犹豫、拖延、逃避和临时应付之间来回摇摆。",
+            "大学结束了。而你要带着这份不够完整的答案，继续往前走。"
+          ],
+          "portraitId": ""
+        }
+      ],
+      "choices": [
+        {
+          "text": "结束游戏",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "flag",
+              "target": "ending_seen",
+              "value": 1,
+              "description": "已查看毕业结局"
+            },
+            {
+              "type": "flag",
+              "target": "ending_bad_c",
+              "value": 1,
+              "description": "ending_bad_c"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        }
+      ],
+      "defaultEffects": [],
+      "chainEventIds": [],
+      "presentation": {
+        "sceneKey": "ending",
+        "sceneDisplayName": "被时间推着走",
+        "locationId": "",
+        "backgroundResourcePath": "",
+        "protagonistPortraitResourcePath": "",
+        "npcPortraitResourcePath": "",
+        "backgroundSlotName": "结局背景",
+        "protagonistSlotName": "",
+        "npcSlotName": ""
+      }
+    }
+  ]
+}

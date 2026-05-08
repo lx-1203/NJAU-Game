@@ -110,6 +110,17 @@ public class EventTriggerCondition
     /// <summary>属性比较条件列表（全部满足才通过）</summary>
     public AttributeCondition[] attributeConditions;
 
+    // ----- Story route conditions -----
+    public string requiredRoute;
+    public string requiredLockedRoute;
+    public int minResearchTendency;
+    public int minCivilServiceTendency;
+    public int minStartupTendency;
+    public int minEducationTendency;
+    public int minEmploymentTendency;
+    public int minConfusedTendency;
+    public int minRouteProgress;
+
     // ----- 金钱条件 -----
     /// <summary>最低金钱 (0=不限)</summary>
     public int minMoney;
@@ -131,6 +142,7 @@ public class EventTriggerCondition
     public string[] excludedEventIds;
     /// <summary>必须为真的全局标记列表</summary>
     public string[] requiredFlags;
+    public string[] anyRequiredFlags;
     /// <summary>必须为假的全局标记列表</summary>
     public string[] excludedFlags;
 

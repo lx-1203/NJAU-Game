@@ -252,6 +252,10 @@ public class DialogueUIBuilder : MonoBehaviour
         {
             text.font = font;
         }
+        if (FontManager.Instance != null)
+        {
+            FontManager.Instance.ApplyChineseFont(text);
+        }
 
         return text;
     }

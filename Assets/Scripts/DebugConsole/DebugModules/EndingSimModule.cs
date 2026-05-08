@@ -118,7 +118,7 @@ public class EndingSimModule : MonoBehaviour, IDebugModule
 
     private void CreateCurrentEndingSection(Transform parent)
     {
-        GameObject section = CreateSection(parent, 210f);
+        GameObject section = CreateSection(parent, 250f);
 
         CreateLabel(section.transform, "当前命中结局", 16f, TextGold, 28f);
         currentEndingText = CreateLabel(section.transform, string.Empty, 14f, TextWhite, 142f);
@@ -126,6 +126,7 @@ public class EndingSimModule : MonoBehaviour, IDebugModule
 
         resultHintText = CreateLabel(section.transform, "点击下方“进入结局”会直接走正式结局流程并回到标题界面。", 12f, TextGray, 24f);
         resultHintText.enableWordWrapping = true;
+        CreateButton(section.transform, "立即判定结局", ButtonGreen, 128f, 32f, TriggerEvaluatedEndingEvent);
     }
 
     private void CreateEditorSection(Transform parent)
@@ -503,6 +504,25 @@ public class EndingSimModule : MonoBehaviour, IDebugModule
         {
             DebugConsoleManager.Log("Ending", $"Failed to trigger specific ending: {ending.id}");
         }
+    }
+
+    private void TriggerEvaluatedEndingEvent()
+    {
+        if (EndingEvaluator.Instance == null)
+        {
+            if (resultHintText != null)
+                resultHintText.text = "EndingEvaluator 尚未就绪，无法判定新结局事件。";
+            return;
+        }
+
+        EndingId ending = EndingEvaluator.Instance.EvaluateEnding();
+        string eventId = EndingEvaluator.Instance.ConvertEndingToEventId(ending);
+
+        if (resultHintText != null)
+            resultHintText.text = $"新结局判定：{ending} -> {eventId}";
+
+        DebugConsoleManager.Log("Ending", $"Evaluate narrative ending: {ending} -> {eventId}");
+        EndingEvaluator.Instance.EvaluateAndTriggerEnding();
     }
 
     private void OnSearchChanged(string value)

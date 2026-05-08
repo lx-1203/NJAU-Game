@@ -4,20 +4,36 @@
       "id": "ME_001",
       "eventType": "MainStory",
       "title": "军训开始",
-      "description": "大一刚开学，操场上第一次集合的哨声把所有人都拽进了大学生活的第一道秩序里。",
+      "description": "游戏开端，建立玩家初始成长倾向。",
       "priority": 1,
       "isForced": true,
       "isRepeatable": false,
+      "actionPointCost": 0,
+      "moneyCost": 0,
+      "maxTriggersPerRound": 1,
       "trigger": {
         "year": 1,
         "semester": 1,
         "roundMin": 1,
         "roundMax": 1,
-        "specificRounds": [1],
+        "specificRounds": [
+          1
+        ],
         "attributeConditions": [],
+        "requiredRoute": "",
+        "requiredLockedRoute": "",
+        "minResearchTendency": 0,
+        "minCivilServiceTendency": 0,
+        "minStartupTendency": 0,
+        "minEducationTendency": 0,
+        "minEmploymentTendency": 0,
+        "minConfusedTendency": 0,
+        "minRouteProgress": 0,
         "minMoney": 0,
         "maxMoney": 0,
         "affinityConditions": [],
+        "romanceConditions": [],
+        "clubConditions": [],
         "requiredEventIds": [],
         "excludedEventIds": [],
         "requiredFlags": [],
@@ -25,22 +41,17 @@
         "minDarkness": 0,
         "triggerBehavior": "",
         "triggerChance": 1,
+        "requiredLocationId": "",
+        "requiredLocationIds": [],
         "phase": "RoundStart"
       },
       "dialogues": [
         {
-          "speaker": "教官",
-          "lines": [
-            "从今天起，站姿、队列、作息，全都要重新学。",
-            "你们要先学会在太阳底下把自己站稳。"
-          ],
-          "portraitId": ""
-        },
-        {
           "speaker": "旁白",
           "lines": [
-            "操场边缘的热浪一层层往上翻，鞋底很快就烫得发麻。",
-            "你意识到，大学生活并不是从课堂开始，而是从你打算用什么姿态迎接第一场消耗开始。"
+            "录取通知书寄到的那个夏天，高中的倒计时终于停下。",
+            "你拖着行李来到南京农业大学，一切都显得新鲜又不真实。",
+            "军训集合哨声响起，大学生活的第一课开始了。"
           ],
           "portraitId": ""
         }
@@ -51,10 +62,42 @@
           "actionPointCost": 0,
           "moneyCost": 0,
           "effects": [
-            { "type": "attribute", "target": "体魄", "value": 5, "description": "体魄 +5" },
-            { "type": "attribute", "target": "压力", "value": 8, "description": "压力 +8" },
-            { "type": "attribute", "target": "领导力", "value": 2, "description": "领导力 +2" },
-            { "type": "flag", "target": "military_training_diligent", "value": 1, "description": "留下认真训练的印象" }
+            {
+              "type": "attribute",
+              "target": "Physique",
+              "value": 5,
+              "description": "体魄 +5"
+            },
+            {
+              "type": "attribute",
+              "target": "Stress",
+              "value": 8,
+              "description": "压力 +8"
+            },
+            {
+              "type": "attribute",
+              "target": "Leadership",
+              "value": 2,
+              "description": "领导力 +2"
+            },
+            {
+              "type": "tendency",
+              "target": "research",
+              "value": 2,
+              "description": "研究倾向 +2"
+            },
+            {
+              "type": "tendency",
+              "target": "civil",
+              "value": 2,
+              "description": "公职倾向 +2"
+            },
+            {
+              "type": "flag",
+              "target": "military_training_diligent",
+              "value": 1,
+              "description": "military_training_diligent"
+            }
           ],
           "triggerEventId": "",
           "showConditions": []
@@ -64,9 +107,30 @@
           "actionPointCost": 0,
           "moneyCost": 0,
           "effects": [
-            { "type": "attribute", "target": "心情", "value": 5, "description": "心情 +5" },
-            { "type": "attribute", "target": "压力", "value": -5, "description": "压力 -5" },
-            { "type": "flag", "target": "military_training_slack", "value": 1, "description": "留下偷懒的痕迹" }
+            {
+              "type": "attribute",
+              "target": "Mood",
+              "value": 5,
+              "description": "心情 +5"
+            },
+            {
+              "type": "attribute",
+              "target": "Stress",
+              "value": -5,
+              "description": "压力 -5"
+            },
+            {
+              "type": "tendency",
+              "target": "confused",
+              "value": 2,
+              "description": "迷茫倾向 +2"
+            },
+            {
+              "type": "flag",
+              "target": "military_training_slack",
+              "value": 1,
+              "description": "military_training_slack"
+            }
           ],
           "triggerEventId": "",
           "showConditions": []
@@ -76,10 +140,69 @@
           "actionPointCost": 0,
           "moneyCost": 0,
           "effects": [
-            { "type": "attribute", "target": "魅力", "value": 3, "description": "魅力 +3" },
-            { "type": "attribute", "target": "领导力", "value": 2, "description": "领导力 +2" },
-            { "type": "attribute", "target": "压力", "value": 4, "description": "压力 +4" },
-            { "type": "flag", "target": "military_training_helper", "value": 1, "description": "留下照顾同学的印象" }
+            {
+              "type": "attribute",
+              "target": "Charm",
+              "value": 3,
+              "description": "魅力 +3"
+            },
+            {
+              "type": "attribute",
+              "target": "Leadership",
+              "value": 2,
+              "description": "领导力 +2"
+            },
+            {
+              "type": "attribute",
+              "target": "Stress",
+              "value": 4,
+              "description": "压力 +4"
+            },
+            {
+              "type": "tendency",
+              "target": "education",
+              "value": 3,
+              "description": "教育倾向 +3"
+            },
+            {
+              "type": "flag",
+              "target": "military_training_helper",
+              "value": 1,
+              "description": "military_training_helper"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "主动帮教官维持队列",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "attribute",
+              "target": "Leadership",
+              "value": 5,
+              "description": "领导力 +5"
+            },
+            {
+              "type": "attribute",
+              "target": "Stress",
+              "value": 5,
+              "description": "压力 +5"
+            },
+            {
+              "type": "tendency",
+              "target": "civil",
+              "value": 4,
+              "description": "公职倾向 +4"
+            },
+            {
+              "type": "flag",
+              "target": "military_training_leader",
+              "value": 1,
+              "description": "military_training_leader"
+            }
           ],
           "triggerEventId": "",
           "showConditions": []
@@ -88,58 +211,69 @@
       "defaultEffects": [],
       "chainEventIds": [],
       "presentation": {
-        "sceneKey": "freshman_training_opening",
-        "sceneDisplayName": "军训操场",
-        "locationId": "Playground",
+        "sceneKey": "me_001",
+        "sceneDisplayName": "军训开始",
+        "locationId": "",
         "backgroundResourcePath": "",
         "protagonistPortraitResourcePath": "",
         "npcPortraitResourcePath": "",
-        "backgroundSlotName": "BG_Freshman_Training_Ground",
-        "protagonistSlotName": "PC_Freshman_Training_Default",
-        "npcSlotName": "NPC_Instructor_Training_Default"
+        "backgroundSlotName": "",
+        "protagonistSlotName": "",
+        "npcSlotName": ""
       }
     },
     {
       "id": "ME_002",
       "eventType": "MainStory",
       "title": "班委竞选",
-      "description": "军训刚过去，班级秩序和人际站位开始重新洗牌，第一次公开亮相的时刻到了。",
+      "description": "建立组织能力、人际风格和公职路线早期伏笔。",
       "priority": 1,
       "isForced": true,
       "isRepeatable": false,
+      "actionPointCost": 0,
+      "moneyCost": 0,
+      "maxTriggersPerRound": 1,
       "trigger": {
         "year": 1,
         "semester": 1,
         "roundMin": 2,
         "roundMax": 2,
-        "specificRounds": [2],
+        "specificRounds": [
+          2
+        ],
         "attributeConditions": [],
+        "requiredRoute": "",
+        "requiredLockedRoute": "",
+        "minResearchTendency": 0,
+        "minCivilServiceTendency": 0,
+        "minStartupTendency": 0,
+        "minEducationTendency": 0,
+        "minEmploymentTendency": 0,
+        "minConfusedTendency": 0,
+        "minRouteProgress": 0,
         "minMoney": 0,
         "maxMoney": 0,
         "affinityConditions": [],
-        "requiredEventIds": [ "ME_001" ],
+        "romanceConditions": [],
+        "clubConditions": [],
+        "requiredEventIds": [],
         "excludedEventIds": [],
         "requiredFlags": [],
         "excludedFlags": [],
         "minDarkness": 0,
         "triggerBehavior": "",
         "triggerChance": 1,
+        "requiredLocationId": "",
+        "requiredLocationIds": [],
         "phase": "RoundStart"
       },
       "dialogues": [
         {
-          "speaker": "班主任",
-          "lines": [
-            "军训结束了，接下来班级事务也该有人站出来负责。",
-            "愿意承担事情的同学，现在可以上台。"
-          ],
-          "portraitId": ""
-        },
-        {
           "speaker": "旁白",
           "lines": [
-            "一瞬间，教室里安静得只剩纸张翻动的声音。",
-            "这不是一次简单的举手，而是别人将如何记住你。"
+            "军训结束后，教室第一次真正安静下来。",
+            "班主任宣布班委竞选开始。",
+            "这是你第一次选择要不要在新集体里被别人记住。"
           ],
           "portraitId": ""
         }
@@ -150,10 +284,36 @@
           "actionPointCost": 0,
           "moneyCost": 0,
           "effects": [
-            { "type": "attribute", "target": "领导力", "value": 5, "description": "领导力 +5" },
-            { "type": "attribute", "target": "魅力", "value": 3, "description": "魅力 +3" },
-            { "type": "attribute", "target": "压力", "value": 6, "description": "压力 +6" },
-            { "type": "flag", "target": "class_committee_candidate", "value": 1, "description": "进入竞选路径" }
+            {
+              "type": "attribute",
+              "target": "Leadership",
+              "value": 5,
+              "description": "领导力 +5"
+            },
+            {
+              "type": "attribute",
+              "target": "Charm",
+              "value": 3,
+              "description": "魅力 +3"
+            },
+            {
+              "type": "attribute",
+              "target": "Stress",
+              "value": 6,
+              "description": "压力 +6"
+            },
+            {
+              "type": "tendency",
+              "target": "civil",
+              "value": 5,
+              "description": "公职倾向 +5"
+            },
+            {
+              "type": "flag",
+              "target": "class_committee_candidate",
+              "value": 1,
+              "description": "class_committee_candidate"
+            }
           ],
           "triggerEventId": "",
           "showConditions": []
@@ -163,9 +323,30 @@
           "actionPointCost": 0,
           "moneyCost": 0,
           "effects": [
-            { "type": "attribute", "target": "心情", "value": 3, "description": "心情 +3" },
-            { "type": "attribute", "target": "压力", "value": -2, "description": "压力 -2" },
-            { "type": "flag", "target": "class_committee_low_profile", "value": 1, "description": "保持低调观望" }
+            {
+              "type": "attribute",
+              "target": "Mood",
+              "value": 3,
+              "description": "心情 +3"
+            },
+            {
+              "type": "attribute",
+              "target": "Stress",
+              "value": -2,
+              "description": "压力 -2"
+            },
+            {
+              "type": "tendency",
+              "target": "confused",
+              "value": 1,
+              "description": "迷茫倾向 +1"
+            },
+            {
+              "type": "flag",
+              "target": "class_committee_low_profile",
+              "value": 1,
+              "description": "class_committee_low_profile"
+            }
           ],
           "triggerEventId": "",
           "showConditions": []
@@ -175,9 +356,63 @@
           "actionPointCost": 0,
           "moneyCost": 0,
           "effects": [
-            { "type": "attribute", "target": "魅力", "value": 2, "description": "魅力 +2" },
-            { "type": "attribute", "target": "领导力", "value": 2, "description": "领导力 +2" },
-            { "type": "flag", "target": "class_committee_helper", "value": 1, "description": "进入拉票协助路径" }
+            {
+              "type": "attribute",
+              "target": "Charm",
+              "value": 2,
+              "description": "魅力 +2"
+            },
+            {
+              "type": "attribute",
+              "target": "Leadership",
+              "value": 2,
+              "description": "领导力 +2"
+            },
+            {
+              "type": "tendency",
+              "target": "employment",
+              "value": 2,
+              "description": "就业倾向 +2"
+            },
+            {
+              "type": "flag",
+              "target": "class_committee_helper",
+              "value": 1,
+              "description": "class_committee_helper"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "临时上台，说出真实想法",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "attribute",
+              "target": "Charm",
+              "value": 4,
+              "description": "魅力 +4"
+            },
+            {
+              "type": "attribute",
+              "target": "Stress",
+              "value": 3,
+              "description": "压力 +3"
+            },
+            {
+              "type": "tendency",
+              "target": "education",
+              "value": 2,
+              "description": "教育倾向 +2"
+            },
+            {
+              "type": "flag",
+              "target": "class_committee_sincere_speech",
+              "value": 1,
+              "description": "class_committee_sincere_speech"
+            }
           ],
           "triggerEventId": "",
           "showConditions": []
@@ -186,185 +421,229 @@
       "defaultEffects": [],
       "chainEventIds": [],
       "presentation": {
-        "sceneKey": "freshman_class_committee",
-        "sceneDisplayName": "新生班会",
-        "locationId": "TeachingBuilding",
+        "sceneKey": "me_002",
+        "sceneDisplayName": "班委竞选",
+        "locationId": "",
         "backgroundResourcePath": "",
         "protagonistPortraitResourcePath": "",
         "npcPortraitResourcePath": "",
-        "backgroundSlotName": "BG_Freshman_Classroom_Meeting",
-        "protagonistSlotName": "PC_ClassCampaign_Default",
-        "npcSlotName": "NPC_HomeroomTeacher_Default"
+        "backgroundSlotName": "",
+        "protagonistSlotName": "",
+        "npcSlotName": ""
       }
     },
     {
       "id": "ME_003",
       "eventType": "MainStory",
-      "title": "第一次期中备考",
-      "description": "第一轮真正意义上的考试周压过来了，整个宿舍楼都在用不同方式对抗焦虑。",
+      "title": "第一次大学生活选择",
+      "description": "确定大一前期生活重心。",
       "priority": 1,
       "isForced": true,
       "isRepeatable": false,
+      "actionPointCost": 0,
+      "moneyCost": 0,
+      "maxTriggersPerRound": 1,
       "trigger": {
         "year": 1,
         "semester": 1,
         "roundMin": 3,
         "roundMax": 3,
-        "specificRounds": [3],
+        "specificRounds": [
+          3
+        ],
         "attributeConditions": [],
+        "requiredRoute": "",
+        "requiredLockedRoute": "",
+        "minResearchTendency": 0,
+        "minCivilServiceTendency": 0,
+        "minStartupTendency": 0,
+        "minEducationTendency": 0,
+        "minEmploymentTendency": 0,
+        "minConfusedTendency": 0,
+        "minRouteProgress": 0,
         "minMoney": 0,
         "maxMoney": 0,
         "affinityConditions": [],
-        "requiredEventIds": [ "ME_002" ],
+        "romanceConditions": [],
+        "clubConditions": [],
+        "requiredEventIds": [],
         "excludedEventIds": [],
         "requiredFlags": [],
         "excludedFlags": [],
         "minDarkness": 0,
         "triggerBehavior": "",
         "triggerChance": 1,
-        "phase": "RoundStart"
-      },
-      "dialogues": [
-        {
-          "speaker": "室友",
-          "lines": [
-            "图书馆今晚肯定爆满，再不定个方向就真的来不及了。",
-            "你到底准备靠硬刷、抱团，还是赌临场状态？"
-          ],
-          "portraitId": ""
-        }
-      ],
-      "choices": [
-        {
-          "text": "一个人沉下心硬刷题",
-          "actionPointCost": 0,
-          "moneyCost": 0,
-          "effects": [
-            { "type": "attribute", "target": "学力", "value": 6, "description": "学力 +6" },
-            { "type": "attribute", "target": "压力", "value": 6, "description": "压力 +6" },
-            { "type": "flag", "target": "midterm_focus_track", "value": 1, "description": "进入硬刷备考路线" }
-          ],
-          "triggerEventId": "",
-          "showConditions": []
-        },
-        {
-          "text": "拉几个人一起互相监督",
-          "actionPointCost": 0,
-          "moneyCost": 0,
-          "effects": [
-            { "type": "attribute", "target": "学力", "value": 3, "description": "学力 +3" },
-            { "type": "attribute", "target": "魅力", "value": 2, "description": "魅力 +2" },
-            { "type": "attribute", "target": "压力", "value": 2, "description": "压力 +2" },
-            { "type": "flag", "target": "midterm_group_track", "value": 1, "description": "进入抱团备考路线" }
-          ],
-          "triggerEventId": "",
-          "showConditions": []
-        },
-        {
-          "text": "先稳住心态，靠临场发挥",
-          "actionPointCost": 0,
-          "moneyCost": 0,
-          "effects": [
-            { "type": "attribute", "target": "心情", "value": 5, "description": "心情 +5" },
-            { "type": "attribute", "target": "幸运", "value": 3, "description": "幸运 +3" },
-            { "type": "flag", "target": "midterm_lucky_track", "value": 1, "description": "进入临场发挥路线" }
-          ],
-          "triggerEventId": "",
-          "showConditions": []
-        }
-      ],
-      "defaultEffects": [],
-      "chainEventIds": [],
-      "presentation": {
-        "sceneKey": "freshman_midterm_prep",
-        "sceneDisplayName": "考前夜",
-        "locationId": "Dormitory",
-        "backgroundResourcePath": "",
-        "protagonistPortraitResourcePath": "",
-        "npcPortraitResourcePath": "",
-        "backgroundSlotName": "BG_Dormitory_PreExam_Night",
-        "protagonistSlotName": "PC_PreExam_Default",
-        "npcSlotName": "NPC_Roommate_PreExam_Default"
-      }
-    },
-    {
-      "id": "ME_004",
-      "eventType": "MainStory",
-      "title": "期末压顶",
-      "description": "刚从期中缓过一口气，学期真正决定绩点和去向的那场硬仗已经站到面前。",
-      "priority": 1,
-      "isForced": true,
-      "isRepeatable": false,
-      "trigger": {
-        "year": 1,
-        "semester": 1,
-        "roundMin": 5,
-        "roundMax": 5,
-        "specificRounds": [5],
-        "attributeConditions": [],
-        "minMoney": 0,
-        "maxMoney": 0,
-        "affinityConditions": [],
-        "requiredEventIds": [ "ME_003" ],
-        "excludedEventIds": [],
-        "requiredFlags": [],
-        "excludedFlags": [],
-        "minDarkness": 0,
-        "triggerBehavior": "",
-        "triggerChance": 1,
+        "requiredLocationId": "",
+        "requiredLocationIds": [],
         "phase": "RoundStart"
       },
       "dialogues": [
         {
           "speaker": "旁白",
           "lines": [
-            "期中只是预演，真正会写进绩点和未来履历里的，是眼前这一轮期末。",
-            "你能感觉到，大家说话都比开学时更谨慎，也更像是在给自己找一个交代。"
-          ],
-          "portraitId": ""
-        },
-        {
-          "speaker": "室友",
-          "lines": [
-            "这回真不是随便糊弄就能过去了。",
-            "你是准备狠狠干绩点，还是先把状态和证书一起稳住？"
+            "真正的大学生活开始变得具体起来。",
+            "大学不像高中那样有一条明确的轨道。",
+            "自由意味着你要自己决定接下来怎么走。"
           ],
           "portraitId": ""
         }
       ],
       "choices": [
         {
-          "text": "补短板冲绩点",
+          "text": "认真上课，先把成绩稳住",
           "actionPointCost": 0,
           "moneyCost": 0,
           "effects": [
-            { "type": "attribute", "target": "学力", "value": 5, "description": "学力 +5" },
-            { "type": "attribute", "target": "压力", "value": 5, "description": "压力 +5" },
-            { "type": "flag", "target": "final_exam_cram_track", "value": 1, "description": "进入冲绩点路线" }
+            {
+              "type": "attribute",
+              "target": "Study",
+              "value": 10,
+              "description": "学力 +10"
+            },
+            {
+              "type": "tendency",
+              "target": "research",
+              "value": 4,
+              "description": "研究倾向 +4"
+            },
+            {
+              "type": "flag",
+              "target": "freshman_focus_study",
+              "value": 1,
+              "description": "freshman_focus_study"
+            }
           ],
           "triggerEventId": "",
           "showConditions": []
         },
         {
-          "text": "先稳作息和状态",
+          "text": "多和同学室友相处",
           "actionPointCost": 0,
           "moneyCost": 0,
           "effects": [
-            { "type": "attribute", "target": "心情", "value": 4, "description": "心情 +4" },
-            { "type": "attribute", "target": "压力", "value": -3, "description": "压力 -3" },
-            { "type": "flag", "target": "final_exam_balance_track", "value": 1, "description": "进入状态平衡路线" }
+            {
+              "type": "attribute",
+              "target": "Charm",
+              "value": 10,
+              "description": "魅力 +10"
+            },
+            {
+              "type": "tendency",
+              "target": "employment",
+              "value": 3,
+              "description": "就业倾向 +3"
+            },
+            {
+              "type": "flag",
+              "target": "freshman_focus_social",
+              "value": 1,
+              "description": "freshman_focus_social"
+            }
           ],
           "triggerEventId": "",
           "showConditions": []
         },
         {
-          "text": "课程和证书一起压过去",
+          "text": "加入学生组织或社团",
           "actionPointCost": 0,
           "moneyCost": 0,
           "effects": [
-            { "type": "attribute", "target": "领导力", "value": 2, "description": "领导力 +2" },
-            { "type": "attribute", "target": "压力", "value": 3, "description": "压力 +3" },
-            { "type": "flag", "target": "final_exam_certificate_track", "value": 1, "description": "进入课程证书双线推进路线" }
+            {
+              "type": "attribute",
+              "target": "Leadership",
+              "value": 6,
+              "description": "领导力 +6"
+            },
+            {
+              "type": "attribute",
+              "target": "Charm",
+              "value": 3,
+              "description": "魅力 +3"
+            },
+            {
+              "type": "tendency",
+              "target": "civil",
+              "value": 3,
+              "description": "公职倾向 +3"
+            },
+            {
+              "type": "flag",
+              "target": "freshman_focus_organization",
+              "value": 1,
+              "description": "freshman_focus_organization"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "尝试参加比赛或项目",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "attribute",
+              "target": "Physique",
+              "value": 6,
+              "description": "体魄 +6"
+            },
+            {
+              "type": "attribute",
+              "target": "Study",
+              "value": 2,
+              "description": "学力 +2"
+            },
+            {
+              "type": "tendency",
+              "target": "startup",
+              "value": 3,
+              "description": "创业倾向 +3"
+            },
+            {
+              "type": "tendency",
+              "target": "employment",
+              "value": 2,
+              "description": "就业倾向 +2"
+            },
+            {
+              "type": "flag",
+              "target": "freshman_focus_practice",
+              "value": 1,
+              "description": "freshman_focus_practice"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "先放松一下，不想太快紧张",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "attribute",
+              "target": "Mood",
+              "value": 5,
+              "description": "心情 +5"
+            },
+            {
+              "type": "attribute",
+              "target": "Stress",
+              "value": 4,
+              "description": "压力 +4"
+            },
+            {
+              "type": "tendency",
+              "target": "confused",
+              "value": 4,
+              "description": "迷茫倾向 +4"
+            },
+            {
+              "type": "flag",
+              "target": "freshman_focus_relax",
+              "value": 1,
+              "description": "freshman_focus_relax"
+            }
           ],
           "triggerEventId": "",
           "showConditions": []
@@ -373,15 +652,4202 @@
       "defaultEffects": [],
       "chainEventIds": [],
       "presentation": {
-        "sceneKey": "freshman_final_prep",
-        "sceneDisplayName": "期末前夜",
-        "locationId": "Dormitory",
+        "sceneKey": "me_003",
+        "sceneDisplayName": "第一次大学生活选择",
+        "locationId": "",
         "backgroundResourcePath": "",
         "protagonistPortraitResourcePath": "",
         "npcPortraitResourcePath": "",
-        "backgroundSlotName": "BG_Dormitory_FinalPrep_Night",
-        "protagonistSlotName": "PC_FinalPrep_Default",
-        "npcSlotName": "NPC_Roommate_FinalPrep_Default"
+        "backgroundSlotName": "",
+        "protagonistSlotName": "",
+        "npcSlotName": ""
+      }
+    },
+    {
+      "id": "ME_004",
+      "eventType": "MainStory",
+      "title": "第一次期末考试",
+      "description": "判断玩家是否适应大学学习。",
+      "priority": 1,
+      "isForced": true,
+      "isRepeatable": false,
+      "actionPointCost": 0,
+      "moneyCost": 0,
+      "maxTriggersPerRound": 1,
+      "trigger": {
+        "year": 1,
+        "semester": 1,
+        "roundMin": 5,
+        "roundMax": 5,
+        "specificRounds": [
+          5
+        ],
+        "attributeConditions": [],
+        "requiredRoute": "",
+        "requiredLockedRoute": "",
+        "minResearchTendency": 0,
+        "minCivilServiceTendency": 0,
+        "minStartupTendency": 0,
+        "minEducationTendency": 0,
+        "minEmploymentTendency": 0,
+        "minConfusedTendency": 0,
+        "minRouteProgress": 0,
+        "minMoney": 0,
+        "maxMoney": 0,
+        "affinityConditions": [],
+        "romanceConditions": [],
+        "clubConditions": [],
+        "requiredEventIds": [],
+        "excludedEventIds": [],
+        "requiredFlags": [],
+        "excludedFlags": [],
+        "minDarkness": 0,
+        "triggerBehavior": "",
+        "triggerChance": 1,
+        "requiredLocationId": "",
+        "requiredLocationIds": [],
+        "phase": "RoundStart"
+      },
+      "dialogues": [
+        {
+          "speaker": "旁白",
+          "lines": [
+            "期末考试周来了。",
+            "大学的第一个学期快要结束了。",
+            "这一次，没有人替你交出答案。"
+          ],
+          "portraitId": ""
+        }
+      ],
+      "choices": [
+        {
+          "text": "下学期继续保持节奏",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "attribute",
+              "target": "Study",
+              "value": 3,
+              "description": "学力 +3"
+            },
+            {
+              "type": "tendency",
+              "target": "research",
+              "value": 2,
+              "description": "研究倾向 +2"
+            },
+            {
+              "type": "flag",
+              "target": "exam_reflection_keep_pace",
+              "value": 1,
+              "description": "exam_reflection_keep_pace"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "我需要换一种学习方法",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "attribute",
+              "target": "Study",
+              "value": 2,
+              "description": "学力 +2"
+            },
+            {
+              "type": "attribute",
+              "target": "Stress",
+              "value": -2,
+              "description": "压力 -2"
+            },
+            {
+              "type": "flag",
+              "target": "exam_reflection_adjust_method",
+              "value": 1,
+              "description": "exam_reflection_adjust_method"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "这学期有点累，下学期想平衡一点",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "attribute",
+              "target": "Mood",
+              "value": 3,
+              "description": "心情 +3"
+            },
+            {
+              "type": "attribute",
+              "target": "Charm",
+              "value": 1,
+              "description": "魅力 +1"
+            },
+            {
+              "type": "flag",
+              "target": "exam_reflection_balance",
+              "value": 1,
+              "description": "exam_reflection_balance"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "反正已经过去了，先不想了",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "attribute",
+              "target": "Mood",
+              "value": 2,
+              "description": "心情 +2"
+            },
+            {
+              "type": "tendency",
+              "target": "confused",
+              "value": 2,
+              "description": "迷茫倾向 +2"
+            },
+            {
+              "type": "flag",
+              "target": "exam_reflection_ignore",
+              "value": 1,
+              "description": "exam_reflection_ignore"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        }
+      ],
+      "defaultEffects": [],
+      "chainEventIds": [],
+      "presentation": {
+        "sceneKey": "me_004",
+        "sceneDisplayName": "第一次期末考试",
+        "locationId": "",
+        "backgroundResourcePath": "",
+        "protagonistPortraitResourcePath": "",
+        "npcPortraitResourcePath": "",
+        "backgroundSlotName": "",
+        "protagonistSlotName": "",
+        "npcSlotName": ""
+      }
+    },
+    {
+      "id": "ME_005",
+      "eventType": "MainStory",
+      "title": "新学期目标",
+      "description": "给玩家一次状态修正机会。",
+      "priority": 1,
+      "isForced": true,
+      "isRepeatable": false,
+      "actionPointCost": 0,
+      "moneyCost": 0,
+      "maxTriggersPerRound": 1,
+      "trigger": {
+        "year": 1,
+        "semester": 2,
+        "roundMin": 1,
+        "roundMax": 1,
+        "specificRounds": [
+          1
+        ],
+        "attributeConditions": [],
+        "requiredRoute": "",
+        "requiredLockedRoute": "",
+        "minResearchTendency": 0,
+        "minCivilServiceTendency": 0,
+        "minStartupTendency": 0,
+        "minEducationTendency": 0,
+        "minEmploymentTendency": 0,
+        "minConfusedTendency": 0,
+        "minRouteProgress": 0,
+        "minMoney": 0,
+        "maxMoney": 0,
+        "affinityConditions": [],
+        "romanceConditions": [],
+        "clubConditions": [],
+        "requiredEventIds": [],
+        "excludedEventIds": [],
+        "requiredFlags": [],
+        "excludedFlags": [],
+        "minDarkness": 0,
+        "triggerBehavior": "",
+        "triggerChance": 1,
+        "requiredLocationId": "",
+        "requiredLocationIds": [],
+        "phase": "RoundStart"
+      },
+      "dialogues": [
+        {
+          "speaker": "旁白",
+          "lines": [
+            "寒假结束后，你重新回到校园。",
+            "大一上学期已经过去。",
+            "接下来，要不要换一种过法？"
+          ],
+          "portraitId": ""
+        }
+      ],
+      "choices": [
+        {
+          "text": "补上上学期没学好的内容",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "attribute",
+              "target": "Study",
+              "value": 6,
+              "description": "学力 +6"
+            },
+            {
+              "type": "attribute",
+              "target": "Stress",
+              "value": -2,
+              "description": "压力 -2"
+            },
+            {
+              "type": "tendency",
+              "target": "research",
+              "value": 2,
+              "description": "研究倾向 +2"
+            },
+            {
+              "type": "flag",
+              "target": "spring_goal_study",
+              "value": 1,
+              "description": "spring_goal_study"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "多参加集体活动",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "attribute",
+              "target": "Charm",
+              "value": 5,
+              "description": "魅力 +5"
+            },
+            {
+              "type": "attribute",
+              "target": "Mood",
+              "value": 3,
+              "description": "心情 +3"
+            },
+            {
+              "type": "tendency",
+              "target": "employment",
+              "value": 2,
+              "description": "就业倾向 +2"
+            },
+            {
+              "type": "flag",
+              "target": "spring_goal_social",
+              "value": 1,
+              "description": "spring_goal_social"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "尝试加入组织或社团",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "attribute",
+              "target": "Leadership",
+              "value": 5,
+              "description": "领导力 +5"
+            },
+            {
+              "type": "tendency",
+              "target": "civil",
+              "value": 2,
+              "description": "公职倾向 +2"
+            },
+            {
+              "type": "flag",
+              "target": "spring_goal_organization",
+              "value": 1,
+              "description": "spring_goal_organization"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "让生活规律一点",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "attribute",
+              "target": "Mood",
+              "value": 5,
+              "description": "心情 +5"
+            },
+            {
+              "type": "attribute",
+              "target": "Stress",
+              "value": -3,
+              "description": "压力 -3"
+            },
+            {
+              "type": "flag",
+              "target": "spring_goal_routine",
+              "value": 1,
+              "description": "spring_goal_routine"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "继续随缘",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "attribute",
+              "target": "Mood",
+              "value": 2,
+              "description": "心情 +2"
+            },
+            {
+              "type": "attribute",
+              "target": "Stress",
+              "value": 3,
+              "description": "压力 +3"
+            },
+            {
+              "type": "tendency",
+              "target": "confused",
+              "value": 3,
+              "description": "迷茫倾向 +3"
+            },
+            {
+              "type": "flag",
+              "target": "spring_goal_casual",
+              "value": 1,
+              "description": "spring_goal_casual"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        }
+      ],
+      "defaultEffects": [],
+      "chainEventIds": [],
+      "presentation": {
+        "sceneKey": "me_005",
+        "sceneDisplayName": "新学期目标",
+        "locationId": "",
+        "backgroundResourcePath": "",
+        "protagonistPortraitResourcePath": "",
+        "npcPortraitResourcePath": "",
+        "backgroundSlotName": "",
+        "protagonistSlotName": "",
+        "npcSlotName": ""
+      }
+    },
+    {
+      "id": "ME_006",
+      "eventType": "MainStory",
+      "title": "百团大战",
+      "description": "选择校园归属方向。",
+      "priority": 1,
+      "isForced": true,
+      "isRepeatable": false,
+      "actionPointCost": 0,
+      "moneyCost": 0,
+      "maxTriggersPerRound": 1,
+      "trigger": {
+        "year": 1,
+        "semester": 2,
+        "roundMin": 2,
+        "roundMax": 2,
+        "specificRounds": [
+          2
+        ],
+        "attributeConditions": [],
+        "requiredRoute": "",
+        "requiredLockedRoute": "",
+        "minResearchTendency": 0,
+        "minCivilServiceTendency": 0,
+        "minStartupTendency": 0,
+        "minEducationTendency": 0,
+        "minEmploymentTendency": 0,
+        "minConfusedTendency": 0,
+        "minRouteProgress": 0,
+        "minMoney": 0,
+        "maxMoney": 0,
+        "affinityConditions": [],
+        "romanceConditions": [],
+        "clubConditions": [],
+        "requiredEventIds": [],
+        "excludedEventIds": [],
+        "requiredFlags": [],
+        "excludedFlags": [],
+        "minDarkness": 0,
+        "triggerBehavior": "",
+        "triggerChance": 1,
+        "requiredLocationId": "",
+        "requiredLocationIds": [],
+        "phase": "RoundStart"
+      },
+      "dialogues": [
+        {
+          "speaker": "旁白",
+          "lines": [
+            "春天之后，校园重新热闹起来。",
+            "操场边摆满了社团招新的摊位。",
+            "你也许可以找到一件愿意投入时间的事。"
+          ],
+          "portraitId": ""
+        }
+      ],
+      "choices": [
+        {
+          "text": "加入学术科技类社团",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "attribute",
+              "target": "Study",
+              "value": 4,
+              "description": "学力 +4"
+            },
+            {
+              "type": "attribute",
+              "target": "Physique",
+              "value": 4,
+              "description": "体魄 +4"
+            },
+            {
+              "type": "tendency",
+              "target": "research",
+              "value": 4,
+              "description": "研究倾向 +4"
+            },
+            {
+              "type": "flag",
+              "target": "club_academic",
+              "value": 1,
+              "description": "club_academic"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "加入学生会或团学组织",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "attribute",
+              "target": "Leadership",
+              "value": 8,
+              "description": "领导力 +8"
+            },
+            {
+              "type": "attribute",
+              "target": "Charm",
+              "value": 2,
+              "description": "魅力 +2"
+            },
+            {
+              "type": "tendency",
+              "target": "civil",
+              "value": 5,
+              "description": "公职倾向 +5"
+            },
+            {
+              "type": "flag",
+              "target": "club_student_union",
+              "value": 1,
+              "description": "club_student_union"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "加入文艺兴趣类社团",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "attribute",
+              "target": "Mood",
+              "value": 6,
+              "description": "心情 +6"
+            },
+            {
+              "type": "attribute",
+              "target": "Charm",
+              "value": 3,
+              "description": "魅力 +3"
+            },
+            {
+              "type": "tendency",
+              "target": "education",
+              "value": 2,
+              "description": "教育倾向 +2"
+            },
+            {
+              "type": "flag",
+              "target": "club_art",
+              "value": 1,
+              "description": "club_art"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "加入志愿服务组织",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "attribute",
+              "target": "Charm",
+              "value": 4,
+              "description": "魅力 +4"
+            },
+            {
+              "type": "attribute",
+              "target": "Mood",
+              "value": 3,
+              "description": "心情 +3"
+            },
+            {
+              "type": "tendency",
+              "target": "education",
+              "value": 6,
+              "description": "教育倾向 +6"
+            },
+            {
+              "type": "flag",
+              "target": "club_volunteer",
+              "value": 1,
+              "description": "club_volunteer"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "暂时不加入",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "attribute",
+              "target": "Mood",
+              "value": 3,
+              "description": "心情 +3"
+            },
+            {
+              "type": "attribute",
+              "target": "Stress",
+              "value": 3,
+              "description": "压力 +3"
+            },
+            {
+              "type": "tendency",
+              "target": "confused",
+              "value": 3,
+              "description": "迷茫倾向 +3"
+            },
+            {
+              "type": "flag",
+              "target": "club_none",
+              "value": 1,
+              "description": "club_none"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        }
+      ],
+      "defaultEffects": [],
+      "chainEventIds": [],
+      "presentation": {
+        "sceneKey": "me_006",
+        "sceneDisplayName": "百团大战",
+        "locationId": "",
+        "backgroundResourcePath": "",
+        "protagonistPortraitResourcePath": "",
+        "npcPortraitResourcePath": "",
+        "backgroundSlotName": "",
+        "protagonistSlotName": "",
+        "npcSlotName": ""
+      }
+    },
+    {
+      "id": "ME_007",
+      "eventType": "MainStory",
+      "title": "春季运动会",
+      "description": "增强班级归属感。",
+      "priority": 1,
+      "isForced": true,
+      "isRepeatable": false,
+      "actionPointCost": 0,
+      "moneyCost": 0,
+      "maxTriggersPerRound": 1,
+      "trigger": {
+        "year": 1,
+        "semester": 2,
+        "roundMin": 4,
+        "roundMax": 4,
+        "specificRounds": [
+          4
+        ],
+        "attributeConditions": [],
+        "requiredRoute": "",
+        "requiredLockedRoute": "",
+        "minResearchTendency": 0,
+        "minCivilServiceTendency": 0,
+        "minStartupTendency": 0,
+        "minEducationTendency": 0,
+        "minEmploymentTendency": 0,
+        "minConfusedTendency": 0,
+        "minRouteProgress": 0,
+        "minMoney": 0,
+        "maxMoney": 0,
+        "affinityConditions": [],
+        "romanceConditions": [],
+        "clubConditions": [],
+        "requiredEventIds": [],
+        "excludedEventIds": [],
+        "requiredFlags": [],
+        "excludedFlags": [],
+        "minDarkness": 0,
+        "triggerBehavior": "",
+        "triggerChance": 1,
+        "requiredLocationId": "",
+        "requiredLocationIds": [],
+        "phase": "RoundStart"
+      },
+      "dialogues": [
+        {
+          "speaker": "旁白",
+          "lines": [
+            "春季运动会开始了。",
+            "你可以选择站到跑道上，也可以成为支撑别人的人。"
+          ],
+          "portraitId": ""
+        }
+      ],
+      "choices": [
+        {
+          "text": "报名参加长跑",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "attribute",
+              "target": "Physique",
+              "value": 8,
+              "description": "体魄 +8"
+            },
+            {
+              "type": "attribute",
+              "target": "Stress",
+              "value": 4,
+              "description": "压力 +4"
+            },
+            {
+              "type": "attribute",
+              "target": "Mood",
+              "value": 2,
+              "description": "心情 +2"
+            },
+            {
+              "type": "flag",
+              "target": "sports_meet_runner",
+              "value": 1,
+              "description": "sports_meet_runner"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "负责后勤和送水",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "attribute",
+              "target": "Charm",
+              "value": 5,
+              "description": "魅力 +5"
+            },
+            {
+              "type": "attribute",
+              "target": "Leadership",
+              "value": 3,
+              "description": "领导力 +3"
+            },
+            {
+              "type": "tendency",
+              "target": "education",
+              "value": 2,
+              "description": "教育倾向 +2"
+            },
+            {
+              "type": "flag",
+              "target": "sports_meet_support",
+              "value": 1,
+              "description": "sports_meet_support"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "在看台为同学加油",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "attribute",
+              "target": "Mood",
+              "value": 5,
+              "description": "心情 +5"
+            },
+            {
+              "type": "attribute",
+              "target": "Charm",
+              "value": 2,
+              "description": "魅力 +2"
+            },
+            {
+              "type": "flag",
+              "target": "sports_meet_audience",
+              "value": 1,
+              "description": "sports_meet_audience"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "帮班级组织秩序",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "attribute",
+              "target": "Leadership",
+              "value": 6,
+              "description": "领导力 +6"
+            },
+            {
+              "type": "attribute",
+              "target": "Stress",
+              "value": 3,
+              "description": "压力 +3"
+            },
+            {
+              "type": "tendency",
+              "target": "civil",
+              "value": 3,
+              "description": "公职倾向 +3"
+            },
+            {
+              "type": "flag",
+              "target": "sports_meet_organizer",
+              "value": 1,
+              "description": "sports_meet_organizer"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "借口不参加",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "attribute",
+              "target": "Mood",
+              "value": 2,
+              "description": "心情 +2"
+            },
+            {
+              "type": "attribute",
+              "target": "Charm",
+              "value": -2,
+              "description": "魅力 -2"
+            },
+            {
+              "type": "tendency",
+              "target": "confused",
+              "value": 2,
+              "description": "迷茫倾向 +2"
+            },
+            {
+              "type": "flag",
+              "target": "sports_meet_absent",
+              "value": 1,
+              "description": "sports_meet_absent"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        }
+      ],
+      "defaultEffects": [],
+      "chainEventIds": [],
+      "presentation": {
+        "sceneKey": "me_007",
+        "sceneDisplayName": "春季运动会",
+        "locationId": "",
+        "backgroundResourcePath": "",
+        "protagonistPortraitResourcePath": "",
+        "npcPortraitResourcePath": "",
+        "backgroundSlotName": "",
+        "protagonistSlotName": "",
+        "npcSlotName": ""
+      }
+    },
+    {
+      "id": "ME_008",
+      "eventType": "MainStory",
+      "title": "大一总结",
+      "description": "总结第一年，形成第一次成长评价。",
+      "priority": 1,
+      "isForced": true,
+      "isRepeatable": false,
+      "actionPointCost": 0,
+      "moneyCost": 0,
+      "maxTriggersPerRound": 1,
+      "trigger": {
+        "year": 1,
+        "semester": 2,
+        "roundMin": 5,
+        "roundMax": 5,
+        "specificRounds": [
+          5
+        ],
+        "attributeConditions": [],
+        "requiredRoute": "",
+        "requiredLockedRoute": "",
+        "minResearchTendency": 0,
+        "minCivilServiceTendency": 0,
+        "minStartupTendency": 0,
+        "minEducationTendency": 0,
+        "minEmploymentTendency": 0,
+        "minConfusedTendency": 0,
+        "minRouteProgress": 0,
+        "minMoney": 0,
+        "maxMoney": 0,
+        "affinityConditions": [],
+        "romanceConditions": [],
+        "clubConditions": [],
+        "requiredEventIds": [],
+        "excludedEventIds": [],
+        "requiredFlags": [],
+        "excludedFlags": [],
+        "minDarkness": 0,
+        "triggerBehavior": "",
+        "triggerChance": 1,
+        "requiredLocationId": "",
+        "requiredLocationIds": [],
+        "phase": "RoundStart"
+      },
+      "dialogues": [
+        {
+          "speaker": "旁白",
+          "lines": [
+            "大一结束的时候，你发现自己已经不像刚入学时那样陌生。",
+            "大学生活已经真正开始了。"
+          ],
+          "portraitId": ""
+        }
+      ],
+      "choices": [
+        {
+          "text": "学业上有了方向",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "tendency",
+              "target": "research",
+              "value": 3,
+              "description": "研究倾向 +3"
+            },
+            {
+              "type": "attribute",
+              "target": "Mood",
+              "value": 2,
+              "description": "心情 +2"
+            },
+            {
+              "type": "flag",
+              "target": "freshman_summary_academic",
+              "value": 1,
+              "description": "freshman_summary_academic"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "人际上更适应了",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "tendency",
+              "target": "employment",
+              "value": 2,
+              "description": "就业倾向 +2"
+            },
+            {
+              "type": "tendency",
+              "target": "education",
+              "value": 2,
+              "description": "教育倾向 +2"
+            },
+            {
+              "type": "attribute",
+              "target": "Mood",
+              "value": 2,
+              "description": "心情 +2"
+            },
+            {
+              "type": "flag",
+              "target": "freshman_summary_social",
+              "value": 1,
+              "description": "freshman_summary_social"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "承担事情让我成长",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "tendency",
+              "target": "civil",
+              "value": 4,
+              "description": "公职倾向 +4"
+            },
+            {
+              "type": "attribute",
+              "target": "Stress",
+              "value": 1,
+              "description": "压力 +1"
+            },
+            {
+              "type": "flag",
+              "target": "freshman_summary_leadership",
+              "value": 1,
+              "description": "freshman_summary_leadership"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "实践让我更有行动感",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "tendency",
+              "target": "startup",
+              "value": 3,
+              "description": "创业倾向 +3"
+            },
+            {
+              "type": "tendency",
+              "target": "employment",
+              "value": 2,
+              "description": "就业倾向 +2"
+            },
+            {
+              "type": "flag",
+              "target": "freshman_summary_practice",
+              "value": 1,
+              "description": "freshman_summary_practice"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "我仍然有些迷茫",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "attribute",
+              "target": "Stress",
+              "value": 2,
+              "description": "压力 +2"
+            },
+            {
+              "type": "tendency",
+              "target": "confused",
+              "value": 4,
+              "description": "迷茫倾向 +4"
+            },
+            {
+              "type": "flag",
+              "target": "freshman_summary_confused",
+              "value": 1,
+              "description": "freshman_summary_confused"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        }
+      ],
+      "defaultEffects": [],
+      "chainEventIds": [],
+      "presentation": {
+        "sceneKey": "me_008",
+        "sceneDisplayName": "大一总结",
+        "locationId": "",
+        "backgroundResourcePath": "",
+        "protagonistPortraitResourcePath": "",
+        "npcPortraitResourcePath": "",
+        "backgroundSlotName": "",
+        "protagonistSlotName": "",
+        "npcSlotName": ""
+      }
+    },
+    {
+      "id": "ME_009",
+      "eventType": "MainStory",
+      "title": "绩点排名公布",
+      "description": "第一次制造未来压力。",
+      "priority": 1,
+      "isForced": true,
+      "isRepeatable": false,
+      "actionPointCost": 0,
+      "moneyCost": 0,
+      "maxTriggersPerRound": 1,
+      "trigger": {
+        "year": 2,
+        "semester": 1,
+        "roundMin": 1,
+        "roundMax": 1,
+        "specificRounds": [
+          1
+        ],
+        "attributeConditions": [],
+        "requiredRoute": "",
+        "requiredLockedRoute": "",
+        "minResearchTendency": 0,
+        "minCivilServiceTendency": 0,
+        "minStartupTendency": 0,
+        "minEducationTendency": 0,
+        "minEmploymentTendency": 0,
+        "minConfusedTendency": 0,
+        "minRouteProgress": 0,
+        "minMoney": 0,
+        "maxMoney": 0,
+        "affinityConditions": [],
+        "romanceConditions": [],
+        "clubConditions": [],
+        "requiredEventIds": [],
+        "excludedEventIds": [],
+        "requiredFlags": [],
+        "excludedFlags": [],
+        "minDarkness": 0,
+        "triggerBehavior": "",
+        "triggerChance": 1,
+        "requiredLocationId": "",
+        "requiredLocationIds": [],
+        "phase": "RoundStart"
+      },
+      "dialogues": [
+        {
+          "speaker": "旁白",
+          "lines": [
+            "上一学年的成绩和排名陆续公布。",
+            "原来同样的一年，大家已经走出了不一样的距离。"
+          ],
+          "portraitId": ""
+        }
+      ],
+      "choices": [
+        {
+          "text": "提高绩点，争取更好的成绩",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "attribute",
+              "target": "Study",
+              "value": 8,
+              "description": "学力 +8"
+            },
+            {
+              "type": "tendency",
+              "target": "research",
+              "value": 5,
+              "description": "研究倾向 +5"
+            },
+            {
+              "type": "flag",
+              "target": "sophomore_goal_gpa",
+              "value": 1,
+              "description": "sophomore_goal_gpa"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "竞选班委或组织负责人",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "attribute",
+              "target": "Leadership",
+              "value": 8,
+              "description": "领导力 +8"
+            },
+            {
+              "type": "tendency",
+              "target": "civil",
+              "value": 5,
+              "description": "公职倾向 +5"
+            },
+            {
+              "type": "flag",
+              "target": "sophomore_goal_leadership",
+              "value": 1,
+              "description": "sophomore_goal_leadership"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "参加竞赛或项目",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "attribute",
+              "target": "Physique",
+              "value": 8,
+              "description": "体魄 +8"
+            },
+            {
+              "type": "tendency",
+              "target": "startup",
+              "value": 4,
+              "description": "创业倾向 +4"
+            },
+            {
+              "type": "tendency",
+              "target": "employment",
+              "value": 2,
+              "description": "就业倾向 +2"
+            },
+            {
+              "type": "flag",
+              "target": "sophomore_goal_competition",
+              "value": 1,
+              "description": "sophomore_goal_competition"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "多参加志愿和社会实践",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "attribute",
+              "target": "Charm",
+              "value": 4,
+              "description": "魅力 +4"
+            },
+            {
+              "type": "attribute",
+              "target": "Mood",
+              "value": 3,
+              "description": "心情 +3"
+            },
+            {
+              "type": "tendency",
+              "target": "education",
+              "value": 5,
+              "description": "教育倾向 +5"
+            },
+            {
+              "type": "flag",
+              "target": "sophomore_goal_volunteer",
+              "value": 1,
+              "description": "sophomore_goal_volunteer"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "我还是不确定自己想做什么",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "attribute",
+              "target": "Mood",
+              "value": 2,
+              "description": "心情 +2"
+            },
+            {
+              "type": "attribute",
+              "target": "Stress",
+              "value": 5,
+              "description": "压力 +5"
+            },
+            {
+              "type": "tendency",
+              "target": "confused",
+              "value": 5,
+              "description": "迷茫倾向 +5"
+            },
+            {
+              "type": "flag",
+              "target": "sophomore_goal_uncertain",
+              "value": 1,
+              "description": "sophomore_goal_uncertain"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        }
+      ],
+      "defaultEffects": [],
+      "chainEventIds": [],
+      "presentation": {
+        "sceneKey": "me_009",
+        "sceneDisplayName": "绩点排名公布",
+        "locationId": "",
+        "backgroundResourcePath": "",
+        "protagonistPortraitResourcePath": "",
+        "npcPortraitResourcePath": "",
+        "backgroundSlotName": "",
+        "protagonistSlotName": "",
+        "npcSlotName": ""
+      }
+    },
+    {
+      "id": "ME_010",
+      "eventType": "MainStory",
+      "title": "校园文化节",
+      "description": "强化兴趣、人际、组织方向。",
+      "priority": 1,
+      "isForced": true,
+      "isRepeatable": false,
+      "actionPointCost": 0,
+      "moneyCost": 0,
+      "maxTriggersPerRound": 1,
+      "trigger": {
+        "year": 2,
+        "semester": 1,
+        "roundMin": 3,
+        "roundMax": 3,
+        "specificRounds": [
+          3
+        ],
+        "attributeConditions": [],
+        "requiredRoute": "",
+        "requiredLockedRoute": "",
+        "minResearchTendency": 0,
+        "minCivilServiceTendency": 0,
+        "minStartupTendency": 0,
+        "minEducationTendency": 0,
+        "minEmploymentTendency": 0,
+        "minConfusedTendency": 0,
+        "minRouteProgress": 0,
+        "minMoney": 0,
+        "maxMoney": 0,
+        "affinityConditions": [],
+        "romanceConditions": [],
+        "clubConditions": [],
+        "requiredEventIds": [],
+        "excludedEventIds": [],
+        "requiredFlags": [],
+        "excludedFlags": [],
+        "minDarkness": 0,
+        "triggerBehavior": "",
+        "triggerChance": 1,
+        "requiredLocationId": "",
+        "requiredLocationIds": [],
+        "phase": "RoundStart"
+      },
+      "dialogues": [
+        {
+          "speaker": "旁白",
+          "lines": [
+            "校园文化节开始后，主干道两侧摆满了社团展台。",
+            "校园像是把所有可能性都摊开在你面前。"
+          ],
+          "portraitId": ""
+        }
+      ],
+      "choices": [
+        {
+          "text": "参加社团展示表演",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "attribute",
+              "target": "Charm",
+              "value": 6,
+              "description": "魅力 +6"
+            },
+            {
+              "type": "attribute",
+              "target": "Mood",
+              "value": 4,
+              "description": "心情 +4"
+            },
+            {
+              "type": "tendency",
+              "target": "employment",
+              "value": 2,
+              "description": "就业倾向 +2"
+            },
+            {
+              "type": "flag",
+              "target": "culture_festival_performer",
+              "value": 1,
+              "description": "culture_festival_performer"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "帮忙布置展台和流程",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "attribute",
+              "target": "Leadership",
+              "value": 5,
+              "description": "领导力 +5"
+            },
+            {
+              "type": "attribute",
+              "target": "Charm",
+              "value": 2,
+              "description": "魅力 +2"
+            },
+            {
+              "type": "tendency",
+              "target": "civil",
+              "value": 3,
+              "description": "公职倾向 +3"
+            },
+            {
+              "type": "flag",
+              "target": "culture_festival_staff",
+              "value": 1,
+              "description": "culture_festival_staff"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "参加读书会或文学活动",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "attribute",
+              "target": "Mood",
+              "value": 5,
+              "description": "心情 +5"
+            },
+            {
+              "type": "attribute",
+              "target": "Study",
+              "value": 2,
+              "description": "学力 +2"
+            },
+            {
+              "type": "tendency",
+              "target": "education",
+              "value": 2,
+              "description": "教育倾向 +2"
+            },
+            {
+              "type": "flag",
+              "target": "culture_festival_literature",
+              "value": 1,
+              "description": "culture_festival_literature"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "拍摄活动照片",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "attribute",
+              "target": "Charm",
+              "value": 3,
+              "description": "魅力 +3"
+            },
+            {
+              "type": "attribute",
+              "target": "Mood",
+              "value": 3,
+              "description": "心情 +3"
+            },
+            {
+              "type": "tendency",
+              "target": "employment",
+              "value": 1,
+              "description": "就业倾向 +1"
+            },
+            {
+              "type": "flag",
+              "target": "culture_festival_photography",
+              "value": 1,
+              "description": "culture_festival_photography"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "只随便逛逛",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "attribute",
+              "target": "Mood",
+              "value": 3,
+              "description": "心情 +3"
+            },
+            {
+              "type": "tendency",
+              "target": "confused",
+              "value": 1,
+              "description": "迷茫倾向 +1"
+            },
+            {
+              "type": "flag",
+              "target": "culture_festival_visitor",
+              "value": 1,
+              "description": "culture_festival_visitor"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        }
+      ],
+      "defaultEffects": [],
+      "chainEventIds": [],
+      "presentation": {
+        "sceneKey": "me_010",
+        "sceneDisplayName": "校园文化节",
+        "locationId": "",
+        "backgroundResourcePath": "",
+        "protagonistPortraitResourcePath": "",
+        "npcPortraitResourcePath": "",
+        "backgroundSlotName": "",
+        "protagonistSlotName": "",
+        "npcSlotName": ""
+      }
+    },
+    {
+      "id": "ME_011",
+      "eventType": "MainStory",
+      "title": "学科小竞赛",
+      "description": "学业、研究、实践路线伏笔。",
+      "priority": 1,
+      "isForced": true,
+      "isRepeatable": false,
+      "actionPointCost": 0,
+      "moneyCost": 0,
+      "maxTriggersPerRound": 1,
+      "trigger": {
+        "year": 2,
+        "semester": 1,
+        "roundMin": 5,
+        "roundMax": 5,
+        "specificRounds": [
+          5
+        ],
+        "attributeConditions": [],
+        "requiredRoute": "",
+        "requiredLockedRoute": "",
+        "minResearchTendency": 0,
+        "minCivilServiceTendency": 0,
+        "minStartupTendency": 0,
+        "minEducationTendency": 0,
+        "minEmploymentTendency": 0,
+        "minConfusedTendency": 0,
+        "minRouteProgress": 0,
+        "minMoney": 0,
+        "maxMoney": 0,
+        "affinityConditions": [],
+        "romanceConditions": [],
+        "clubConditions": [],
+        "requiredEventIds": [],
+        "excludedEventIds": [],
+        "requiredFlags": [],
+        "excludedFlags": [],
+        "minDarkness": 0,
+        "triggerBehavior": "",
+        "triggerChance": 1,
+        "requiredLocationId": "",
+        "requiredLocationIds": [],
+        "phase": "RoundStart"
+      },
+      "dialogues": [
+        {
+          "speaker": "旁白",
+          "lines": [
+            "学院发布了学科竞赛报名通知。",
+            "参加比赛意味着接下来几周会更忙。"
+          ],
+          "portraitId": ""
+        }
+      ],
+      "choices": [
+        {
+          "text": "主动报名并认真准备",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "attribute",
+              "target": "Study",
+              "value": 6,
+              "description": "学力 +6"
+            },
+            {
+              "type": "attribute",
+              "target": "Physique",
+              "value": 4,
+              "description": "体魄 +4"
+            },
+            {
+              "type": "attribute",
+              "target": "Stress",
+              "value": 4,
+              "description": "压力 +4"
+            },
+            {
+              "type": "tendency",
+              "target": "research",
+              "value": 5,
+              "description": "研究倾向 +5"
+            },
+            {
+              "type": "flag",
+              "target": "academic_competition_joined",
+              "value": 1,
+              "description": "academic_competition_joined"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "和顾景和组队",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "attribute",
+              "target": "Study",
+              "value": 5,
+              "description": "学力 +5"
+            },
+            {
+              "type": "attribute",
+              "target": "Charm",
+              "value": 2,
+              "description": "魅力 +2"
+            },
+            {
+              "type": "tendency",
+              "target": "research",
+              "value": 6,
+              "description": "研究倾向 +6"
+            },
+            {
+              "type": "flag",
+              "target": "academic_competition_with_gu",
+              "value": 1,
+              "description": "academic_competition_with_gu"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "只做小组中的辅助任务",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "attribute",
+              "target": "Study",
+              "value": 3,
+              "description": "学力 +3"
+            },
+            {
+              "type": "attribute",
+              "target": "Charm",
+              "value": 2,
+              "description": "魅力 +2"
+            },
+            {
+              "type": "tendency",
+              "target": "employment",
+              "value": 2,
+              "description": "就业倾向 +2"
+            },
+            {
+              "type": "flag",
+              "target": "academic_competition_support",
+              "value": 1,
+              "description": "academic_competition_support"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "担心影响课程而放弃",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "attribute",
+              "target": "Study",
+              "value": 2,
+              "description": "学力 +2"
+            },
+            {
+              "type": "attribute",
+              "target": "Mood",
+              "value": 2,
+              "description": "心情 +2"
+            },
+            {
+              "type": "flag",
+              "target": "academic_competition_skipped",
+              "value": 1,
+              "description": "academic_competition_skipped"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "报名后中途摆烂",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "attribute",
+              "target": "Stress",
+              "value": 5,
+              "description": "压力 +5"
+            },
+            {
+              "type": "attribute",
+              "target": "Charm",
+              "value": -3,
+              "description": "魅力 -3"
+            },
+            {
+              "type": "tendency",
+              "target": "confused",
+              "value": 3,
+              "description": "迷茫倾向 +3"
+            },
+            {
+              "type": "flag",
+              "target": "academic_competition_slack",
+              "value": 1,
+              "description": "academic_competition_slack"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        }
+      ],
+      "defaultEffects": [],
+      "chainEventIds": [],
+      "presentation": {
+        "sceneKey": "me_011",
+        "sceneDisplayName": "学科小竞赛",
+        "locationId": "",
+        "backgroundResourcePath": "",
+        "protagonistPortraitResourcePath": "",
+        "npcPortraitResourcePath": "",
+        "backgroundSlotName": "",
+        "protagonistSlotName": "",
+        "npcSlotName": ""
+      }
+    },
+    {
+      "id": "ME_012",
+      "eventType": "MainStory",
+      "title": "机会开始出现",
+      "description": "展示未来方向机会。",
+      "priority": 1,
+      "isForced": true,
+      "isRepeatable": false,
+      "actionPointCost": 0,
+      "moneyCost": 0,
+      "maxTriggersPerRound": 1,
+      "trigger": {
+        "year": 2,
+        "semester": 2,
+        "roundMin": 1,
+        "roundMax": 1,
+        "specificRounds": [
+          1
+        ],
+        "attributeConditions": [],
+        "requiredRoute": "",
+        "requiredLockedRoute": "",
+        "minResearchTendency": 0,
+        "minCivilServiceTendency": 0,
+        "minStartupTendency": 0,
+        "minEducationTendency": 0,
+        "minEmploymentTendency": 0,
+        "minConfusedTendency": 0,
+        "minRouteProgress": 0,
+        "minMoney": 0,
+        "maxMoney": 0,
+        "affinityConditions": [],
+        "romanceConditions": [],
+        "clubConditions": [],
+        "requiredEventIds": [],
+        "excludedEventIds": [],
+        "requiredFlags": [],
+        "excludedFlags": [],
+        "minDarkness": 0,
+        "triggerBehavior": "",
+        "triggerChance": 1,
+        "requiredLocationId": "",
+        "requiredLocationIds": [],
+        "phase": "RoundStart"
+      },
+      "dialogues": [
+        {
+          "speaker": "旁白",
+          "lines": [
+            "大二下学期开始后，机会突然多了起来。",
+            "科研、组织、创业、志愿、实习简历都推到你面前。"
+          ],
+          "portraitId": ""
+        }
+      ],
+      "choices": [
+        {
+          "text": "先了解科研项目",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "attribute",
+              "target": "Study",
+              "value": 2,
+              "description": "学力 +2"
+            },
+            {
+              "type": "tendency",
+              "target": "research",
+              "value": 2,
+              "description": "研究倾向 +2"
+            },
+            {
+              "type": "flag",
+              "target": "opportunity_notice_research",
+              "value": 1,
+              "description": "opportunity_notice_research"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "先了解学生组织换届",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "attribute",
+              "target": "Leadership",
+              "value": 2,
+              "description": "领导力 +2"
+            },
+            {
+              "type": "tendency",
+              "target": "civil",
+              "value": 2,
+              "description": "公职倾向 +2"
+            },
+            {
+              "type": "flag",
+              "target": "opportunity_notice_civil",
+              "value": 1,
+              "description": "opportunity_notice_civil"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "先了解创业比赛",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "attribute",
+              "target": "Physique",
+              "value": 2,
+              "description": "体魄 +2"
+            },
+            {
+              "type": "tendency",
+              "target": "startup",
+              "value": 2,
+              "description": "创业倾向 +2"
+            },
+            {
+              "type": "flag",
+              "target": "opportunity_notice_startup",
+              "value": 1,
+              "description": "opportunity_notice_startup"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "先了解志愿服务",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "attribute",
+              "target": "Charm",
+              "value": 2,
+              "description": "魅力 +2"
+            },
+            {
+              "type": "tendency",
+              "target": "education",
+              "value": 2,
+              "description": "教育倾向 +2"
+            },
+            {
+              "type": "flag",
+              "target": "opportunity_notice_education",
+              "value": 1,
+              "description": "opportunity_notice_education"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "先了解实习和简历",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "attribute",
+              "target": "Charm",
+              "value": 1,
+              "description": "魅力 +1"
+            },
+            {
+              "type": "attribute",
+              "target": "Physique",
+              "value": 2,
+              "description": "体魄 +2"
+            },
+            {
+              "type": "tendency",
+              "target": "employment",
+              "value": 2,
+              "description": "就业倾向 +2"
+            },
+            {
+              "type": "flag",
+              "target": "opportunity_notice_employment",
+              "value": 1,
+              "description": "opportunity_notice_employment"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        }
+      ],
+      "defaultEffects": [],
+      "chainEventIds": [],
+      "presentation": {
+        "sceneKey": "me_012",
+        "sceneDisplayName": "机会开始出现",
+        "locationId": "",
+        "backgroundResourcePath": "",
+        "protagonistPortraitResourcePath": "",
+        "npcPortraitResourcePath": "",
+        "backgroundSlotName": "",
+        "protagonistSlotName": "",
+        "npcSlotName": ""
+      }
+    },
+    {
+      "id": "ME_013",
+      "eventType": "MainStory",
+      "title": "方向机会选择",
+      "description": "第一次明显路线分化。",
+      "priority": 1,
+      "isForced": true,
+      "isRepeatable": false,
+      "actionPointCost": 0,
+      "moneyCost": 0,
+      "maxTriggersPerRound": 1,
+      "trigger": {
+        "year": 2,
+        "semester": 2,
+        "roundMin": 2,
+        "roundMax": 2,
+        "specificRounds": [
+          2
+        ],
+        "attributeConditions": [],
+        "requiredRoute": "",
+        "requiredLockedRoute": "",
+        "minResearchTendency": 0,
+        "minCivilServiceTendency": 0,
+        "minStartupTendency": 0,
+        "minEducationTendency": 0,
+        "minEmploymentTendency": 0,
+        "minConfusedTendency": 0,
+        "minRouteProgress": 0,
+        "minMoney": 0,
+        "maxMoney": 0,
+        "affinityConditions": [],
+        "romanceConditions": [],
+        "clubConditions": [],
+        "requiredEventIds": [],
+        "excludedEventIds": [],
+        "requiredFlags": [],
+        "excludedFlags": [],
+        "minDarkness": 0,
+        "triggerBehavior": "",
+        "triggerChance": 1,
+        "requiredLocationId": "",
+        "requiredLocationIds": [],
+        "phase": "RoundStart"
+      },
+      "dialogues": [
+        {
+          "speaker": "旁白",
+          "lines": [
+            "你面前摆着几种完全不同的选择。",
+            "每一种选择都不轻松。",
+            "但你知道，不能永远只站在原地看。"
+          ],
+          "portraitId": ""
+        }
+      ],
+      "choices": [
+        {
+          "text": "申请加入科研项目",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "attribute",
+              "target": "Study",
+              "value": 6,
+              "description": "学力 +6"
+            },
+            {
+              "type": "attribute",
+              "target": "Physique",
+              "value": 3,
+              "description": "体魄 +3"
+            },
+            {
+              "type": "tendency",
+              "target": "research",
+              "value": 8,
+              "description": "研究倾向 +8"
+            },
+            {
+              "type": "flag",
+              "target": "route_seed_research",
+              "value": 1,
+              "description": "route_seed_research"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "参加学生组织换届",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "attribute",
+              "target": "Leadership",
+              "value": 8,
+              "description": "领导力 +8"
+            },
+            {
+              "type": "attribute",
+              "target": "Charm",
+              "value": 3,
+              "description": "魅力 +3"
+            },
+            {
+              "type": "tendency",
+              "target": "civil",
+              "value": 8,
+              "description": "公职倾向 +8"
+            },
+            {
+              "type": "flag",
+              "target": "route_seed_civil",
+              "value": 1,
+              "description": "route_seed_civil"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "组队参加创新创业比赛",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "attribute",
+              "target": "Physique",
+              "value": 8,
+              "description": "体魄 +8"
+            },
+            {
+              "type": "attribute",
+              "target": "Charm",
+              "value": 3,
+              "description": "魅力 +3"
+            },
+            {
+              "type": "tendency",
+              "target": "startup",
+              "value": 8,
+              "description": "创业倾向 +8"
+            },
+            {
+              "type": "flag",
+              "target": "route_seed_startup",
+              "value": 1,
+              "description": "route_seed_startup"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "报名志愿服务或支教活动",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "attribute",
+              "target": "Charm",
+              "value": 5,
+              "description": "魅力 +5"
+            },
+            {
+              "type": "attribute",
+              "target": "Mood",
+              "value": 3,
+              "description": "心情 +3"
+            },
+            {
+              "type": "tendency",
+              "target": "education",
+              "value": 8,
+              "description": "教育倾向 +8"
+            },
+            {
+              "type": "flag",
+              "target": "route_seed_education",
+              "value": 1,
+              "description": "route_seed_education"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "开始准备简历和实习",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "attribute",
+              "target": "Physique",
+              "value": 6,
+              "description": "体魄 +6"
+            },
+            {
+              "type": "attribute",
+              "target": "Charm",
+              "value": 2,
+              "description": "魅力 +2"
+            },
+            {
+              "type": "tendency",
+              "target": "employment",
+              "value": 8,
+              "description": "就业倾向 +8"
+            },
+            {
+              "type": "flag",
+              "target": "route_seed_employment",
+              "value": 1,
+              "description": "route_seed_employment"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "暂时都不选",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "attribute",
+              "target": "Mood",
+              "value": 3,
+              "description": "心情 +3"
+            },
+            {
+              "type": "attribute",
+              "target": "Stress",
+              "value": 6,
+              "description": "压力 +6"
+            },
+            {
+              "type": "tendency",
+              "target": "confused",
+              "value": 6,
+              "description": "迷茫倾向 +6"
+            },
+            {
+              "type": "flag",
+              "target": "route_seed_confused",
+              "value": 1,
+              "description": "route_seed_confused"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        }
+      ],
+      "defaultEffects": [],
+      "chainEventIds": [],
+      "presentation": {
+        "sceneKey": "me_013",
+        "sceneDisplayName": "方向机会选择",
+        "locationId": "",
+        "backgroundResourcePath": "",
+        "protagonistPortraitResourcePath": "",
+        "npcPortraitResourcePath": "",
+        "backgroundSlotName": "",
+        "protagonistSlotName": "",
+        "npcSlotName": ""
+      }
+    },
+    {
+      "id": "ME_014",
+      "eventType": "MainStory",
+      "title": "第一次方向任务",
+      "description": "根据 ME_013 的选择体验第一次方向任务。",
+      "priority": 1,
+      "isForced": true,
+      "isRepeatable": false,
+      "actionPointCost": 0,
+      "moneyCost": 0,
+      "maxTriggersPerRound": 1,
+      "trigger": {
+        "year": 2,
+        "semester": 2,
+        "roundMin": 3,
+        "roundMax": 3,
+        "specificRounds": [
+          3
+        ],
+        "attributeConditions": [],
+        "requiredRoute": "",
+        "requiredLockedRoute": "",
+        "minResearchTendency": 0,
+        "minCivilServiceTendency": 0,
+        "minStartupTendency": 0,
+        "minEducationTendency": 0,
+        "minEmploymentTendency": 0,
+        "minConfusedTendency": 0,
+        "minRouteProgress": 0,
+        "minMoney": 0,
+        "maxMoney": 0,
+        "affinityConditions": [],
+        "romanceConditions": [],
+        "clubConditions": [],
+        "requiredEventIds": [],
+        "excludedEventIds": [],
+        "requiredFlags": [],
+        "excludedFlags": [],
+        "minDarkness": 0,
+        "triggerBehavior": "",
+        "triggerChance": 1,
+        "requiredLocationId": "",
+        "requiredLocationIds": [],
+        "phase": "RoundStart"
+      },
+      "dialogues": [
+        {
+          "speaker": "旁白",
+          "lines": [
+            "做出选择之后，你发现真正的开始并不像想象中那样热血。",
+            "方向是你开始做第一件具体的事之后，才慢慢变得清楚的。"
+          ],
+          "portraitId": ""
+        }
+      ],
+      "choices": [
+        {
+          "text": "完成第一次方向任务",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "route_progress",
+              "target": "",
+              "value": 5,
+              "description": "路线进度 +5"
+            },
+            {
+              "type": "flag",
+              "target": "first_research_task",
+              "value": 1,
+              "description": "first_research_task"
+            },
+            {
+              "type": "flag",
+              "target": "first_organization_task",
+              "value": 1,
+              "description": "first_organization_task"
+            },
+            {
+              "type": "flag",
+              "target": "first_startup_task",
+              "value": 1,
+              "description": "first_startup_task"
+            },
+            {
+              "type": "flag",
+              "target": "first_education_task",
+              "value": 1,
+              "description": "first_education_task"
+            },
+            {
+              "type": "flag",
+              "target": "first_resume_task",
+              "value": 1,
+              "description": "first_resume_task"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        }
+      ],
+      "defaultEffects": [],
+      "chainEventIds": [],
+      "presentation": {
+        "sceneKey": "me_014",
+        "sceneDisplayName": "第一次方向任务",
+        "locationId": "",
+        "backgroundResourcePath": "",
+        "protagonistPortraitResourcePath": "",
+        "npcPortraitResourcePath": "",
+        "backgroundSlotName": "",
+        "protagonistSlotName": "",
+        "npcSlotName": ""
+      }
+    },
+    {
+      "id": "ME_015",
+      "eventType": "MainStory",
+      "title": "你到底想成为什么样的人",
+      "description": "大二总结，大三路线选择前的预告。",
+      "priority": 1,
+      "isForced": true,
+      "isRepeatable": false,
+      "actionPointCost": 0,
+      "moneyCost": 0,
+      "maxTriggersPerRound": 1,
+      "trigger": {
+        "year": 2,
+        "semester": 2,
+        "roundMin": 5,
+        "roundMax": 5,
+        "specificRounds": [
+          5
+        ],
+        "attributeConditions": [],
+        "requiredRoute": "",
+        "requiredLockedRoute": "",
+        "minResearchTendency": 0,
+        "minCivilServiceTendency": 0,
+        "minStartupTendency": 0,
+        "minEducationTendency": 0,
+        "minEmploymentTendency": 0,
+        "minConfusedTendency": 0,
+        "minRouteProgress": 0,
+        "minMoney": 0,
+        "maxMoney": 0,
+        "affinityConditions": [],
+        "romanceConditions": [],
+        "clubConditions": [],
+        "requiredEventIds": [],
+        "excludedEventIds": [],
+        "requiredFlags": [],
+        "excludedFlags": [],
+        "minDarkness": 0,
+        "triggerBehavior": "",
+        "triggerChance": 1,
+        "requiredLocationId": "",
+        "requiredLocationIds": [],
+        "phase": "RoundStart"
+      },
+      "dialogues": [
+        {
+          "speaker": "旁白",
+          "lines": [
+            "大二结束的时候，你发现大学已经不再只是新鲜感。",
+            "很多选择正在一点点把你推向某个方向。"
+          ],
+          "portraitId": ""
+        }
+      ],
+      "choices": [
+        {
+          "text": "记住这次提问",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "flag",
+              "target": "direction_hint_research",
+              "value": 1,
+              "description": "direction_hint_research"
+            },
+            {
+              "type": "flag",
+              "target": "direction_hint_civil",
+              "value": 1,
+              "description": "direction_hint_civil"
+            },
+            {
+              "type": "flag",
+              "target": "direction_hint_startup",
+              "value": 1,
+              "description": "direction_hint_startup"
+            },
+            {
+              "type": "flag",
+              "target": "direction_hint_education",
+              "value": 1,
+              "description": "direction_hint_education"
+            },
+            {
+              "type": "flag",
+              "target": "direction_hint_employment",
+              "value": 1,
+              "description": "direction_hint_employment"
+            },
+            {
+              "type": "flag",
+              "target": "direction_hint_confused",
+              "value": 1,
+              "description": "direction_hint_confused"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        }
+      ],
+      "defaultEffects": [],
+      "chainEventIds": [],
+      "presentation": {
+        "sceneKey": "me_015",
+        "sceneDisplayName": "你到底想成为什么样的人",
+        "locationId": "",
+        "backgroundResourcePath": "",
+        "protagonistPortraitResourcePath": "",
+        "npcPortraitResourcePath": "",
+        "backgroundSlotName": "",
+        "protagonistSlotName": "",
+        "npcSlotName": ""
+      }
+    },
+    {
+      "id": "ME_016",
+      "eventType": "MainStory",
+      "title": "未来规划会议",
+      "description": "正式选择主路线。",
+      "priority": 1,
+      "isForced": true,
+      "isRepeatable": false,
+      "actionPointCost": 0,
+      "moneyCost": 0,
+      "maxTriggersPerRound": 1,
+      "trigger": {
+        "year": 3,
+        "semester": 1,
+        "roundMin": 1,
+        "roundMax": 1,
+        "specificRounds": [
+          1
+        ],
+        "attributeConditions": [],
+        "requiredRoute": "",
+        "requiredLockedRoute": "",
+        "minResearchTendency": 0,
+        "minCivilServiceTendency": 0,
+        "minStartupTendency": 0,
+        "minEducationTendency": 0,
+        "minEmploymentTendency": 0,
+        "minConfusedTendency": 0,
+        "minRouteProgress": 0,
+        "minMoney": 0,
+        "maxMoney": 0,
+        "affinityConditions": [],
+        "romanceConditions": [],
+        "clubConditions": [],
+        "requiredEventIds": [],
+        "excludedEventIds": [],
+        "requiredFlags": [],
+        "excludedFlags": [],
+        "minDarkness": 0,
+        "triggerBehavior": "",
+        "triggerChance": 1,
+        "requiredLocationId": "",
+        "requiredLocationIds": [],
+        "phase": "RoundStart"
+      },
+      "dialogues": [
+        {
+          "speaker": "旁白",
+          "lines": [
+            "大三开学后的第一次年级会议，未来第一次真正站到了你面前。",
+            "考研、考公、就业、创业、教师资格证，每一条路都需要提前准备。"
+          ],
+          "portraitId": ""
+        }
+      ],
+      "choices": [
+        {
+          "text": "我要准备考研",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "route",
+              "target": "GraduateExam",
+              "value": 1,
+              "description": "进入GraduateExam路线"
+            },
+            {
+              "type": "tendency",
+              "target": "research",
+              "value": 8,
+              "description": "研究倾向 +8"
+            },
+            {
+              "type": "attribute",
+              "target": "Stress",
+              "value": 3,
+              "description": "压力 +3"
+            },
+            {
+              "type": "flag",
+              "target": "route_graduate_exam",
+              "value": 1,
+              "description": "route_graduate_exam"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "我要准备考公或考编",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "route",
+              "target": "CivilService",
+              "value": 1,
+              "description": "进入CivilService路线"
+            },
+            {
+              "type": "tendency",
+              "target": "civil",
+              "value": 8,
+              "description": "公职倾向 +8"
+            },
+            {
+              "type": "attribute",
+              "target": "Stress",
+              "value": 3,
+              "description": "压力 +3"
+            },
+            {
+              "type": "flag",
+              "target": "route_civil_service",
+              "value": 1,
+              "description": "route_civil_service"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "我要继续做项目，尝试创业",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "route",
+              "target": "Startup",
+              "value": 1,
+              "description": "进入Startup路线"
+            },
+            {
+              "type": "tendency",
+              "target": "startup",
+              "value": 8,
+              "description": "创业倾向 +8"
+            },
+            {
+              "type": "attribute",
+              "target": "Stress",
+              "value": 4,
+              "description": "压力 +4"
+            },
+            {
+              "type": "flag",
+              "target": "route_startup",
+              "value": 1,
+              "description": "route_startup"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "我想从事教育相关工作",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "route",
+              "target": "Education",
+              "value": 1,
+              "description": "进入Education路线"
+            },
+            {
+              "type": "tendency",
+              "target": "education",
+              "value": 8,
+              "description": "教育倾向 +8"
+            },
+            {
+              "type": "attribute",
+              "target": "Mood",
+              "value": 2,
+              "description": "心情 +2"
+            },
+            {
+              "type": "flag",
+              "target": "route_education",
+              "value": 1,
+              "description": "route_education"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "我想找实习，准备就业",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "route",
+              "target": "Employment",
+              "value": 1,
+              "description": "进入Employment路线"
+            },
+            {
+              "type": "tendency",
+              "target": "employment",
+              "value": 8,
+              "description": "就业倾向 +8"
+            },
+            {
+              "type": "attribute",
+              "target": "Stress",
+              "value": 2,
+              "description": "压力 +2"
+            },
+            {
+              "type": "flag",
+              "target": "route_employment",
+              "value": 1,
+              "description": "route_employment"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "我还没有想好",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "route",
+              "target": "Confused",
+              "value": 1,
+              "description": "进入Confused路线"
+            },
+            {
+              "type": "attribute",
+              "target": "Stress",
+              "value": 5,
+              "description": "压力 +5"
+            },
+            {
+              "type": "tendency",
+              "target": "confused",
+              "value": 8,
+              "description": "迷茫倾向 +8"
+            },
+            {
+              "type": "flag",
+              "target": "route_confused",
+              "value": 1,
+              "description": "route_confused"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        }
+      ],
+      "defaultEffects": [],
+      "chainEventIds": [],
+      "presentation": {
+        "sceneKey": "me_016",
+        "sceneDisplayName": "未来规划会议",
+        "locationId": "",
+        "backgroundResourcePath": "",
+        "protagonistPortraitResourcePath": "",
+        "npcPortraitResourcePath": "",
+        "backgroundSlotName": "",
+        "protagonistSlotName": "",
+        "npcSlotName": ""
+      }
+    },
+    {
+      "id": "ME_017",
+      "eventType": "MainStory",
+      "title": "路线目标确认",
+      "description": "明确当前路线目标。",
+      "priority": 1,
+      "isForced": true,
+      "isRepeatable": false,
+      "actionPointCost": 0,
+      "moneyCost": 0,
+      "maxTriggersPerRound": 1,
+      "trigger": {
+        "year": 3,
+        "semester": 2,
+        "roundMin": 1,
+        "roundMax": 1,
+        "specificRounds": [
+          1
+        ],
+        "attributeConditions": [],
+        "requiredRoute": "",
+        "requiredLockedRoute": "",
+        "minResearchTendency": 0,
+        "minCivilServiceTendency": 0,
+        "minStartupTendency": 0,
+        "minEducationTendency": 0,
+        "minEmploymentTendency": 0,
+        "minConfusedTendency": 0,
+        "minRouteProgress": 0,
+        "minMoney": 0,
+        "maxMoney": 0,
+        "affinityConditions": [],
+        "romanceConditions": [],
+        "clubConditions": [],
+        "requiredEventIds": [],
+        "excludedEventIds": [],
+        "requiredFlags": [],
+        "excludedFlags": [],
+        "minDarkness": 0,
+        "triggerBehavior": "",
+        "triggerChance": 1,
+        "requiredLocationId": "",
+        "requiredLocationIds": [],
+        "phase": "RoundStart"
+      },
+      "dialogues": [
+        {
+          "speaker": "旁白",
+          "lines": [
+            "大三下学期开始后，很多事情变得更具体了。",
+            "选择一条路并不难，难的是愿不愿意继续往前走。"
+          ],
+          "portraitId": ""
+        }
+      ],
+      "choices": [
+        {
+          "text": "确认考研路线",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "lock_route",
+              "target": "GraduateExam",
+              "value": 1,
+              "description": "锁定GraduateExam路线"
+            },
+            {
+              "type": "route_progress",
+              "target": "",
+              "value": 10,
+              "description": "路线进度 +10"
+            },
+            {
+              "type": "flag",
+              "target": "route_goal_graduate_confirmed",
+              "value": 1,
+              "description": "route_goal_graduate_confirmed"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "确认考公考编路线",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "lock_route",
+              "target": "CivilService",
+              "value": 1,
+              "description": "锁定CivilService路线"
+            },
+            {
+              "type": "route_progress",
+              "target": "",
+              "value": 10,
+              "description": "路线进度 +10"
+            },
+            {
+              "type": "flag",
+              "target": "route_goal_civil_confirmed",
+              "value": 1,
+              "description": "route_goal_civil_confirmed"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "确认创业路线",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "lock_route",
+              "target": "Startup",
+              "value": 1,
+              "description": "锁定Startup路线"
+            },
+            {
+              "type": "route_progress",
+              "target": "",
+              "value": 10,
+              "description": "路线进度 +10"
+            },
+            {
+              "type": "flag",
+              "target": "route_goal_startup_confirmed",
+              "value": 1,
+              "description": "route_goal_startup_confirmed"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "确认教育路线",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "lock_route",
+              "target": "Education",
+              "value": 1,
+              "description": "锁定Education路线"
+            },
+            {
+              "type": "route_progress",
+              "target": "",
+              "value": 10,
+              "description": "路线进度 +10"
+            },
+            {
+              "type": "flag",
+              "target": "route_goal_education_confirmed",
+              "value": 1,
+              "description": "route_goal_education_confirmed"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "确认就业路线",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "lock_route",
+              "target": "Employment",
+              "value": 1,
+              "description": "锁定Employment路线"
+            },
+            {
+              "type": "route_progress",
+              "target": "",
+              "value": 10,
+              "description": "路线进度 +10"
+            },
+            {
+              "type": "flag",
+              "target": "route_goal_employment_confirmed",
+              "value": 1,
+              "description": "route_goal_employment_confirmed"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "确认暂时迷茫",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "lock_route",
+              "target": "Confused",
+              "value": 1,
+              "description": "锁定Confused路线"
+            },
+            {
+              "type": "route_progress",
+              "target": "",
+              "value": 3,
+              "description": "路线进度 +3"
+            },
+            {
+              "type": "flag",
+              "target": "route_goal_confused_confirmed",
+              "value": 1,
+              "description": "route_goal_confused_confirmed"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        }
+      ],
+      "defaultEffects": [],
+      "chainEventIds": [],
+      "presentation": {
+        "sceneKey": "me_017",
+        "sceneDisplayName": "路线目标确认",
+        "locationId": "",
+        "backgroundResourcePath": "",
+        "protagonistPortraitResourcePath": "",
+        "npcPortraitResourcePath": "",
+        "backgroundSlotName": "",
+        "protagonistSlotName": "",
+        "npcSlotName": ""
+      }
+    },
+    {
+      "id": "CHECK_002",
+      "eventType": "MainStory",
+      "title": "大三结束路线锁定",
+      "description": "大三结束时，根据你的选择、倾向和状态锁定毕业前的主要路线。",
+      "priority": 1,
+      "isForced": true,
+      "isRepeatable": false,
+      "actionPointCost": 0,
+      "moneyCost": 0,
+      "maxTriggersPerRound": 1,
+      "trigger": {
+        "year": 3,
+        "semester": 2,
+        "roundMin": 5,
+        "roundMax": 5,
+        "specificRounds": [
+          5
+        ],
+        "attributeConditions": [],
+        "requiredRoute": "",
+        "requiredLockedRoute": "",
+        "minResearchTendency": 0,
+        "minCivilServiceTendency": 0,
+        "minStartupTendency": 0,
+        "minEducationTendency": 0,
+        "minEmploymentTendency": 0,
+        "minConfusedTendency": 0,
+        "minRouteProgress": 0,
+        "minMoney": 0,
+        "maxMoney": 0,
+        "affinityConditions": [],
+        "romanceConditions": [],
+        "clubConditions": [],
+        "requiredEventIds": [],
+        "excludedEventIds": [],
+        "requiredFlags": [],
+        "anyRequiredFlags": [],
+        "excludedFlags": [
+          "locked_route_GraduateExam",
+          "locked_route_CivilService",
+          "locked_route_Startup",
+          "locked_route_Education",
+          "locked_route_Employment",
+          "locked_route_Confused",
+          "locked_route_Balanced"
+        ],
+        "minDarkness": 0,
+        "triggerBehavior": "",
+        "triggerChance": 1,
+        "requiredLocationId": "",
+        "requiredLocationIds": [],
+        "phase": "RoundEnd"
+      },
+      "dialogues": [
+        {
+          "speaker": "旁白",
+          "lines": [
+            "大三结束的时候，很多选择已经不再只是想法。",
+            "这一年之后，你需要带着已经形成的方向，走进最后的毕业阶段。",
+            "你停下来，重新看了一眼自己这三年来留下的痕迹。"
+          ],
+          "portraitId": ""
+        }
+      ],
+      "choices": [
+        {
+          "text": "确认我的毕业前路线",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "flag",
+              "target": "route_lock_checkpoint_seen",
+              "value": 1,
+              "description": "已完成路线锁定检查"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        }
+      ],
+      "defaultEffects": [],
+      "chainEventIds": [],
+      "presentation": {
+        "sceneKey": "check_002",
+        "sceneDisplayName": "大三结束路线锁定",
+        "locationId": "",
+        "backgroundResourcePath": "",
+        "protagonistPortraitResourcePath": "",
+        "npcPortraitResourcePath": "",
+        "backgroundSlotName": "",
+        "protagonistSlotName": "",
+        "npcSlotName": ""
+      }
+    },
+    {
+      "id": "ME_018",
+      "eventType": "MainStory",
+      "title": "毕业前的选择确认",
+      "description": "进入最终冲刺阶段。",
+      "priority": 1,
+      "isForced": true,
+      "isRepeatable": false,
+      "actionPointCost": 0,
+      "moneyCost": 0,
+      "maxTriggersPerRound": 1,
+      "trigger": {
+        "year": 4,
+        "semester": 1,
+        "roundMin": 1,
+        "roundMax": 1,
+        "specificRounds": [
+          1
+        ],
+        "attributeConditions": [],
+        "requiredRoute": "",
+        "requiredLockedRoute": "",
+        "minResearchTendency": 0,
+        "minCivilServiceTendency": 0,
+        "minStartupTendency": 0,
+        "minEducationTendency": 0,
+        "minEmploymentTendency": 0,
+        "minConfusedTendency": 0,
+        "minRouteProgress": 0,
+        "minMoney": 0,
+        "maxMoney": 0,
+        "affinityConditions": [],
+        "romanceConditions": [],
+        "clubConditions": [],
+        "requiredEventIds": [],
+        "excludedEventIds": [],
+        "requiredFlags": [],
+        "excludedFlags": [],
+        "minDarkness": 0,
+        "triggerBehavior": "",
+        "triggerChance": 1,
+        "requiredLocationId": "",
+        "requiredLocationIds": [],
+        "phase": "RoundStart"
+      },
+      "dialogues": [
+        {
+          "speaker": "旁白",
+          "lines": [
+            "大四开学的时候，校园看起来和往年没有太大区别。",
+            "可你知道，一切都不一样了。毕业已经不再是遥远的未来。"
+          ],
+          "portraitId": ""
+        }
+      ],
+      "choices": [
+        {
+          "text": "进入最终冲刺",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "route_progress",
+              "target": "",
+              "value": 10,
+              "description": "路线进度 +10"
+            },
+            {
+              "type": "attribute",
+              "target": "Stress",
+              "value": 4,
+              "description": "压力 +4"
+            },
+            {
+              "type": "flag",
+              "target": "final_year_graduate_start",
+              "value": 1,
+              "description": "final_year_graduate_start"
+            },
+            {
+              "type": "flag",
+              "target": "final_year_civil_start",
+              "value": 1,
+              "description": "final_year_civil_start"
+            },
+            {
+              "type": "flag",
+              "target": "final_year_startup_start",
+              "value": 1,
+              "description": "final_year_startup_start"
+            },
+            {
+              "type": "flag",
+              "target": "final_year_education_start",
+              "value": 1,
+              "description": "final_year_education_start"
+            },
+            {
+              "type": "flag",
+              "target": "final_year_employment_start",
+              "value": 1,
+              "description": "final_year_employment_start"
+            },
+            {
+              "type": "flag",
+              "target": "final_year_confused_start",
+              "value": 1,
+              "description": "final_year_confused_start"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        }
+      ],
+      "defaultEffects": [],
+      "chainEventIds": [],
+      "presentation": {
+        "sceneKey": "me_018",
+        "sceneDisplayName": "毕业前的选择确认",
+        "locationId": "",
+        "backgroundResourcePath": "",
+        "protagonistPortraitResourcePath": "",
+        "npcPortraitResourcePath": "",
+        "backgroundSlotName": "",
+        "protagonistSlotName": "",
+        "npcSlotName": ""
+      }
+    },
+    {
+      "id": "ME_019",
+      "eventType": "MainStory",
+      "title": "冲刺前夜",
+      "description": "心态检验，影响最终结果。",
+      "priority": 1,
+      "isForced": true,
+      "isRepeatable": false,
+      "actionPointCost": 0,
+      "moneyCost": 0,
+      "maxTriggersPerRound": 1,
+      "trigger": {
+        "year": 4,
+        "semester": 1,
+        "roundMin": 4,
+        "roundMax": 4,
+        "specificRounds": [
+          4
+        ],
+        "attributeConditions": [],
+        "requiredRoute": "",
+        "requiredLockedRoute": "",
+        "minResearchTendency": 0,
+        "minCivilServiceTendency": 0,
+        "minStartupTendency": 0,
+        "minEducationTendency": 0,
+        "minEmploymentTendency": 0,
+        "minConfusedTendency": 0,
+        "minRouteProgress": 0,
+        "minMoney": 0,
+        "maxMoney": 0,
+        "affinityConditions": [],
+        "romanceConditions": [],
+        "clubConditions": [],
+        "requiredEventIds": [],
+        "excludedEventIds": [],
+        "requiredFlags": [],
+        "excludedFlags": [],
+        "minDarkness": 0,
+        "triggerBehavior": "",
+        "triggerChance": 1,
+        "requiredLocationId": "",
+        "requiredLocationIds": [],
+        "phase": "RoundStart"
+      },
+      "dialogues": [
+        {
+          "speaker": "旁白",
+          "lines": [
+            "最终结果到来之前的夜晚，比你想象中更安静。",
+            "你问自己：我真的准备好了吗？"
+          ],
+          "portraitId": ""
+        }
+      ],
+      "choices": [
+        {
+          "text": "稳住节奏，正常准备",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "attribute",
+              "target": "Mood",
+              "value": 3,
+              "description": "心情 +3"
+            },
+            {
+              "type": "attribute",
+              "target": "Stress",
+              "value": -2,
+              "description": "压力 -2"
+            },
+            {
+              "type": "route_progress",
+              "target": "",
+              "value": 3,
+              "description": "路线进度 +3"
+            },
+            {
+              "type": "flag",
+              "target": "final_night_stable",
+              "value": 1,
+              "description": "final_night_stable"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "找朋友或NPC聊聊",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "attribute",
+              "target": "Mood",
+              "value": 5,
+              "description": "心情 +5"
+            },
+            {
+              "type": "attribute",
+              "target": "Stress",
+              "value": -4,
+              "description": "压力 -4"
+            },
+            {
+              "type": "attribute",
+              "target": "Charm",
+              "value": 1,
+              "description": "魅力 +1"
+            },
+            {
+              "type": "flag",
+              "target": "final_night_talked",
+              "value": 1,
+              "description": "final_night_talked"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "熬夜冲刺",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "attribute",
+              "target": "Study",
+              "value": 2,
+              "description": "学力 +2"
+            },
+            {
+              "type": "route_progress",
+              "target": "",
+              "value": 3,
+              "description": "路线进度 +3"
+            },
+            {
+              "type": "attribute",
+              "target": "Stress",
+              "value": 5,
+              "description": "压力 +5"
+            },
+            {
+              "type": "flag",
+              "target": "final_night_overwork",
+              "value": 1,
+              "description": "final_night_overwork"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "暂时休息，保证状态",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "attribute",
+              "target": "Mood",
+              "value": 6,
+              "description": "心情 +6"
+            },
+            {
+              "type": "route_progress",
+              "target": "",
+              "value": -2,
+              "description": "路线进度 -2"
+            },
+            {
+              "type": "flag",
+              "target": "final_night_rest",
+              "value": 1,
+              "description": "final_night_rest"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "开始怀疑自己",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "attribute",
+              "target": "Stress",
+              "value": 5,
+              "description": "压力 +5"
+            },
+            {
+              "type": "tendency",
+              "target": "confused",
+              "value": 3,
+              "description": "迷茫倾向 +3"
+            },
+            {
+              "type": "flag",
+              "target": "final_night_doubt",
+              "value": 1,
+              "description": "final_night_doubt"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        }
+      ],
+      "defaultEffects": [],
+      "chainEventIds": [],
+      "presentation": {
+        "sceneKey": "me_019",
+        "sceneDisplayName": "冲刺前夜",
+        "locationId": "",
+        "backgroundResourcePath": "",
+        "protagonistPortraitResourcePath": "",
+        "npcPortraitResourcePath": "",
+        "backgroundSlotName": "",
+        "protagonistSlotName": "",
+        "npcSlotName": ""
+      }
+    },
+    {
+      "id": "ME_020",
+      "eventType": "MainStory",
+      "title": "毕业季开始",
+      "description": "从奋斗转向告别。",
+      "priority": 1,
+      "isForced": true,
+      "isRepeatable": false,
+      "actionPointCost": 0,
+      "moneyCost": 0,
+      "maxTriggersPerRound": 1,
+      "trigger": {
+        "year": 4,
+        "semester": 2,
+        "roundMin": 1,
+        "roundMax": 1,
+        "specificRounds": [
+          1
+        ],
+        "attributeConditions": [],
+        "requiredRoute": "",
+        "requiredLockedRoute": "",
+        "minResearchTendency": 0,
+        "minCivilServiceTendency": 0,
+        "minStartupTendency": 0,
+        "minEducationTendency": 0,
+        "minEmploymentTendency": 0,
+        "minConfusedTendency": 0,
+        "minRouteProgress": 0,
+        "minMoney": 0,
+        "maxMoney": 0,
+        "affinityConditions": [],
+        "romanceConditions": [],
+        "clubConditions": [],
+        "requiredEventIds": [],
+        "excludedEventIds": [],
+        "requiredFlags": [],
+        "excludedFlags": [],
+        "minDarkness": 0,
+        "triggerBehavior": "",
+        "triggerChance": 1,
+        "requiredLocationId": "",
+        "requiredLocationIds": [],
+        "phase": "RoundStart"
+      },
+      "dialogues": [
+        {
+          "speaker": "旁白",
+          "lines": [
+            "大四下学期开学后，校园忽然变得不一样了。",
+            "大学四年，好像真的走到了最后一段。"
+          ],
+          "portraitId": ""
+        }
+      ],
+      "choices": [
+        {
+          "text": "再认真走一遍校园",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "attribute",
+              "target": "Mood",
+              "value": 5,
+              "description": "心情 +5"
+            },
+            {
+              "type": "attribute",
+              "target": "Stress",
+              "value": -2,
+              "description": "压力 -2"
+            },
+            {
+              "type": "flag",
+              "target": "graduation_walk_campus",
+              "value": 1,
+              "description": "graduation_walk_campus"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "整理四年的照片和记录",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "attribute",
+              "target": "Mood",
+              "value": 4,
+              "description": "心情 +4"
+            },
+            {
+              "type": "tendency",
+              "target": "confused",
+              "value": -2,
+              "description": "迷茫倾向 -2"
+            },
+            {
+              "type": "flag",
+              "target": "graduation_review_memory",
+              "value": 1,
+              "description": "graduation_review_memory"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "和朋友约一次告别饭",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "attribute",
+              "target": "Charm",
+              "value": 3,
+              "description": "魅力 +3"
+            },
+            {
+              "type": "attribute",
+              "target": "Mood",
+              "value": 4,
+              "description": "心情 +4"
+            },
+            {
+              "type": "flag",
+              "target": "graduation_farewell_meal",
+              "value": 1,
+              "description": "graduation_farewell_meal"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "继续处理毕业前事务",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "attribute",
+              "target": "Study",
+              "value": 2,
+              "description": "学力 +2"
+            },
+            {
+              "type": "attribute",
+              "target": "Stress",
+              "value": 2,
+              "description": "压力 +2"
+            },
+            {
+              "type": "flag",
+              "target": "graduation_focus_tasks",
+              "value": 1,
+              "description": "graduation_focus_tasks"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "不太想面对离别",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "attribute",
+              "target": "Stress",
+              "value": 3,
+              "description": "压力 +3"
+            },
+            {
+              "type": "attribute",
+              "target": "Mood",
+              "value": -2,
+              "description": "心情 -2"
+            },
+            {
+              "type": "flag",
+              "target": "graduation_avoidance",
+              "value": 1,
+              "description": "graduation_avoidance"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        }
+      ],
+      "defaultEffects": [],
+      "chainEventIds": [],
+      "presentation": {
+        "sceneKey": "me_020",
+        "sceneDisplayName": "毕业季开始",
+        "locationId": "",
+        "backgroundResourcePath": "",
+        "protagonistPortraitResourcePath": "",
+        "npcPortraitResourcePath": "",
+        "backgroundSlotName": "",
+        "protagonistSlotName": "",
+        "npcSlotName": ""
+      }
+    },
+    {
+      "id": "ME_021",
+      "eventType": "MainStory",
+      "title": "NPC告别与校园回忆",
+      "description": "根据 NPC 好感生成后日谈伏笔。",
+      "priority": 1,
+      "isForced": true,
+      "isRepeatable": false,
+      "actionPointCost": 0,
+      "moneyCost": 0,
+      "maxTriggersPerRound": 1,
+      "trigger": {
+        "year": 4,
+        "semester": 2,
+        "roundMin": 3,
+        "roundMax": 3,
+        "specificRounds": [
+          3
+        ],
+        "attributeConditions": [],
+        "requiredRoute": "",
+        "requiredLockedRoute": "",
+        "minResearchTendency": 0,
+        "minCivilServiceTendency": 0,
+        "minStartupTendency": 0,
+        "minEducationTendency": 0,
+        "minEmploymentTendency": 0,
+        "minConfusedTendency": 0,
+        "minRouteProgress": 0,
+        "minMoney": 0,
+        "maxMoney": 0,
+        "affinityConditions": [],
+        "romanceConditions": [],
+        "clubConditions": [],
+        "requiredEventIds": [],
+        "excludedEventIds": [],
+        "requiredFlags": [],
+        "excludedFlags": [],
+        "minDarkness": 0,
+        "triggerBehavior": "",
+        "triggerChance": 1,
+        "requiredLocationId": "",
+        "requiredLocationIds": [],
+        "phase": "RoundStart"
+      },
+      "dialogues": [
+        {
+          "speaker": "旁白",
+          "lines": [
+            "毕业前，你开始和熟悉的人一一道别。",
+            "大学四年最重要的并不只有成绩、证书和结果。"
+          ],
+          "portraitId": ""
+        }
+      ],
+      "choices": [
+        {
+          "text": "和顾景和告别",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "tendency",
+              "target": "research",
+              "value": 3,
+              "description": "研究倾向 +3"
+            },
+            {
+              "type": "attribute",
+              "target": "Mood",
+              "value": 2,
+              "description": "心情 +2"
+            },
+            {
+              "type": "flag",
+              "target": "farewell_gu_jinghe",
+              "value": 1,
+              "description": "farewell_gu_jinghe"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "和陆向阳告别",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "attribute",
+              "target": "Physique",
+              "value": 2,
+              "description": "体魄 +2"
+            },
+            {
+              "type": "attribute",
+              "target": "Mood",
+              "value": 4,
+              "description": "心情 +4"
+            },
+            {
+              "type": "flag",
+              "target": "farewell_lu_xiangyang",
+              "value": 1,
+              "description": "farewell_lu_xiangyang"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "和程砚舟告别",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "tendency",
+              "target": "startup",
+              "value": 3,
+              "description": "创业倾向 +3"
+            },
+            {
+              "type": "attribute",
+              "target": "Mood",
+              "value": 2,
+              "description": "心情 +2"
+            },
+            {
+              "type": "flag",
+              "target": "farewell_cheng_yanzhou",
+              "value": 1,
+              "description": "farewell_cheng_yanzhou"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "和林知晚告别",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "attribute",
+              "target": "Mood",
+              "value": 5,
+              "description": "心情 +5"
+            },
+            {
+              "type": "attribute",
+              "target": "Stress",
+              "value": -3,
+              "description": "压力 -3"
+            },
+            {
+              "type": "flag",
+              "target": "farewell_lin_zhiwan",
+              "value": 1,
+              "description": "farewell_lin_zhiwan"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "和沈清妍告别",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "tendency",
+              "target": "civil",
+              "value": 3,
+              "description": "公职倾向 +3"
+            },
+            {
+              "type": "attribute",
+              "target": "Leadership",
+              "value": 2,
+              "description": "领导力 +2"
+            },
+            {
+              "type": "flag",
+              "target": "farewell_shen_qingyan",
+              "value": 1,
+              "description": "farewell_shen_qingyan"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "和陈书仟告别",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "tendency",
+              "target": "education",
+              "value": 3,
+              "description": "教育倾向 +3"
+            },
+            {
+              "type": "attribute",
+              "target": "Mood",
+              "value": 2,
+              "description": "心情 +2"
+            },
+            {
+              "type": "flag",
+              "target": "farewell_chen_shuqian",
+              "value": 1,
+              "description": "farewell_chen_shuqian"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        }
+      ],
+      "defaultEffects": [],
+      "chainEventIds": [],
+      "presentation": {
+        "sceneKey": "me_021",
+        "sceneDisplayName": "NPC告别与校园回忆",
+        "locationId": "",
+        "backgroundResourcePath": "",
+        "protagonistPortraitResourcePath": "",
+        "npcPortraitResourcePath": "",
+        "backgroundSlotName": "",
+        "protagonistSlotName": "",
+        "npcSlotName": ""
+      }
+    },
+    {
+      "id": "ME_022",
+      "eventType": "MainStory",
+      "title": "最后一次选择",
+      "description": "修正最终结局文案和心态。",
+      "priority": 1,
+      "isForced": true,
+      "isRepeatable": false,
+      "actionPointCost": 0,
+      "moneyCost": 0,
+      "maxTriggersPerRound": 1,
+      "trigger": {
+        "year": 4,
+        "semester": 2,
+        "roundMin": 4,
+        "roundMax": 4,
+        "specificRounds": [
+          4
+        ],
+        "attributeConditions": [],
+        "requiredRoute": "",
+        "requiredLockedRoute": "",
+        "minResearchTendency": 0,
+        "minCivilServiceTendency": 0,
+        "minStartupTendency": 0,
+        "minEducationTendency": 0,
+        "minEmploymentTendency": 0,
+        "minConfusedTendency": 0,
+        "minRouteProgress": 0,
+        "minMoney": 0,
+        "maxMoney": 0,
+        "affinityConditions": [],
+        "romanceConditions": [],
+        "clubConditions": [],
+        "requiredEventIds": [],
+        "excludedEventIds": [],
+        "requiredFlags": [],
+        "excludedFlags": [],
+        "minDarkness": 0,
+        "triggerBehavior": "",
+        "triggerChance": 1,
+        "requiredLocationId": "",
+        "requiredLocationIds": [],
+        "phase": "RoundStart"
+      },
+      "dialogues": [
+        {
+          "speaker": "旁白",
+          "lines": [
+            "毕业典礼前一天，你一个人走在校园里。",
+            "很多答案并不是被想出来的，而是在一次次选择里慢慢长成了现在的自己。"
+          ],
+          "portraitId": ""
+        }
+      ],
+      "choices": [
+        {
+          "text": "我接受这四年的结果",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "attribute",
+              "target": "Mood",
+              "value": 5,
+              "description": "心情 +5"
+            },
+            {
+              "type": "attribute",
+              "target": "Stress",
+              "value": -2,
+              "description": "压力 -2"
+            },
+            {
+              "type": "ending_bonus",
+              "target": "",
+              "value": 1,
+              "description": "结局修正 +1"
+            },
+            {
+              "type": "flag",
+              "target": "final_choice_accept",
+              "value": 1,
+              "description": "final_choice_accept"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "我还有遗憾，但愿意继续走",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "attribute",
+              "target": "Mood",
+              "value": 3,
+              "description": "心情 +3"
+            },
+            {
+              "type": "attribute",
+              "target": "Stress",
+              "value": -3,
+              "description": "压力 -3"
+            },
+            {
+              "type": "tendency",
+              "target": "confused",
+              "value": -2,
+              "description": "迷茫倾向 -2"
+            },
+            {
+              "type": "flag",
+              "target": "final_choice_regret_forward",
+              "value": 1,
+              "description": "final_choice_regret_forward"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "我想感谢一路陪伴的人",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "attribute",
+              "target": "Charm",
+              "value": 3,
+              "description": "魅力 +3"
+            },
+            {
+              "type": "attribute",
+              "target": "Mood",
+              "value": 4,
+              "description": "心情 +4"
+            },
+            {
+              "type": "flag",
+              "target": "final_choice_grateful",
+              "value": 1,
+              "description": "final_choice_grateful"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "我想再努力一次",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "attribute",
+              "target": "Mood",
+              "value": 2,
+              "description": "心情 +2"
+            },
+            {
+              "type": "attribute",
+              "target": "Stress",
+              "value": 2,
+              "description": "压力 +2"
+            },
+            {
+              "type": "ending_bonus",
+              "target": "",
+              "value": 1,
+              "description": "结局修正 +1"
+            },
+            {
+              "type": "flag",
+              "target": "final_choice_try_again",
+              "value": 1,
+              "description": "final_choice_try_again"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        },
+        {
+          "text": "我不知道自己做得好不好",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "attribute",
+              "target": "Stress",
+              "value": 2,
+              "description": "压力 +2"
+            },
+            {
+              "type": "tendency",
+              "target": "confused",
+              "value": 2,
+              "description": "迷茫倾向 +2"
+            },
+            {
+              "type": "flag",
+              "target": "final_choice_uncertain",
+              "value": 1,
+              "description": "final_choice_uncertain"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        }
+      ],
+      "defaultEffects": [],
+      "chainEventIds": [],
+      "presentation": {
+        "sceneKey": "me_022",
+        "sceneDisplayName": "最后一次选择",
+        "locationId": "",
+        "backgroundResourcePath": "",
+        "protagonistPortraitResourcePath": "",
+        "npcPortraitResourcePath": "",
+        "backgroundSlotName": "",
+        "protagonistSlotName": "",
+        "npcSlotName": ""
+      }
+    },
+    {
+      "id": "END_000",
+      "eventType": "MainStory",
+      "title": "毕业答卷",
+      "description": "进入毕业结局判定。",
+      "priority": 1,
+      "isForced": true,
+      "isRepeatable": false,
+      "actionPointCost": 0,
+      "moneyCost": 0,
+      "maxTriggersPerRound": 1,
+      "trigger": {
+        "year": 4,
+        "semester": 2,
+        "roundMin": 5,
+        "roundMax": 5,
+        "specificRounds": [
+          5
+        ],
+        "attributeConditions": [],
+        "requiredRoute": "",
+        "requiredLockedRoute": "",
+        "minResearchTendency": 0,
+        "minCivilServiceTendency": 0,
+        "minStartupTendency": 0,
+        "minEducationTendency": 0,
+        "minEmploymentTendency": 0,
+        "minConfusedTendency": 0,
+        "minRouteProgress": 0,
+        "minMoney": 0,
+        "maxMoney": 0,
+        "affinityConditions": [],
+        "romanceConditions": [],
+        "clubConditions": [],
+        "requiredEventIds": [],
+        "excludedEventIds": [],
+        "requiredFlags": [],
+        "excludedFlags": [],
+        "minDarkness": 0,
+        "triggerBehavior": "",
+        "triggerChance": 1,
+        "requiredLocationId": "",
+        "requiredLocationIds": [],
+        "phase": "RoundStart"
+      },
+      "dialogues": [
+        {
+          "speaker": "旁白",
+          "lines": [
+            "毕业典礼那天，校园里到处都是穿着学士服的人。",
+            "大学四年结束了。而你的人生，才刚刚翻开下一页。"
+          ],
+          "portraitId": ""
+        }
+      ],
+      "choices": [
+        {
+          "text": "查看我的毕业结局",
+          "actionPointCost": 0,
+          "moneyCost": 0,
+          "effects": [
+            {
+              "type": "flag",
+              "target": "graduation_ending_checked",
+              "value": 1,
+              "description": "graduation_ending_checked"
+            }
+          ],
+          "triggerEventId": "",
+          "showConditions": []
+        }
+      ],
+      "defaultEffects": [],
+      "chainEventIds": [],
+      "presentation": {
+        "sceneKey": "end_000",
+        "sceneDisplayName": "毕业答卷",
+        "locationId": "",
+        "backgroundResourcePath": "",
+        "protagonistPortraitResourcePath": "",
+        "npcPortraitResourcePath": "",
+        "backgroundSlotName": "",
+        "protagonistSlotName": "",
+        "npcSlotName": ""
       }
     }
   ]
