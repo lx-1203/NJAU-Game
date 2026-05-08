@@ -263,6 +263,38 @@ public static class ZhongshanDeckToolStateBridge
         return false;
     }
 
+    public static ZhongshanDeckTitleContent GetTitleContent()
+    {
+        ZhongshanDeckToolState state = GetState();
+        state.titleContent ??= new ZhongshanDeckTitleContent();
+        state.titleContent.EnsureInitialized();
+        return state.titleContent.Clone();
+    }
+
+    public static void SaveTitleContent(ZhongshanDeckTitleContent content)
+    {
+        ZhongshanDeckToolState state = GetState();
+        state.titleContent = content != null ? content.Clone() : new ZhongshanDeckTitleContent();
+        state.titleContent.EnsureInitialized();
+        SaveState();
+    }
+
+    public static ZhongshanDeckSaveLoadContent GetSaveLoadContent()
+    {
+        ZhongshanDeckToolState state = GetState();
+        state.saveLoadContent ??= new ZhongshanDeckSaveLoadContent();
+        state.saveLoadContent.EnsureInitialized();
+        return state.saveLoadContent.Clone();
+    }
+
+    public static void SaveSaveLoadContent(ZhongshanDeckSaveLoadContent content)
+    {
+        ZhongshanDeckToolState state = GetState();
+        state.saveLoadContent = content != null ? content.Clone() : new ZhongshanDeckSaveLoadContent();
+        state.saveLoadContent.EnsureInitialized();
+        SaveState();
+    }
+
     private static ZhongshanDeckNewsRoundEntry CloneNewsRoundEntry(ZhongshanDeckNewsRoundEntry source)
     {
         ZhongshanDeckNewsRoundEntry clone = new ZhongshanDeckNewsRoundEntry

@@ -89,6 +89,25 @@ public class SeasonalAmbientEffectSystem : MonoBehaviour
     private GameState boundGameState;
     private int cachedMonth = -1;
     private Vector2 lastScreenSize = Vector2.zero;
+    private float simulationAccumulator;
+
+    private const float SimulationStep = 1f / 60f;
+    private const float MaxFrameDelta = 1f / 15f;
+    private const int MaxSimulationStepsPerFrame = 4;
+
+    private Vector2 GetParticleViewportSize()
+    {
+        if (particleRoot != null)
+        {
+            Rect rect = particleRoot.rect;
+            if (rect.width > 0.01f && rect.height > 0.01f)
+            {
+                return new Vector2(rect.width, rect.height);
+            }
+        }
+
+        return new Vector2(Screen.width, Screen.height);
+    }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
     private static void Bootstrap()
@@ -159,7 +178,7 @@ public class SeasonalAmbientEffectSystem : MonoBehaviour
     {
         TryBindGameState();
 
-        Vector2 currentScreenSize = new Vector2(Screen.width, Screen.height);
+        Vector2 currentScreenSize = GetParticleViewportSize();
         if (currentScreenSize != lastScreenSize)
         {
             lastScreenSize = currentScreenSize;
@@ -177,10 +196,41 @@ public class SeasonalAmbientEffectSystem : MonoBehaviour
             return;
         }
 
-        float deltaTime = Time.unscaledDeltaTime;
-        float width = Screen.width;
-        float height = Screen.height;
+        float deltaTime = Mathf.Min(Time.unscaledDeltaTime, MaxFrameDelta);
+        Vector2 viewportSize = GetParticleViewportSize();
+        float width = viewportSize.x;
+        float height = viewportSize.y;
 
+        simulationAccumulator += deltaTime;
+        int simulatedSteps = 0;
+        while (simulationAccumulator >= SimulationStep && simulatedSteps < MaxSimulationStepsPerFrame)
+        {
+            SimulateParticles(SimulationStep, width, height);
+            simulationAccumulator -= SimulationStep;
+            simulatedSteps++;
+        }
+
+        if (simulatedSteps == 0)
+        {
+            SimulateParticles(Mathf.Max(0.0001f, deltaTime), width, height);
+        }
+
+        simulationAccumulator = Mathf.Min(simulationAccumulator, SimulationStep);
+    }
+
+    private void OnSceneLoaded(Scene scene, LoadSceneMode loadSceneMode)
+    {
+        if (overlayCanvas == null)
+        {
+            CreateOverlayCanvas();
+        }
+
+        overlayCanvas.sortingOrder = sortingOrder;
+        RefreshEffect(true);
+    }
+
+    private void SimulateParticles(float deltaTime, float width, float height)
+    {
         for (int i = 0; i < particles.Count; i++)
         {
             AmbientParticle particle = particles[i];
@@ -212,17 +262,6 @@ public class SeasonalAmbientEffectSystem : MonoBehaviour
             particle.rect.anchoredPosition = new Vector2(particle.x + sway, particle.y);
             particle.rect.localRotation = Quaternion.Euler(0f, 0f, particle.angle);
         }
-    }
-
-    private void OnSceneLoaded(Scene scene, LoadSceneMode loadSceneMode)
-    {
-        if (overlayCanvas == null)
-        {
-            CreateOverlayCanvas();
-        }
-
-        overlayCanvas.sortingOrder = sortingOrder;
-        RefreshEffect(true);
     }
 
     private void OnGameStateChanged()
@@ -305,7 +344,7 @@ public class SeasonalAmbientEffectSystem : MonoBehaviour
         group.interactable = false;
         group.blocksRaycasts = false;
 
-        lastScreenSize = new Vector2(Screen.width, Screen.height);
+        lastScreenSize = GetParticleViewportSize();
 
         if (hideInSceneView)
         {
@@ -505,7 +544,8 @@ public class SeasonalAmbientEffectSystem : MonoBehaviour
         };
 
         particles.Add(particle);
-        RespawnParticle(particle, Screen.width, Screen.height, false, profile);
+        Vector2 viewportSize = GetParticleViewportSize();
+        RespawnParticle(particle, viewportSize.x, viewportSize.y, true, profile);
     }
 
     private void RespawnParticle(AmbientParticle particle, float width, float height, bool fromTop)

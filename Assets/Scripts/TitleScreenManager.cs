@@ -6,6 +6,9 @@ using System.Collections.Generic;
 using System;
 using System.IO;
 using TMPro;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 /// <summary>
 /// 标题过渡引导界面管理器
@@ -55,6 +58,7 @@ public class TitleScreenManager : MonoBehaviour
     private RectTransform canvasRect;
     private CanvasGroup fadeOverlay;
     private TMP_Text hintText;
+    private RectTransform hintTextRect;
     private RawImage videoImage;
     private readonly VideoPlayer[] videoPlayers = new VideoPlayer[2];
     private readonly RenderTexture[] videoTextures = new RenderTexture[2];
@@ -93,6 +97,9 @@ public class TitleScreenManager : MonoBehaviour
     private Button achievementButton;
     private Button cgButton;
     private Button creditsButton;
+    private RectTransform topRightIconsRoot;
+    private readonly List<TextMeshProUGUI> topRightIconTexts = new List<TextMeshProUGUI>();
+    private readonly List<string> topRightIconTooltips = new List<string>();
 
     // ===== 制作人面板 =====
     private GameObject creditsPanel;
@@ -102,14 +109,19 @@ public class TitleScreenManager : MonoBehaviour
     private TextMeshProUGUI creditsDetailTitle;
     private TextMeshProUGUI creditsDetailRole;
     private TextMeshProUGUI creditsDetailDescription;
+    private TextMeshProUGUI creditsPanelTitleText;
+    private TextMeshProUGUI creditsTabText;
+    private TextMeshProUGUI creditsFooterText;
     private readonly List<Button> creditsEntryButtons = new List<Button>();
     private int currentCreditsEntryIndex = 0;
+    private readonly List<ZhongshanDeckCreditsEntry> creditsEntries = new List<ZhongshanDeckCreditsEntry>();
 
     // ===== 教程面板 =====
     private GameObject tutorialPanel;
     private CanvasGroup tutorialPanelGroup;
     private RectTransform tutorialItemListContent;
     private RectTransform tutorialDetailContent;
+    private RectTransform tutorialTabsRoot;
     private TextMeshProUGUI tutorialSectionTitle;
     private TextMeshProUGUI tutorialEntryTitle;
     private TextMeshProUGUI tutorialEntryDescription;
@@ -123,6 +135,11 @@ public class TitleScreenManager : MonoBehaviour
     private CanvasGroup changelogPanelGroup;
     private RectTransform changelogContent;
     private Button changelogButton;
+    private RectTransform changelogButtonRect;
+    private TextMeshProUGUI changelogButtonLabelText;
+    private TextMeshProUGUI changelogPanelTitleText;
+    private readonly List<ZhongshanDeckChangelogSection> changelogSections = new List<ZhongshanDeckChangelogSection>();
+    private ZhongshanDeckTitleContent titleContentData;
 
     // ===== 游戏CG / 结局面板 =====
     private GameObject galleryPanel;
@@ -161,6 +178,12 @@ public class TitleScreenManager : MonoBehaviour
 
     // ===== 版本号 =====
     private TMP_Text versionText;
+    private RectTransform versionTextRect;
+    private RectTransform logoAreaRect;
+    private RectTransform mainMenuPanelRect;
+    private TextMeshProUGUI settingsTitleText;
+    private TextMeshProUGUI settingsBackButtonLabelText;
+    private readonly Dictionary<string, Button> mainMenuButtonsByAction = new Dictionary<string, Button>(StringComparer.OrdinalIgnoreCase);
 
     // ===== 颜色缓存 =====
     private Color bgColor;
@@ -228,76 +251,7 @@ public class TitleScreenManager : MonoBehaviour
         public List<GalleryEntry> Entries = new List<GalleryEntry>();
     }
 
-    private sealed class CreditsEntry
-    {
-        public string Title;
-        public string Role;
-        public string Description;
-        public string[] Tags;
-
-        public CreditsEntry(string title, string role, string description, params string[] tags)
-        {
-            Title = title;
-            Role = role;
-            Description = description;
-            Tags = tags ?? Array.Empty<string>();
-        }
-    }
-
-    private readonly List<CreditsEntry> creditsEntries = new List<CreditsEntry>
-    {
-        new CreditsEntry("总制作", "项目策划 / 系统统筹", "负责《钟山下》的整体玩法框架、大学生活循环、系统节奏与内容整合。", "玩法框架", "系统节奏", "内容整合"),
-        new CreditsEntry("程序实现", "Unity / 纯代码 UI / 存档系统", "实现标题界面、HUD、任务、成就、考试、社团、恋爱、事件、存档等核心系统，并保持各模块可独立维护。", "Unity", "C#", "模块化"),
-        new CreditsEntry("美术与界面", "视觉风格 / 界面布局", "以手账、纸张、校园笔记为主视觉参考，统一首页入口、教程、成就、CG 与制作人界面的阅读体验。", "手账风", "纸张界面", "校园感"),
-        new CreditsEntry("文本与世界观", "剧情设定 / 人物关系", "围绕大学四年成长主题，搭建人物关系、校园事件、结局路线与不同价值取舍。", "大学四年", "人物关系", "多结局"),
-        new CreditsEntry("特别鸣谢", "测试 / 反馈 / 灵感", "感谢所有参与测试、提供反馈、提出想法与陪伴项目迭代的人。", "测试反馈", "灵感来源", "持续迭代")
-    };
-
-    private readonly List<TutorialCategory> tutorialCategories = new List<TutorialCategory>
-    {
-        new TutorialCategory("属性",
-            new TutorialEntry("智力", "决定课程学习、考试通过率与部分学术事件。", "智力越高，学习类行动带来的成长越稳定，也更容易解锁偏学术路线的内容。", "课程成绩", "考试修正", "学术事件"),
-            new TutorialEntry("情商", "影响社交对话、关系推进与部分组织活动。", "情商主要作用在角色互动和分支选择，很多人物线与组织机会都会检查这项数值。", "社交判定", "人物剧情", "组织互动"),
-            new TutorialEntry("体魄", "决定体测、运动、部分兼职与高压状态下的稳定性。", "体魄不仅决定运动收益，也会影响你在高压力阶段是否容易崩盘。", "体测表现", "运动收益", "抗压稳定"),
-            new TutorialEntry("精力", "每天可支配行动能力的直接体现。", "精力不足会让你无法连续高强度安排学习、社交和兼职，需要用休息和节奏管理来维持。", "行动安排", "休息恢复", "效率上限"),
-            new TutorialEntry("零花钱", "覆盖消费、部分活动门槛与经济路线发展。", "钱不只是资源，还会影响很多机会是否出现。部分事件能让你快速赚钱，也可能快速负债。", "商店消费", "活动门槛", "债务风险"),
-            new TutorialEntry("成就", "记录阶段性达成，用来回看你的关键进展。", "成就既是收藏，也经常是路线完成度的旁证，能帮助你判断当前周目的发展方向。", "路线进度", "关键节点", "收集目标")
-        ),
-        new TutorialCategory("机制",
-            new TutorialEntry("行动回合", "每个阶段都有固定行动次数。", "学习、社交、兼职、探索都会消耗回合，首页教程建议你优先熟悉每回合的机会成本。", "阶段规划", "行动消耗", "路线节奏"),
-            new TutorialEntry("课程与考试", "课程成绩会在学期末集中结算。", "平时学习、专项训练和临时抱佛脚都会进入考试判定，但收益和风险不同。", "平时积累", "考试结算", "高风险补救"),
-            new TutorialEntry("压力与心情", "长期失衡会拖慢成长，甚至触发负面链条。", "不要只追单一属性。高压低心情会降低稳定性，很多负面事件都从这里开始。", "状态管理", "负面事件", "恢复手段")
-        ),
-        new TutorialCategory("方法论",
-            new TutorialEntry("前期思路", "先建立一条稳定增长线，再考虑扩张。", "开局推荐先确定 1 到 2 个主目标，比如学业线加社交线，避免什么都做导致资源分散。", "主线选择", "资源集中", "前期稳态"),
-            new TutorialEntry("中期转向", "根据事件、人物和经济情况调整路径。", "中期最容易因为新机会而分心。教程建议只在回报明显超过当前路线时再切换。", "机会判断", "路径切换", "收益比较"),
-            new TutorialEntry("补短板", "不要让明显短板卡住关键节点。", "某些系统会检查最低门槛。与其追求极致数值，不如保证关键属性不过低。", "门槛检查", "低风险推进", "容错空间")
-        ),
-        new TutorialCategory("人格",
-            new TutorialEntry("性格取向", "你的选择会逐步塑造角色气质。", "很多选项不会立刻给出巨大收益，但会持续影响人物评价、事件风格和后续分支。", "人物印象", "分支语气", "长期累积"),
-            new TutorialEntry("动力与热情", "决定你能否持续推进长期目标。", "短期高收益不一定适合长期路线。热情和动力更像耐久值，决定你能走多远。", "长期路线", "持续投入", "发展韧性")
-        ),
-        new TutorialCategory("专长",
-            new TutorialEntry("能力专精", "围绕一项主属性构筑专长最有效。", "专长不是平均加点，而是把行动、人物与资源集中到一条能持续放大的线。", "属性联动", "路线强化", "收益放大"),
-            new TutorialEntry("跨界组合", "少量副属性能显著提高路线手感。", "比如学业线搭配一点情商，能让许多人物事件更顺；兼职线搭配体魄，容错更高。", "副属性支持", "事件兼容", "容错增强")
-        ),
-        new TutorialCategory("人物",
-            new TutorialEntry("角色关系", "人物不只是剧情对象，也是资源与信息来源。", "关系推进后，很多人物会带来独有行动、特殊事件或成长捷径。", "专属事件", "隐藏机会", "互动收益"),
-            new TutorialEntry("好感管理", "不要只看短期涨幅，要看后续解锁。", "有些人物前期收益不高，但后续路线价值很大。教程面板建议优先观察他们能解锁什么。", "解锁条件", "长期收益", "路线价值")
-        ),
-        new TutorialCategory("职业",
-            new TutorialEntry("兼职选择", "兼职是钱和成长的交换。", "低门槛兼职适合保底，高门槛兼职更适合中后期冲收益。选择时看你缺的是钱、属性还是事件。", "保底收入", "高门槛回报", "路线匹配"),
-            new TutorialEntry("发展方向", "职业倾向会反向影响你的养成重点。", "如果你想走更现实的功利路线，经济和执行相关属性的比重要尽早提上来。", "养成重点", "路线风格", "资源倾斜")
-        ),
-        new TutorialCategory("人生观",
-            new TutorialEntry("价值取舍", "每次选择都在定义你想成为什么样的人。", "成长并不只看面板变大。不同价值取向会让同一事件出现完全不同的结果。", "事件分歧", "路线气质", "结局影响"),
-            new TutorialEntry("长短期平衡", "眼前收益和长线结果经常冲突。", "教程建议你先想清楚这一周目最想验证什么，再决定是否为了即时收益打破原计划。", "即时收益", "长期布局", "周目目标")
-        ),
-        new TutorialCategory("其他",
-            new TutorialEntry("存档与回看", "关键节点前后都值得留一个档。", "很多系统是连锁反应式的，保留关键节点存档会让你更容易验证不同路线。", "关键节点", "分支对比", "路线实验"),
-            new TutorialEntry("首页入口", "教程、成就、CG 和制作人信息都在首页右上角。", "教程适合新开局前快速复习，成就回看适合复盘当前周目，两个入口会持续补充。", "教程入口", "成就回看", "开局复习")
-        )
-    };
+    private readonly List<TutorialCategory> tutorialCategories = new List<TutorialCategory>();
 
     // ===== 呼吸动画协程 =====
     private Coroutine breathCoroutine;
@@ -308,6 +262,7 @@ public class TitleScreenManager : MonoBehaviour
     {
         UIFlowGuard.CleanupBlockingUI();
         EnsureSaveManager();
+        ReloadAuthoredTitleContent();
         ResolveVideoSource();
         CacheColors();
         BuildUI();
@@ -401,6 +356,342 @@ public class TitleScreenManager : MonoBehaviour
         subPanelColor = new Color(0.08f, 0.1f, 0.16f, 0.92f);
     }
 
+    private void ReloadAuthoredTitleContent()
+    {
+        titleContentData = ZhongshanDeckToolStateBridge.GetTitleContent();
+        titleContentData ??= new ZhongshanDeckTitleContent();
+        titleContentData.EnsureInitialized();
+
+        creditsEntries.Clear();
+        if (titleContentData.credits?.entries != null)
+        {
+            for (int i = 0; i < titleContentData.credits.entries.Count; i++)
+            {
+                ZhongshanDeckCreditsEntry entry = titleContentData.credits.entries[i];
+                if (entry != null)
+                {
+                    creditsEntries.Add(entry.Clone());
+                }
+            }
+        }
+
+        changelogSections.Clear();
+        if (titleContentData.changelog?.sections != null)
+        {
+            for (int i = 0; i < titleContentData.changelog.sections.Count; i++)
+            {
+                ZhongshanDeckChangelogSection section = titleContentData.changelog.sections[i];
+                if (section != null)
+                {
+                    changelogSections.Add(section.Clone());
+                }
+            }
+        }
+
+        tutorialCategories.Clear();
+        if (titleContentData.tutorial?.categories != null)
+        {
+            for (int i = 0; i < titleContentData.tutorial.categories.Count; i++)
+            {
+                ZhongshanDeckTutorialCategoryData categoryData = titleContentData.tutorial.categories[i];
+                if (categoryData == null)
+                {
+                    continue;
+                }
+
+                TutorialCategory category = new TutorialCategory(categoryData.name);
+                if (categoryData.entries != null)
+                {
+                    for (int entryIndex = 0; entryIndex < categoryData.entries.Count; entryIndex++)
+                    {
+                        ZhongshanDeckTutorialEntryData entryData = categoryData.entries[entryIndex];
+                        if (entryData != null)
+                        {
+                            category.Entries.Add(new TutorialEntry(
+                                entryData.title,
+                                entryData.lead,
+                                entryData.description,
+                                entryData.highlights != null ? entryData.highlights.ToArray() : Array.Empty<string>()));
+                        }
+                    }
+                }
+
+                tutorialCategories.Add(category);
+            }
+        }
+    }
+
+    public void DebugReloadAuthoredTitleContent()
+    {
+        ReloadAuthoredTitleContent();
+        ApplyAuthoredTitleContentToPanels();
+    }
+
+    private void ApplyAuthoredTitleContentToPanels()
+    {
+        hintMessage = titleContentData?.homepage?.hintMessage ?? hintMessage;
+        if (hintText != null)
+        {
+            hintText.text = hintMessage;
+        }
+
+        if (changelogButtonLabelText != null)
+        {
+            changelogButtonLabelText.text = titleContentData?.homepage?.changelogButtonLabel ?? "更新日志";
+        }
+
+        ApplyHomepageLayoutOverrides();
+
+        ApplyHomepageMenuLabels();
+        ApplyTopIconLabels();
+
+        if (settingsTitleText != null)
+        {
+            settingsTitleText.text = titleContentData?.homepage?.settingsPanelTitle ?? "设置";
+        }
+
+        if (settingsBackButtonLabelText != null)
+        {
+            settingsBackButtonLabelText.text = titleContentData?.homepage?.settingsBackButtonLabel ?? "返回";
+        }
+
+        if (creditsPanelTitleText != null)
+        {
+            creditsPanelTitleText.text = titleContentData?.credits?.panelTitle ?? "制作人";
+        }
+
+        if (creditsTabText != null)
+        {
+            creditsTabText.text = titleContentData?.credits?.tabLabel ?? "STAFF";
+        }
+
+        if (creditsFooterText != null)
+        {
+            creditsFooterText.text = titleContentData?.credits?.footerText ?? string.Empty;
+        }
+
+        if (changelogPanelTitleText != null)
+        {
+            changelogPanelTitleText.text = titleContentData?.changelog?.panelTitle ?? "更新日志";
+        }
+
+        if (creditsListContent != null)
+        {
+            RebuildCreditsList();
+            if (creditsEntries.Count > 0)
+            {
+                SelectCreditsEntry(Mathf.Clamp(currentCreditsEntryIndex, 0, creditsEntries.Count - 1));
+            }
+        }
+
+        if (changelogContent != null)
+        {
+            RebuildChangelogContent();
+        }
+
+        if (tutorialTabsRoot != null)
+        {
+            RebuildTutorialCategoryTabs();
+            if (tutorialCategories.Count > 0)
+            {
+                SelectTutorialCategory(Mathf.Clamp(currentTutorialCategoryIndex, 0, tutorialCategories.Count - 1));
+            }
+        }
+    }
+
+    private void ApplyHomepageLayoutOverrides()
+    {
+        ApplyHomepageLayoutToRect(hintTextRect, ZhongshanDeckTitleContentDefaults.LayoutHint);
+        ApplyHomepageLayoutToRect(logoAreaRect, ZhongshanDeckTitleContentDefaults.LayoutLogo);
+        ApplyHomepageLayoutToRect(mainMenuPanelRect, ZhongshanDeckTitleContentDefaults.LayoutMainMenu);
+        ApplyHomepageLayoutToRect(topRightIconsRoot, ZhongshanDeckTitleContentDefaults.LayoutTopIcons);
+        ApplyHomepageLayoutToRect(changelogButtonRect, ZhongshanDeckTitleContentDefaults.LayoutChangelog);
+        ApplyHomepageLayoutToRect(versionTextRect, ZhongshanDeckTitleContentDefaults.LayoutVersion);
+    }
+
+    private void ApplyHomepageLayoutToRect(RectTransform target, string key)
+    {
+        if (target == null || string.IsNullOrWhiteSpace(key))
+        {
+            return;
+        }
+
+        ZhongshanDeckHomepageLayoutItem layoutItem = FindHomepageLayoutItem(key);
+        if (layoutItem == null)
+        {
+            return;
+        }
+
+        layoutItem.EnsureInitialized();
+        Vector2 anchor = GetLayoutAnchorVector(layoutItem.anchor);
+        target.anchorMin = anchor;
+        target.anchorMax = anchor;
+        target.pivot = GetLayoutPivotVector(layoutItem.anchor);
+        target.anchoredPosition = layoutItem.anchoredPosition;
+        target.sizeDelta = layoutItem.size;
+        target.localScale = GetHomepageLayoutScale(key, layoutItem.size);
+        target.gameObject.SetActive(layoutItem.visible);
+    }
+
+    private ZhongshanDeckHomepageLayoutItem FindHomepageLayoutItem(string key)
+    {
+        List<ZhongshanDeckHomepageLayoutItem> layoutItems = titleContentData?.homepage?.layoutItems;
+        if (layoutItems == null)
+        {
+            return null;
+        }
+
+        for (int i = 0; i < layoutItems.Count; i++)
+        {
+            ZhongshanDeckHomepageLayoutItem item = layoutItems[i];
+            if (item != null && string.Equals(item.key, key, StringComparison.Ordinal))
+            {
+                return item;
+            }
+        }
+
+        return null;
+    }
+
+    private static Vector2 GetLayoutAnchorVector(ZhongshanDeckLayoutAnchor anchor)
+    {
+        switch (anchor)
+        {
+            case ZhongshanDeckLayoutAnchor.TopLeft: return new Vector2(0f, 1f);
+            case ZhongshanDeckLayoutAnchor.TopCenter: return new Vector2(0.5f, 1f);
+            case ZhongshanDeckLayoutAnchor.TopRight: return new Vector2(1f, 1f);
+            case ZhongshanDeckLayoutAnchor.LeftCenter: return new Vector2(0f, 0.5f);
+            case ZhongshanDeckLayoutAnchor.RightCenter: return new Vector2(1f, 0.5f);
+            case ZhongshanDeckLayoutAnchor.BottomLeft: return new Vector2(0f, 0f);
+            case ZhongshanDeckLayoutAnchor.BottomCenter: return new Vector2(0.5f, 0f);
+            case ZhongshanDeckLayoutAnchor.BottomRight: return new Vector2(1f, 0f);
+            default: return new Vector2(0.5f, 0.5f);
+        }
+    }
+
+    private static Vector2 GetLayoutPivotVector(ZhongshanDeckLayoutAnchor anchor)
+    {
+        switch (anchor)
+        {
+            case ZhongshanDeckLayoutAnchor.TopLeft: return new Vector2(0f, 1f);
+            case ZhongshanDeckLayoutAnchor.TopCenter: return new Vector2(0.5f, 1f);
+            case ZhongshanDeckLayoutAnchor.TopRight: return new Vector2(1f, 1f);
+            case ZhongshanDeckLayoutAnchor.LeftCenter: return new Vector2(0f, 0.5f);
+            case ZhongshanDeckLayoutAnchor.RightCenter: return new Vector2(1f, 0.5f);
+            case ZhongshanDeckLayoutAnchor.BottomLeft: return new Vector2(0f, 0f);
+            case ZhongshanDeckLayoutAnchor.BottomCenter: return new Vector2(0.5f, 0f);
+            case ZhongshanDeckLayoutAnchor.BottomRight: return new Vector2(1f, 0f);
+            default: return new Vector2(0.5f, 0.5f);
+        }
+    }
+
+    private static Vector3 GetHomepageLayoutScale(string key, Vector2 currentSize)
+    {
+        Vector2 defaultSize = GetDefaultHomepageLayoutSize(key);
+        if (defaultSize.x <= 0.01f || defaultSize.y <= 0.01f)
+        {
+            return Vector3.one;
+        }
+
+        if (string.Equals(key, ZhongshanDeckTitleContentDefaults.LayoutMainMenu, StringComparison.Ordinal) ||
+            string.Equals(key, ZhongshanDeckTitleContentDefaults.LayoutTopIcons, StringComparison.Ordinal))
+        {
+            return new Vector3(
+                Mathf.Max(0.2f, currentSize.x / defaultSize.x),
+                Mathf.Max(0.2f, currentSize.y / defaultSize.y),
+                1f);
+        }
+
+        return Vector3.one;
+    }
+
+    private static Vector2 GetDefaultHomepageLayoutSize(string key)
+    {
+        if (string.Equals(key, ZhongshanDeckTitleContentDefaults.LayoutLogo, StringComparison.Ordinal))
+        {
+            return new Vector2(900f, 330f);
+        }
+
+        if (string.Equals(key, ZhongshanDeckTitleContentDefaults.LayoutMainMenu, StringComparison.Ordinal))
+        {
+            return new Vector2(420f, 480f);
+        }
+
+        if (string.Equals(key, ZhongshanDeckTitleContentDefaults.LayoutTopIcons, StringComparison.Ordinal))
+        {
+            return new Vector2(292f, 80f);
+        }
+
+        if (string.Equals(key, ZhongshanDeckTitleContentDefaults.LayoutChangelog, StringComparison.Ordinal))
+        {
+            return new Vector2(300f, 74f);
+        }
+
+        if (string.Equals(key, ZhongshanDeckTitleContentDefaults.LayoutHint, StringComparison.Ordinal))
+        {
+            return new Vector2(800f, 80f);
+        }
+
+        if (string.Equals(key, ZhongshanDeckTitleContentDefaults.LayoutVersion, StringComparison.Ordinal))
+        {
+            return new Vector2(200f, 36f);
+        }
+
+        return Vector2.zero;
+    }
+
+    private void ApplyHomepageMenuLabels()
+    {
+        if (titleContentData?.homepage?.mainMenuItems == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < titleContentData.homepage.mainMenuItems.Count; i++)
+        {
+            ZhongshanDeckMenuActionLabel item = titleContentData.homepage.mainMenuItems[i];
+            if (item == null || string.IsNullOrWhiteSpace(item.actionId))
+            {
+                continue;
+            }
+
+            if (mainMenuButtonsByAction.TryGetValue(item.actionId, out Button button) && button != null)
+            {
+                TextMeshProUGUI label = button.GetComponentInChildren<TextMeshProUGUI>(true);
+                if (label != null)
+                {
+                    label.text = item.label;
+                }
+            }
+        }
+    }
+
+    private void ApplyTopIconLabels()
+    {
+        topRightIconTooltips.Clear();
+        if (titleContentData?.homepage?.topIcons == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < topRightIconTexts.Count && i < titleContentData.homepage.topIcons.Count; i++)
+        {
+            ZhongshanDeckIconEntry entry = titleContentData.homepage.topIcons[i];
+            if (entry == null)
+            {
+                topRightIconTooltips.Add(string.Empty);
+                continue;
+            }
+
+            if (topRightIconTexts[i] != null)
+            {
+                topRightIconTexts[i].text = entry.label;
+            }
+
+            topRightIconTooltips.Add(entry.tooltip ?? string.Empty);
+        }
+    }
+
     #endregion
 
     #region UI 构建
@@ -462,6 +753,7 @@ public class TitleScreenManager : MonoBehaviour
     {
         GameObject hintGO = CreateUIElement("HintText", canvasRect);
         RectTransform rt = hintGO.GetComponent<RectTransform>();
+        hintTextRect = rt;
         rt.anchorMin = new Vector2(0.5f, 0.12f);
         rt.anchorMax = new Vector2(0.5f, 0.12f);
         rt.pivot = new Vector2(0.5f, 0.5f);
@@ -476,9 +768,10 @@ public class TitleScreenManager : MonoBehaviour
         hintText.raycastTarget = false;
 
         // 先应用中文字体（确保在材质操作之前完成字体设置）
-        if (FontManager.Instance != null && FontManager.Instance.ChineseFont != null)
+        TMP_FontAsset chineseFont = GetAvailableChineseFont();
+        if (chineseFont != null)
         {
-            hintText.font = FontManager.Instance.ChineseFont;
+            hintText.font = chineseFont;
         }
 
         // TMP 描边 + 阴影 — 使用实例化材质避免共享材质污染
@@ -514,6 +807,7 @@ public class TitleScreenManager : MonoBehaviour
         CreateGalleryPanel(overlayGO.transform as RectTransform);
         CreateCreditsPanel(overlayGO.transform as RectTransform);
         CreateChangelogPanel(overlayGO.transform as RectTransform);
+        ApplyAuthoredTitleContentToPanels();
 
         overlayGO.SetActive(false);
     }
@@ -525,6 +819,7 @@ public class TitleScreenManager : MonoBehaviour
     {
         GameObject logoGO = CreateUIElement("LogoArea", parent);
         RectTransform rt = logoGO.GetComponent<RectTransform>();
+        logoAreaRect = rt;
         rt.anchorMin = new Vector2(0.5f, 0.5f);
         rt.anchorMax = new Vector2(0.5f, 0.5f);
         rt.pivot = new Vector2(0.5f, 0.5f);
@@ -573,6 +868,7 @@ public class TitleScreenManager : MonoBehaviour
     {
         GameObject buttonGO = CreateUIElement("ChangelogEntryButton", parent);
         RectTransform rect = buttonGO.GetComponent<RectTransform>();
+        changelogButtonRect = rect;
         rect.anchorMin = new Vector2(0f, 0f);
         rect.anchorMax = new Vector2(0f, 0f);
         rect.pivot = new Vector2(0f, 0f);
@@ -596,10 +892,10 @@ public class TitleScreenManager : MonoBehaviour
         colors.pressedColor = new Color(0.9f, 0.78f, 0.58f, 1f);
         changelogButton.colors = colors;
 
-        TextMeshProUGUI label = CreateTMPBlock(rect, "Label", "更新日志", 30f, new Color(0.44f, 0.18f, 0.08f, 1f), TextAlignmentOptions.Center);
-        StretchFull(label.rectTransform);
-        label.fontStyle = FontStyles.Bold;
-        label.margin = new Vector4(36f, 0f, 0f, 0f);
+        changelogButtonLabelText = CreateTMPBlock(rect, "Label", titleContentData?.homepage?.changelogButtonLabel ?? "更新日志", 30f, new Color(0.44f, 0.18f, 0.08f, 1f), TextAlignmentOptions.Center);
+        StretchFull(changelogButtonLabelText.rectTransform);
+        changelogButtonLabelText.fontStyle = FontStyles.Bold;
+        changelogButtonLabelText.margin = new Vector4(36f, 0f, 0f, 0f);
 
         TextMeshProUGUI icon = CreateTMPBlock(rect, "Icon", "■", 34f, new Color(0.95f, 0.88f, 0.66f, 1f), TextAlignmentOptions.Center);
         icon.rectTransform.anchorMin = new Vector2(0f, 0.5f);
@@ -614,27 +910,37 @@ public class TitleScreenManager : MonoBehaviour
     /// </summary>
     private void CreateTopRightIcons(RectTransform parent)
     {
-        string[] labels = { "教程", "成就", "CG", "制作人" };
-        string[] tooltips = { "游戏教程", "成就", "游戏CG", "制作人详情" };
+        List<ZhongshanDeckIconEntry> iconEntries = titleContentData?.homepage?.topIcons;
+        if (iconEntries == null || iconEntries.Count == 0)
+        {
+            iconEntries = ZhongshanDeckTitleContentDefaults.CreateHomepageTopIcons();
+        }
+
         float iconSize = 56f;
         float spacing = 12f;
-        float totalWidth = labels.Length * iconSize + (labels.Length - 1) * spacing;
+        float totalWidth = iconEntries.Count * iconSize + (iconEntries.Count - 1) * spacing;
         float startX = -(totalWidth / 2f) + iconSize / 2f;
 
         GameObject iconsRoot = CreateUIElement("TopRightIcons", parent);
         RectTransform rootRT = iconsRoot.GetComponent<RectTransform>();
+        topRightIconsRoot = rootRT;
         rootRT.anchorMin = new Vector2(1f, 1f);
         rootRT.anchorMax = new Vector2(1f, 1f);
         rootRT.pivot = new Vector2(1f, 1f);
         rootRT.sizeDelta = new Vector2(totalWidth + 32f, iconSize + 24f);
         rootRT.anchoredPosition = new Vector2(-24f, -20f);
 
-        for (int i = 0; i < labels.Length; i++)
+        topRightIconTexts.Clear();
+        topRightIconTooltips.Clear();
+
+        for (int i = 0; i < iconEntries.Count; i++)
         {
             int idx = i;
             float xOffset = startX + i * (iconSize + spacing);
+            ZhongshanDeckIconEntry iconEntry = iconEntries[i];
+            string buttonName = string.IsNullOrWhiteSpace(iconEntry?.label) ? $"Icon{idx}" : iconEntry.label;
 
-            GameObject iconGO = CreateUIElement(labels[i] + "Btn", rootRT);
+            GameObject iconGO = CreateUIElement(buttonName + "Btn", rootRT);
             RectTransform iconRT = iconGO.GetComponent<RectTransform>();
             iconRT.anchorMin = new Vector2(0.5f, 0.5f);
             iconRT.anchorMax = new Vector2(0.5f, 0.5f);
@@ -657,7 +963,7 @@ public class TitleScreenManager : MonoBehaviour
             GameObject labelGO = CreateUIElement("Label", iconRT);
             StretchFull(labelGO.GetComponent<RectTransform>());
             TextMeshProUGUI txt = labelGO.AddComponent<TextMeshProUGUI>();
-            txt.text = labels[i];
+            txt.text = iconEntry?.label ?? string.Empty;
             txt.fontSize = 16f;
             txt.alignment = TextAlignmentOptions.Center;
             txt.color = new Color(0.9f, 0.9f, 0.95f, 0.9f);
@@ -675,7 +981,10 @@ public class TitleScreenManager : MonoBehaviour
             txt.fontMaterial.SetFloat("_UnderlaySoftness", 0.08f);
 
             int captured = idx;
-            btn.onClick.AddListener(() => OnTopIconClicked(captured, tooltips[captured]));
+            topRightIconTexts.Add(txt);
+            topRightIconTooltips.Add(iconEntry?.tooltip ?? string.Empty);
+
+            btn.onClick.AddListener(() => OnTopIconClicked(captured));
 
             // 保存引用
             if (idx == 0) tutorialButton = btn;
@@ -685,7 +994,7 @@ public class TitleScreenManager : MonoBehaviour
         }
     }
 
-    private void OnTopIconClicked(int index, string name)
+    private void OnTopIconClicked(int index)
     {
         if (index == 0)
         {
@@ -728,6 +1037,7 @@ public class TitleScreenManager : MonoBehaviour
     {
         GameObject vGO = CreateUIElement("VersionText", parent);
         RectTransform rt = vGO.GetComponent<RectTransform>();
+        versionTextRect = rt;
         rt.anchorMin = new Vector2(1f, 0f);
         rt.anchorMax = new Vector2(1f, 0f);
         rt.pivot = new Vector2(1f, 0f);
@@ -751,6 +1061,7 @@ public class TitleScreenManager : MonoBehaviour
         // 无背景面板，直接在屏幕上放按钮
         mainMenuPanel = CreateUIElement("MainMenuPanel", parent);
         RectTransform panelRect = mainMenuPanel.GetComponent<RectTransform>();
+        mainMenuPanelRect = panelRect;
         panelRect.anchorMin = new Vector2(0.5f, 0.5f);
         panelRect.anchorMax = new Vector2(0.5f, 0.5f);
         panelRect.pivot = new Vector2(0.5f, 0.5f);
@@ -758,14 +1069,7 @@ public class TitleScreenManager : MonoBehaviour
         panelRect.anchoredPosition = new Vector2(0f, -100f);
 
         // 按钮列表：文字、回调
-        var menuItems = new System.Collections.Generic.List<(string label, UnityEngine.Events.UnityAction action)>
-        {
-            ("继续游戏",  ContinueGame),
-            ("开始游戏",  StartGame),
-            ("载入游戏",  OnLoadGame),
-            ("设  置",    OpenSettings),
-            ("退出游戏",  QuitGame),
-        };
+        List<(string actionId, string label, UnityEngine.Events.UnityAction action)> menuItems = BuildHomepageMenuItems();
 
         float btnHeight = 62f;
         float gap = 10f;
@@ -778,24 +1082,63 @@ public class TitleScreenManager : MonoBehaviour
             float y = startY - i * (btnHeight + gap);
             bool isPrimary = (i == 0 || i == 1); // 继续/开始 高亮
             Button createdButton = CreateTextMenuButton(panelRect, item.label, new Vector2(0f, y), item.action, isPrimary);
-            switch (item.label)
+            mainMenuButtonsByAction[item.actionId] = createdButton;
+
+            switch (item.actionId)
             {
-                case "继续游戏":
+                case "continue":
                     continueGameButton = createdButton;
                     break;
-                case "开始游戏":
+                case "start":
                     startGameButton = createdButton;
                     break;
-                case "设  置":
+                case "settings":
                     settingsButton = createdButton;
                     break;
-                case "退出游戏":
+                case "quit":
                     quitGameButton = createdButton;
                     break;
             }
         }
 
         RefreshContinueButtonState();
+    }
+
+    private List<(string actionId, string label, UnityEngine.Events.UnityAction action)> BuildHomepageMenuItems()
+    {
+        List<(string actionId, string label, UnityEngine.Events.UnityAction action)> items = new List<(string actionId, string label, UnityEngine.Events.UnityAction action)>();
+        List<ZhongshanDeckMenuActionLabel> authored = titleContentData?.homepage?.mainMenuItems;
+
+        if (authored == null || authored.Count == 0)
+        {
+            authored = ZhongshanDeckTitleContentDefaults.CreateHomepageMenuItems();
+        }
+
+        for (int i = 0; i < authored.Count; i++)
+        {
+            ZhongshanDeckMenuActionLabel item = authored[i];
+            if (item == null)
+            {
+                continue;
+            }
+
+            UnityEngine.Events.UnityAction action = item.actionId switch
+            {
+                "continue" => ContinueGame,
+                "start" => StartGame,
+                "load" => OnLoadGame,
+                "settings" => OpenSettings,
+                "quit" => QuitGame,
+                _ => null
+            };
+
+            if (action != null)
+            {
+                items.Add((item.actionId, item.label, action));
+            }
+        }
+
+        return items;
     }
 
     /// <summary>
@@ -932,13 +1275,14 @@ public class TitleScreenManager : MonoBehaviour
         RectTransform panelRect = settingsPanel.GetComponent<RectTransform>();
         panelRect.anchoredPosition = new Vector2(0f, -10f);
 
-        CreatePanelTitle(settingsPanel.transform as RectTransform, "设置", 42, new Vector2(0f, 235f));
+        settingsTitleText = CreatePanelTitle(settingsPanel.transform as RectTransform, titleContentData?.homepage?.settingsPanelTitle ?? "设置", 42, new Vector2(0f, 235f));
 
         musicVolumeSlider = CreateLabeledSlider(settingsPanel.transform as RectTransform, "音乐音量", new Vector2(0f, 110f));
         sfxVolumeSlider = CreateLabeledSlider(settingsPanel.transform as RectTransform, "音效音量", new Vector2(0f, 5f));
         fullscreenToggle = CreateLabeledToggle(settingsPanel.transform as RectTransform, "全屏显示", new Vector2(0f, -105f));
 
-        backButton = CreateMenuButton(settingsPanel.transform as RectTransform, "BackButton", "返回", new Vector2(0f, -225f), primaryColor, BackToMainMenu);
+        backButton = CreateMenuButton(settingsPanel.transform as RectTransform, "BackButton", titleContentData?.homepage?.settingsBackButtonLabel ?? "返回", new Vector2(0f, -225f), primaryColor, BackToMainMenu);
+        settingsBackButtonLabelText = backButton != null ? backButton.GetComponentInChildren<TextMeshProUGUI>(true) : null;
 
         settingsPanel.SetActive(false);
 
@@ -997,9 +1341,9 @@ public class TitleScreenManager : MonoBehaviour
         header.gameObject.AddComponent<Image>().color = new Color(1f, 0.92f, 0.65f, 1f);
         CreateTutorialGridBackground(header);
 
-        TextMeshProUGUI title = CreateTMPBlock(header, "Title", "更新日志", 32f, TutorialAccentColor, TextAlignmentOptions.Center);
-        StretchFull(title.rectTransform);
-        title.fontStyle = FontStyles.Bold;
+        changelogPanelTitleText = CreateTMPBlock(header, "Title", titleContentData?.changelog?.panelTitle ?? "更新日志", 32f, TutorialAccentColor, TextAlignmentOptions.Center);
+        StretchFull(changelogPanelTitleText.rectTransform);
+        changelogPanelTitleText.fontStyle = FontStyles.Bold;
 
         RectTransform scrollRoot = CreateUIElement("ChangelogScroll", frame).GetComponent<RectTransform>();
         scrollRoot.anchorMin = new Vector2(0f, 0f);
@@ -1020,18 +1364,7 @@ public class TitleScreenManager : MonoBehaviour
         ContentSizeFitter fitter = changelogContent.gameObject.AddComponent<ContentSizeFitter>();
         fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
-        AddChangelogLine("更新补丁 1.90", 31f, new Color(0.1f, 0.45f, 0.9f, 1f), FontStyles.Bold, 46f);
-        AddChangelogLine("同学录增加Q版CG栏目", 26f, TutorialTextColor, FontStyles.Bold, 42f);
-        AddChangelogLine("创意工坊的立绘编辑页面增加“Q版头像”设置", 26f, TutorialTextColor, FontStyles.Bold, 42f);
-        AddChangelogLine("修复了状态事件的选项数量不正确的问题", 26f, TutorialTextColor, FontStyles.Bold, 42f);
-        AddChangelogLine("修复了状态事件的点击无法进入下一句的问题", 26f, TutorialTextColor, FontStyles.Bold, 42f);
-        AddChangelogLine("修复了“已养成性格”卡住的问题", 26f, TutorialTextColor, FontStyles.Bold, 42f);
-        AddChangelogLine("完善了大量百科错误", 26f, TutorialTextColor, FontStyles.Bold, 42f);
-        AddChangelogLine("修复了开放人格对职业潜力的错误加成", 26f, TutorialTextColor, FontStyles.Bold, 42f);
-        AddChangelogLine("调整了各挚友特性加性格倾向的数值", 26f, TutorialTextColor, FontStyles.Bold, 42f);
-        AddChangelogLine("修复跑步小游戏中点击跳过按钮导致双倍奖励的bug", 26f, TutorialTextColor, FontStyles.Bold, 42f);
-        AddChangelogLine("修复了部分文本错误", 26f, TutorialTextColor, FontStyles.Bold, 42f);
-        AddChangelogLine("\n后续版本会继续补充首页入口、同学录和系统体验优化。", 23f, TutorialMutedTextColor, FontStyles.Normal, 78f);
+        RebuildChangelogContent();
 
         Button closeButton = CreateMenuButton(frame, "ChangelogCloseButton", "关闭", new Vector2(0f, -320f), new Color(0.98f, 0.78f, 0.38f, 1f), HideChangelogPanel);
         RectTransform closeRect = closeButton.GetComponent<RectTransform>();
@@ -1050,6 +1383,56 @@ public class TitleScreenManager : MonoBehaviour
         TextMeshProUGUI line = CreateTMPLayoutItem(changelogContent, "ChangelogLine", text, fontSize, color, style, preferredHeight);
         line.enableWordWrapping = true;
         line.lineSpacing = 8f;
+    }
+
+    private void RebuildChangelogContent()
+    {
+        if (changelogContent == null)
+        {
+            return;
+        }
+
+        for (int i = changelogContent.childCount - 1; i >= 0; i--)
+        {
+            DestroyRuntimeOrEditor(changelogContent.GetChild(i).gameObject);
+        }
+
+        if (changelogSections.Count == 0)
+        {
+            AddChangelogLine("暂时还没有可显示的更新日志。", 25f, TutorialMutedTextColor, FontStyles.Italic, 54f);
+            return;
+        }
+
+        for (int sectionIndex = 0; sectionIndex < changelogSections.Count; sectionIndex++)
+        {
+            ZhongshanDeckChangelogSection section = changelogSections[sectionIndex];
+            if (section == null)
+            {
+                continue;
+            }
+
+            if (!string.IsNullOrWhiteSpace(section.heading))
+            {
+                AddChangelogLine(section.heading, 31f, new Color(0.1f, 0.45f, 0.9f, 1f), FontStyles.Bold, 46f);
+            }
+
+            if (section.bulletLines != null)
+            {
+                for (int lineIndex = 0; lineIndex < section.bulletLines.Count; lineIndex++)
+                {
+                    string line = section.bulletLines[lineIndex];
+                    if (!string.IsNullOrWhiteSpace(line))
+                    {
+                        AddChangelogLine(line, 26f, TutorialTextColor, FontStyles.Bold, 42f);
+                    }
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(section.note))
+            {
+                AddChangelogLine("\n" + section.note, 23f, TutorialMutedTextColor, FontStyles.Normal, 78f);
+            }
+        }
     }
 
     private void CreateCreditsPanel(RectTransform parent)
@@ -1091,18 +1474,18 @@ public class TitleScreenManager : MonoBehaviour
         tab.offsetMin = Vector2.zero;
         tab.offsetMax = Vector2.zero;
         tab.gameObject.AddComponent<Image>().color = TutorialHighlightColor;
-        TextMeshProUGUI tabText = CreateTMPBlock(tab, "Label", "STAFF", 28f, TutorialAccentColor, TextAlignmentOptions.Center);
-        StretchFull(tabText.rectTransform);
-        tabText.fontStyle = FontStyles.Bold;
+        creditsTabText = CreateTMPBlock(tab, "Label", titleContentData?.credits?.tabLabel ?? "STAFF", 28f, TutorialAccentColor, TextAlignmentOptions.Center);
+        StretchFull(creditsTabText.rectTransform);
+        creditsTabText.fontStyle = FontStyles.Bold;
 
         CreateTutorialCloseButton(frameRect, HideCreditsPanel);
 
-        TextMeshProUGUI title = CreateTMPBlock(frameRect, "CreditsTitle", "制作人", 48f, TutorialAccentColor, TextAlignmentOptions.Left);
-        title.rectTransform.anchorMin = new Vector2(0.04f, 0.91f);
-        title.rectTransform.anchorMax = new Vector2(0.24f, 1f);
-        title.rectTransform.offsetMin = Vector2.zero;
-        title.rectTransform.offsetMax = Vector2.zero;
-        title.fontStyle = FontStyles.Bold;
+        creditsPanelTitleText = CreateTMPBlock(frameRect, "CreditsTitle", titleContentData?.credits?.panelTitle ?? "制作人", 48f, TutorialAccentColor, TextAlignmentOptions.Left);
+        creditsPanelTitleText.rectTransform.anchorMin = new Vector2(0.04f, 0.91f);
+        creditsPanelTitleText.rectTransform.anchorMax = new Vector2(0.24f, 1f);
+        creditsPanelTitleText.rectTransform.offsetMin = Vector2.zero;
+        creditsPanelTitleText.rectTransform.offsetMax = Vector2.zero;
+        creditsPanelTitleText.fontStyle = FontStyles.Bold;
 
         RectTransform contentRoot = CreateUIElement("CreditsContent", paperRect).GetComponent<RectTransform>();
         contentRoot.anchorMin = new Vector2(0.035f, 0.055f);
@@ -1202,15 +1585,18 @@ public class TitleScreenManager : MonoBehaviour
         tagLayout.childForceExpandWidth = false;
         tagLayout.childForceExpandHeight = false;
 
-        TextMeshProUGUI footer = CreateTMPBlock(detailPane, "CreditsFooter", "感谢每一次选择、每一次反馈，以及每一个把钟山下玩下去的周目。", 22f, TutorialMutedTextColor, TextAlignmentOptions.Center);
-        footer.rectTransform.anchorMin = new Vector2(0.06f, 0.06f);
-        footer.rectTransform.anchorMax = new Vector2(0.94f, 0.15f);
-        footer.rectTransform.offsetMin = Vector2.zero;
-        footer.rectTransform.offsetMax = Vector2.zero;
-        footer.fontStyle = FontStyles.Italic;
+        creditsFooterText = CreateTMPBlock(detailPane, "CreditsFooter", titleContentData?.credits?.footerText ?? string.Empty, 22f, TutorialMutedTextColor, TextAlignmentOptions.Center);
+        creditsFooterText.rectTransform.anchorMin = new Vector2(0.06f, 0.06f);
+        creditsFooterText.rectTransform.anchorMax = new Vector2(0.94f, 0.15f);
+        creditsFooterText.rectTransform.offsetMin = Vector2.zero;
+        creditsFooterText.rectTransform.offsetMax = Vector2.zero;
+        creditsFooterText.fontStyle = FontStyles.Italic;
 
         RebuildCreditsList();
-        SelectCreditsEntry(0);
+        if (creditsEntries.Count > 0)
+        {
+            SelectCreditsEntry(0);
+        }
     }
 
     private void ShowCreditsPanel()
@@ -1220,12 +1606,16 @@ public class TitleScreenManager : MonoBehaviour
             return;
         }
 
+        DebugReloadAuthoredTitleContent();
         creditsPanel.SetActive(true);
         creditsPanel.transform.SetAsLastSibling();
         creditsPanelGroup.alpha = 1f;
         creditsPanelGroup.interactable = true;
         creditsPanelGroup.blocksRaycasts = true;
-        SelectCreditsEntry(currentCreditsEntryIndex);
+        if (creditsEntries.Count > 0)
+        {
+            SelectCreditsEntry(currentCreditsEntryIndex);
+        }
     }
 
     private void HideCreditsPanel()
@@ -1246,13 +1636,22 @@ public class TitleScreenManager : MonoBehaviour
         creditsEntryButtons.Clear();
         for (int i = creditsListContent.childCount - 1; i >= 0; i--)
         {
-            Destroy(creditsListContent.GetChild(i).gameObject);
+            DestroyRuntimeOrEditor(creditsListContent.GetChild(i).gameObject);
+        }
+
+        if (creditsEntries.Count == 0)
+        {
+            if (creditsDetailTitle != null) creditsDetailTitle.text = "暂无条目";
+            if (creditsDetailRole != null) creditsDetailRole.text = string.Empty;
+            if (creditsDetailDescription != null) creditsDetailDescription.text = "钟山台内容资产里还没有制作组条目。";
+            RefreshCreditsTags(null);
+            return;
         }
 
         for (int i = 0; i < creditsEntries.Count; i++)
         {
             int captured = i;
-            creditsEntryButtons.Add(CreateTutorialEntryButton(creditsListContent, creditsEntries[i].Title, () => SelectCreditsEntry(captured)));
+            creditsEntryButtons.Add(CreateTutorialEntryButton(creditsListContent, creditsEntries[i].title, () => SelectCreditsEntry(captured)));
         }
 
         LayoutRebuilder.ForceRebuildLayoutImmediate(creditsListContent);
@@ -1266,24 +1665,24 @@ public class TitleScreenManager : MonoBehaviour
         }
 
         currentCreditsEntryIndex = Mathf.Clamp(index, 0, creditsEntries.Count - 1);
-        CreditsEntry entry = creditsEntries[currentCreditsEntryIndex];
+        ZhongshanDeckCreditsEntry entry = creditsEntries[currentCreditsEntryIndex];
 
         for (int i = 0; i < creditsEntryButtons.Count; i++)
         {
             UpdateTutorialEntryButtonState(creditsEntryButtons[i], i == currentCreditsEntryIndex);
         }
 
-        creditsDetailTitle.text = entry.Title;
-        creditsDetailRole.text = entry.Role;
-        creditsDetailDescription.text = entry.Description;
-        RefreshCreditsTags(entry.Tags);
+        creditsDetailTitle.text = entry.title;
+        creditsDetailRole.text = entry.role;
+        creditsDetailDescription.text = entry.description;
+        RefreshCreditsTags(entry.tags);
     }
 
-    private void RefreshCreditsTags(string[] tags)
+    private void RefreshCreditsTags(List<string> tags)
     {
         for (int i = creditsTagsRoot.childCount - 1; i >= 0; i--)
         {
-            Destroy(creditsTagsRoot.GetChild(i).gameObject);
+            DestroyRuntimeOrEditor(creditsTagsRoot.GetChild(i).gameObject);
         }
 
         if (tags == null)
@@ -1291,7 +1690,7 @@ public class TitleScreenManager : MonoBehaviour
             return;
         }
 
-        for (int i = 0; i < tags.Length; i++)
+        for (int i = 0; i < tags.Count; i++)
         {
             CreateTutorialTag(creditsTagsRoot, tags[i]);
         }
@@ -1304,6 +1703,7 @@ public class TitleScreenManager : MonoBehaviour
             return;
         }
 
+        DebugReloadAuthoredTitleContent();
         changelogPanel.SetActive(true);
         changelogPanel.transform.SetAsLastSibling();
         changelogPanelGroup.alpha = 1f;
@@ -1633,7 +2033,7 @@ public class TitleScreenManager : MonoBehaviour
         galleryEntryButtons.Clear();
         for (int i = galleryGridContent.childCount - 1; i >= 0; i--)
         {
-            Destroy(galleryGridContent.GetChild(i).gameObject);
+            DestroyRuntimeOrEditor(galleryGridContent.GetChild(i).gameObject);
         }
 
         List<GalleryEntry> entries = galleryCategories[currentGalleryCategoryIndex].Entries;
@@ -2251,12 +2651,12 @@ public class TitleScreenManager : MonoBehaviour
         paperImage.color = TutorialPaperColor;
         CreateTutorialGridBackground(paperRect);
 
-        RectTransform tabsRoot = CreateUIElement("TutorialTabs", frameRect).GetComponent<RectTransform>();
-        tabsRoot.anchorMin = new Vector2(0.06f, 0.88f);
-        tabsRoot.anchorMax = new Vector2(0.94f, 0.98f);
-        tabsRoot.offsetMin = Vector2.zero;
-        tabsRoot.offsetMax = Vector2.zero;
-        HorizontalLayoutGroup tabsLayout = tabsRoot.gameObject.AddComponent<HorizontalLayoutGroup>();
+        tutorialTabsRoot = CreateUIElement("TutorialTabs", frameRect).GetComponent<RectTransform>();
+        tutorialTabsRoot.anchorMin = new Vector2(0.06f, 0.88f);
+        tutorialTabsRoot.anchorMax = new Vector2(0.94f, 0.98f);
+        tutorialTabsRoot.offsetMin = Vector2.zero;
+        tutorialTabsRoot.offsetMax = Vector2.zero;
+        HorizontalLayoutGroup tabsLayout = tutorialTabsRoot.gameObject.AddComponent<HorizontalLayoutGroup>();
         tabsLayout.spacing = 14f;
         tabsLayout.childAlignment = TextAnchor.LowerLeft;
         tabsLayout.childControlWidth = true;
@@ -2264,12 +2664,7 @@ public class TitleScreenManager : MonoBehaviour
         tabsLayout.childForceExpandWidth = true;
         tabsLayout.childForceExpandHeight = true;
         tabsLayout.padding = new RectOffset(0, 110, 0, 0);
-
-        for (int i = 0; i < tutorialCategories.Count; i++)
-        {
-            int captured = i;
-            tutorialCategoryButtons.Add(CreateTutorialCategoryButton(tabsRoot, tutorialCategories[i].Name, () => SelectTutorialCategory(captured)));
-        }
+        RebuildTutorialCategoryTabs();
 
         CreateTutorialCloseButton(frameRect, HideTutorialPanel);
 
@@ -2349,7 +2744,10 @@ public class TitleScreenManager : MonoBehaviour
         CreateTutorialPreviewCard(tutorialDetailContent);
 
         LayoutRebuilder.ForceRebuildLayoutImmediate(frameRect);
-        SelectTutorialCategory(0);
+        if (tutorialCategories.Count > 0)
+        {
+            SelectTutorialCategory(0);
+        }
     }
 
     private void ShowTutorialPanel()
@@ -2359,11 +2757,15 @@ public class TitleScreenManager : MonoBehaviour
             return;
         }
 
+        DebugReloadAuthoredTitleContent();
         tutorialPanel.SetActive(true);
         tutorialPanelGroup.alpha = 1f;
         tutorialPanelGroup.interactable = true;
         tutorialPanelGroup.blocksRaycasts = true;
-        SelectTutorialCategory(currentTutorialCategoryIndex);
+        if (tutorialCategories.Count > 0)
+        {
+            SelectTutorialCategory(currentTutorialCategoryIndex);
+        }
     }
 
     private void HideTutorialPanel()
@@ -2383,6 +2785,10 @@ public class TitleScreenManager : MonoBehaviour
     {
         if (tutorialCategories.Count == 0)
         {
+            if (tutorialSectionTitle != null)
+            {
+                tutorialSectionTitle.text = titleContentData?.tutorial?.panelTitle ?? "新生手册";
+            }
             return;
         }
 
@@ -2398,13 +2804,33 @@ public class TitleScreenManager : MonoBehaviour
         UpdateTutorialEntryDetail();
     }
 
+    private void RebuildTutorialCategoryTabs()
+    {
+        tutorialCategoryButtons.Clear();
+        if (tutorialTabsRoot == null)
+        {
+            return;
+        }
+
+        for (int i = tutorialTabsRoot.childCount - 1; i >= 0; i--)
+        {
+            DestroyRuntimeOrEditor(tutorialTabsRoot.GetChild(i).gameObject);
+        }
+
+        for (int i = 0; i < tutorialCategories.Count; i++)
+        {
+            int captured = i;
+            tutorialCategoryButtons.Add(CreateTutorialCategoryButton(tutorialTabsRoot, tutorialCategories[i].Name, () => SelectTutorialCategory(captured)));
+        }
+    }
+
     private void RebuildTutorialEntryList()
     {
         tutorialEntryButtons.Clear();
 
         for (int i = tutorialItemListContent.childCount - 1; i >= 0; i--)
         {
-            Destroy(tutorialItemListContent.GetChild(i).gameObject);
+            DestroyRuntimeOrEditor(tutorialItemListContent.GetChild(i).gameObject);
         }
 
         List<TutorialEntry> entries = tutorialCategories[currentTutorialCategoryIndex].Entries;
@@ -2469,7 +2895,7 @@ public class TitleScreenManager : MonoBehaviour
 
         for (int i = tagsRoot.childCount - 1; i >= 0; i--)
         {
-            Destroy(tagsRoot.GetChild(i).gameObject);
+            DestroyRuntimeOrEditor(tagsRoot.GetChild(i).gameObject);
         }
 
         if (highlights == null)
@@ -2640,38 +3066,23 @@ public class TitleScreenManager : MonoBehaviour
                 SaveManager.PendingLoadSlot = 0;
                 Debug.Log("[TitleScreen] 已加载自动存档，准备进入游戏");
                 BeginGameTransition(false);
-            }
-            else
-            {
-                Debug.LogWarning("[TitleScreen] 自动存档读取失败");
-                ShowTitleNotification("自动存档读取失败", "自动存档暂时无法读取，系统会为你打开手动读档入口。");
-                if (HasManualSaveData())
-                {
-                    OnLoadGame();
-                    return;
-                }
-            }
-        }
-        else
-        {
-            Debug.Log("[TitleScreen] 无自动存档");
-            if (HasManualSaveData())
-            {
-                Debug.Log("[TitleScreen] 检测到手动存档，打开读档界面");
-                OnLoadGame();
                 return;
             }
 
-            if (continueGameStartsGame)
-            {
-                ShowTitleNotification("没有可继续的进度", "当前没有找到自动存档，本次会直接进入新游戏流程。", 2.6f, new Color(0.36f, 0.64f, 0.92f));
-                StartGame();
-            }
-            else
-            {
-                ShowTitleNotification("没有可继续的进度", "当前没有找到自动存档或手动存档，先开始一局新游戏吧。");
-            }
+            Debug.LogWarning("[TitleScreen] 自动存档读取失败");
+            ShowTitleNotification("自动存档读取失败", "自动存档暂时无法读取，需要的话可以改用“载入游戏”选择其他存档。");
+            return;
         }
+
+        Debug.Log("[TitleScreen] 无自动存档");
+        if (continueGameStartsGame)
+        {
+            ShowTitleNotification("没有可继续的进度", "当前没有找到自动存档，本次会直接进入新游戏流程。", 2.6f, new Color(0.36f, 0.64f, 0.92f));
+            StartGame();
+            return;
+        }
+
+        ShowTitleNotification("没有可继续的进度", "当前没有找到自动存档，需要的话请使用“载入游戏”选择其他存档。");
     }
 
     private bool HasAnySaveData()
@@ -2985,6 +3396,11 @@ public class TitleScreenManager : MonoBehaviour
 
         if (activePlayerIndex >= 0)
         {
+            if (!Application.isPlaying)
+            {
+                return;
+            }
+
             // 已有活跃播放器 —— 检查活跃播放器是否已停止（卡住恢复）
             VideoPlayer activePlayer = videoPlayers[activePlayerIndex];
             if (activePlayer != null && !activePlayer.isPlaying && preparedIndex == standbyPlayerIndex)
@@ -3002,6 +3418,11 @@ public class TitleScreenManager : MonoBehaviour
         videoImage.color = Color.white;
         preparedPlayer.Play();
 
+        if (!Application.isPlaying)
+        {
+            return;
+        }
+
         if (loopMonitorCoroutine == null)
         {
             loopMonitorCoroutine = StartCoroutine(MonitorVideoLoop());
@@ -3017,6 +3438,13 @@ public class TitleScreenManager : MonoBehaviour
         }
 
         Debug.Log($"[TitleScreen] VideoPlayer_{finishedIndex} 播放完毕");
+
+        if (!Application.isPlaying)
+        {
+            finishedPlayer.time = 0;
+            finishedPlayer.Play();
+            return;
+        }
 
         if (standbyPlayerIndex >= 0 && playerPrepared[standbyPlayerIndex])
         {
@@ -3050,6 +3478,11 @@ public class TitleScreenManager : MonoBehaviour
         }
 
         Debug.LogWarning("[TitleScreen] 开始界面视频播放失败: " + message);
+        if (!Application.isPlaying)
+        {
+            return;
+        }
+
         if (!notifiedVideoPlaybackError)
         {
             notifiedVideoPlaybackError = true;
@@ -3621,9 +4054,10 @@ public class TitleScreenManager : MonoBehaviour
         tmp.alignment = alignment;
         tmp.raycastTarget = false;
 
-        if (FontManager.Instance != null && FontManager.Instance.ChineseFont != null)
+        TMP_FontAsset chineseFont = GetAvailableChineseFont();
+        if (chineseFont != null)
         {
-            tmp.font = FontManager.Instance.ChineseFont;
+            tmp.font = chineseFont;
         }
 
         return tmp;
@@ -3665,7 +4099,7 @@ public class TitleScreenManager : MonoBehaviour
         return panelGO;
     }
 
-    private void CreatePanelTitle(RectTransform parent, string title, int fontSize, Vector2 anchoredPosition)
+    private TextMeshProUGUI CreatePanelTitle(RectTransform parent, string title, int fontSize, Vector2 anchoredPosition)
     {
         GameObject titleGO = CreateUIElement(title + "Title", parent);
         RectTransform rt = titleGO.GetComponent<RectTransform>();
@@ -3681,6 +4115,7 @@ public class TitleScreenManager : MonoBehaviour
         text.alignment = TextAlignmentOptions.Center;
         text.color = textColor;
         text.raycastTarget = false;
+        return text;
     }
 
     private void CreatePanelSubtitle(RectTransform parent, string content, Vector2 anchoredPosition)
@@ -3898,6 +4333,58 @@ public class TitleScreenManager : MonoBehaviour
         return go;
     }
 
+    private TMP_FontAsset GetAvailableChineseFont()
+    {
+        if (FontManager.Instance != null && FontManager.Instance.ChineseFont != null)
+        {
+            return FontManager.Instance.ChineseFont;
+        }
+
+        FontManager[] fontManagers = Resources.FindObjectsOfTypeAll<FontManager>();
+        FontManager sceneFontManager = fontManagers != null && fontManagers.Length > 0 ? fontManagers[0] : null;
+        if (sceneFontManager != null)
+        {
+            if (sceneFontManager.chineseFontAsset != null)
+            {
+                return sceneFontManager.chineseFontAsset;
+            }
+
+            TMP_FontAsset[] fonts = Resources.LoadAll<TMP_FontAsset>(sceneFontManager.resourceFontPath);
+            if (fonts != null && fonts.Length > 0)
+            {
+                return fonts[0];
+            }
+        }
+
+        TMP_FontAsset[] resourceFonts = Resources.LoadAll<TMP_FontAsset>("Fonts");
+        if (resourceFonts != null && resourceFonts.Length > 0)
+        {
+            return resourceFonts[0];
+        }
+
+        return null;
+    }
+
+    private static void DestroyRuntimeOrEditor(UnityEngine.Object obj)
+    {
+        if (obj == null)
+        {
+            return;
+        }
+
+        if (Application.isPlaying)
+        {
+            Destroy(obj);
+            return;
+        }
+
+#if UNITY_EDITOR
+        DestroyImmediate(obj);
+#else
+        Destroy(obj);
+#endif
+    }
+
     private void StretchFull(RectTransform rt)
     {
         rt.anchorMin = Vector2.zero;
@@ -3974,9 +4461,10 @@ public class TitleScreenManager : MonoBehaviour
         titleNotificationTitleText.alignment = TextAlignmentOptions.Left;
         titleNotificationTitleText.color = Color.white;
         titleNotificationTitleText.raycastTarget = false;
-        if (FontManager.Instance != null && FontManager.Instance.ChineseFont != null)
+        TMP_FontAsset chineseFont = GetAvailableChineseFont();
+        if (chineseFont != null)
         {
-            titleNotificationTitleText.font = FontManager.Instance.ChineseFont;
+            titleNotificationTitleText.font = chineseFont;
         }
 
         GameObject messageGO = CreateUIElement("NotificationMessage", rootRT);
@@ -3993,9 +4481,10 @@ public class TitleScreenManager : MonoBehaviour
         titleNotificationMessageText.enableWordWrapping = true;
         titleNotificationMessageText.color = new Color(1f, 1f, 1f, 0.95f);
         titleNotificationMessageText.raycastTarget = false;
-        if (FontManager.Instance != null && FontManager.Instance.ChineseFont != null)
+        TMP_FontAsset chineseFontMessage = GetAvailableChineseFont();
+        if (chineseFontMessage != null)
         {
-            titleNotificationMessageText.font = FontManager.Instance.ChineseFont;
+            titleNotificationMessageText.font = chineseFontMessage;
         }
     }
 
@@ -4039,6 +4528,288 @@ public class TitleScreenManager : MonoBehaviour
         group.alpha = 0f;
         titleNotificationCoroutine = null;
     }
+
+#if UNITY_EDITOR
+    public bool EditorPreviewIsBuilt()
+    {
+        return canvas != null && menuOverlay != null && logoAreaRect != null && mainMenuPanelRect != null;
+    }
+
+    public void EditorEnsureLivePreview()
+    {
+        if (Application.isPlaying)
+        {
+            return;
+        }
+
+        if (!EditorPreviewIsBuilt())
+        {
+            EditorBuildLivePreview();
+            return;
+        }
+
+        EditorSyncLivePreview();
+    }
+
+    public void EditorBuildLivePreview()
+    {
+        if (Application.isPlaying)
+        {
+            return;
+        }
+
+        EditorClearLivePreview();
+        ReloadAuthoredTitleContent();
+        ResolveVideoSource();
+        CacheColors();
+        BuildUI();
+        ApplyAuthoredTitleContentToPanels();
+        EditorShowMenuImmediately();
+        PrepareVideoBackground();
+        EditorUtility.SetDirty(this);
+        EditorApplication.QueuePlayerLoopUpdate();
+    }
+
+    public void EditorSyncLivePreview()
+    {
+        if (Application.isPlaying)
+        {
+            return;
+        }
+
+        ReloadAuthoredTitleContent();
+        ApplyAuthoredTitleContentToPanels();
+        EditorShowMenuImmediately();
+        EditorApplication.QueuePlayerLoopUpdate();
+    }
+
+    public void EditorApplyHomepageLayoutPreview()
+    {
+        if (Application.isPlaying || !EditorPreviewIsBuilt())
+        {
+            return;
+        }
+
+        ReloadAuthoredTitleContent();
+        ApplyHomepageLayoutOverrides();
+        ApplyHomepageMenuLabels();
+        ApplyTopIconLabels();
+        EditorShowMenuImmediately();
+        EditorApplication.QueuePlayerLoopUpdate();
+    }
+
+    public RectTransform EditorGetHomepageLayoutRect(string key)
+    {
+        switch (key)
+        {
+            case ZhongshanDeckTitleContentDefaults.LayoutLogo:
+                return logoAreaRect;
+            case ZhongshanDeckTitleContentDefaults.LayoutMainMenu:
+                return mainMenuPanelRect;
+            case ZhongshanDeckTitleContentDefaults.LayoutTopIcons:
+                return topRightIconsRoot;
+            case ZhongshanDeckTitleContentDefaults.LayoutChangelog:
+                return changelogButtonRect;
+            case ZhongshanDeckTitleContentDefaults.LayoutHint:
+                return hintTextRect;
+            case ZhongshanDeckTitleContentDefaults.LayoutVersion:
+                return versionTextRect;
+            default:
+                return null;
+        }
+    }
+
+    public static Vector2 EditorGetDefaultHomepageLayoutSize(string key)
+    {
+        return GetDefaultHomepageLayoutSize(key);
+    }
+
+    public static bool EditorUsesScaledLayout(string key)
+    {
+        return string.Equals(key, ZhongshanDeckTitleContentDefaults.LayoutMainMenu, StringComparison.Ordinal) ||
+               string.Equals(key, ZhongshanDeckTitleContentDefaults.LayoutTopIcons, StringComparison.Ordinal);
+    }
+
+    public void EditorSetPreviewVisible(bool visible)
+    {
+        if (Application.isPlaying || canvas == null)
+        {
+            return;
+        }
+
+        canvas.gameObject.SetActive(visible);
+        if (menuOverlay != null)
+        {
+            menuOverlay.gameObject.SetActive(visible);
+        }
+    }
+
+    private void EditorShowMenuImmediately()
+    {
+        hasEnteredMenu = true;
+        transitionRequested = false;
+
+        if (menuOverlay != null)
+        {
+            menuOverlay.gameObject.SetActive(true);
+            menuOverlay.alpha = 1f;
+            menuOverlay.interactable = false;
+            menuOverlay.blocksRaycasts = false;
+        }
+
+        if (hintText != null)
+        {
+            hintText.gameObject.SetActive(false);
+        }
+
+        if (mainMenuPanel != null)
+        {
+            mainMenuPanel.SetActive(true);
+        }
+
+        if (settingsPanel != null) settingsPanel.SetActive(false);
+        if (tutorialPanel != null) tutorialPanel.SetActive(false);
+        if (galleryPanel != null) galleryPanel.SetActive(false);
+        if (creditsPanel != null) creditsPanel.SetActive(false);
+        if (changelogPanel != null) changelogPanel.SetActive(false);
+        if (galleryViewerPanel != null) galleryViewerPanel.SetActive(false);
+        if (fadeOverlay != null) fadeOverlay.gameObject.SetActive(false);
+    }
+
+    public void EditorClearLivePreview()
+    {
+        if (Application.isPlaying)
+        {
+            return;
+        }
+
+        for (int i = 0; i < videoPlayers.Length; i++)
+        {
+            if (videoPlayers[i] != null)
+            {
+                videoPlayers[i].prepareCompleted -= OnVideoPrepared;
+                videoPlayers[i].loopPointReached -= OnVideoLoopPointReached;
+                videoPlayers[i].errorReceived -= OnVideoError;
+                if (videoPlayers[i].gameObject != null)
+                {
+                    DestroyImmediate(videoPlayers[i].gameObject);
+                }
+                videoPlayers[i] = null;
+            }
+
+            if (videoTextures[i] != null)
+            {
+                videoTextures[i].Release();
+                DestroyImmediate(videoTextures[i]);
+                videoTextures[i] = null;
+            }
+
+            playerPrepared[i] = false;
+        }
+
+        for (int childIndex = transform.childCount - 1; childIndex >= 0; childIndex--)
+        {
+            DestroyImmediate(transform.GetChild(childIndex).gameObject);
+        }
+
+        canvas = null;
+        canvasRect = null;
+        fadeOverlay = null;
+        hintText = null;
+        hintTextRect = null;
+        videoImage = null;
+        loopMonitorCoroutine = null;
+        activePlayerIndex = -1;
+        standbyPlayerIndex = -1;
+        titleNotificationRoot = null;
+        titleNotificationBg = null;
+        titleNotificationTitleText = null;
+        titleNotificationMessageText = null;
+        titleNotificationCoroutine = null;
+        menuOverlay = null;
+        mainMenuPanel = null;
+        settingsPanel = null;
+        continueGameButton = null;
+        startGameButton = null;
+        settingsButton = null;
+        quitGameButton = null;
+        backButton = null;
+        musicVolumeSlider = null;
+        sfxVolumeSlider = null;
+        fullscreenToggle = null;
+        tutorialButton = null;
+        achievementButton = null;
+        cgButton = null;
+        creditsButton = null;
+        topRightIconsRoot = null;
+        topRightIconTexts.Clear();
+        topRightIconTooltips.Clear();
+        creditsPanel = null;
+        creditsPanelGroup = null;
+        creditsListContent = null;
+        creditsTagsRoot = null;
+        creditsDetailTitle = null;
+        creditsDetailRole = null;
+        creditsDetailDescription = null;
+        creditsPanelTitleText = null;
+        creditsTabText = null;
+        creditsFooterText = null;
+        creditsEntryButtons.Clear();
+        tutorialPanel = null;
+        tutorialPanelGroup = null;
+        tutorialItemListContent = null;
+        tutorialDetailContent = null;
+        tutorialTabsRoot = null;
+        tutorialSectionTitle = null;
+        tutorialEntryTitle = null;
+        tutorialEntryDescription = null;
+        tutorialCategoryButtons.Clear();
+        tutorialEntryButtons.Clear();
+        changelogPanel = null;
+        changelogPanelGroup = null;
+        changelogContent = null;
+        changelogButton = null;
+        changelogButtonRect = null;
+        changelogButtonLabelText = null;
+        changelogPanelTitleText = null;
+        galleryPanel = null;
+        galleryPanelGroup = null;
+        galleryGridContent = null;
+        galleryPrevPageButton = null;
+        galleryNextPageButton = null;
+        galleryPageText = null;
+        galleryGridStatusText = null;
+        galleryGenderMaleButton = null;
+        galleryGenderFemaleButton = null;
+        gallerySectionTitle = null;
+        galleryPreviewTitle = null;
+        galleryPreviewSubtitle = null;
+        galleryPreviewDescription = null;
+        galleryCounterText = null;
+        galleryPreviewImage = null;
+        galleryPreviewImageLabel = null;
+        galleryOpenButton = null;
+        galleryTabButtons.Clear();
+        galleryEntryButtons.Clear();
+        galleryViewerPanel = null;
+        galleryViewerGroup = null;
+        galleryViewerImage = null;
+        galleryViewerImageLabel = null;
+        galleryViewerTitle = null;
+        galleryViewerSubtitle = null;
+        galleryViewerDescription = null;
+        versionText = null;
+        versionTextRect = null;
+        logoAreaRect = null;
+        mainMenuPanelRect = null;
+        settingsTitleText = null;
+        settingsBackButtonLabelText = null;
+        mainMenuButtonsByAction.Clear();
+        breathCoroutine = null;
+        hasEnteredMenu = false;
+        transitionRequested = false;
+    }
+#endif
 
     #endregion
 }

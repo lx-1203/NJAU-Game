@@ -3,6 +3,8 @@ using UnityEditor;
 public static class ZhongshanDeckMenu
 {
     private const string Root = "钟山台/调试台/";
+    private const string ModuleRoot = Root + "模块/";
+    private const string PreviewRoot = Root + "编辑器界面/";
 
     [MenuItem(Root + "总控窗口", false, 0)]
     public static void OpenWindow()
@@ -110,30 +112,60 @@ public static class ZhongshanDeckMenu
         return true;
     }
 
-    [MenuItem(Root + "模块/属性", false, 60)]
+    [MenuItem(ModuleRoot + "总览", false, 60)]
+    public static void OpenOverviewTab() => ZhongshanDeckWindow.Open(ZhongshanDeckWindow.Tab.Overview);
+
+    [MenuItem(ModuleRoot + "场景跳转", false, 61)]
+    public static void OpenSceneJumpTab() => ZhongshanDeckWindow.Open(ZhongshanDeckWindow.Tab.SceneJump);
+
+    [MenuItem(ModuleRoot + "属性", false, 62)]
     public static void OpenAttributesTab() => ZhongshanDeckWindow.Open(ZhongshanDeckWindow.Tab.Attributes);
 
-    [MenuItem(Root + "模块/时间", false, 61)]
+    [MenuItem(ModuleRoot + "时间", false, 63)]
     public static void OpenTimeTab() => ZhongshanDeckWindow.Open(ZhongshanDeckWindow.Tab.Time);
 
-    [MenuItem(Root + "模块/结局", false, 62)]
+    [MenuItem(ModuleRoot + "内容", false, 64)]
+    public static void OpenContentTab() => ZhongshanDeckWindow.Open(ZhongshanDeckWindow.Tab.Content);
+
+    [MenuItem(ModuleRoot + "新闻", false, 65)]
+    public static void OpenNewsTab() => ZhongshanDeckWindow.Open(ZhongshanDeckWindow.Tab.News);
+
+    [MenuItem(ModuleRoot + "结局", false, 66)]
     public static void OpenEndingTab() => ZhongshanDeckWindow.Open(ZhongshanDeckWindow.Tab.Endings);
 
-    [MenuItem(Root + "模块/事件", false, 63)]
+    [MenuItem(ModuleRoot + "事件", false, 67)]
     public static void OpenEventTab() => ZhongshanDeckWindow.Open(ZhongshanDeckWindow.Tab.Events);
 
-    [MenuItem(Root + "模块/NPC", false, 64)]
+    [MenuItem(ModuleRoot + "NPC", false, 68)]
     public static void OpenNPCTab() => ZhongshanDeckWindow.Open(ZhongshanDeckWindow.Tab.NPC);
 
-    [MenuItem(Root + "模块/经济", false, 65)]
+    [MenuItem(ModuleRoot + "经济", false, 69)]
     public static void OpenEconomyTab() => ZhongshanDeckWindow.Open(ZhongshanDeckWindow.Tab.Economy);
 
-    [MenuItem(Root + "模块/公式", false, 66)]
+    [MenuItem(ModuleRoot + "公式", false, 70)]
     public static void OpenFormulaTab() => ZhongshanDeckWindow.Open(ZhongshanDeckWindow.Tab.Formula);
 
-    [MenuItem(Root + "模块/快照", false, 67)]
+    [MenuItem(ModuleRoot + "快照", false, 71)]
     public static void OpenSnapshotTab() => ZhongshanDeckWindow.Open(ZhongshanDeckWindow.Tab.Snapshots);
 
-    [MenuItem(Root + "模块/日志", false, 68)]
+    [MenuItem(ModuleRoot + "日志", false, 72)]
     public static void OpenLogTab() => ZhongshanDeckWindow.Open(ZhongshanDeckWindow.Tab.Logs);
+
+    [MenuItem(PreviewRoot + "标题页真实预览", false, 90)]
+    public static void OpenTitleScenePreview()
+    {
+        ZhongshanDeckWindow.OpenTitleScenePreview();
+    }
+
+    [MenuItem(PreviewRoot + "存档界面真实预览", false, 91)]
+    public static void OpenSaveLoadScenePreview()
+    {
+        ZhongshanDeckWindow.OpenSaveLoadScenePreview();
+    }
+
+    [MenuItem(PreviewRoot + "标题内容编辑", false, 92)]
+    public static void OpenContentEditor()
+    {
+        ZhongshanDeckWindow.Open(ZhongshanDeckWindow.Tab.Content);
+    }
 }

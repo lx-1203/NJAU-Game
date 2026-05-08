@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
@@ -10,6 +11,20 @@ namespace Zhongshan.CreatorToolkit
     /// </summary>
     public static class ToolkitDataManager
     {
+        public sealed class DialogueFileInfo
+        {
+            public string fileName;
+            public string relativePath;
+            public string dialogueId;
+            public string displayName;
+            public int nodeCount;
+
+            public override string ToString()
+            {
+                return displayName;
+            }
+        }
+
         private static readonly string DialoguesFolderPath = Path.Combine(Application.streamingAssetsPath, "Dialogues");
         private static readonly string EventsFolderPath = Path.Combine(Application.dataPath, "Resources/Data/Events");
         private static readonly string MissionsFilePath = Path.Combine(Application.dataPath, "Resources/Data/missions.json");
@@ -20,15 +35,25 @@ namespace Zhongshan.CreatorToolkit
         /// <summary>
         /// 获取所有对话文件列表
         /// </summary>
-        public static List<string> GetAllDialogueFiles()
+        public static List<DialogueFileInfo> GetAllDialogueFiles()
         {
             EnsureDirectoryExists(DialoguesFolderPath);
-            string[] files = Directory.GetFiles(DialoguesFolderPath, "*.json");
-            List<string> result = new List<string>();
+            string[] files = Directory.GetFiles(DialoguesFolderPath, "*.json", SearchOption.AllDirectories);
+            List<DialogueFileInfo> result = new List<DialogueFileInfo>();
             foreach (var file in files)
             {
-                result.Add(Path.GetFileName(file));
+                DialogueFileInfo info = BuildDialogueFileInfo(file);
+                if (info != null)
+                {
+                    result.Add(info);
+                }
             }
+
+            result = result
+                .OrderBy(info => info.displayName)
+                .ThenBy(info => info.fileName)
+                .ToList();
+
             return result;
         }
 
@@ -135,6 +160,93 @@ namespace Zhongshan.CreatorToolkit
             {
                 Directory.CreateDirectory(path);
             }
+        }
+
+        private static DialogueFileInfo BuildDialogueFileInfo(string absolutePath)
+        {
+            string fileName = Path.GetFileName(absolutePath);
+            string relativePath = Path.GetRelativePath(DialoguesFolderPath, absolutePath).Replace("\\", "/");
+            string displayName = Path.GetFileNameWithoutExtension(fileName);
+            int nodeCount = 0;
+
+            try
+            {
+                string json = File.ReadAllText(absolutePath);
+                DialogueDataWrapper wrapper = JsonUtility.FromJson<DialogueDataWrapper>(json);
+                DialogueData wrapperDialogue = wrapper != null && wrapper.dialogues != null && wrapper.dialogues.Length > 0
+                    ? wrapper.dialogues[0]
+                    : null;
+                DialogueData singleDialogue = wrapperDialogue ?? JsonUtility.FromJson<DialogueData>(json);
+                if (singleDialogue != null)
+                {
+                    if (!string.IsNullOrWhiteSpace(singleDialogue.id))
+                    {
+                        displayName = GetDialogueDisplayName(singleDialogue.id, singleDialogue.nodes, fileName);
+                    }
+
+                    nodeCount = singleDialogue.nodes != null ? singleDialogue.nodes.Length : 0;
+                    return new DialogueFileInfo
+                    {
+                        fileName = fileName,
+                        relativePath = relativePath,
+                        dialogueId = string.IsNullOrWhiteSpace(singleDialogue.id) ? Path.GetFileNameWithoutExtension(fileName) : singleDialogue.id,
+                        displayName = displayName,
+                        nodeCount = nodeCount
+                    };
+                }
+            }
+            catch
+            {
+                // Fall back to filename-based display below.
+            }
+
+            return new DialogueFileInfo
+            {
+                fileName = fileName,
+                relativePath = relativePath,
+                dialogueId = Path.GetFileNameWithoutExtension(fileName),
+                displayName = GetDialogueDisplayName(Path.GetFileNameWithoutExtension(fileName), null, fileName),
+                nodeCount = nodeCount
+            };
+        }
+
+        private static string GetDialogueDisplayName(string dialogueId, DialogueNode[] nodes, string fileName)
+        {
+            string speakerName = GetPrimarySpeakerName(nodes);
+            if (!string.IsNullOrWhiteSpace(speakerName))
+            {
+                return speakerName;
+            }
+
+            switch (dialogueId)
+            {
+                case "lin_zhiqiu": return "林知秋";
+                case "su_xiaoting": return "苏小晴";
+                case "zhou_ran": return "周然";
+                case "xie_lingyun": return "谢凌云";
+                case "sample": return "示例对话";
+                default:
+                    return Path.GetFileNameWithoutExtension(fileName);
+            }
+        }
+
+        private static string GetPrimarySpeakerName(DialogueNode[] nodes)
+        {
+            if (nodes == null)
+            {
+                return null;
+            }
+
+            for (int i = 0; i < nodes.Length; i++)
+            {
+                string speaker = nodes[i]?.speaker;
+                if (!string.IsNullOrWhiteSpace(speaker) && speaker != "_inner")
+                {
+                    return speaker;
+                }
+            }
+
+            return null;
         }
     }
 }

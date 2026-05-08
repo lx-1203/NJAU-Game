@@ -82,6 +82,11 @@ public static class SceneLoader
     /// </summary>
     public static void QuitGame()
     {
+        if (SaveManager.Instance != null)
+        {
+            SaveManager.Instance.AutoSaveImmediate("主动退出游戏", true);
+        }
+
         Debug.Log("[SceneLoader] 退出游戏");
         #if UNITY_EDITOR
         UnityEditor.EditorApplication.isPlaying = false;

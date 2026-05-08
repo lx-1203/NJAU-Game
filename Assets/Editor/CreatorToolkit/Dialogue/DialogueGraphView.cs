@@ -45,17 +45,18 @@ namespace Zhongshan.CreatorToolkit.Dialogue
         {
             entryNode = new DialogueGraphNode
             {
-                title = "璧峰鐐?(START)",
+                title = "起始节点",
                 GUID = Guid.NewGuid().ToString(),
                 NodeId = "start",
                 EntryPoint = true
             };
 
             var generatedPort = GeneratePort(entryNode, Direction.Output);
-            generatedPort.portName = "Next";
+            generatedPort.portName = "下一句";
             entryNode.outputContainer.Add(generatedPort);
 
-            entryNode.capabilities &= ~Capabilities.Movable; // 绂佹鍒犻櫎鍜岃繃搴︾Щ鍔?            entryNode.capabilities &= ~Capabilities.Deletable;
+            entryNode.capabilities &= ~Capabilities.Movable;
+            entryNode.capabilities &= ~Capabilities.Deletable;
 
             entryNode.SetPosition(new Rect(100, 200, 100, 150));
             AddElement(entryNode);
@@ -89,37 +90,36 @@ namespace Zhongshan.CreatorToolkit.Dialogue
             };
 
             var inputPort = GeneratePort(dialogueNode, Direction.Input, Port.Capacity.Multi);
-            inputPort.portName = "Input";
+            inputPort.portName = "输入";
             dialogueNode.inputContainer.Add(inputPort);
 
-            // Add an output port by default (for normal "next" connection)
+            // 默认的顺序推进连接
             var nextPort = GeneratePort(dialogueNode, Direction.Output, Port.Capacity.Single);
-            nextPort.portName = "Next";
+            nextPort.portName = "下一句";
             dialogueNode.outputContainer.Add(nextPort);
 
             var button = new Button(() => { AddChoicePort(dialogueNode); })
             {
-                text = "鏂板閫夐」 (Choice)"
+                text = "新增选项"
             };
             dialogueNode.titleContainer.Add(button);
 
-            // UI Fields
-            var idField = new TextField("Node ID:") { value = nodeName, name = "idField" };
+            var idField = new TextField("节点 ID") { value = nodeName, name = "idField" };
             idField.RegisterValueChangedCallback(evt => {
                 dialogueNode.NodeId = evt.newValue;
                 dialogueNode.title = evt.newValue;
             });
             dialogueNode.mainContainer.Add(idField);
 
-            var speakerField = new TextField("Speaker:") { value = "", name = "speakerField" };
+            var speakerField = new TextField("说话人") { value = "", name = "speakerField" };
             speakerField.RegisterValueChangedCallback(evt => { dialogueNode.Speaker = evt.newValue; });
             dialogueNode.mainContainer.Add(speakerField);
 
-            var portraitField = new TextField("Portrait:") { value = "", name = "portraitField" };
+            var portraitField = new TextField("立绘/头像") { value = "", name = "portraitField" };
             portraitField.RegisterValueChangedCallback(evt => { dialogueNode.Portrait = evt.newValue; });
             dialogueNode.mainContainer.Add(portraitField);
 
-            var contentField = new TextField("Content:") { value = "", multiline = true, name = "contentField" };
+            var contentField = new TextField("内容") { value = "", multiline = true, name = "contentField" };
             contentField.RegisterValueChangedCallback(evt => { dialogueNode.ContentText = evt.newValue; });
             dialogueNode.mainContainer.Add(contentField);
 
@@ -137,7 +137,7 @@ namespace Zhongshan.CreatorToolkit.Dialogue
 
             var outputPortCount = node.outputContainer.Query("connector").ToList().Count;
             var choicePortName = string.IsNullOrEmpty(overridePortName) 
-                ? $"Choice {outputPortCount}" 
+                ? $"选项 {outputPortCount}" 
                 : overridePortName;
             
             var textField = new TextField

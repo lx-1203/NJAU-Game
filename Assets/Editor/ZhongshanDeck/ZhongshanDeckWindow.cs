@@ -44,6 +44,7 @@ public class ZhongshanDeckWindow : EditorWindow
     private const string SplashScenePath = "Assets/Scenes/SplashScreen.unity";
     private const string LoadingScenePath = "Assets/Scenes/LoadingScreen.unity";
     private const string TitleScenePath = "Assets/Scenes/TitleScreen.unity";
+    private const string SaveLoadPreviewScenePath = "Assets/Scenes/SaveLoadPreview.unity";
     private const string GameScenePath = "Assets/Scenes/GameScene/GameScene.unity";
     private const string EndingsDataPath = "Assets/Resources/Data/endings.json";
     private const int SceneJumpColumnCount = 3;
@@ -54,6 +55,7 @@ public class ZhongshanDeckWindow : EditorWindow
         SceneJump,
         Attributes,
         Time,
+        Content,
         News,
         Endings,
         Events,
@@ -66,7 +68,7 @@ public class ZhongshanDeckWindow : EditorWindow
 
     private static readonly string[] TabLabels =
     {
-        "总览", "场景跳转", "属性", "时间", "新闻", "结局", "事件", "NPC", "经济", "公式", "快照", "日志"
+        "总览", "场景跳转", "属性", "时间", "内容", "新闻", "结局", "事件", "NPC", "经济", "公式", "快照", "日志"
     };
 
     private static readonly (string Label, string Key, int Min, int Max)[] AttributeDefs =
@@ -167,6 +169,18 @@ public class ZhongshanDeckWindow : EditorWindow
     private int formulaC = 2;
     private string formulaResult = string.Empty;
     private string logFilter = string.Empty;
+    private string selectedHomepageLayoutKey = ZhongshanDeckTitleContentDefaults.LayoutLogo;
+    private string selectedSaveLoadLayoutKey = ZhongshanDeckSaveLoadContentDefaults.LayoutBoard;
+    private bool isHomepageLayoutDragging;
+    private bool isHomepageLayoutResizing;
+    private Vector2 homepageLayoutDragStartMouse;
+    private Vector2 homepageLayoutDragStartPosition;
+    private Vector2 homepageLayoutDragStartSize;
+    private bool isSaveLoadLayoutDragging;
+    private bool isSaveLoadLayoutResizing;
+    private Vector2 saveLoadLayoutDragStartMouse;
+    private Vector2 saveLoadLayoutDragStartPosition;
+    private Vector2 saveLoadLayoutDragStartSize;
     private string endingSearchInput = string.Empty;
     private string endingEditorStatus = string.Empty;
     private string editingEndingId = string.Empty;
@@ -268,6 +282,32 @@ public class ZhongshanDeckWindow : EditorWindow
         window.Show();
     }
 
+    public static bool OpenTitleScenePreview()
+    {
+        if (!OpenEditorScene(TitleScenePath))
+        {
+            return false;
+        }
+
+        ZhongshanDeckSaveLoadScenePreview.SetPreviewVisible(false);
+        ZhongshanDeckTitleScenePreview.SetPreviewVisible(true);
+        SceneView.RepaintAll();
+        return true;
+    }
+
+    public static bool OpenSaveLoadScenePreview()
+    {
+        if (!OpenEditorScene(SaveLoadPreviewScenePath))
+        {
+            return false;
+        }
+
+        ZhongshanDeckTitleScenePreview.SetPreviewVisible(false);
+        ZhongshanDeckSaveLoadScenePreview.SetPreviewVisible(true);
+        SceneView.RepaintAll();
+        return true;
+    }
+
     private void OnEnable()
     {
         ZhongshanDeckEditorStateUtility.GetOrCreateStateAsset();
@@ -305,6 +345,7 @@ public class ZhongshanDeckWindow : EditorWindow
             case Tab.SceneJump: DrawSceneJump(); break;
             case Tab.Attributes: DrawAttributes(); break;
             case Tab.Time: DrawTime(); break;
+            case Tab.Content: DrawContent(); break;
             case Tab.News: DrawNews(); break;
             case Tab.Endings: DrawEndings(); break;
             case Tab.Events: DrawEvents(); break;
@@ -321,7 +362,7 @@ public class ZhongshanDeckWindow : EditorWindow
     private void DrawToolbar()
     {
         EditorGUILayout.BeginHorizontal(EditorStyles.toolbar);
-        int selected = GUILayout.Toolbar((int)currentTab, TabLabels, EditorStyles.toolbarButton, GUILayout.Width(620f));
+        int selected = GUILayout.Toolbar((int)currentTab, TabLabels, EditorStyles.toolbarButton, GUILayout.Width(700f));
         if (selected != (int)currentTab)
         {
             currentTab = (Tab)selected;
@@ -408,6 +449,7 @@ public class ZhongshanDeckWindow : EditorWindow
         }
         if (GUILayout.Button("属性", GUILayout.Width(70f))) currentTab = Tab.Attributes;
         if (GUILayout.Button("时间", GUILayout.Width(70f))) currentTab = Tab.Time;
+        if (GUILayout.Button("内容", GUILayout.Width(70f))) currentTab = Tab.Content;
         if (GUILayout.Button("新闻", GUILayout.Width(70f))) currentTab = Tab.News;
         if (GUILayout.Button("事件", GUILayout.Width(70f))) currentTab = Tab.Events;
         if (GUILayout.Button("NPC", GUILayout.Width(70f))) currentTab = Tab.NPC;
@@ -420,7 +462,36 @@ public class ZhongshanDeckWindow : EditorWindow
     {
         EditorGUILayout.Space(8f);
         EditorGUILayout.LabelField("场景跳转", EditorStyles.boldLabel);
-        EditorGUILayout.HelpBox("这里会自动列出项目里当前已有的全部 .unity 场景。普通场景直接打开，宿舍入口会同步切换主角身份与宿舍编辑状态。", MessageType.None);
+        SceneAsset currentPlayStartScene = EditorSceneManager.playModeStartScene;
+        string playStartSceneLabel = currentPlayStartScene != null ? AssetDatabase.GetAssetPath(currentPlayStartScene) : "未设置";
+        EditorGUILayout.HelpBox($"这里是 Unity 编辑器里的钟山台场景跳转，不是局内调试面板。当前 Play 起始场景：{playStartSceneLabel}", MessageType.None);
+        EditorGUILayout.HelpBox("标题页文字、按钮和排版不是预制在场景里的，而是由 TitleScreenManager 在运行时动态创建。要做标题页可视化排版，请切到“内容”页里的“首页布局可视化编辑”。", MessageType.Info);
+        EditorGUILayout.HelpBox("存档界面现在使用独立的 SaveLoadPreview 场景做真实预览。主菜单和存档已经拆开，避免两个编辑层继续叠在同一个场景里。", MessageType.Info);
+
+        using (new EditorGUILayout.HorizontalScope())
+        {
+            if (GUILayout.Button("打开标题布局编辑", GUILayout.Width(160f)))
+            {
+                currentTab = Tab.Content;
+                GUI.FocusControl(null);
+            }
+
+            if (GUILayout.Button("打开标题页场景", GUILayout.Width(140f)) && HasSceneAsset(TitleScenePath))
+            {
+                OpenSceneByPath(TitleScenePath);
+                ZhongshanDeckSaveLoadScenePreview.SetPreviewVisible(false);
+                ZhongshanDeckTitleScenePreview.SetPreviewVisible(true);
+            }
+
+            if (GUILayout.Button("打开存档界面预览", GUILayout.Width(160f)) && HasSceneAsset(SaveLoadPreviewScenePath))
+            {
+                OpenSceneByPath(SaveLoadPreviewScenePath);
+                ZhongshanDeckSaveLoadScenePreview.SetPreviewVisible(true);
+                SceneView.RepaintAll();
+            }
+
+            GUILayout.FlexibleSpace();
+        }
 
         EditorGUILayout.Space(6f);
         EditorGUILayout.LabelField("项目场景", EditorStyles.boldLabel);
@@ -430,41 +501,60 @@ public class ZhongshanDeckWindow : EditorWindow
         EditorGUILayout.LabelField("快速入口", EditorStyles.boldLabel);
         using (new EditorGUILayout.HorizontalScope())
         {
-            if (GUILayout.Button("SplashScreen", GUILayout.Width(140f)) && HasSceneAsset(SplashScenePath))
+            if (GUILayout.Button(GetSceneDisplayNameByPath(SplashScenePath), GUILayout.Width(140f)) && HasSceneAsset(SplashScenePath))
             {
                 OpenSceneByPath(SplashScenePath);
             }
 
-            if (GUILayout.Button("LoadingScreen", GUILayout.Width(140f)) && HasSceneAsset(LoadingScenePath))
+            if (GUILayout.Button(GetSceneDisplayNameByPath(LoadingScenePath), GUILayout.Width(140f)) && HasSceneAsset(LoadingScenePath))
             {
                 OpenSceneByPath(LoadingScenePath);
             }
 
-            if (GUILayout.Button("TitleScreen", GUILayout.Width(140f)) && HasSceneAsset(TitleScenePath))
+            if (GUILayout.Button(GetSceneDisplayNameByPath(TitleScenePath), GUILayout.Width(140f)) && HasSceneAsset(TitleScenePath))
             {
                 OpenSceneByPath(TitleScenePath);
             }
 
-            if (GUILayout.Button("GameScene", GUILayout.Width(140f)) && HasSceneAsset(GameScenePath))
+            if (GUILayout.Button(GetSceneDisplayNameByPath(GameScenePath), GUILayout.Width(140f)) && HasSceneAsset(GameScenePath))
             {
                 OpenSceneByPath(GameScenePath);
             }
         }
 
-        EditorGUILayout.Space(8f);
-        EditorGUILayout.LabelField("宿舍编辑", EditorStyles.boldLabel);
         using (new EditorGUILayout.HorizontalScope())
         {
-            if (GUILayout.Button("进入男生宿舍", GUILayout.Width(180f)))
+            if (GUILayout.Button($"设 {GetSceneDisplayNameByPath(SplashScenePath)} 为 Play 起始", GUILayout.Width(180f)) && HasSceneAsset(SplashScenePath))
             {
-                OpenDormitoryPreview(0);
+                SetPlayModeStartScene(SplashScenePath);
             }
 
-            if (GUILayout.Button("进入女生宿舍", GUILayout.Width(180f)))
+            if (GUILayout.Button($"设 {GetSceneDisplayNameByPath(TitleScenePath)} 为 Play 起始", GUILayout.Width(180f)) && HasSceneAsset(TitleScenePath))
             {
-                OpenDormitoryPreview(1);
+                SetPlayModeStartScene(TitleScenePath);
+            }
+
+            if (GUILayout.Button($"设 {GetSceneDisplayNameByPath(GameScenePath)} 为 Play 起始", GUILayout.Width(180f)) && HasSceneAsset(GameScenePath))
+            {
+                SetPlayModeStartScene(GameScenePath);
             }
         }
+
+        using (new EditorGUILayout.HorizontalScope())
+        {
+            if (GUILayout.Button($"打开并设为 {GetSceneDisplayNameByPath(TitleScenePath)} 起始", GUILayout.Width(180f)) && HasSceneAsset(TitleScenePath))
+            {
+                OpenSceneAndSetPlayStart(TitleScenePath);
+            }
+
+            if (GUILayout.Button($"打开并设为 {GetSceneDisplayNameByPath(GameScenePath)} 起始", GUILayout.Width(180f)) && HasSceneAsset(GameScenePath))
+            {
+                OpenSceneAndSetPlayStart(GameScenePath);
+            }
+        }
+
+        EditorGUILayout.Space(8f);
+        DrawLocationPreviewTools();
     }
 
     private void DrawAttributes()
@@ -544,6 +634,11 @@ public class ZhongshanDeckWindow : EditorWindow
 
     private bool OpenSceneByPath(string scenePath)
     {
+        return OpenEditorScene(scenePath);
+    }
+
+    private static bool OpenEditorScene(string scenePath)
+    {
         if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
         {
             return false;
@@ -559,34 +654,154 @@ public class ZhongshanDeckWindow : EditorWindow
         return true;
     }
 
+    private bool OpenSceneAndSetPlayStart(string scenePath)
+    {
+        if (!OpenSceneByPath(scenePath))
+        {
+            return false;
+        }
+
+        SetPlayModeStartScene(scenePath);
+        return true;
+    }
+
+    private void SetPlayModeStartScene(string scenePath)
+    {
+        SceneAsset sceneAsset = AssetDatabase.LoadAssetAtPath<SceneAsset>(scenePath);
+        if (sceneAsset == null)
+        {
+            EditorUtility.DisplayDialog("钟山台", $"找不到场景：{scenePath}", "确定");
+            return;
+        }
+
+        EditorSceneManager.playModeStartScene = sceneAsset;
+        Repaint();
+    }
+
     private void OpenDormitoryPreview(int previewGender)
+    {
+        OpenLocationPreview(LocationId.Dormitory, previewGender);
+    }
+
+    private void DrawLocationPreviewTools()
+    {
+        EditorGUILayout.LabelField("地点可视化编辑", EditorStyles.boldLabel);
+        EditorGUILayout.HelpBox("以下入口会打开 GameScene，把 LocationSceneController 切到对应地点预览，并同步 NPC 锚点。打开后可直接在 Scene 视图里拖地面、边界、障碍和 NPC 站位。", MessageType.None);
+
+        using (new EditorGUILayout.HorizontalScope())
+        {
+            if (GUILayout.Button("男生宿舍", GUILayout.Width(140f)))
+            {
+                OpenLocationPreview(LocationId.Dormitory, 0);
+            }
+
+            if (GUILayout.Button("女生宿舍", GUILayout.Width(140f)))
+            {
+                OpenLocationPreview(LocationId.Dormitory, 1);
+            }
+
+            if (GUILayout.Button("教学楼", GUILayout.Width(140f)))
+            {
+                OpenLocationPreview(LocationId.TeachingBuilding);
+            }
+
+            if (GUILayout.Button("图书馆", GUILayout.Width(140f)))
+            {
+                OpenLocationPreview(LocationId.Library);
+            }
+        }
+
+        using (new EditorGUILayout.HorizontalScope())
+        {
+            if (GUILayout.Button("食堂", GUILayout.Width(140f)))
+            {
+                OpenLocationPreview(LocationId.Canteen);
+            }
+
+            if (GUILayout.Button("操场", GUILayout.Width(140f)))
+            {
+                OpenLocationPreview(LocationId.Playground);
+            }
+
+            if (GUILayout.Button("教超", GUILayout.Width(140f)))
+            {
+                OpenLocationPreview(LocationId.Store);
+            }
+
+            if (GUILayout.Button("快递站", GUILayout.Width(140f)))
+            {
+                OpenLocationPreview(LocationId.ExpressStation);
+            }
+        }
+
+        using (new EditorGUILayout.HorizontalScope())
+        {
+            if (GUILayout.Button("外卖站", GUILayout.Width(140f)))
+            {
+                OpenLocationPreview(LocationId.TakeoutStation);
+            }
+
+            if (GUILayout.Button("补全全部地点 Profile", GUILayout.Width(180f)))
+            {
+                EnsureAllLocationProfiles();
+            }
+
+            GUILayout.FlexibleSpace();
+        }
+    }
+
+    private void EnsureAllLocationProfiles()
     {
         if (!OpenSceneByPath(GameScenePath))
         {
             return;
         }
 
-        StartupFlowSettings.SetEditorPreviewPlayerGenderOverride(previewGender);
-        StartupFlowSettings.DefaultPlayerGender = Mathf.Clamp(previewGender, 0, 1);
-
-        LocationSceneController controller = UnityEngine.Object.FindFirstObjectByType<LocationSceneController>();
-        if (controller == null)
-        {
-            GameObject controllerObject = new GameObject("LocationSceneController");
-            controller = controllerObject.AddComponent<LocationSceneController>();
-            controller.EnsureDefaultProfiles();
-        }
-
-        Undo.RecordObject(controller, "Open Dormitory Preview");
-        controller.SetPreviewLocation(LocationId.Dormitory);
-        controller.SetPreviewPlayerGenderInEditMode(previewGender);
+        LocationSceneController controller = GetOrCreateLocationSceneController();
+        Undo.RecordObject(controller, "Add Missing Location Profiles");
+        controller.AddMissingProfiles();
         controller.RebuildScene();
         EditorUtility.SetDirty(controller);
+        Selection.activeObject = controller.gameObject;
+        EditorGUIUtility.PingObject(controller.gameObject);
+    }
+
+    private void OpenLocationPreview(LocationId locationId, int? previewGender = null)
+    {
+        if (!OpenSceneByPath(GameScenePath))
+        {
+            return;
+        }
+
+        if (previewGender.HasValue)
+        {
+            int gender = Mathf.Clamp(previewGender.Value, 0, 1);
+            StartupFlowSettings.SetEditorPreviewPlayerGenderOverride(gender);
+            StartupFlowSettings.DefaultPlayerGender = gender;
+        }
+
+        LocationSceneController controller = GetOrCreateLocationSceneController();
+        Undo.RecordObject(controller, $"Open {locationId} Preview");
+        controller.EnsureProfile(locationId);
+        controller.SetPreviewLocation(locationId);
+        if (previewGender.HasValue)
+        {
+            controller.SetPreviewPlayerGenderInEditMode(previewGender.Value);
+        }
+        controller.RebuildScene();
+        EditorUtility.SetDirty(controller);
+
+        NPCManager npcManager = UnityEngine.Object.FindFirstObjectByType<NPCManager>();
+        if (npcManager != null)
+        {
+            npcManager.RefreshEditorSceneAnchors();
+            EditorUtility.SetDirty(npcManager);
+        }
 
         PlayerController playerController = UnityEngine.Object.FindFirstObjectByType<PlayerController>();
         if (playerController != null)
         {
-            Undo.RecordObject(playerController, "Switch Dormitory Character");
+            Undo.RecordObject(playerController, "Apply Preview Character");
             playerController.SendMessage("ApplyEditorPreviewSprite", SendMessageOptions.DontRequireReceiver);
             EditorUtility.SetDirty(playerController);
             Selection.activeObject = playerController.gameObject;
@@ -599,6 +814,21 @@ public class ZhongshanDeckWindow : EditorWindow
         }
 
         SceneView.lastActiveSceneView?.FrameSelected();
+        SceneView.RepaintAll();
+    }
+
+    private static LocationSceneController GetOrCreateLocationSceneController()
+    {
+        LocationSceneController controller = UnityEngine.Object.FindFirstObjectByType<LocationSceneController>();
+        if (controller != null)
+        {
+            return controller;
+        }
+
+        GameObject controllerObject = new GameObject("LocationSceneController");
+        controller = controllerObject.AddComponent<LocationSceneController>();
+        controller.EnsureDefaultProfiles();
+        return controller;
     }
 
     private void DrawTime()
@@ -2606,13 +2836,53 @@ public class ZhongshanDeckWindow : EditorWindow
     {
         string fileName = System.IO.Path.GetFileNameWithoutExtension(scenePath);
         string folderName = System.IO.Path.GetFileName(System.IO.Path.GetDirectoryName(scenePath));
+        string sceneLabel = GetSceneDisplayName(fileName);
+        string folderLabel = GetSceneFolderDisplayName(folderName);
 
         if (string.Equals(folderName, "Scenes", StringComparison.OrdinalIgnoreCase) || string.IsNullOrEmpty(folderName))
         {
-            return fileName;
+            return sceneLabel;
         }
 
-        return $"{fileName}\n({folderName})";
+        return $"{sceneLabel}\n({folderLabel})";
+    }
+
+    private string GetSceneDisplayNameByPath(string scenePath)
+    {
+        string fileName = System.IO.Path.GetFileNameWithoutExtension(scenePath);
+        return GetSceneDisplayName(fileName);
+    }
+
+    private string GetSceneDisplayName(string sceneName)
+    {
+        switch (sceneName)
+        {
+            case "SplashScreen":
+                return "启动页";
+            case "LoadingScreen":
+                return "加载页";
+            case "TitleScreen":
+                return "标题页";
+            case "GameScene":
+                return "游戏主场景";
+            case "SampleScene":
+                return "示例空场景";
+            default:
+                return sceneName;
+        }
+    }
+
+    private string GetSceneFolderDisplayName(string folderName)
+    {
+        switch (folderName)
+        {
+            case "StartMenu":
+                return "开始菜单示例";
+            case "GameScene":
+                return "游戏场景";
+            default:
+                return folderName;
+        }
     }
 
     private string GetEventTypeDisplayName(string eventType)
@@ -3508,6 +3778,813 @@ public class ZhongshanDeckWindow : EditorWindow
         {
             DrawNewsItemEditor(i);
         }
+    }
+
+    private void DrawContent()
+    {
+        EditorGUILayout.Space(8f);
+        EditorGUILayout.LabelField("场景感知内容编辑", EditorStyles.boldLabel);
+        EditorGUILayout.HelpBox("这里会根据当前打开的场景，自动切换到标题页布局编辑或存档布局编辑。锁定、位置、尺寸等字段统一放在这里管理。", MessageType.Info);
+
+        using (new EditorGUILayout.HorizontalScope())
+        {
+            if (GUILayout.Button("打开 TitleScreen", GUILayout.Width(140f)) && HasSceneAsset(TitleScenePath))
+            {
+                OpenSceneByPath(TitleScenePath);
+            }
+
+            if (GUILayout.Button("打开 SaveLoadPreview", GUILayout.Width(160f)) && HasSceneAsset(SaveLoadPreviewScenePath))
+            {
+                OpenSceneByPath(SaveLoadPreviewScenePath);
+            }
+
+            if (GUILayout.Button("定位状态资产", GUILayout.Width(140f)))
+            {
+                Selection.activeObject = ZhongshanDeckEditorStateUtility.GetOrCreateStateAsset();
+                EditorGUIUtility.PingObject(Selection.activeObject);
+            }
+
+            if (GUILayout.Button("恢复默认内容", GUILayout.Width(140f)))
+            {
+                ZhongshanDeckToolState state = ZhongshanDeckEditorStateUtility.GetOrCreateStateAsset();
+                state.titleContent = new ZhongshanDeckTitleContent();
+                state.titleContent.EnsureInitialized();
+                EditorUtility.SetDirty(state);
+                AssetDatabase.SaveAssets();
+                Repaint();
+            }
+        }
+
+        ZhongshanDeckToolState asset = ZhongshanDeckEditorStateUtility.GetOrCreateStateAsset();
+        SerializedObject serializedObject = new SerializedObject(asset);
+        string activeScenePath = EditorSceneManager.GetActiveScene().path;
+        SerializedProperty activeContentProperty = null;
+        GUIContent activeContentLabel = null;
+
+        if (string.Equals(activeScenePath, TitleScenePath, StringComparison.OrdinalIgnoreCase))
+        {
+            activeContentProperty = serializedObject.FindProperty("titleContent");
+            activeContentLabel = new GUIContent("标题页共享内容");
+        }
+        else if (string.Equals(activeScenePath, SaveLoadPreviewScenePath, StringComparison.OrdinalIgnoreCase))
+        {
+            activeContentProperty = serializedObject.FindProperty("saveLoadContent");
+            activeContentLabel = new GUIContent("存档页共享内容");
+        }
+        else
+        {
+            activeContentProperty = serializedObject.FindProperty("titleContent");
+            activeContentLabel = new GUIContent("标题页共享内容");
+        }
+
+        if (activeContentProperty == null)
+        {
+            EditorGUILayout.HelpBox("未找到当前场景对应的内容字段。", MessageType.Error);
+            return;
+        }
+
+        EditorGUILayout.Space(6f);
+        EditorGUI.BeginChangeCheck();
+        EditorGUILayout.PropertyField(activeContentProperty, activeContentLabel, true);
+        if (EditorGUI.EndChangeCheck())
+        {
+            serializedObject.ApplyModifiedProperties();
+            asset.EnsureInitialized();
+            EditorUtility.SetDirty(asset);
+            AssetDatabase.SaveAssets();
+        }
+        else
+        {
+            serializedObject.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        asset.EnsureInitialized();
+
+        EditorGUILayout.Space(10f);
+        DrawSceneAwareLayoutEditor(asset);
+
+        EditorGUILayout.Space(8f);
+        if (EditorApplication.isPlaying)
+        {
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                if (GUILayout.Button("通知标题界面立即重载", GUILayout.Width(180f)))
+                {
+                    TitleScreenManager[] managers = FindObjectsOfType<TitleScreenManager>();
+                    for (int i = 0; i < managers.Length; i++)
+                    {
+                        managers[i].DebugReloadAuthoredTitleContent();
+                    }
+                }
+
+                if (GUILayout.Button("打开游戏内内容模块", GUILayout.Width(180f)))
+                {
+                    DebugConsoleManager.Instance?.Open();
+                }
+            }
+        }
+        else
+        {
+            EditorGUILayout.HelpBox("进入 Play 模式后，可以在这里通知当前标题界面即时回刷内容。", MessageType.None);
+        }
+    }
+
+    private void DrawSceneAwareLayoutEditor(ZhongshanDeckToolState asset)
+    {
+        string activeScenePath = EditorSceneManager.GetActiveScene().path;
+        if (string.Equals(activeScenePath, TitleScenePath, StringComparison.OrdinalIgnoreCase))
+        {
+            DrawHomepageLayoutEditor(asset);
+            return;
+        }
+
+        if (string.Equals(activeScenePath, SaveLoadPreviewScenePath, StringComparison.OrdinalIgnoreCase))
+        {
+            DrawSaveLoadLayoutEditor(asset);
+            return;
+        }
+
+        using (new EditorGUILayout.VerticalScope("box"))
+        {
+            EditorGUILayout.LabelField("布局编辑入口", EditorStyles.boldLabel);
+            EditorGUILayout.HelpBox("当前场景没有对应的布局编辑内容。切到 TitleScreen 或 SaveLoadPreview 后，这里会自动显示对应字段。", MessageType.None);
+
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                if (GUILayout.Button("切到标题布局", GUILayout.Width(120f)))
+                {
+                    OpenTitleScenePreview();
+                }
+
+                if (GUILayout.Button("切到存档布局", GUILayout.Width(120f)))
+                {
+                    OpenSaveLoadScenePreview();
+                }
+            }
+        }
+    }
+
+    private void DrawHomepageLayoutEditor(ZhongshanDeckToolState asset)
+    {
+        if (asset == null)
+        {
+            return;
+        }
+
+        asset.EnsureInitialized();
+        ZhongshanDeckHomepageContent homepage = asset.titleContent?.homepage;
+        if (homepage == null)
+        {
+            EditorGUILayout.HelpBox("未找到首页内容。", MessageType.Warning);
+            return;
+        }
+
+        ZhongshanDeckTitleContentDefaults.EnsureHomepageLayoutItems(homepage.layoutItems);
+        ZhongshanDeckHomepageLayoutItem selectedItem = GetSelectedHomepageLayoutItem(homepage);
+        if (selectedItem == null && homepage.layoutItems.Count > 0)
+        {
+            selectedItem = homepage.layoutItems[0];
+            selectedHomepageLayoutKey = selectedItem.key;
+        }
+
+        using (new EditorGUILayout.VerticalScope("box"))
+        {
+            EditorGUILayout.LabelField("首页布局可视化编辑", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("拖动物块可改位置，拖右下角小方块可改尺寸。坐标基于 1920x1080 标题页参考分辨率。", EditorStyles.wordWrappedMiniLabel);
+
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                if (GUILayout.Button("重置首页布局", GUILayout.Width(120f)))
+                {
+                    homepage.layoutItems.Clear();
+                    ZhongshanDeckTitleContentDefaults.EnsureHomepageLayoutItems(homepage.layoutItems);
+                    selectedHomepageLayoutKey = ZhongshanDeckTitleContentDefaults.LayoutLogo;
+                    SaveTitleAsset(asset);
+                    GUI.FocusControl(null);
+                }
+
+                if (GUILayout.Button("定位 TitleScreen 场景", GUILayout.Width(140f)) && HasSceneAsset(TitleScenePath))
+                {
+                    OpenSceneByPath(TitleScenePath);
+                }
+
+                GUILayout.FlexibleSpace();
+            }
+
+            Rect previewRect = GUILayoutUtility.GetRect(720f, 450f, GUILayout.ExpandWidth(true));
+            DrawHomepageLayoutPreview(previewRect, homepage, asset);
+            selectedItem = GetSelectedHomepageLayoutItem(homepage);
+
+            EditorGUILayout.Space(8f);
+            DrawHomepageLayoutInspector(selectedItem, asset);
+        }
+    }
+
+    private void DrawSaveLoadLayoutEditor(ZhongshanDeckToolState asset)
+    {
+        if (asset == null)
+        {
+            return;
+        }
+
+        asset.EnsureInitialized();
+        ZhongshanDeckSaveLoadContent content = asset.saveLoadContent;
+        if (content == null)
+        {
+            EditorGUILayout.HelpBox("未找到存档布局内容。", MessageType.Warning);
+            return;
+        }
+
+        content.EnsureInitialized();
+        ZhongshanDeckSaveLoadLayoutItem selectedItem = GetSelectedSaveLoadLayoutItem(content);
+        if (selectedItem == null && content.layoutItems.Count > 0)
+        {
+            selectedItem = content.layoutItems[0];
+            selectedSaveLoadLayoutKey = selectedItem.key;
+        }
+
+        using (new EditorGUILayout.VerticalScope("box"))
+        {
+            EditorGUILayout.LabelField("存档布局可视化编辑", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("当前处于 SaveLoadPreview 场景。位置锁定、显示、锚点、尺寸统一在这里编辑。", EditorStyles.wordWrappedMiniLabel);
+
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                if (GUILayout.Button("重置存档布局", GUILayout.Width(120f)))
+                {
+                    content.layoutItems.Clear();
+                    ZhongshanDeckSaveLoadContentDefaults.EnsureLayoutItems(content.layoutItems);
+                    selectedSaveLoadLayoutKey = ZhongshanDeckSaveLoadContentDefaults.LayoutBoard;
+                    SaveToolStateAsset(asset);
+                    GUI.FocusControl(null);
+                }
+
+                if (GUILayout.Button("定位 SaveLoadPreview 场景", GUILayout.Width(170f)) && HasSceneAsset(SaveLoadPreviewScenePath))
+                {
+                    OpenSceneByPath(SaveLoadPreviewScenePath);
+                }
+
+                GUILayout.FlexibleSpace();
+            }
+
+            Rect previewRect = GUILayoutUtility.GetRect(720f, 450f, GUILayout.ExpandWidth(true));
+            DrawSaveLoadLayoutPreview(previewRect, content, asset);
+            selectedItem = GetSelectedSaveLoadLayoutItem(content);
+
+            EditorGUILayout.Space(8f);
+            DrawSaveLoadLayoutInspector(selectedItem, asset);
+        }
+    }
+
+    private void DrawHomepageLayoutPreview(Rect previewRect, ZhongshanDeckHomepageContent homepage, ZhongshanDeckToolState asset)
+    {
+        Rect canvasRect = FitRectWithAspect(previewRect, 16f / 9f);
+        EditorGUI.DrawRect(previewRect, new Color(0.1f, 0.11f, 0.14f, 1f));
+        EditorGUI.DrawRect(canvasRect, new Color(0.17f, 0.2f, 0.24f, 1f));
+        DrawPreviewGrid(canvasRect, 6, 4, new Color(1f, 1f, 1f, 0.08f));
+        GUI.Box(canvasRect, GUIContent.none);
+
+        Event evt = Event.current;
+        float scale = canvasRect.width / 1920f;
+        ZhongshanDeckHomepageLayoutItem clickedItem = null;
+        bool changed = false;
+
+        for (int i = homepage.layoutItems.Count - 1; i >= 0; i--)
+        {
+            ZhongshanDeckHomepageLayoutItem item = homepage.layoutItems[i];
+            if (item == null)
+            {
+                continue;
+            }
+
+            item.EnsureInitialized();
+            Rect itemRect = GetHomepagePreviewRect(item, canvasRect);
+            bool isSelected = string.Equals(selectedHomepageLayoutKey, item.key, StringComparison.Ordinal);
+            Color fill = isSelected ? new Color(0.98f, 0.72f, 0.22f, 0.35f) : new Color(0.3f, 0.6f, 0.95f, 0.25f);
+            Color outline = isSelected ? new Color(0.98f, 0.8f, 0.32f, 1f) : new Color(0.48f, 0.72f, 0.98f, 0.9f);
+            EditorGUI.DrawRect(itemRect, fill);
+            Handles.color = outline;
+            Handles.DrawSolidRectangleWithOutline(itemRect, Color.clear, outline);
+            DrawPreviewLabel(itemRect, string.IsNullOrWhiteSpace(item.displayName) ? item.key : item.displayName, isSelected);
+
+            Rect resizeHandle = new Rect(itemRect.xMax - 12f, itemRect.yMax - 12f, 12f, 12f);
+            EditorGUI.DrawRect(resizeHandle, outline);
+
+            if (evt.type == UnityEngine.EventType.MouseDown && evt.button == 0)
+            {
+                if (resizeHandle.Contains(evt.mousePosition))
+                {
+                    clickedItem = item;
+                    selectedHomepageLayoutKey = item.key;
+                    isHomepageLayoutDragging = false;
+                    isHomepageLayoutResizing = true;
+                    homepageLayoutDragStartMouse = evt.mousePosition;
+                    homepageLayoutDragStartSize = item.size;
+                    evt.Use();
+                }
+                else if (itemRect.Contains(evt.mousePosition))
+                {
+                    clickedItem = item;
+                    selectedHomepageLayoutKey = item.key;
+                    isHomepageLayoutDragging = true;
+                    isHomepageLayoutResizing = false;
+                    homepageLayoutDragStartMouse = evt.mousePosition;
+                    homepageLayoutDragStartPosition = item.anchoredPosition;
+                    evt.Use();
+                }
+            }
+        }
+
+        ZhongshanDeckHomepageLayoutItem selectedItem = GetSelectedHomepageLayoutItem(homepage);
+        if (selectedItem != null)
+        {
+            if (evt.type == UnityEngine.EventType.MouseDrag && (isHomepageLayoutDragging || isHomepageLayoutResizing))
+            {
+                Vector2 delta = (evt.mousePosition - homepageLayoutDragStartMouse) / scale;
+                if (isHomepageLayoutDragging)
+                {
+                    selectedItem.anchoredPosition = homepageLayoutDragStartPosition + new Vector2(delta.x, -delta.y);
+                }
+                else if (isHomepageLayoutResizing)
+                {
+                    selectedItem.size = new Vector2(
+                        Mathf.Max(24f, homepageLayoutDragStartSize.x + delta.x),
+                        Mathf.Max(24f, homepageLayoutDragStartSize.y + delta.y));
+                }
+
+                changed = true;
+                evt.Use();
+            }
+
+            if (evt.type == UnityEngine.EventType.MouseUp)
+            {
+                isHomepageLayoutDragging = false;
+                isHomepageLayoutResizing = false;
+            }
+        }
+
+        if (clickedItem == null && evt.type == UnityEngine.EventType.MouseDown && evt.button == 0 && canvasRect.Contains(evt.mousePosition))
+        {
+            Repaint();
+        }
+
+        if (changed)
+        {
+            SaveTitleAsset(asset);
+            Repaint();
+        }
+    }
+
+    private void DrawHomepageLayoutInspector(ZhongshanDeckHomepageLayoutItem selectedItem, ZhongshanDeckToolState asset)
+    {
+        if (selectedItem == null)
+        {
+            EditorGUILayout.HelpBox("先在上面的预览里点一个模块。", MessageType.None);
+            return;
+        }
+
+        using (new EditorGUILayout.VerticalScope("box"))
+        {
+            EditorGUILayout.LabelField($"当前模块：{selectedItem.displayName}", EditorStyles.boldLabel);
+            EditorGUI.BeginChangeCheck();
+            selectedItem.locked = EditorGUILayout.Toggle("锁定编辑", selectedItem.locked);
+            selectedItem.visible = EditorGUILayout.Toggle("显示", selectedItem.visible);
+            selectedItem.anchor = (ZhongshanDeckLayoutAnchor)EditorGUILayout.EnumPopup("锚点", selectedItem.anchor);
+            selectedItem.anchoredPosition = EditorGUILayout.Vector2Field("位置", selectedItem.anchoredPosition);
+            selectedItem.size = EditorGUILayout.Vector2Field("尺寸", selectedItem.size);
+            selectedItem.size = new Vector2(Mathf.Max(24f, selectedItem.size.x), Mathf.Max(24f, selectedItem.size.y));
+            if (EditorGUI.EndChangeCheck())
+            {
+                SaveTitleAsset(asset);
+            }
+
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                if (GUILayout.Button("锁定其他项", GUILayout.Width(100f)))
+                {
+                    SetOnlyHomepageItemEditable(asset, selectedItem.key);
+                }
+
+                if (GUILayout.Button("全部解锁", GUILayout.Width(100f)))
+                {
+                    SetAllHomepageItemsLocked(asset, false);
+                }
+
+                if (GUILayout.Button("保存布局", GUILayout.Width(100f)))
+                {
+                    SaveTitleAsset(asset);
+                }
+
+                if (GUILayout.Button("播放中通知标题页刷新", GUILayout.Width(160f)))
+                {
+                    if (EditorApplication.isPlaying)
+                    {
+                        TitleScreenManager[] managers = FindObjectsOfType<TitleScreenManager>();
+                        for (int i = 0; i < managers.Length; i++)
+                        {
+                            managers[i].DebugReloadAuthoredTitleContent();
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private void DrawSaveLoadLayoutPreview(Rect previewRect, ZhongshanDeckSaveLoadContent content, ZhongshanDeckToolState asset)
+    {
+        Rect canvasRect = FitRectWithAspect(previewRect, 16f / 9f);
+        EditorGUI.DrawRect(previewRect, new Color(0.1f, 0.11f, 0.14f, 1f));
+        EditorGUI.DrawRect(canvasRect, new Color(0.17f, 0.2f, 0.24f, 1f));
+        DrawPreviewGrid(canvasRect, 6, 4, new Color(1f, 1f, 1f, 0.08f));
+        GUI.Box(canvasRect, GUIContent.none);
+
+        Event evt = Event.current;
+        float scale = canvasRect.width / 1920f;
+        ZhongshanDeckSaveLoadLayoutItem clickedItem = null;
+        bool changed = false;
+
+        for (int i = content.layoutItems.Count - 1; i >= 0; i--)
+        {
+            ZhongshanDeckSaveLoadLayoutItem item = content.layoutItems[i];
+            if (item == null)
+            {
+                continue;
+            }
+
+            item.EnsureInitialized();
+            Rect itemRect = GetSaveLoadPreviewRect(item, canvasRect);
+            bool isSelected = string.Equals(selectedSaveLoadLayoutKey, item.key, StringComparison.Ordinal);
+            bool isLocked = item.locked;
+            Color fill = isSelected ? new Color(0.98f, 0.72f, 0.22f, 0.35f) : new Color(0.3f, 0.6f, 0.95f, 0.25f);
+            Color outline = isLocked
+                ? new Color(0.95f, 0.42f, 0.42f, 0.95f)
+                : (isSelected ? new Color(0.98f, 0.8f, 0.32f, 1f) : new Color(0.48f, 0.72f, 0.98f, 0.9f));
+            EditorGUI.DrawRect(itemRect, fill);
+            Handles.color = outline;
+            Handles.DrawSolidRectangleWithOutline(itemRect, Color.clear, outline);
+            DrawPreviewLabel(itemRect, isLocked ? $"{GetSaveLoadPreviewLabel(item)} [锁]" : GetSaveLoadPreviewLabel(item), isSelected);
+
+            Rect resizeHandle = new Rect(itemRect.xMax - 12f, itemRect.yMax - 12f, 12f, 12f);
+            if (!isLocked)
+            {
+                EditorGUI.DrawRect(resizeHandle, outline);
+            }
+
+            if (evt.type == UnityEngine.EventType.MouseDown && evt.button == 0)
+            {
+                if (resizeHandle.Contains(evt.mousePosition) && !isLocked)
+                {
+                    clickedItem = item;
+                    selectedSaveLoadLayoutKey = item.key;
+                    isSaveLoadLayoutDragging = false;
+                    isSaveLoadLayoutResizing = true;
+                    saveLoadLayoutDragStartMouse = evt.mousePosition;
+                    saveLoadLayoutDragStartSize = item.size;
+                    evt.Use();
+                }
+                else if (itemRect.Contains(evt.mousePosition))
+                {
+                    clickedItem = item;
+                    selectedSaveLoadLayoutKey = item.key;
+                    if (!isLocked)
+                    {
+                        isSaveLoadLayoutDragging = true;
+                        isSaveLoadLayoutResizing = false;
+                        saveLoadLayoutDragStartMouse = evt.mousePosition;
+                        saveLoadLayoutDragStartPosition = item.anchoredPosition;
+                    }
+                    evt.Use();
+                }
+            }
+        }
+
+        ZhongshanDeckSaveLoadLayoutItem selectedItem = GetSelectedSaveLoadLayoutItem(content);
+        if (selectedItem != null)
+        {
+            if (evt.type == UnityEngine.EventType.MouseDrag && (isSaveLoadLayoutDragging || isSaveLoadLayoutResizing))
+            {
+                Vector2 delta = (evt.mousePosition - saveLoadLayoutDragStartMouse) / scale;
+                if (isSaveLoadLayoutDragging)
+                {
+                    selectedItem.anchoredPosition = saveLoadLayoutDragStartPosition + new Vector2(delta.x, -delta.y);
+                }
+                else if (isSaveLoadLayoutResizing)
+                {
+                    selectedItem.size = new Vector2(
+                        Mathf.Max(24f, saveLoadLayoutDragStartSize.x + delta.x),
+                        Mathf.Max(24f, saveLoadLayoutDragStartSize.y + delta.y));
+                }
+
+                changed = true;
+                evt.Use();
+            }
+
+            if (evt.type == UnityEngine.EventType.MouseUp)
+            {
+                isSaveLoadLayoutDragging = false;
+                isSaveLoadLayoutResizing = false;
+            }
+        }
+
+        if (clickedItem == null && evt.type == UnityEngine.EventType.MouseDown && evt.button == 0 && canvasRect.Contains(evt.mousePosition))
+        {
+            Repaint();
+        }
+
+        if (changed)
+        {
+            SaveToolStateAsset(asset);
+            Repaint();
+        }
+    }
+
+    private void DrawSaveLoadLayoutInspector(ZhongshanDeckSaveLoadLayoutItem selectedItem, ZhongshanDeckToolState asset)
+    {
+        if (selectedItem == null)
+        {
+            EditorGUILayout.HelpBox("先在上面的预览里点一个模块。", MessageType.None);
+            return;
+        }
+
+        using (new EditorGUILayout.VerticalScope("box"))
+        {
+            EditorGUILayout.LabelField($"当前模块：{selectedItem.displayName}", EditorStyles.boldLabel);
+            EditorGUI.BeginChangeCheck();
+            selectedItem.locked = EditorGUILayout.Toggle("锁定编辑", selectedItem.locked);
+            selectedItem.visible = EditorGUILayout.Toggle("显示", selectedItem.visible);
+            selectedItem.anchor = (ZhongshanDeckLayoutAnchor)EditorGUILayout.EnumPopup("锚点", selectedItem.anchor);
+            selectedItem.anchoredPosition = EditorGUILayout.Vector2Field("位置", selectedItem.anchoredPosition);
+            selectedItem.size = EditorGUILayout.Vector2Field("尺寸", selectedItem.size);
+            selectedItem.size = new Vector2(Mathf.Max(24f, selectedItem.size.x), Mathf.Max(24f, selectedItem.size.y));
+            if (EditorGUI.EndChangeCheck())
+            {
+                SaveToolStateAsset(asset);
+            }
+
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                if (GUILayout.Button("锁定其他项", GUILayout.Width(100f)))
+                {
+                    SetOnlySaveLoadItemEditable(asset, selectedItem.key);
+                }
+
+                if (GUILayout.Button("全部解锁", GUILayout.Width(100f)))
+                {
+                    SetAllSaveLoadItemsLocked(asset, false);
+                }
+
+                if (GUILayout.Button("保存布局", GUILayout.Width(100f)))
+                {
+                    SaveToolStateAsset(asset);
+                }
+            }
+        }
+    }
+
+    private ZhongshanDeckHomepageLayoutItem GetSelectedHomepageLayoutItem(ZhongshanDeckHomepageContent homepage)
+    {
+        if (homepage?.layoutItems == null)
+        {
+            return null;
+        }
+
+        for (int i = 0; i < homepage.layoutItems.Count; i++)
+        {
+            ZhongshanDeckHomepageLayoutItem item = homepage.layoutItems[i];
+            if (item != null && string.Equals(item.key, selectedHomepageLayoutKey, StringComparison.Ordinal))
+            {
+                return item;
+            }
+        }
+
+        return null;
+    }
+
+    private ZhongshanDeckSaveLoadLayoutItem GetSelectedSaveLoadLayoutItem(ZhongshanDeckSaveLoadContent content)
+    {
+        if (content?.layoutItems == null)
+        {
+            return null;
+        }
+
+        for (int i = 0; i < content.layoutItems.Count; i++)
+        {
+            ZhongshanDeckSaveLoadLayoutItem item = content.layoutItems[i];
+            if (item != null && string.Equals(item.key, selectedSaveLoadLayoutKey, StringComparison.Ordinal))
+            {
+                return item;
+            }
+        }
+
+        return null;
+    }
+
+    private Rect GetHomepagePreviewRect(ZhongshanDeckHomepageLayoutItem item, Rect canvasRect)
+    {
+        Vector2 pivot = GetLayoutPivot(item.anchor);
+        Vector2 anchorPoint = GetPreviewAnchorPoint(item.anchor, canvasRect);
+        float scale = canvasRect.width / 1920f;
+        Vector2 size = item.size * scale;
+        Vector2 pivotGui = new Vector2(anchorPoint.x + item.anchoredPosition.x * scale, anchorPoint.y - item.anchoredPosition.y * scale);
+        float left = pivotGui.x - size.x * pivot.x;
+        float top = pivotGui.y - size.y * (1f - pivot.y);
+        return new Rect(left, top, size.x, size.y);
+    }
+
+    private Rect GetSaveLoadPreviewRect(ZhongshanDeckSaveLoadLayoutItem item, Rect canvasRect)
+    {
+        Vector2 pivot = GetLayoutPivot(item.anchor);
+        Vector2 anchorPoint = GetPreviewAnchorPoint(item.anchor, canvasRect);
+        float scale = canvasRect.width / 1920f;
+        Vector2 size = item.size * scale;
+        Vector2 pivotGui = new Vector2(anchorPoint.x + item.anchoredPosition.x * scale, anchorPoint.y - item.anchoredPosition.y * scale);
+        float left = pivotGui.x - size.x * pivot.x;
+        float top = pivotGui.y - size.y * (1f - pivot.y);
+        return new Rect(left, top, size.x, size.y);
+    }
+
+    private Rect FitRectWithAspect(Rect rect, float aspect)
+    {
+        float width = rect.width;
+        float height = width / aspect;
+        if (height > rect.height)
+        {
+            height = rect.height;
+            width = height * aspect;
+        }
+
+        return new Rect(
+            rect.x + (rect.width - width) * 0.5f,
+            rect.y + (rect.height - height) * 0.5f,
+            width,
+            height);
+    }
+
+    private void DrawPreviewGrid(Rect rect, int columns, int rows, Color color)
+    {
+        Handles.BeginGUI();
+        Handles.color = color;
+
+        for (int i = 1; i < columns; i++)
+        {
+            float x = Mathf.Lerp(rect.xMin, rect.xMax, i / (float)columns);
+            Handles.DrawLine(new Vector3(x, rect.yMin), new Vector3(x, rect.yMax));
+        }
+
+        for (int i = 1; i < rows; i++)
+        {
+            float y = Mathf.Lerp(rect.yMin, rect.yMax, i / (float)rows);
+            Handles.DrawLine(new Vector3(rect.xMin, y), new Vector3(rect.xMax, y));
+        }
+
+        Handles.EndGUI();
+    }
+
+    private void DrawPreviewLabel(Rect rect, string label, bool selected)
+    {
+        GUIStyle style = new GUIStyle(EditorStyles.boldLabel);
+        style.alignment = TextAnchor.MiddleCenter;
+        style.normal.textColor = selected ? Color.white : new Color(0.96f, 0.96f, 0.96f, 0.92f);
+        GUI.Label(rect, label, style);
+    }
+
+    private Vector2 GetPreviewAnchorPoint(ZhongshanDeckLayoutAnchor anchor, Rect canvasRect)
+    {
+        switch (anchor)
+        {
+            case ZhongshanDeckLayoutAnchor.TopLeft: return new Vector2(canvasRect.xMin, canvasRect.yMin);
+            case ZhongshanDeckLayoutAnchor.TopCenter: return new Vector2(canvasRect.center.x, canvasRect.yMin);
+            case ZhongshanDeckLayoutAnchor.TopRight: return new Vector2(canvasRect.xMax, canvasRect.yMin);
+            case ZhongshanDeckLayoutAnchor.LeftCenter: return new Vector2(canvasRect.xMin, canvasRect.center.y);
+            case ZhongshanDeckLayoutAnchor.RightCenter: return new Vector2(canvasRect.xMax, canvasRect.center.y);
+            case ZhongshanDeckLayoutAnchor.BottomLeft: return new Vector2(canvasRect.xMin, canvasRect.yMax);
+            case ZhongshanDeckLayoutAnchor.BottomCenter: return new Vector2(canvasRect.center.x, canvasRect.yMax);
+            case ZhongshanDeckLayoutAnchor.BottomRight: return new Vector2(canvasRect.xMax, canvasRect.yMax);
+            default: return canvasRect.center;
+        }
+    }
+
+    private Vector2 GetLayoutPivot(ZhongshanDeckLayoutAnchor anchor)
+    {
+        switch (anchor)
+        {
+            case ZhongshanDeckLayoutAnchor.TopLeft: return new Vector2(0f, 1f);
+            case ZhongshanDeckLayoutAnchor.TopCenter: return new Vector2(0.5f, 1f);
+            case ZhongshanDeckLayoutAnchor.TopRight: return new Vector2(1f, 1f);
+            case ZhongshanDeckLayoutAnchor.LeftCenter: return new Vector2(0f, 0.5f);
+            case ZhongshanDeckLayoutAnchor.RightCenter: return new Vector2(1f, 0.5f);
+            case ZhongshanDeckLayoutAnchor.BottomLeft: return new Vector2(0f, 0f);
+            case ZhongshanDeckLayoutAnchor.BottomCenter: return new Vector2(0.5f, 0f);
+            case ZhongshanDeckLayoutAnchor.BottomRight: return new Vector2(1f, 0f);
+            default: return new Vector2(0.5f, 0.5f);
+        }
+    }
+
+    private void SaveTitleAsset(ZhongshanDeckToolState asset)
+    {
+        if (asset == null)
+        {
+            return;
+        }
+
+        asset.EnsureInitialized();
+        EditorUtility.SetDirty(asset);
+        AssetDatabase.SaveAssets();
+    }
+
+    private void SaveToolStateAsset(ZhongshanDeckToolState asset)
+    {
+        if (asset == null)
+        {
+            return;
+        }
+
+        asset.EnsureInitialized();
+        EditorUtility.SetDirty(asset);
+        AssetDatabase.SaveAssets();
+    }
+
+    private void SetOnlyHomepageItemEditable(ZhongshanDeckToolState asset, string editableKey)
+    {
+        ZhongshanDeckHomepageContent homepage = asset?.titleContent?.homepage;
+        if (homepage?.layoutItems == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < homepage.layoutItems.Count; i++)
+        {
+            ZhongshanDeckHomepageLayoutItem item = homepage.layoutItems[i];
+            if (item != null)
+            {
+                item.locked = !string.Equals(item.key, editableKey, StringComparison.Ordinal);
+            }
+        }
+
+        SaveToolStateAsset(asset);
+    }
+
+    private void SetAllHomepageItemsLocked(ZhongshanDeckToolState asset, bool locked)
+    {
+        ZhongshanDeckHomepageContent homepage = asset?.titleContent?.homepage;
+        if (homepage?.layoutItems == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < homepage.layoutItems.Count; i++)
+        {
+            if (homepage.layoutItems[i] != null)
+            {
+                homepage.layoutItems[i].locked = locked;
+            }
+        }
+
+        SaveToolStateAsset(asset);
+    }
+
+    private void SetOnlySaveLoadItemEditable(ZhongshanDeckToolState asset, string editableKey)
+    {
+        ZhongshanDeckSaveLoadContent content = asset?.saveLoadContent;
+        if (content?.layoutItems == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < content.layoutItems.Count; i++)
+        {
+            ZhongshanDeckSaveLoadLayoutItem item = content.layoutItems[i];
+            if (item != null)
+            {
+                item.locked = !string.Equals(item.key, editableKey, StringComparison.Ordinal);
+            }
+        }
+
+        SaveToolStateAsset(asset);
+    }
+
+    private void SetAllSaveLoadItemsLocked(ZhongshanDeckToolState asset, bool locked)
+    {
+        ZhongshanDeckSaveLoadContent content = asset?.saveLoadContent;
+        if (content?.layoutItems == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < content.layoutItems.Count; i++)
+        {
+            if (content.layoutItems[i] != null)
+            {
+                content.layoutItems[i].locked = locked;
+            }
+        }
+
+        SaveToolStateAsset(asset);
+    }
+
+    private string GetSaveLoadPreviewLabel(ZhongshanDeckSaveLoadLayoutItem item)
+    {
+        return string.IsNullOrWhiteSpace(item?.displayName) ? item?.key ?? string.Empty : item.displayName;
     }
 
     private void DrawNewsItemEditor(int index)

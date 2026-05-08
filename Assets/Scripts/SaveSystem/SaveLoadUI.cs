@@ -1,10 +1,14 @@
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
 using TMPro;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 /// <summary>
 /// 存档/读档 UI —— 春季主题手账风格，2x2 四格存档位布局
@@ -67,6 +71,9 @@ public class SaveLoadUI : MonoBehaviour
 
     private const float PanelMaxWidth = 1520f;
     private const float PanelMaxHeight = 900f;
+    private const float SpringDesignWidth = 2755f;
+    private const float SpringDesignHeight = 1537f;
+    private const string SpringResourceFolder = "UI/SaveLoadSpring";
     private const float SlotWidth = 470f;
     private const float SlotHeight = 210f;
     private const float PhotoWidth = 188f;
@@ -89,12 +96,35 @@ public class SaveLoadUI : MonoBehaviour
     private Action confirmDialogCancelAction;
     private readonly List<PendingPreviewRequest> pendingPreviewRequests = new List<PendingPreviewRequest>();
     private readonly List<UnityEngine.Object> runtimeThumbnailObjects = new List<UnityEngine.Object>();
+    private readonly Dictionary<string, RectTransform> editorLayoutRects = new Dictionary<string, RectTransform>(StringComparer.Ordinal);
+    private readonly Dictionary<int, SaveData> editorPreviewSlotData = new Dictionary<int, SaveData>();
+    private ZhongshanDeckSaveLoadContent layoutContent;
+    private RectTransform mainPanelRect;
+    private RectTransform topOverlayRect;
+    private RectTransform prevPageButtonRect;
+    private RectTransform nextPageButtonRect;
+    private RectTransform returnButtonRect;
+    private bool useEditorPreviewData;
+    private bool editorPreviewSaveMode;
+    private bool editorPreviewBuilt;
 
-    // 当前显示的槽位页（预留翻页功能）
-    private int currentPage = 0;
-
-    private static Sprite cachedSpringBoardSprite;
     private static readonly Dictionary<string, Sprite> PreviewSpriteCache = new Dictionary<string, Sprite>();
+    private static readonly Dictionary<string, Sprite> SpringMaskSpriteCache = new Dictionary<string, Sprite>();
+
+    private sealed class SlotVisualConfig
+    {
+        public int slot;
+        public bool isAutoSlot;
+        public string cardFileName;
+        public string frameFileName;
+        public string maskFileName;
+        public string buttonFileName;
+        public Rect cardRect;
+        public Rect previewRect;
+        public Rect buttonRect;
+        public float previewRotation;
+        public Color themeColor;
+    }
 
     public bool IsOpen => this != null && gameObject != null && gameObject.activeInHierarchy;
 
@@ -145,11 +175,28 @@ public class SaveLoadUI : MonoBehaviour
         {
             if (runtimeThumbnailObjects[i] != null)
             {
-                Destroy(runtimeThumbnailObjects[i]);
+                if (Application.isPlaying)
+                {
+                    Destroy(runtimeThumbnailObjects[i]);
+                }
+#if UNITY_EDITOR
+                else
+                {
+                    DestroyImmediate(runtimeThumbnailObjects[i]);
+                }
+#endif
             }
         }
 
         runtimeThumbnailObjects.Clear();
+        editorLayoutRects.Clear();
+        editorPreviewSlotData.Clear();
+        mainPanelRect = null;
+        returnButtonRect = null;
+        canvas = null;
+        canvasRect = null;
+        layoutContent = null;
+        editorPreviewBuilt = false;
     }
 
     // ========== 静态入口 ==========
@@ -184,10 +231,59 @@ public class SaveLoadUI : MonoBehaviour
         ui.BuildUI();
     }
 
+    private ZhongshanDeckSaveLoadContent LoadLayoutContent()
+    {
+        ZhongshanDeckSaveLoadContent content = ZhongshanDeckToolStateBridge.GetSaveLoadContent();
+        content ??= new ZhongshanDeckSaveLoadContent();
+        content.EnsureInitialized();
+        return content;
+    }
+
+    private SaveData GetSlotDataForBuild(int slot)
+    {
+        if (useEditorPreviewData)
+        {
+            return editorPreviewSlotData.TryGetValue(slot, out SaveData preview) ? preview : null;
+        }
+
+        return SaveManager.Instance?.GetSlotSaveData(slot);
+    }
+
+    private ZhongshanDeckSaveLoadLayoutItem GetLayoutItem(string key)
+    {
+        if (layoutContent?.layoutItems == null || string.IsNullOrWhiteSpace(key))
+        {
+            return null;
+        }
+
+        for (int i = 0; i < layoutContent.layoutItems.Count; i++)
+        {
+            ZhongshanDeckSaveLoadLayoutItem item = layoutContent.layoutItems[i];
+            if (item != null && string.Equals(item.key, key, StringComparison.Ordinal))
+            {
+                item.EnsureInitialized();
+                return item;
+            }
+        }
+
+        return null;
+    }
+
+    private void RegisterLayoutRect(string key, RectTransform rect)
+    {
+        if (string.IsNullOrWhiteSpace(key) || rect == null)
+        {
+            return;
+        }
+
+        editorLayoutRects[key] = rect;
+    }
+
     // ========== UI 构建总入口 ==========
 
     private void BuildUI()
     {
+        layoutContent = LoadLayoutContent();
         canvas = gameObject.AddComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
         canvas.sortingOrder = CanvasSortOrder;
@@ -204,22 +300,36 @@ public class SaveLoadUI : MonoBehaviour
         // 1. 半透明遮罩
         CreateOverlayBackground();
 
-        springBoardSprite = LoadCachedSprite("UI/SaveLoadSpringBg", ref cachedSpringBoardSprite);
-
         // 2. 主面板（春季素材底图）
         GameObject mainPanel = CreateMainPanel();
         RectTransform mainRT = mainPanel.GetComponent<RectTransform>();
+        RegisterLayoutRect(ZhongshanDeckSaveLoadContentDefaults.LayoutBoard, mainRT);
 
         // 3. 四格存档覆盖层
         CreateCardGrid(mainRT);
 
-        // 4. 返回按钮热区
+        // 4. 翻页按钮
+        CreatePageButtons(mainRT);
+
+        // 5. 顶层装饰与模式标题，必须压在引导和卡片层上方
+        CreateTopOverlay(mainRT);
+
+        // 6. 返回按钮热区
         CreateReturnButton(mainRT);
 
         if (pendingPreviewRequests.Count > 0)
         {
-            StartCoroutine(LoadQueuedPreviews());
+            if (Application.isPlaying)
+            {
+                StartCoroutine(LoadQueuedPreviews());
+            }
+            else
+            {
+                ApplyQueuedPreviewsImmediately();
+            }
         }
+
+        editorPreviewBuilt = true;
     }
 
     // ========== 1. 遮罩背景 ==========
@@ -240,10 +350,13 @@ public class SaveLoadUI : MonoBehaviour
     {
         GameObject panel = CreateUIElement("SpringBoard", canvasRect);
         RectTransform panelRT = panel.GetComponent<RectTransform>();
+        mainPanelRect = panelRT;
         panelRT.anchorMin = new Vector2(0.5f, 0.5f);
         panelRT.anchorMax = new Vector2(0.5f, 0.5f);
         panelRT.pivot = new Vector2(0.5f, 0.5f);
         panelRT.anchoredPosition = Vector2.zero;
+
+        springBoardSprite = LoadSpringSprite("底图");
 
         Vector2 panelSize = CalculatePanelSize();
         panelRT.sizeDelta = panelSize;
@@ -266,6 +379,46 @@ public class SaveLoadUI : MonoBehaviour
         return panel;
     }
 
+    private void CreateTopOverlay(RectTransform parent)
+    {
+        Sprite topOverlaySprite = LoadSpringSprite("顶图");
+        if (topOverlaySprite != null)
+        {
+            GameObject overlayGO = CreateUIElement("TopOverlay", parent);
+            RectTransform overlayRT = overlayGO.GetComponent<RectTransform>();
+            StretchFull(overlayRT);
+            topOverlayRect = overlayRT;
+            RegisterLayoutRect(ZhongshanDeckSaveLoadContentDefaults.LayoutTopOverlay, overlayRT);
+
+            Image overlayImage = overlayGO.AddComponent<Image>();
+            overlayImage.sprite = topOverlaySprite;
+            overlayImage.preserveAspect = true;
+            overlayImage.color = Color.white;
+            overlayImage.raycastTarget = false;
+        }
+
+    }
+
+    private void CreateHeaderLabel(RectTransform parent, string text, Vector2 imageCenter, Vector2 size, float fontSize, Color color, TextAlignmentOptions alignment)
+    {
+        GameObject labelGO = CreateUIElement("HeaderLabel", parent);
+        RectTransform labelRT = labelGO.GetComponent<RectTransform>();
+        labelRT.anchorMin = new Vector2(0.5f, 0.5f);
+        labelRT.anchorMax = new Vector2(0.5f, 0.5f);
+        labelRT.pivot = new Vector2(0.5f, 0.5f);
+        labelRT.anchoredPosition = ImagePointToLocal(imageCenter.x, imageCenter.y);
+        labelRT.sizeDelta = ScalePanelSize(size);
+
+        TextMeshProUGUI label = labelGO.AddComponent<TextMeshProUGUI>();
+        label.text = text;
+        label.fontSize = fontSize * GetPanelScale();
+        label.alignment = alignment;
+        label.color = color;
+        label.fontStyle = FontStyles.Bold;
+        label.raycastTarget = false;
+        ApplyChineseFont(label);
+    }
+
     // ========== 4. 卡片网格 (2x2) ==========
 
     private void CreateCardGrid(RectTransform parent)
@@ -273,86 +426,59 @@ public class SaveLoadUI : MonoBehaviour
         SaveData[] slotData = new SaveData[SlotCount];
         for (int i = 0; i < SlotCount; i++)
         {
-            slotData[i] = SaveManager.Instance?.GetSlotSaveData(i);
+            slotData[i] = GetSlotDataForBuild(i);
         }
 
-        CreateSlotOverlay(parent, 0, slotData[0], GetSlotCenter(0), AutoPink, true);
-        CreateSlotOverlay(parent, 1, slotData[1], GetSlotCenter(1), Slot01Pink, false);
-        CreateSlotOverlay(parent, 2, slotData[2], GetSlotCenter(2), Slot02Green, false);
-        CreateSlotOverlay(parent, 3, slotData[3], GetSlotCenter(3), Slot03Yellow, false);
+        for (int slot = 0; slot < SlotCount; slot++)
+        {
+            CreateSlotComposite(parent, GetSlotVisualConfig(slot), slotData[slot]);
+        }
     }
 
-    private void CreateSlotOverlay(RectTransform parent, int slot, SaveData data,
-        Vector2 position, Color themeColor, bool isAutoSlot)
+    private void CreateSlotComposite(RectTransform parent, SlotVisualConfig config, SaveData data)
     {
         bool isEmpty = (data == null);
+        CreateFullPanelArtLayer(parent, $"CardArt_{config.slot}", config.cardFileName);
+        CreateFullPanelArtLayer(parent, $"FrameArt_{config.slot}", config.frameFileName);
 
-        GameObject slotRoot = CreateUIElement($"SlotOverlay_{slot}", parent);
-        RectTransform slotRT = slotRoot.GetComponent<RectTransform>();
-        slotRT.anchorMin = new Vector2(0.5f, 0.5f);
-        slotRT.anchorMax = new Vector2(0.5f, 0.5f);
-        slotRT.pivot = new Vector2(0.5f, 0.5f);
-        slotRT.sizeDelta = new Vector2(SlotWidth, SlotHeight);
-        slotRT.anchoredPosition = position;
+        RectTransform previewRoot = CreatePreviewMaskRoot(parent, config, $"SlotPreview_{config.slot}");
+        CreateSlotPhoto(previewRoot, config, data, isEmpty);
 
-        Image hitArea = slotRoot.AddComponent<Image>();
-        hitArea.color = new Color(1f, 1f, 1f, 0.01f);
-        hitArea.raycastTarget = true;
+        CreateFullPanelArtLayer(parent, $"ButtonArt_{config.slot}", config.buttonFileName);
 
-        Button slotButton = slotRoot.AddComponent<Button>();
-        slotButton.targetGraphic = hitArea;
-        ColorBlock cb = slotButton.colors;
-        cb.normalColor = Color.white;
-        cb.highlightedColor = new Color(1f, 1f, 1f, 0.08f);
-        cb.pressedColor = new Color(1f, 1f, 1f, 0.14f);
-        slotButton.colors = cb;
-        slotButton.transition = Selectable.Transition.ColorTint;
-        slotButton.onClick.AddListener(() => OnSlotClicked(slot, isEmpty));
-
-        CreateSlotPhoto(slotRT, data, isEmpty);
-        CreateInfoTextArea(slotRT, data, isEmpty, themeColor);
-        CreateCardButtons(slotRT, slot, isEmpty, isAutoSlot, themeColor);
-
-        if (!isSaveMode && isEmpty)
-        {
-            slotButton.interactable = false;
-        }
+        RectTransform overlayRoot = CreateSlotRoot(parent, config, $"SlotOverlay_{config.slot}", registerLayout: true);
+        CreateInteractiveOverlay(overlayRoot, config, isEmpty);
+        CreateInfoTextArea(overlayRoot, config.slot, data, isEmpty, config.themeColor);
+        CreateCardButtons(overlayRoot, config, isEmpty);
     }
 
     // ---- 信息文字区 ----
 
-    private void CreateSlotPhoto(RectTransform slotRT, SaveData data, bool isEmpty)
+    private void CreateSlotPhoto(RectTransform slotRT, SlotVisualConfig config, SaveData data, bool isEmpty)
     {
-        GameObject photoFrame = CreateUIElement("PhotoFrame", slotRT);
-        RectTransform frameRT = photoFrame.GetComponent<RectTransform>();
-        frameRT.anchorMin = new Vector2(0f, 0.5f);
-        frameRT.anchorMax = new Vector2(0f, 0.5f);
-        frameRT.pivot = new Vector2(0f, 0.5f);
-        frameRT.sizeDelta = new Vector2(PhotoFrameWidth, PhotoFrameHeight);
-        frameRT.anchoredPosition = new Vector2(34f, 10f);
+        Rect previewRect = ToPanelLocalRect(config.previewRect);
 
-        Image frameImg = photoFrame.AddComponent<Image>();
-        frameImg.color = new Color(0.98f, 0.96f, 0.93f, 0.82f);
-        frameImg.raycastTarget = false;
+        GameObject contentGO = CreateUIElement("PhotoContent", slotRT);
+        RectTransform contentRT = contentGO.GetComponent<RectTransform>();
+        ApplyPanelRect(contentRT, previewRect);
+        RegisterLayoutRect(ZhongshanDeckSaveLoadContentDefaults.GetSlotPhotoKey(config.slot), contentRT);
+        contentRT.localRotation = Quaternion.Euler(0f, 0f, config.previewRotation);
+        contentRT.localScale = Vector3.one * 1.08f;
 
-        GameObject photoInner = CreateUIElement("PhotoInner", frameRT);
+        GameObject photoInner = CreateUIElement("PhotoInner", contentRT);
         RectTransform innerRT = photoInner.GetComponent<RectTransform>();
-        innerRT.anchorMin = new Vector2(0.5f, 0.5f);
-        innerRT.anchorMax = new Vector2(0.5f, 0.5f);
-        innerRT.pivot = new Vector2(0.5f, 0.5f);
-        innerRT.sizeDelta = new Vector2(PhotoWidth, PhotoHeight);
-        innerRT.anchoredPosition = Vector2.zero;
+        StretchFull(innerRT);
 
         Image photoImg = photoInner.AddComponent<Image>();
         photoImg.raycastTarget = false;
-
         photoImg.color = PhotoInnerGray;
+        photoImg.preserveAspect = false;
 
-        GameObject fallbackGO = CreateUIElement("FallbackLabel", innerRT);
+        GameObject fallbackGO = CreateUIElement("FallbackLabel", contentRT);
         StretchFull(fallbackGO.GetComponent<RectTransform>());
         TextMeshProUGUI fallbackText = fallbackGO.AddComponent<TextMeshProUGUI>();
         fallbackText.text = isEmpty ? "空位" : GetLocationName(data.currentLocation);
-        fallbackText.fontSize = 22f;
+        fallbackText.fontSize = 26f * GetPanelScale();
         fallbackText.alignment = TextAlignmentOptions.Center;
         fallbackText.color = TextGray;
         fallbackText.raycastTarget = false;
@@ -369,29 +495,35 @@ public class SaveLoadUI : MonoBehaviour
         }
     }
 
-    private void CreateInfoTextArea(RectTransform slotRT, SaveData data, bool isEmpty, Color themeColor)
+    private void CreateInfoTextArea(RectTransform slotRT, int slot, SaveData data, bool isEmpty, Color themeColor)
     {
-        float infoStartX = 246f;
-        float infoWidth = 188f;
+        float infoStartX = 435f;
+        float infoWidth = 300f;
+
+        GameObject infoRootGO = CreateUIElement("InfoRoot", slotRT);
+        RectTransform infoRootRT = infoRootGO.GetComponent<RectTransform>();
+        infoRootRT.anchorMin = new Vector2(0f, 1f);
+        infoRootRT.anchorMax = new Vector2(0f, 1f);
+        infoRootRT.pivot = new Vector2(0f, 1f);
+        infoRootRT.sizeDelta = ScalePanelSize(new Vector2(infoWidth, 156f));
+        infoRootRT.anchoredPosition = ScalePanelSize(new Vector2(infoStartX, -34f));
+        RegisterLayoutRect(ZhongshanDeckSaveLoadContentDefaults.GetSlotInfoKey(slot), infoRootRT);
 
         if (isEmpty)
         {
-            GameObject emptyGO = CreateUIElement("EmptyHint", slotRT);
+            GameObject emptyGO = CreateUIElement("EmptyHint", infoRootRT);
             RectTransform emptyRT = emptyGO.GetComponent<RectTransform>();
-            emptyRT.anchorMin = new Vector2(0f, 1f);
-            emptyRT.anchorMax = new Vector2(0f, 1f);
-            emptyRT.pivot = new Vector2(0f, 1f);
-            emptyRT.sizeDelta = new Vector2(infoWidth, 112f);
-            emptyRT.anchoredPosition = new Vector2(infoStartX, -24f);
+            StretchFull(emptyRT);
 
             TextMeshProUGUI emptyText = emptyGO.AddComponent<TextMeshProUGUI>();
             emptyText.text = isSaveMode
-                ? "空存档位\n<size=18><color=#8B7355>点击此处保存当前进度</color></size>"
-                : "空存档位\n<size=18><color=#8B7355>暂无存档记录</color></size>";
-            emptyText.fontSize = 20;
-            emptyText.alignment = TextAlignmentOptions.Left;
+                ? "空存档位\n<size=24><color=#8B7355>点击卡片或下方按钮保存当前进度</color></size>"
+                : "空存档位\n<size=24><color=#8B7355>这里还没有留下任何记录</color></size>";
+            emptyText.fontSize = 24f * GetPanelScale();
+            emptyText.alignment = TextAlignmentOptions.TopLeft;
             emptyText.color = TextGray;
             emptyText.raycastTarget = false;
+            emptyText.enableWordWrapping = true;
             ApplyChineseFont(emptyText);
             return;
         }
@@ -409,50 +541,46 @@ public class SaveLoadUI : MonoBehaviour
         string playTime = FormatPlayTime(data.totalPlayTimeSeconds);
         string moneyStr = data.money >= 0 ? $"¥{data.money}" : $"-¥{-data.money}";
 
-        CreateAccentDot(slotRT, new Vector2(infoStartX - 12f, -22f), themeColor);
+        CreateAccentDot(infoRootRT, new Vector2(-12f, 8f), themeColor);
 
-        float lineH = 20f;
-        float startY = -22f;
+        float lineH = 24f;
+        float startY = 10f;
         int lineIdx = 0;
 
-        CreateInfoLine(slotRT, $"{playerName}，{age}岁",
-            infoStartX, startY - lineIdx * lineH, infoWidth, 18f, TextBrown, FontStyles.Bold);
+        CreateInfoLine(infoRootRT, $"{playerName}，{age}岁",
+            0f, startY - lineIdx * lineH, infoWidth, 22f, TextBrown, FontStyles.Bold);
         lineIdx++;
 
-        CreateInfoLine(slotRT, $"学年：{yearSeason}",
-            infoStartX, startY - lineIdx * lineH, infoWidth, 14f, TextBrownLight);
+        CreateInfoLine(infoRootRT, $"学年：{yearSeason}    回合：{data.currentRound}",
+            0f, startY - lineIdx * lineH, infoWidth, 15f, TextBrownLight);
         lineIdx++;
 
-        CreateInfoLine(slotRT, $"季节：{season}    专业：{major}",
-            infoStartX, startY - lineIdx * lineH, infoWidth, 11.5f, TextBrownLight);
+        CreateInfoLine(infoRootRT, $"季节：{season}    专业：{major}",
+            0f, startY - lineIdx * lineH, infoWidth, 14f, TextBrownLight);
         lineIdx++;
 
-        CreateInfoLine(slotRT, $"地点：{locationName}",
-            infoStartX, startY - lineIdx * lineH, infoWidth, 13f, TextBrownLight);
+        CreateInfoLine(infoRootRT, $"地点：{locationName}",
+            0f, startY - lineIdx * lineH, infoWidth, 14f, TextBrownLight);
         lineIdx++;
 
-        CreateInfoLine(slotRT, $"金钱：{moneyStr}   GPA：{gpa:F2}",
-            infoStartX, startY - lineIdx * lineH, infoWidth, 13f, TextBrownLight, FontStyles.Bold);
+        CreateInfoLine(infoRootRT, $"金钱：{moneyStr}   GPA：{gpa:F2}",
+            0f, startY - lineIdx * lineH, infoWidth, 14f, TextBrownLight, FontStyles.Bold);
         lineIdx++;
 
-        CreateInfoLine(slotRT, $"核心：学{data.study} 魅{data.charm} 体{data.physique} 领{data.leadership}",
-            infoStartX, startY - lineIdx * lineH, infoWidth, 10.5f, TextBrownLight);
+        CreateInfoLine(infoRootRT, $"核心：学{data.study} 魅{data.charm} 体{data.physique} 领{data.leadership}",
+            0f, startY - lineIdx * lineH, infoWidth, 13f, TextBrownLight);
         lineIdx++;
 
-        CreateInfoLine(slotRT, $"状态：心情{data.mood}  压力{data.stress}  幸运{data.luck}",
-            infoStartX, startY - lineIdx * lineH, infoWidth, 10.5f, TextBrownLight);
+        CreateInfoLine(infoRootRT, $"状态：心情{data.mood}  压力{data.stress}  幸运{data.luck}",
+            0f, startY - lineIdx * lineH, infoWidth, 13f, TextBrownLight);
         lineIdx++;
 
-        CreateInfoLine(slotRT, $"回合：{data.currentRound}",
-            infoStartX, startY - lineIdx * lineH, infoWidth, 13f, TextBrownLight);
+        CreateInfoLine(infoRootRT, $"存档时间：{saveTime}",
+            0f, startY - lineIdx * lineH, infoWidth, 12f, TextGray);
         lineIdx++;
 
-        CreateInfoLine(slotRT, $"存档时间：{saveTime}",
-            infoStartX, startY - lineIdx * lineH, infoWidth, 10.5f, TextGray);
-        lineIdx++;
-
-        CreateInfoLine(slotRT, $"游玩时长：{playTime}",
-            infoStartX, startY - lineIdx * lineH, infoWidth, 10.5f, TextGray);
+        CreateInfoLine(infoRootRT, $"游玩时长：{playTime}",
+            0f, startY - lineIdx * lineH, infoWidth, 12f, TextGray);
     }
 
     private void CreateInfoLine(RectTransform parent, string text,
@@ -464,12 +592,12 @@ public class SaveLoadUI : MonoBehaviour
         rt.anchorMin = new Vector2(0f, 1f);
         rt.anchorMax = new Vector2(0f, 1f);
         rt.pivot = new Vector2(0f, 1f);
-        rt.sizeDelta = new Vector2(width, fontSize + 4f);
-        rt.anchoredPosition = new Vector2(x, y);
+        rt.sizeDelta = ScalePanelSize(new Vector2(width, fontSize + 12f));
+        rt.anchoredPosition = ScalePanelSize(new Vector2(x, y));
 
         TextMeshProUGUI tmp = go.AddComponent<TextMeshProUGUI>();
         tmp.text = text;
-        tmp.fontSize = fontSize;
+        tmp.fontSize = fontSize * GetPanelScale();
         tmp.alignment = TextAlignmentOptions.Left;
         tmp.color = color;
         tmp.fontStyle = style;
@@ -511,52 +639,74 @@ public class SaveLoadUI : MonoBehaviour
 
     // ---- 卡片按钮 ----
 
-    private void CreateCardButtons(RectTransform cardRT, int slot, bool isEmpty,
-        bool isAutoSlot, Color themeColor)
+    private void CreateCardButtons(RectTransform cardRT, SlotVisualConfig config, bool isEmpty)
     {
-        float btnY = 18f;
-        float btnX = 76f;
+        Rect pairRect = ToSlotLocalRect(config.cardRect, config.buttonRect);
+        GameObject buttonsRootGO = CreateUIElement("ButtonsRoot", cardRT);
+        RectTransform buttonsRootRT = buttonsRootGO.GetComponent<RectTransform>();
+        ApplySlotRect(buttonsRootRT, pairRect);
+        RegisterLayoutRect(ZhongshanDeckSaveLoadContentDefaults.GetSlotButtonsKey(config.slot), buttonsRootRT);
 
-        if (isAutoSlot)
+        if (config.isAutoSlot)
         {
-            bool canClick = !isSaveMode && !isEmpty;
-            CreateCardButton(cardRT, "自动存档", new Vector2(btnX, btnY),
-                new Vector2(138f, 34f), themeColor,
-                canClick ? () => OnSlotClicked(slot, false) : null);
+            CreateCardButton(buttonsRootRT,
+                config,
+                "主按钮",
+                isSaveMode ? "快速保存" : "读取",
+                new Rect(0f, 0f, pairRect.width, pairRect.height),
+                isSaveMode ? (Action)(() => OnSlotClicked(config.slot, isEmpty)) : (!isEmpty ? () => OnSlotClicked(config.slot, false) : null),
+                ZhongshanDeckSaveLoadContentDefaults.GetSlotPrimaryButtonKey(config.slot));
+
+            if (!isSaveMode && !isEmpty)
+            {
+                CreateButtonCaption(buttonsRootRT, "AutoHint", "读取自动存档", new Rect(0f, 0f, pairRect.width, pairRect.height), 17f);
+            }
         }
         else
         {
-            string slotLabel = $"存档 {slot:D2}";
-            CreateCardButton(cardRT, slotLabel, new Vector2(btnX, btnY),
-                new Vector2(102f, 34f), themeColor,
-                isSaveMode ? () => OnSlotClicked(slot, isEmpty) : null);
+            Rect leftRect = new Rect(0f, 0f, pairRect.width * 0.48f, pairRect.height);
+            Rect rightRect = new Rect(pairRect.width * 0.52f, 0f, pairRect.width * 0.48f, pairRect.height);
 
-            CreateCardButton(cardRT, "负载", new Vector2(btnX + 114f, btnY),
-                new Vector2(82f, 34f), themeColor,
-                (!isSaveMode && !isEmpty) ? () => OnSlotClicked(slot, false) : null);
+            string leftLabel = isSaveMode ? (isEmpty ? "保存" : "覆盖") : "读取";
+            string rightLabel = isEmpty ? "空位" : "删除";
+
+            CreateCardButton(buttonsRootRT,
+                config,
+                "LeftButton",
+                leftLabel,
+                leftRect,
+                isSaveMode ? (Action)(() => OnSlotClicked(config.slot, isEmpty)) : (!isEmpty ? () => OnSlotClicked(config.slot, false) : null),
+                ZhongshanDeckSaveLoadContentDefaults.GetSlotLeftButtonKey(config.slot));
+
+            CreateCardButton(buttonsRootRT,
+                config,
+                "RightButton",
+                rightLabel,
+                rightRect,
+                isEmpty ? null : (Action)(() => OnDeleteSlotClicked(config.slot)),
+                ZhongshanDeckSaveLoadContentDefaults.GetSlotRightButtonKey(config.slot));
         }
     }
 
-    private Button CreateCardButton(RectTransform parent, string label,
-        Vector2 position, Vector2 size, Color bgColor, Action onClick)
+    private Button CreateCardButton(RectTransform parent, SlotVisualConfig config, string name, string label, Rect rect, Action onClick, string layoutKey = null)
     {
-        GameObject btnGO = CreateUIElement($"Btn_{label}", parent);
+        GameObject btnGO = CreateUIElement($"Btn_{name}", parent);
         RectTransform btnRT = btnGO.GetComponent<RectTransform>();
-        btnRT.anchorMin = new Vector2(0f, 0f);
-        btnRT.anchorMax = new Vector2(0f, 0f);
-        btnRT.pivot = new Vector2(0f, 0f);
-        btnRT.sizeDelta = size;
-        btnRT.anchoredPosition = position;
+        ApplySlotRect(btnRT, rect);
+        if (!string.IsNullOrWhiteSpace(layoutKey))
+        {
+            RegisterLayoutRect(layoutKey, btnRT);
+        }
 
         Image btnBg = btnGO.AddComponent<Image>();
-        btnBg.color = new Color(bgColor.r, bgColor.g, bgColor.b, 0.94f);
+        btnBg.color = new Color(1f, 1f, 1f, 0.01f);
 
         Button btn = btnGO.AddComponent<Button>();
         btn.targetGraphic = btnBg;
         ColorBlock cb = btn.colors;
         cb.normalColor = Color.white;
-        cb.highlightedColor = new Color(0.92f, 0.92f, 0.92f);
-        cb.pressedColor = new Color(0.82f, 0.82f, 0.82f);
+        cb.highlightedColor = new Color(1f, 1f, 1f, 0.08f);
+        cb.pressedColor = new Color(1f, 1f, 1f, 0.16f);
         cb.disabledColor = new Color(0.70f, 0.70f, 0.70f);
         btn.colors = cb;
 
@@ -567,15 +717,14 @@ public class SaveLoadUI : MonoBehaviour
         else
         {
             btn.interactable = false;
-            btnBg.color = new Color(bgColor.r, bgColor.g, bgColor.b, 0.42f);
+            btnBg.color = new Color(1f, 1f, 1f, 0.004f);
         }
 
-        // 按钮文字
         GameObject textGO = CreateUIElement("Label", btnRT);
         StretchFull(textGO.GetComponent<RectTransform>());
         TextMeshProUGUI tmp = textGO.AddComponent<TextMeshProUGUI>();
         tmp.text = label;
-        tmp.fontSize = 15;
+        tmp.fontSize = 18f * GetPanelScale();
         tmp.alignment = TextAlignmentOptions.Center;
         tmp.color = TextBrown;
         tmp.fontStyle = FontStyles.Bold;
@@ -583,6 +732,21 @@ public class SaveLoadUI : MonoBehaviour
         ApplyChineseFont(tmp);
 
         return btn;
+    }
+
+    private void CreateButtonCaption(RectTransform parent, string name, string text, Rect rect, float fontSize)
+    {
+        GameObject textGO = CreateUIElement(name, parent);
+        RectTransform textRT = textGO.GetComponent<RectTransform>();
+        ApplySlotRect(textRT, new Rect(rect.xMin, rect.yMax + 8f * GetPanelScale(), rect.width, 24f * GetPanelScale()));
+
+        TextMeshProUGUI tmp = textGO.AddComponent<TextMeshProUGUI>();
+        tmp.text = text;
+        tmp.fontSize = fontSize * GetPanelScale();
+        tmp.alignment = TextAlignmentOptions.Center;
+        tmp.color = TextBrownLight;
+        tmp.raycastTarget = false;
+        ApplyChineseFont(tmp);
     }
 
     // ========== 装饰元素工厂 ==========
@@ -840,27 +1004,141 @@ public class SaveLoadUI : MonoBehaviour
 
     private void CreateReturnButton(RectTransform parent)
     {
+        const float returnMinX = 2081f;
+        const float returnMinY = 188f;
+        const float returnMaxX = 2283f;
+        const float returnMaxY = 291f;
+
         GameObject btnGO = CreateUIElement("ReturnButton", parent);
         RectTransform rt = btnGO.GetComponent<RectTransform>();
-        rt.anchorMin = new Vector2(1f, 1f);
-        rt.anchorMax = new Vector2(1f, 1f);
-        rt.pivot = new Vector2(1f, 1f);
-        rt.sizeDelta = new Vector2(150f, 86f);
-        rt.anchoredPosition = new Vector2(-112f, -62f);
+        rt.anchorMin = new Vector2(0.5f, 0.5f);
+        rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.anchoredPosition = ImagePointToLocal((returnMinX + returnMaxX) * 0.5f, (returnMinY + returnMaxY) * 0.5f);
+        rt.sizeDelta = ImageSizeToLocal(returnMaxX - returnMinX + 1f, returnMaxY - returnMinY + 1f);
+        returnButtonRect = rt;
+        RegisterLayoutRect(ZhongshanDeckSaveLoadContentDefaults.LayoutReturnButton, rt);
 
         Image btnBg = btnGO.AddComponent<Image>();
         btnBg.color = new Color(1f, 1f, 1f, 0.01f);
         btnBg.raycastTarget = true;
 
+        Sprite btnSprite = LoadSpringSprite("返回界面显示按钮");
+        Image hoverImage = null;
+        if (btnSprite != null)
+        {
+            GameObject hoverGO = CreateUIElement("ReturnHoverVisual", parent);
+            RectTransform hoverRT = hoverGO.GetComponent<RectTransform>();
+            StretchFull(hoverRT);
+            hoverImage = hoverGO.AddComponent<Image>();
+            hoverImage.sprite = btnSprite;
+            hoverImage.preserveAspect = true;
+            hoverImage.color = new Color(1f, 1f, 1f, 0f);
+            hoverImage.raycastTarget = false;
+            hoverGO.transform.SetAsLastSibling();
+        }
+
         Button btn = btnGO.AddComponent<Button>();
         btn.targetGraphic = btnBg;
-        ColorBlock cb = btn.colors;
-        cb.normalColor = Color.white;
-        cb.highlightedColor = new Color(1f, 1f, 1f, 0.08f);
-        cb.pressedColor = new Color(1f, 1f, 1f, 0.14f);
-        cb.selectedColor = Color.white;
-        btn.colors = cb;
+        btn.transition = Selectable.Transition.None;
         btn.onClick.AddListener(ClosePanel);
+
+        EventTrigger trigger = btnGO.AddComponent<EventTrigger>();
+        trigger.triggers = new List<EventTrigger.Entry>();
+        bool isHovering = false;
+
+        EventTrigger.Entry enterEntry = new EventTrigger.Entry { eventID = EventTriggerType.PointerEnter };
+        enterEntry.callback.AddListener(_ =>
+        {
+            isHovering = true;
+            if (hoverImage != null)
+            {
+                hoverImage.color = Color.white;
+            }
+        });
+        trigger.triggers.Add(enterEntry);
+
+        EventTrigger.Entry exitEntry = new EventTrigger.Entry { eventID = EventTriggerType.PointerExit };
+        exitEntry.callback.AddListener(_ =>
+        {
+            isHovering = false;
+            if (hoverImage != null)
+            {
+                hoverImage.color = new Color(1f, 1f, 1f, 0f);
+            }
+        });
+        trigger.triggers.Add(exitEntry);
+
+        EventTrigger.Entry downEntry = new EventTrigger.Entry { eventID = EventTriggerType.PointerDown };
+        downEntry.callback.AddListener(_ =>
+        {
+            if (hoverImage != null)
+            {
+                hoverImage.color = Color.white;
+            }
+        });
+        trigger.triggers.Add(downEntry);
+
+        EventTrigger.Entry upEntry = new EventTrigger.Entry { eventID = EventTriggerType.PointerUp };
+        upEntry.callback.AddListener(_ =>
+        {
+            if (hoverImage != null)
+            {
+                hoverImage.color = isHovering ? Color.white : new Color(1f, 1f, 1f, 0f);
+            }
+        });
+        trigger.triggers.Add(upEntry);
+    }
+
+    private void CreatePageButtons(RectTransform parent)
+    {
+        CreatePageButton(parent, "PrevPageButton", "左-不可翻页", false,
+            new Vector2(134f, 768f), new Vector2(86f, 86f), null);
+        CreatePageButton(parent, "NextPageButton", "右-不可翻页", false,
+            new Vector2(2624f, 768f), new Vector2(86f, 86f), null);
+    }
+
+    private void CreatePageButton(RectTransform parent, string objectName, string spriteName, bool interactable, Vector2 imageCenter, Vector2 imageSize, Action onClick)
+    {
+        Sprite sprite = LoadSpringSprite(spriteName);
+        if (sprite == null)
+        {
+            return;
+        }
+
+        GameObject rootGO = CreateUIElement(objectName, parent);
+        RectTransform rootRT = rootGO.GetComponent<RectTransform>();
+        rootRT.anchorMin = new Vector2(0.5f, 0.5f);
+        rootRT.anchorMax = new Vector2(0.5f, 0.5f);
+        rootRT.pivot = new Vector2(0.5f, 0.5f);
+        rootRT.anchoredPosition = ImagePointToLocal(imageCenter.x, imageCenter.y);
+        rootRT.sizeDelta = ImageSizeToLocal(imageSize.x, imageSize.y);
+
+        if (string.Equals(objectName, "PrevPageButton", StringComparison.Ordinal))
+        {
+            prevPageButtonRect = rootRT;
+            RegisterLayoutRect(ZhongshanDeckSaveLoadContentDefaults.LayoutPrevPageButton, rootRT);
+        }
+        else if (string.Equals(objectName, "NextPageButton", StringComparison.Ordinal))
+        {
+            nextPageButtonRect = rootRT;
+            RegisterLayoutRect(ZhongshanDeckSaveLoadContentDefaults.LayoutNextPageButton, rootRT);
+        }
+
+        Image img = rootGO.AddComponent<Image>();
+        img.sprite = sprite;
+        img.preserveAspect = true;
+        img.raycastTarget = interactable;
+        img.color = Color.white;
+
+        if (!interactable)
+        {
+            return;
+        }
+
+        Button btn = rootGO.AddComponent<Button>();
+        btn.targetGraphic = img;
+        btn.onClick.AddListener(() => onClick?.Invoke());
     }
 
     // ========== 交互逻辑 ==========
@@ -937,7 +1215,32 @@ public class SaveLoadUI : MonoBehaviour
 
     private void Close()
     {
-        Destroy(gameObject);
+        if (Application.isPlaying)
+        {
+            Destroy(gameObject);
+        }
+#if UNITY_EDITOR
+        else
+        {
+            DestroyImmediate(gameObject);
+        }
+#endif
+    }
+
+    private void OnDeleteSlotClicked(int slot)
+    {
+        if (SaveManager.Instance == null)
+        {
+            ShowSystemNotification("删除失败", "存档系统暂时不可用，现在无法移除这个槽位。");
+            return;
+        }
+
+        ShowConfirmDialog("确认删除这份存档？\n删除后将无法恢复", () =>
+        {
+            SaveManager.Instance.DeleteSlot(slot);
+            ShowSystemNotification("已删除", slot == 0 ? "自动存档已移除。" : $"存档 {slot:D2} 已移除。");
+            Show(isSaveMode);
+        });
     }
 
     private IEnumerator DoSaveRoutine(int slot)
@@ -1107,12 +1410,9 @@ public class SaveLoadUI : MonoBehaviour
 
     private Vector2 CalculatePanelSize()
     {
-        if (springBoardSprite == null)
-        {
-            return new Vector2(PanelMaxWidth, PanelMaxHeight);
-        }
-
-        Rect spriteRect = springBoardSprite.rect;
+        Rect spriteRect = springBoardSprite != null
+            ? springBoardSprite.rect
+            : new Rect(0f, 0f, SpringDesignWidth, SpringDesignHeight);
         float spriteAspect = spriteRect.width / spriteRect.height;
         float width = PanelMaxWidth;
         float height = width / spriteAspect;
@@ -1128,13 +1428,79 @@ public class SaveLoadUI : MonoBehaviour
 
     private Vector2 GetSlotCenter(int slot)
     {
+        SlotVisualConfig config = GetSlotVisualConfig(slot);
+        Rect rect = config.cardRect;
+        return ImagePointToLocal((rect.xMin + rect.xMax) * 0.5f, (rect.yMin + rect.yMax) * 0.5f);
+    }
+
+    private string GetSlotLayoutKey(int slot)
+    {
         switch (slot)
         {
-            case 0: return new Vector2(-268f, 96f);
-            case 1: return new Vector2(284f, 96f);
-            case 2: return new Vector2(-268f, -206f);
-            case 3: return new Vector2(284f, -206f);
-            default: return Vector2.zero;
+            case 0: return ZhongshanDeckSaveLoadContentDefaults.LayoutAutoSlot;
+            case 1: return ZhongshanDeckSaveLoadContentDefaults.LayoutSlot01;
+            case 2: return ZhongshanDeckSaveLoadContentDefaults.LayoutSlot02;
+            case 3: return ZhongshanDeckSaveLoadContentDefaults.LayoutSlot03;
+            default: return string.Empty;
+        }
+    }
+
+    private void ApplyLayoutToRect(RectTransform target, ZhongshanDeckSaveLoadLayoutItem item, Vector2 fallbackAnchor, Vector2 fallbackPosition, Vector2 fallbackSize)
+    {
+        if (target == null)
+        {
+            return;
+        }
+
+        if (item == null)
+        {
+            target.anchorMin = fallbackAnchor;
+            target.anchorMax = fallbackAnchor;
+            target.pivot = fallbackAnchor;
+            target.anchoredPosition = fallbackPosition;
+            target.sizeDelta = fallbackSize;
+            return;
+        }
+
+        Vector2 anchor = GetLayoutAnchorVector(item.anchor);
+        Vector2 pivot = GetLayoutPivotVector(item.anchor);
+        target.anchorMin = anchor;
+        target.anchorMax = anchor;
+        target.pivot = pivot;
+        target.anchoredPosition = item.anchoredPosition;
+        target.sizeDelta = item.size;
+        target.gameObject.SetActive(item.visible);
+    }
+
+    private static Vector2 GetLayoutAnchorVector(ZhongshanDeckLayoutAnchor anchor)
+    {
+        switch (anchor)
+        {
+            case ZhongshanDeckLayoutAnchor.TopLeft: return new Vector2(0f, 1f);
+            case ZhongshanDeckLayoutAnchor.TopCenter: return new Vector2(0.5f, 1f);
+            case ZhongshanDeckLayoutAnchor.TopRight: return new Vector2(1f, 1f);
+            case ZhongshanDeckLayoutAnchor.LeftCenter: return new Vector2(0f, 0.5f);
+            case ZhongshanDeckLayoutAnchor.RightCenter: return new Vector2(1f, 0.5f);
+            case ZhongshanDeckLayoutAnchor.BottomLeft: return new Vector2(0f, 0f);
+            case ZhongshanDeckLayoutAnchor.BottomCenter: return new Vector2(0.5f, 0f);
+            case ZhongshanDeckLayoutAnchor.BottomRight: return new Vector2(1f, 0f);
+            default: return new Vector2(0.5f, 0.5f);
+        }
+    }
+
+    private static Vector2 GetLayoutPivotVector(ZhongshanDeckLayoutAnchor anchor)
+    {
+        switch (anchor)
+        {
+            case ZhongshanDeckLayoutAnchor.TopLeft: return new Vector2(0f, 1f);
+            case ZhongshanDeckLayoutAnchor.TopCenter: return new Vector2(0.5f, 1f);
+            case ZhongshanDeckLayoutAnchor.TopRight: return new Vector2(1f, 1f);
+            case ZhongshanDeckLayoutAnchor.LeftCenter: return new Vector2(0f, 0.5f);
+            case ZhongshanDeckLayoutAnchor.RightCenter: return new Vector2(1f, 0.5f);
+            case ZhongshanDeckLayoutAnchor.BottomLeft: return new Vector2(0f, 0f);
+            case ZhongshanDeckLayoutAnchor.BottomCenter: return new Vector2(0.5f, 0f);
+            case ZhongshanDeckLayoutAnchor.BottomRight: return new Vector2(1f, 0f);
+            default: return new Vector2(0.5f, 0.5f);
         }
     }
 
@@ -1174,6 +1540,345 @@ public class SaveLoadUI : MonoBehaviour
         return LoadCachedSprite("GameLogo");
     }
 
+    private RectTransform CreateSlotRoot(RectTransform parent, SlotVisualConfig config, string objectName, bool registerLayout)
+    {
+        GameObject rootGO = CreateUIElement(objectName, parent);
+        RectTransform rootRT = rootGO.GetComponent<RectTransform>();
+        Vector2 center = ImagePointToLocal(
+            (config.cardRect.xMin + config.cardRect.xMax) * 0.5f,
+            (config.cardRect.yMin + config.cardRect.yMax) * 0.5f);
+        Vector2 size = ImageSizeToLocal(config.cardRect.width, config.cardRect.height);
+
+        rootRT.anchorMin = new Vector2(0.5f, 0.5f);
+        rootRT.anchorMax = new Vector2(0.5f, 0.5f);
+        rootRT.pivot = new Vector2(0.5f, 0.5f);
+        rootRT.anchoredPosition = center;
+        rootRT.sizeDelta = size;
+
+        if (registerLayout)
+        {
+            RegisterLayoutRect(GetSlotLayoutKey(config.slot), rootRT);
+        }
+
+        return rootRT;
+    }
+
+    private RectTransform CreatePreviewMaskRoot(RectTransform parent, SlotVisualConfig config, string objectName)
+    {
+        GameObject rootGO = CreateUIElement(objectName, parent);
+        RectTransform rootRT = rootGO.GetComponent<RectTransform>();
+        StretchFull(rootRT);
+
+        Sprite maskSprite = LoadSpringMaskSprite(System.IO.Path.GetFileNameWithoutExtension(config.maskFileName));
+        Image maskImage = rootGO.AddComponent<Image>();
+        maskImage.sprite = maskSprite;
+        maskImage.preserveAspect = true;
+        maskImage.color = Color.white;
+        maskImage.raycastTarget = false;
+
+        Mask mask = rootGO.AddComponent<Mask>();
+        mask.showMaskGraphic = false;
+
+        return rootRT;
+    }
+
+    private void CreateInteractiveOverlay(RectTransform slotRT, SlotVisualConfig config, bool isEmpty)
+    {
+        Image hitArea = slotRT.gameObject.AddComponent<Image>();
+        hitArea.color = new Color(1f, 1f, 1f, 0.01f);
+        hitArea.raycastTarget = true;
+
+        Button slotButton = slotRT.gameObject.AddComponent<Button>();
+        slotButton.targetGraphic = hitArea;
+        ColorBlock cb = slotButton.colors;
+        cb.normalColor = Color.white;
+        cb.highlightedColor = new Color(1f, 1f, 1f, 0.06f);
+        cb.pressedColor = new Color(1f, 1f, 1f, 0.12f);
+        slotButton.colors = cb;
+        slotButton.transition = Selectable.Transition.ColorTint;
+        slotButton.onClick.AddListener(() => OnSlotClicked(config.slot, isEmpty));
+
+        if (!isSaveMode && isEmpty)
+        {
+            slotButton.interactable = false;
+        }
+    }
+
+    private void CreateFullPanelArtLayer(RectTransform parent, string objectName, string fileName)
+    {
+        Sprite sprite = LoadSpringSprite(System.IO.Path.GetFileNameWithoutExtension(fileName));
+        if (sprite == null)
+        {
+            return;
+        }
+
+        GameObject layerGO = CreateUIElement(objectName, parent);
+        RectTransform layerRT = layerGO.GetComponent<RectTransform>();
+        StretchFull(layerRT);
+
+        Image image = layerGO.AddComponent<Image>();
+        image.sprite = sprite;
+        image.preserveAspect = true;
+        image.color = Color.white;
+        image.raycastTarget = false;
+    }
+
+    private SlotVisualConfig GetSlotVisualConfig(int slot)
+    {
+        switch (slot)
+        {
+            case 0:
+                return new SlotVisualConfig
+                {
+                    slot = 0,
+                    isAutoSlot = true,
+                    cardFileName = "游戏卡片左上.png",
+                    frameFileName = "游戏截图左上.png",
+                    maskFileName = "游戏截图左上遮罩.png",
+                    buttonFileName = "红色短按钮.png",
+                    cardRect = Rect.MinMaxRect(547f, 366f, 1368f, 821f),
+                    previewRect = Rect.MinMaxRect(582f, 407f, 965f, 705f),
+                    buttonRect = Rect.MinMaxRect(653f, 704f, 894f, 782f),
+                    previewRotation = 3.0f,
+                    themeColor = AutoPink
+                };
+            case 1:
+                return new SlotVisualConfig
+                {
+                    slot = 1,
+                    isAutoSlot = false,
+                    cardFileName = "游戏卡片右上.png",
+                    frameFileName = "游戏截图右上.png",
+                    maskFileName = "游戏截图右上遮罩.png",
+                    buttonFileName = "蓝色短按钮.png",
+                    cardRect = Rect.MinMaxRect(1425f, 366f, 2246f, 821f),
+                    previewRect = Rect.MinMaxRect(1458f, 407f, 1841f, 705f),
+                    buttonRect = Rect.MinMaxRect(1498f, 704f, 1825f, 782f),
+                    previewRotation = 3.0f,
+                    themeColor = Slot01Pink
+                };
+            case 2:
+                return new SlotVisualConfig
+                {
+                    slot = 2,
+                    isAutoSlot = false,
+                    cardFileName = "游戏卡片左下.png",
+                    frameFileName = "游戏截图左下.png",
+                    maskFileName = "游戏截图左下遮罩.png",
+                    buttonFileName = "绿色短按钮.png",
+                    cardRect = Rect.MinMaxRect(547f, 867f, 1368f, 1322f),
+                    previewRect = Rect.MinMaxRect(582f, 903f, 965f, 1201f),
+                    buttonRect = Rect.MinMaxRect(610f, 1205f, 937f, 1283f),
+                    previewRotation = 3.0f,
+                    themeColor = Slot02Green
+                };
+            case 3:
+                return new SlotVisualConfig
+                {
+                    slot = 3,
+                    isAutoSlot = false,
+                    cardFileName = "游戏卡片右下.png",
+                    frameFileName = "游戏截图右下.png",
+                    maskFileName = "游戏截图右下遮罩.png",
+                    buttonFileName = "黄色端按钮.png",
+                    cardRect = Rect.MinMaxRect(1425f, 867f, 2246f, 1322f),
+                    previewRect = Rect.MinMaxRect(1458f, 903f, 1841f, 1201f),
+                    buttonRect = Rect.MinMaxRect(1489f, 1205f, 1816f, 1283f),
+                    previewRotation = 3.0f,
+                    themeColor = Slot03Yellow
+                };
+            default:
+                throw new ArgumentOutOfRangeException(nameof(slot), slot, null);
+        }
+    }
+
+    private Rect ToSlotLocalRect(Rect cardRect, Rect childRect)
+    {
+        float scale = GetPanelScale();
+        float left = (childRect.xMin - cardRect.xMin) * scale;
+        float top = (childRect.yMin - cardRect.yMin) * scale;
+        float width = childRect.width * scale;
+        float height = childRect.height * scale;
+
+        return new Rect(
+            -ImageSizeToLocal(cardRect.width, 0f).x * 0.5f + left,
+            ImageSizeToLocal(0f, cardRect.height).y * 0.5f - top - height,
+            width,
+            height);
+    }
+
+    private Rect ToPanelLocalRect(Rect imageRect)
+    {
+        Vector2 min = ImagePointToLocal(imageRect.xMin, imageRect.yMax);
+        Vector2 size = ImageSizeToLocal(imageRect.width, imageRect.height);
+        return new Rect(min.x, min.y, size.x, size.y);
+    }
+
+    private void ApplySlotRect(RectTransform target, Rect rect)
+    {
+        target.anchorMin = new Vector2(0f, 0f);
+        target.anchorMax = new Vector2(0f, 0f);
+        target.pivot = new Vector2(0f, 0f);
+        target.anchoredPosition = new Vector2(rect.xMin, rect.yMin);
+        target.sizeDelta = new Vector2(rect.width, rect.height);
+    }
+
+    private void ApplyPanelRect(RectTransform target, Rect rect)
+    {
+        target.anchorMin = new Vector2(0.5f, 0.5f);
+        target.anchorMax = new Vector2(0.5f, 0.5f);
+        target.pivot = new Vector2(0.5f, 0.5f);
+        target.anchoredPosition = new Vector2(rect.xMin + rect.width * 0.5f, rect.yMin + rect.height * 0.5f);
+        target.sizeDelta = new Vector2(rect.width, rect.height);
+    }
+
+    private float GetPanelScale()
+    {
+        return mainPanelRect != null ? mainPanelRect.rect.width / SpringDesignWidth : 1f;
+    }
+
+    private Vector2 ImagePointToLocal(float imageX, float imageY)
+    {
+        float scale = GetPanelScale();
+        return new Vector2(
+            (imageX - SpringDesignWidth * 0.5f) * scale,
+            (SpringDesignHeight * 0.5f - imageY) * scale);
+    }
+
+    private Vector2 ImageSizeToLocal(float imageWidth, float imageHeight)
+    {
+        float scale = GetPanelScale();
+        return new Vector2(imageWidth * scale, imageHeight * scale);
+    }
+
+    private Vector2 ScalePanelLocalPoint(Vector2 localCenter)
+    {
+        return localCenter * GetPanelScale();
+    }
+
+    private Vector2 ScalePanelSize(Vector2 size)
+    {
+        return size * GetPanelScale();
+    }
+
+    private Sprite LoadSpringSprite(string resourceName)
+    {
+        return LoadCachedSprite($"{SpringResourceFolder}/{resourceName}");
+    }
+
+    private Sprite LoadSpringMaskSprite(string resourceName)
+    {
+        if (string.IsNullOrWhiteSpace(resourceName))
+        {
+            return null;
+        }
+
+        if (SpringMaskSpriteCache.TryGetValue(resourceName, out Sprite cachedMask) && cachedMask != null)
+        {
+            return cachedMask;
+        }
+
+        Sprite sourceSprite = LoadSpringSprite(resourceName);
+        if (sourceSprite == null || sourceSprite.texture == null)
+        {
+            return sourceSprite;
+        }
+
+        Texture2D readableTexture = ExtractReadableTexture(sourceSprite);
+        if (readableTexture == null)
+        {
+            return sourceSprite;
+        }
+
+        Color[] pixels = readableTexture.GetPixels();
+        for (int i = 0; i < pixels.Length; i++)
+        {
+            Color color = pixels[i];
+            float alpha = Mathf.Clamp01((color.r + color.g + color.b) / 3f);
+            pixels[i] = new Color(1f, 1f, 1f, alpha);
+        }
+
+        Texture2D maskTexture = new Texture2D(readableTexture.width, readableTexture.height, TextureFormat.RGBA32, false);
+        maskTexture.name = resourceName + "_AlphaMask";
+        maskTexture.SetPixels(pixels);
+        maskTexture.Apply(false, false);
+
+        Sprite maskSprite = Sprite.Create(
+            maskTexture,
+            new Rect(0f, 0f, maskTexture.width, maskTexture.height),
+            new Vector2(0.5f, 0.5f),
+            sourceSprite.pixelsPerUnit);
+
+        SpringMaskSpriteCache[resourceName] = maskSprite;
+        runtimeThumbnailObjects.Add(readableTexture);
+        runtimeThumbnailObjects.Add(maskTexture);
+        runtimeThumbnailObjects.Add(maskSprite);
+        return maskSprite;
+    }
+
+    private Texture2D ExtractReadableTexture(Sprite sprite)
+    {
+        if (sprite == null || sprite.texture == null)
+        {
+            return null;
+        }
+
+        Rect rect = sprite.rect;
+        RenderTexture renderTexture = RenderTexture.GetTemporary((int)rect.width, (int)rect.height, 0, RenderTextureFormat.ARGB32);
+        RenderTexture previous = RenderTexture.active;
+
+        try
+        {
+            Graphics.Blit(sprite.texture, renderTexture);
+            RenderTexture.active = renderTexture;
+
+            Texture2D texture = new Texture2D((int)rect.width, (int)rect.height, TextureFormat.RGBA32, false);
+            texture.ReadPixels(new Rect(rect.x, rect.y, rect.width, rect.height), 0, 0);
+            texture.Apply(false, false);
+            return texture;
+        }
+        finally
+        {
+            RenderTexture.active = previous;
+            RenderTexture.ReleaseTemporary(renderTexture);
+        }
+    }
+
+    private Rect GetSlotPhotoFallbackRect(int slot)
+    {
+        SlotVisualConfig config = GetSlotVisualConfig(slot);
+        return ToPanelLocalRect(config.previewRect);
+    }
+
+    private Rect GetSlotInfoFallbackRect(int slot)
+    {
+        return new Rect(435f, -34f, 300f, 156f);
+    }
+
+    private Rect GetSlotButtonsFallbackRect(int slot)
+    {
+        SlotVisualConfig config = GetSlotVisualConfig(slot);
+        return ToSlotLocalRect(config.cardRect, config.buttonRect);
+    }
+
+    private Rect GetSlotPrimaryButtonFallbackRect(int slot)
+    {
+        Rect buttonsRect = GetSlotButtonsFallbackRect(slot);
+        return new Rect(0f, 0f, buttonsRect.width, buttonsRect.height);
+    }
+
+    private Rect GetSlotLeftButtonFallbackRect(int slot)
+    {
+        Rect buttonsRect = GetSlotButtonsFallbackRect(slot);
+        return new Rect(0f, 0f, buttonsRect.width * 0.48f, buttonsRect.height);
+    }
+
+    private Rect GetSlotRightButtonFallbackRect(int slot)
+    {
+        Rect buttonsRect = GetSlotButtonsFallbackRect(slot);
+        return new Rect(buttonsRect.width * 0.52f, 0f, buttonsRect.width * 0.48f, buttonsRect.height);
+    }
+
     private void CreateAccentDot(RectTransform parent, Vector2 anchoredPosition, Color color)
     {
         GameObject dotGO = CreateUIElement("AccentDot", parent);
@@ -1181,8 +1886,8 @@ public class SaveLoadUI : MonoBehaviour
         rt.anchorMin = new Vector2(0f, 1f);
         rt.anchorMax = new Vector2(0f, 1f);
         rt.pivot = new Vector2(0.5f, 0.5f);
-        rt.sizeDelta = new Vector2(9f, 9f);
-        rt.anchoredPosition = anchoredPosition;
+        rt.sizeDelta = ScalePanelSize(new Vector2(9f, 9f));
+        rt.anchoredPosition = ScalePanelSize(anchoredPosition);
 
         Image dotImage = dotGO.AddComponent<Image>();
         dotImage.color = color;
@@ -1307,17 +2012,6 @@ public class SaveLoadUI : MonoBehaviour
         return loaded;
     }
 
-    private static Sprite LoadCachedSprite(string resourcePath, ref Sprite cacheField)
-    {
-        if (cacheField != null)
-        {
-            return cacheField;
-        }
-
-        cacheField = LoadCachedSprite(resourcePath);
-        return cacheField;
-    }
-
     private Sprite LoadSavedThumbnailSprite(string thumbnailFileName)
     {
         if (SaveManager.Instance == null || string.IsNullOrWhiteSpace(thumbnailFileName))
@@ -1351,6 +2045,35 @@ public class SaveLoadUI : MonoBehaviour
         return sprite;
     }
 
+    private void ApplyQueuedPreviewsImmediately()
+    {
+        for (int i = 0; i < pendingPreviewRequests.Count; i++)
+        {
+            PendingPreviewRequest request = pendingPreviewRequests[i];
+            if (request == null || request.targetImage == null)
+            {
+                continue;
+            }
+
+            Sprite previewSprite = LoadSlotPreviewSprite(request.data);
+            if (previewSprite == null)
+            {
+                continue;
+            }
+
+            request.targetImage.sprite = previewSprite;
+            request.targetImage.color = Color.white;
+            request.targetImage.preserveAspect = false;
+
+            if (request.fallbackText != null)
+            {
+                request.fallbackText.gameObject.SetActive(false);
+            }
+        }
+
+        pendingPreviewRequests.Clear();
+    }
+
     private IEnumerator LoadQueuedPreviews()
     {
         yield return null;
@@ -1368,7 +2091,7 @@ public class SaveLoadUI : MonoBehaviour
             {
                 request.targetImage.sprite = previewSprite;
                 request.targetImage.color = Color.white;
-                request.targetImage.preserveAspect = true;
+                request.targetImage.preserveAspect = false;
 
                 if (request.fallbackText != null)
                 {
@@ -1381,4 +2104,257 @@ public class SaveLoadUI : MonoBehaviour
 
         pendingPreviewRequests.Clear();
     }
+
+#if UNITY_EDITOR
+    public bool EditorPreviewIsBuilt()
+    {
+        return !Application.isPlaying && editorPreviewBuilt && canvas != null && mainPanelRect != null;
+    }
+
+    public void EditorBuildLivePreview(bool previewAsSaveMode)
+    {
+        if (Application.isPlaying)
+        {
+            return;
+        }
+
+        PreviewSpriteCache.Clear();
+        SpringMaskSpriteCache.Clear();
+        isSaveMode = previewAsSaveMode;
+        editorPreviewSaveMode = previewAsSaveMode;
+        useEditorPreviewData = true;
+        BuildEditorPreviewData();
+        EditorClearLivePreview();
+        BuildUI();
+        EditorUtility.SetDirty(this);
+        EditorApplication.QueuePlayerLoopUpdate();
+    }
+
+    public void EditorSyncLivePreview()
+    {
+        if (Application.isPlaying)
+        {
+            return;
+        }
+
+        if (!EditorPreviewIsBuilt())
+        {
+            EditorBuildLivePreview(editorPreviewSaveMode);
+            return;
+        }
+
+        PreviewSpriteCache.Clear();
+        SpringMaskSpriteCache.Clear();
+        layoutContent = LoadLayoutContent();
+        ApplyEditorLayoutPreview();
+        ApplyQueuedPreviewsImmediately();
+        EditorApplication.QueuePlayerLoopUpdate();
+    }
+
+    public void EditorApplyLayoutPreview()
+    {
+        if (Application.isPlaying || !EditorPreviewIsBuilt())
+        {
+            return;
+        }
+
+        layoutContent = LoadLayoutContent();
+        ApplyEditorLayoutPreview();
+        EditorApplication.QueuePlayerLoopUpdate();
+    }
+
+    public RectTransform EditorGetLayoutRect(string key)
+    {
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            return null;
+        }
+
+        return editorLayoutRects.TryGetValue(key, out RectTransform rect) ? rect : null;
+    }
+
+    private void EditorClearLivePreview()
+    {
+        for (int i = transform.childCount - 1; i >= 0; i--)
+        {
+            DestroyImmediate(transform.GetChild(i).gameObject);
+        }
+
+        Component[] components = GetComponents<Component>();
+        for (int i = components.Length - 1; i >= 0; i--)
+        {
+            Component component = components[i];
+            if (component is Transform || component is SaveLoadUI)
+            {
+                continue;
+            }
+
+            DestroyImmediate(component);
+        }
+
+        for (int i = 0; i < runtimeThumbnailObjects.Count; i++)
+        {
+            if (runtimeThumbnailObjects[i] != null)
+            {
+                DestroyImmediate(runtimeThumbnailObjects[i]);
+            }
+        }
+
+        runtimeThumbnailObjects.Clear();
+        pendingPreviewRequests.Clear();
+        editorLayoutRects.Clear();
+        mainPanelRect = null;
+        topOverlayRect = null;
+        prevPageButtonRect = null;
+        nextPageButtonRect = null;
+        returnButtonRect = null;
+        canvas = null;
+        canvasRect = null;
+        confirmDialog = null;
+        confirmDialogConfirmButton = null;
+        confirmDialogConfirmAction = null;
+        confirmDialogCancelAction = null;
+        editorPreviewBuilt = false;
+    }
+
+    private void ApplyEditorLayoutPreview()
+    {
+        if (mainPanelRect != null)
+        {
+            ZhongshanDeckSaveLoadLayoutItem boardItem = GetLayoutItem(ZhongshanDeckSaveLoadContentDefaults.LayoutBoard);
+            ApplyLayoutToRect(mainPanelRect, boardItem, new Vector2(0.5f, 0.5f), Vector2.zero, CalculatePanelSize());
+        }
+
+        if (topOverlayRect != null)
+        {
+            ZhongshanDeckSaveLoadLayoutItem overlayItem = GetLayoutItem(ZhongshanDeckSaveLoadContentDefaults.LayoutTopOverlay);
+            ApplyLayoutToRect(topOverlayRect, overlayItem, new Vector2(0.5f, 0.5f), Vector2.zero, mainPanelRect != null ? mainPanelRect.sizeDelta : CalculatePanelSize());
+        }
+
+        if (prevPageButtonRect != null)
+        {
+            ZhongshanDeckSaveLoadLayoutItem prevItem = GetLayoutItem(ZhongshanDeckSaveLoadContentDefaults.LayoutPrevPageButton);
+            ApplyLayoutToRect(prevPageButtonRect, prevItem, new Vector2(0.5f, 0.5f), ImagePointToLocal(134f, 768f), ImageSizeToLocal(86f, 86f));
+        }
+
+        if (nextPageButtonRect != null)
+        {
+            ZhongshanDeckSaveLoadLayoutItem nextItem = GetLayoutItem(ZhongshanDeckSaveLoadContentDefaults.LayoutNextPageButton);
+            ApplyLayoutToRect(nextPageButtonRect, nextItem, new Vector2(0.5f, 0.5f), ImagePointToLocal(2624f, 768f), ImageSizeToLocal(86f, 86f));
+        }
+
+        for (int slot = 0; slot < SlotCount; slot++)
+        {
+            string key = GetSlotLayoutKey(slot);
+            RectTransform rect = EditorGetLayoutRect(key);
+            if (rect == null)
+            {
+                continue;
+            }
+
+            ZhongshanDeckSaveLoadLayoutItem item = GetLayoutItem(key);
+            ApplyLayoutToRect(rect, item, new Vector2(0.5f, 0.5f), GetSlotCenter(slot), new Vector2(SlotWidth, SlotHeight));
+
+            RectTransform photoRect = EditorGetLayoutRect(ZhongshanDeckSaveLoadContentDefaults.GetSlotPhotoKey(slot));
+            if (photoRect != null)
+            {
+                Rect fallback = GetSlotPhotoFallbackRect(slot);
+                ZhongshanDeckSaveLoadLayoutItem photoItem = GetLayoutItem(ZhongshanDeckSaveLoadContentDefaults.GetSlotPhotoKey(slot));
+                ApplyLayoutToRect(photoRect, photoItem, new Vector2(0.5f, 0.5f), new Vector2(fallback.center.x, fallback.center.y), new Vector2(fallback.width, fallback.height));
+            }
+
+            RectTransform infoRect = EditorGetLayoutRect(ZhongshanDeckSaveLoadContentDefaults.GetSlotInfoKey(slot));
+            if (infoRect != null)
+            {
+                Rect fallback = GetSlotInfoFallbackRect(slot);
+                ZhongshanDeckSaveLoadLayoutItem infoItem = GetLayoutItem(ZhongshanDeckSaveLoadContentDefaults.GetSlotInfoKey(slot));
+                ApplyLayoutToRect(infoRect, infoItem, new Vector2(0f, 1f), new Vector2(fallback.xMin, fallback.yMin), new Vector2(fallback.width, fallback.height));
+            }
+
+            RectTransform buttonsRect = EditorGetLayoutRect(ZhongshanDeckSaveLoadContentDefaults.GetSlotButtonsKey(slot));
+            if (buttonsRect != null)
+            {
+                Rect fallback = GetSlotButtonsFallbackRect(slot);
+                ZhongshanDeckSaveLoadLayoutItem buttonsItem = GetLayoutItem(ZhongshanDeckSaveLoadContentDefaults.GetSlotButtonsKey(slot));
+                ApplyLayoutToRect(buttonsRect, buttonsItem, new Vector2(0f, 1f), new Vector2(fallback.xMin, fallback.yMin), new Vector2(fallback.width, fallback.height));
+            }
+
+            RectTransform primaryButtonRect = EditorGetLayoutRect(ZhongshanDeckSaveLoadContentDefaults.GetSlotPrimaryButtonKey(slot));
+            if (primaryButtonRect != null)
+            {
+                Rect fallback = GetSlotPrimaryButtonFallbackRect(slot);
+                ZhongshanDeckSaveLoadLayoutItem primaryItem = GetLayoutItem(ZhongshanDeckSaveLoadContentDefaults.GetSlotPrimaryButtonKey(slot));
+                ApplyLayoutToRect(primaryButtonRect, primaryItem, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(fallback.width, fallback.height));
+            }
+
+            RectTransform leftButtonRect = EditorGetLayoutRect(ZhongshanDeckSaveLoadContentDefaults.GetSlotLeftButtonKey(slot));
+            if (leftButtonRect != null)
+            {
+                Rect fallback = GetSlotLeftButtonFallbackRect(slot);
+                ZhongshanDeckSaveLoadLayoutItem leftItem = GetLayoutItem(ZhongshanDeckSaveLoadContentDefaults.GetSlotLeftButtonKey(slot));
+                ApplyLayoutToRect(leftButtonRect, leftItem, new Vector2(0.5f, 0.5f), new Vector2(fallback.center.x, fallback.center.y), new Vector2(fallback.width, fallback.height));
+            }
+
+            RectTransform rightButtonRect = EditorGetLayoutRect(ZhongshanDeckSaveLoadContentDefaults.GetSlotRightButtonKey(slot));
+            if (rightButtonRect != null)
+            {
+                Rect fallback = GetSlotRightButtonFallbackRect(slot);
+                ZhongshanDeckSaveLoadLayoutItem rightItem = GetLayoutItem(ZhongshanDeckSaveLoadContentDefaults.GetSlotRightButtonKey(slot));
+                ApplyLayoutToRect(rightButtonRect, rightItem, new Vector2(0.5f, 0.5f), new Vector2(fallback.center.x, fallback.center.y), new Vector2(fallback.width, fallback.height));
+            }
+        }
+
+        if (returnButtonRect != null)
+        {
+            ZhongshanDeckSaveLoadLayoutItem item = GetLayoutItem(ZhongshanDeckSaveLoadContentDefaults.LayoutReturnButton);
+            ApplyLayoutToRect(returnButtonRect, item, new Vector2(1f, 1f), new Vector2(-126f, -126f), new Vector2(170f, 86f));
+        }
+    }
+
+    private void BuildEditorPreviewData()
+    {
+        editorPreviewSlotData.Clear();
+        editorPreviewSlotData[0] = CreateEditorPreviewSaveData("林见书", 1, 2, 4, 10, 0, "Library", "中文系", 12340, 24510f, "2026-05-06T21:10:00");
+        editorPreviewSlotData[1] = CreateEditorPreviewSaveData("陈望秋", 2, 1, 2, 9, 1, "Dormitory", "新闻传播", 8750, 18240f, "2026-05-05T18:32:00");
+        editorPreviewSlotData[2] = CreateEditorPreviewSaveData("苏青禾", 3, 2, 5, 7, 1, "TeachingBuilding", "计算机", -320, 33480f, "2026-05-04T23:08:00");
+        editorPreviewSlotData[3] = null;
+    }
+
+    private SaveData CreateEditorPreviewSaveData(string playerName, int year, int semester, int round, int month, int gender, string location, string major, int money, float playSeconds, string saveTime)
+    {
+        SaveData data = new SaveData
+        {
+            playerName = playerName,
+            playerGender = gender % 2,
+            playerMajor = major,
+            currentYear = year,
+            currentSemester = semester,
+            currentRound = round,
+            currentMonth = month,
+            currentLocation = location,
+            money = money,
+            actionPoints = 12,
+            study = 72 + year * 4,
+            charm = 55 + semester * 3,
+            physique = 48 + round,
+            leadership = 36 + year * 2,
+            stress = 28 + semester * 4,
+            mood = 68 - round,
+            luck = 61,
+            totalPlayTimeSeconds = playSeconds,
+            meta = new SaveMetaInfo
+            {
+                saveTime = saveTime
+            }
+        };
+
+        data.semesterGPAHistory = new List<SemesterGPA>
+        {
+            new SemesterGPA { year = Mathf.Max(1, year - 1), semester = 1, gpa = 3.42f },
+            new SemesterGPA { year = year, semester = semester, gpa = 3.76f }
+        };
+        data.EnsureInitialized();
+        return data;
+    }
+#endif
 }

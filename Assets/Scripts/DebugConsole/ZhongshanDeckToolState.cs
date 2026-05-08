@@ -42,6 +42,12 @@ public class ZhongshanDeckToolState : ScriptableObject
     [Header("Monthly News Overrides")]
     public List<ZhongshanDeckNewsRoundEntry> monthlyNewsOverrides = new List<ZhongshanDeckNewsRoundEntry>();
 
+    [Header("Title Authored Content")]
+    public ZhongshanDeckTitleContent titleContent = new ZhongshanDeckTitleContent();
+
+    [Header("Save Load Layout Content")]
+    public ZhongshanDeckSaveLoadContent saveLoadContent = new ZhongshanDeckSaveLoadContent();
+
     public void EnsureInitialized()
     {
         defaultPlayerName ??= "Teat";
@@ -49,6 +55,10 @@ public class ZhongshanDeckToolState : ScriptableObject
         snapshots ??= new List<ZhongshanDeckSnapshotEntry>();
         authoredEvents ??= new List<ZhongshanDeckEventEntry>();
         monthlyNewsOverrides ??= new List<ZhongshanDeckNewsRoundEntry>();
+        titleContent ??= new ZhongshanDeckTitleContent();
+        titleContent.EnsureInitialized();
+        saveLoadContent ??= new ZhongshanDeckSaveLoadContent();
+        saveLoadContent.EnsureInitialized();
         stepIndex = Mathf.Clamp(stepIndex, 0, 3);
         defaultPlayerGender = Mathf.Clamp(defaultPlayerGender, 0, 1);
         semesterRoundCount = Mathf.Clamp(semesterRoundCount, 3, 12);

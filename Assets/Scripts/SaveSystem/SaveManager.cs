@@ -38,11 +38,13 @@ public class SaveManager : MonoBehaviour
 
     /// <summary>槽位数量: 0=autosave, 1-3=手动</summary>
     private const int SlotCount = 4;
+    private const float LifecycleAutoSaveDebounceSeconds = 2f;
 
     // ========== 游戏时长追踪 ==========
 
     private float sessionStartTime;
     private float previousTotalPlayTime;
+    private float lastLifecycleAutoSaveTime = -999f;
     private readonly Dictionary<int, SaveData> slotDataCache = new Dictionary<int, SaveData>();
 
     // ========== 生命周期 ==========
@@ -88,6 +90,7 @@ public class SaveManager : MonoBehaviour
             return;
         }
 
+        SaveData existingData = GetSlotSaveData(slot);
         SaveData data = new SaveData();
 
         // 收集所有 ISaveable 组件的数据
@@ -117,9 +120,13 @@ public class SaveManager : MonoBehaviour
         // 记录总游戏时长
         data.totalPlayTimeSeconds = data.meta.playTimeSeconds;
 
-        if (thumbnailTexture != null)
+        data.thumbnailFileName = !string.IsNullOrWhiteSpace(existingData?.thumbnailFileName)
+            ? existingData.thumbnailFileName
+            : GetThumbnailFileNameForSlot(slot);
+
+        if (thumbnailTexture == null && string.IsNullOrWhiteSpace(existingData?.thumbnailFileName))
         {
-            data.thumbnailFileName = $"thumb_{slot}.png";
+            data.thumbnailFileName = string.Empty;
         }
 
         // 序列化并写入文件
@@ -133,8 +140,12 @@ public class SaveManager : MonoBehaviour
             {
                 WriteThumbnail(slot, data.thumbnailFileName, thumbnailTexture);
             }
+            else if (string.IsNullOrWhiteSpace(data.thumbnailFileName))
+            {
+                DeleteThumbnailFile(GetThumbnailFileNameForSlot(slot));
+            }
 
-            File.WriteAllText(filePath, json);
+            WriteSaveFileAtomically(filePath, json);
             CacheSlotData(slot, data);
             Debug.Log($"[SaveManager] 存档成功: 槽位{slot} -> {filePath}");
             OnSaveCompleted?.Invoke(slot);
@@ -204,11 +215,35 @@ public class SaveManager : MonoBehaviour
         }
 
         string filePath = GetSlotFilePath(slot);
-        if (File.Exists(filePath))
+        string backupPath = GetBackupFilePath(filePath);
+        string tempPath = GetTempFilePath(filePath);
+        SaveData existingData = GetSlotSaveData(slot);
+        string thumbnailFileName = !string.IsNullOrWhiteSpace(existingData?.thumbnailFileName)
+            ? existingData.thumbnailFileName
+            : GetThumbnailFileNameForSlot(slot);
+        string thumbnailPath = GetThumbnailPath(thumbnailFileName);
+
+        if (File.Exists(filePath) || File.Exists(backupPath) || File.Exists(tempPath) || (!string.IsNullOrWhiteSpace(thumbnailPath) && File.Exists(thumbnailPath)))
         {
             try
             {
-                File.Delete(filePath);
+                if (File.Exists(filePath))
+                {
+                    File.Delete(filePath);
+                }
+
+                if (File.Exists(backupPath))
+                {
+                    File.Delete(backupPath);
+                }
+
+                if (File.Exists(tempPath))
+                {
+                    File.Delete(tempPath);
+                }
+
+                DeleteThumbnailFile(thumbnailFileName);
+
                 slotDataCache.Remove(slot);
                 Debug.Log($"[SaveManager] 已删除存档: 槽位{slot}");
             }
@@ -226,7 +261,10 @@ public class SaveManager : MonoBehaviour
     public bool HasSaveData(int slot)
     {
         if (slot < 0 || slot >= SlotCount) return false;
-        return File.Exists(GetSlotFilePath(slot));
+        string filePath = GetSlotFilePath(slot);
+        return File.Exists(filePath)
+            || File.Exists(GetBackupFilePath(filePath))
+            || File.Exists(GetTempFilePath(filePath));
     }
 
     /// <summary>
@@ -271,7 +309,59 @@ public class SaveManager : MonoBehaviour
     /// </summary>
     public void AutoSave()
     {
+        if (!CanAutoSaveCurrentSession())
+        {
+            return;
+        }
+
         CaptureAndSaveToSlot(0);
+    }
+
+    public void AutoSaveImmediate(string reason = null, bool ignoreDebounce = false)
+    {
+        if (!CanAutoSaveCurrentSession())
+        {
+            return;
+        }
+
+        float now = Time.realtimeSinceStartup;
+        if (!ignoreDebounce && now - lastLifecycleAutoSaveTime < LifecycleAutoSaveDebounceSeconds)
+        {
+            return;
+        }
+
+        lastLifecycleAutoSaveTime = now;
+
+        if (!string.IsNullOrWhiteSpace(reason))
+        {
+            Debug.Log($"[SaveManager] 执行即时自动存档: {reason}");
+        }
+
+        SaveToSlot(0);
+    }
+
+    public int GetLatestSaveSlot()
+    {
+        int latestSlot = -1;
+        DateTime latestTime = DateTime.MinValue;
+
+        for (int slot = 0; slot < SlotCount; slot++)
+        {
+            SaveData data = GetSlotSaveData(slot);
+            if (data == null)
+            {
+                continue;
+            }
+
+            DateTime saveTime = GetBestSaveTimestamp(slot, data);
+            if (latestSlot < 0 || saveTime > latestTime)
+            {
+                latestSlot = slot;
+                latestTime = saveTime;
+            }
+        }
+
+        return latestSlot;
     }
 
     public Coroutine CaptureAndSaveToSlot(int slot, Action<bool> onCompleted = null)
@@ -290,6 +380,21 @@ public class SaveManager : MonoBehaviour
         return Path.Combine(saveFolderPath, fileName);
     }
 
+    private string GetBackupFilePath(string filePath)
+    {
+        return $"{filePath}.bak";
+    }
+
+    private string GetTempFilePath(string filePath)
+    {
+        return $"{filePath}.tmp";
+    }
+
+    private string GetThumbnailFileNameForSlot(int slot)
+    {
+        return $"thumb_{slot}.png";
+    }
+
     private SaveData ReadSlotData(int slot, bool logSuccess)
     {
         if (slot < 0 || slot >= SlotCount)
@@ -300,7 +405,10 @@ public class SaveManager : MonoBehaviour
         }
 
         string filePath = GetSlotFilePath(slot);
-        if (!File.Exists(filePath))
+        string backupPath = GetBackupFilePath(filePath);
+        string tempPath = GetTempFilePath(filePath);
+
+        if (!File.Exists(filePath) && !File.Exists(backupPath) && !File.Exists(tempPath))
         {
             Debug.LogWarning($"[SaveManager] 存档文件不存在: {filePath}");
             if (logSuccess)
@@ -312,9 +420,30 @@ public class SaveManager : MonoBehaviour
 
         try
         {
-            string json = File.ReadAllText(filePath);
-            SaveData data = JsonUtility.FromJson<SaveData>(json);
-            data?.EnsureInitialized();
+            SaveData data = TryReadSaveDataFromPath(filePath);
+            if (data == null)
+            {
+                data = TryReadSaveDataFromPath(backupPath);
+                if (data != null)
+                {
+                    Debug.LogWarning($"[SaveManager] 主存档读取失败，已回退到备份文件: {backupPath}");
+                }
+            }
+
+            if (data == null)
+            {
+                data = TryReadSaveDataFromPath(tempPath);
+                if (data != null)
+                {
+                    Debug.LogWarning($"[SaveManager] 主存档与备份不可用，已回退到临时文件: {tempPath}");
+                }
+            }
+
+            if (data == null)
+            {
+                throw new InvalidDataException("未能从主文件、备份文件或临时文件中恢复有效存档。");
+            }
+
             CacheSlotData(slot, data);
             if (logSuccess)
             {
@@ -326,6 +455,32 @@ public class SaveManager : MonoBehaviour
         {
             Debug.LogError($"[SaveManager] 读档失败: {e.Message}");
             ShowSaveNotification("读档失败", "读取存档文件时发生异常，请换一个槽位再试。");
+            return null;
+        }
+    }
+
+    private SaveData TryReadSaveDataFromPath(string filePath)
+    {
+        if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath))
+        {
+            return null;
+        }
+
+        try
+        {
+            string json = File.ReadAllText(filePath);
+            if (string.IsNullOrWhiteSpace(json))
+            {
+                return null;
+            }
+
+            SaveData data = JsonUtility.FromJson<SaveData>(json);
+            data?.EnsureInitialized();
+            return data;
+        }
+        catch (Exception e)
+        {
+            Debug.LogWarning($"[SaveManager] 读取存档文件失败，准备尝试回退文件: {filePath} | {e.Message}");
             return null;
         }
     }
@@ -368,6 +523,43 @@ public class SaveManager : MonoBehaviour
         slotDataCache[slot] = data;
     }
 
+    private void WriteSaveFileAtomically(string filePath, string json)
+    {
+        string tempPath = GetTempFilePath(filePath);
+        string backupPath = GetBackupFilePath(filePath);
+
+        File.WriteAllText(tempPath, json);
+
+        if (File.Exists(filePath))
+        {
+            File.Replace(tempPath, filePath, backupPath, true);
+            return;
+        }
+
+        File.Move(tempPath, filePath);
+    }
+
+    private bool CanAutoSaveCurrentSession()
+    {
+        return GameState.Instance != null && PlayerAttributes.Instance != null;
+    }
+
+    private DateTime GetBestSaveTimestamp(int slot, SaveData data)
+    {
+        if (DateTime.TryParse(data?.meta?.saveTime, out DateTime parsed))
+        {
+            return parsed.ToUniversalTime();
+        }
+
+        string filePath = GetSlotFilePath(slot);
+        if (File.Exists(filePath))
+        {
+            return File.GetLastWriteTimeUtc(filePath);
+        }
+
+        return DateTime.MinValue;
+    }
+
     private void ShowSaveNotification(string title, string message, float duration = 2.8f)
     {
         if (MissionUI.Instance != null)
@@ -396,7 +588,7 @@ public class SaveManager : MonoBehaviour
 
         try
         {
-            capturedTexture = ScreenCapture.CaptureScreenshotAsTexture();
+            capturedTexture = CaptureFramebufferTexture();
             SaveToSlot(slot, capturedTexture);
         }
         catch (Exception e)
@@ -414,6 +606,16 @@ public class SaveManager : MonoBehaviour
         }
 
         onCompleted?.Invoke(succeeded);
+    }
+
+    private Texture2D CaptureFramebufferTexture()
+    {
+        int width = Mathf.Max(1, Screen.width);
+        int height = Mathf.Max(1, Screen.height);
+        Texture2D texture = new Texture2D(width, height, TextureFormat.RGB24, false);
+        texture.ReadPixels(new Rect(0f, 0f, width, height), 0, 0, false);
+        texture.Apply(false, false);
+        return texture;
     }
 
     private void WriteThumbnail(int slot, string thumbnailFileName, Texture2D sourceTexture)
@@ -437,6 +639,17 @@ public class SaveManager : MonoBehaviour
         }
     }
 
+    private void DeleteThumbnailFile(string thumbnailFileName)
+    {
+        string thumbnailPath = GetThumbnailPath(thumbnailFileName);
+        if (string.IsNullOrWhiteSpace(thumbnailPath) || !File.Exists(thumbnailPath))
+        {
+            return;
+        }
+
+        File.Delete(thumbnailPath);
+    }
+
     private Texture2D ResizeTexture(Texture2D source, int targetWidth, int targetHeight)
     {
         if (source == null)
@@ -457,5 +670,26 @@ public class SaveManager : MonoBehaviour
         RenderTexture.active = previous;
         RenderTexture.ReleaseTemporary(rt);
         return resized;
+    }
+
+    private void OnApplicationPause(bool pauseStatus)
+    {
+        if (pauseStatus)
+        {
+            AutoSaveImmediate("应用进入后台");
+        }
+    }
+
+    private void OnApplicationFocus(bool hasFocus)
+    {
+        if (!hasFocus)
+        {
+            AutoSaveImmediate("应用失去焦点");
+        }
+    }
+
+    private void OnApplicationQuit()
+    {
+        AutoSaveImmediate("退出游戏", true);
     }
 }

@@ -45,6 +45,7 @@ public class DebugConsoleUI : MonoBehaviour
     {
         "属性",
         "时间",
+        "内容",
         "新闻",
         "结局",
         "事件",
@@ -86,6 +87,7 @@ public class DebugConsoleUI : MonoBehaviour
 
     private AttributeModule attributeModule;
     private TimeModule timeModule;
+    private ContentModule contentModule;
     private NewsModule newsModule;
     private EndingSimModule endingSimModule;
     private EventModule eventModule;
@@ -427,6 +429,7 @@ public class DebugConsoleUI : MonoBehaviour
     {
         attributeModule = CreateModulePanel<AttributeModule>("AttributePanel");
         timeModule = CreateModulePanel<TimeModule>("TimePanel");
+        contentModule = CreateModulePanel<ContentModule>("ContentPanel");
         newsModule = CreateModulePanel<NewsModule>("NewsPanel");
         endingSimModule = CreateModulePanel<EndingSimModule>("EndingPanel");
         eventModule = CreateModulePanel<EventModule>("EventPanel");
@@ -497,15 +500,16 @@ public class DebugConsoleUI : MonoBehaviour
         {
             case 0: attributeModule?.Refresh(); break;
             case 1: timeModule?.Refresh(); break;
-            case 2: newsModule?.Refresh(); break;
-            case 3: endingSimModule?.Refresh(); break;
-            case 4: eventModule?.Refresh(); break;
-            case 5: storyModule?.Refresh(); break;
-            case 6: npcModule?.Refresh(); break;
-            case 7: economyModule?.Refresh(); break;
-            case 8: formulaModule?.Refresh(); break;
-            case 9: snapshotModule?.Refresh(); break;
-            case 10: logModule?.Refresh(); break;
+            case 2: contentModule?.Refresh(); break;
+            case 3: newsModule?.Refresh(); break;
+            case 4: endingSimModule?.Refresh(); break;
+            case 5: eventModule?.Refresh(); break;
+            case 6: storyModule?.Refresh(); break;
+            case 7: npcModule?.Refresh(); break;
+            case 8: economyModule?.Refresh(); break;
+            case 9: formulaModule?.Refresh(); break;
+            case 10: snapshotModule?.Refresh(); break;
+            case 11: logModule?.Refresh(); break;
         }
     }
 

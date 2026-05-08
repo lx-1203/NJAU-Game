@@ -76,6 +76,11 @@ public class ProgressBarParticleEffect : MonoBehaviour
     private float currentProgress = 0f;
     private float spawnTimer = 0f;
     private float trailSpawnTimer = 0f;
+    private float simulationAccumulator = 0f;
+
+    private const float SimulationStep = 1f / 60f;
+    private const float MaxFrameDelta = 1f / 15f;
+    private const int MaxSimulationStepsPerFrame = 4;
 
     private Sprite circleSprite;
     private Sprite softCircleSprite;
@@ -147,6 +152,7 @@ public class ProgressBarParticleEffect : MonoBehaviour
             currentProgress = progressBarFill.fillAmount;
         }
 
+        float deltaTime = Mathf.Min(Time.unscaledDeltaTime, MaxFrameDelta);
         bool shouldEmit = currentProgress > 0.005f && currentProgress < 0.995f;
 
         // 更新光晕
@@ -156,32 +162,21 @@ public class ProgressBarParticleEffect : MonoBehaviour
             if (shouldEmit) UpdateGlow();
         }
 
-        // 生成前端粒子
-        if (shouldEmit)
+        simulationAccumulator += deltaTime;
+        int simulatedSteps = 0;
+        while (simulationAccumulator >= SimulationStep && simulatedSteps < MaxSimulationStepsPerFrame)
         {
-            spawnTimer += Time.deltaTime;
-            float interval = 1f / spawnRate;
-            while (spawnTimer >= interval && pool.Count > 0)
-            {
-                spawnTimer -= interval;
-                EmitParticle(false);
-            }
-
-            // 生成拖尾粒子
-            if (enableTrail)
-            {
-                trailSpawnTimer += Time.deltaTime;
-                float trailInterval = 1f / trailSpawnRate;
-                while (trailSpawnTimer >= trailInterval && pool.Count > 0)
-                {
-                    trailSpawnTimer -= trailInterval;
-                    EmitParticle(true);
-                }
-            }
+            SimulateStep(SimulationStep, shouldEmit);
+            simulationAccumulator -= SimulationStep;
+            simulatedSteps++;
         }
 
-        // 更新所有活跃粒子
-        UpdateActiveParticles();
+        if (simulatedSteps == 0)
+        {
+            SimulateStep(Mathf.Max(0.0001f, deltaTime), shouldEmit);
+        }
+
+        simulationAccumulator = Mathf.Min(simulationAccumulator, SimulationStep);
     }
 
     private void OnDestroy()
@@ -362,12 +357,12 @@ public class ProgressBarParticleEffect : MonoBehaviour
 
     #region 粒子更新
 
-    private void UpdateActiveParticles()
+    private void UpdateActiveParticles(float deltaTime)
     {
         for (int i = activeParticles.Count - 1; i >= 0; i--)
         {
             var pt = activeParticles[i];
-            pt.age += Time.deltaTime;
+            pt.age += deltaTime;
 
             // 超过生命周期则回收
             if (pt.age >= pt.maxAge)
@@ -379,8 +374,8 @@ public class ProgressBarParticleEffect : MonoBehaviour
             float t = pt.age / pt.maxAge; // 归一化生命进度 0→1
 
             // 运动
-            pt.rt.anchoredPosition += pt.vel * Time.deltaTime;
-            pt.vel.y += riseAccel * Time.deltaTime;     // 上升加速
+            pt.rt.anchoredPosition += pt.vel * deltaTime;
+            pt.vel.y += riseAccel * deltaTime;     // 上升加速
             pt.vel.x *= horizontalDrag;                  // 水平阻力
 
             // 渐变透明（二次衰减，后期消失更快）
@@ -425,9 +420,36 @@ public class ProgressBarParticleEffect : MonoBehaviour
         glowRect.anchoredPosition = new Vector2(lp.x, lp.y);
 
         // 脉动效果
-        float pulse = 0.65f + 0.35f * Mathf.Sin(Time.time * glowPulseSpeed);
+        float pulse = 0.65f + 0.35f * Mathf.Sin(Time.unscaledTime * glowPulseSpeed);
         glowImage.color = new Color(glowColor.r, glowColor.g, glowColor.b, glowColor.a * pulse);
         glowRect.sizeDelta = new Vector2(glowSize * pulse, glowSize * pulse);
+    }
+
+    private void SimulateStep(float deltaTime, bool shouldEmit)
+    {
+        if (shouldEmit)
+        {
+            spawnTimer += deltaTime;
+            float interval = 1f / spawnRate;
+            while (spawnTimer >= interval && pool.Count > 0)
+            {
+                spawnTimer -= interval;
+                EmitParticle(false);
+            }
+
+            if (enableTrail)
+            {
+                trailSpawnTimer += deltaTime;
+                float trailInterval = 1f / trailSpawnRate;
+                while (trailSpawnTimer >= trailInterval && pool.Count > 0)
+                {
+                    trailSpawnTimer -= trailInterval;
+                    EmitParticle(true);
+                }
+            }
+        }
+
+        UpdateActiveParticles(deltaTime);
     }
 
     #endregion

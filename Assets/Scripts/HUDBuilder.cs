@@ -62,9 +62,9 @@ public class HUDBuilder : MonoBehaviour
 
     // --- 底部中央：行动按钮 ---
     [HideInInspector] public GameObject actionButtonRow;
+    [HideInInspector] public Button btnInfo;
     [HideInInspector] public Button btnInventory;
     [HideInInspector] public Button btnActionToggle;
-    [HideInInspector] public Button btnInfo;
     [HideInInspector] public Button btnGrowth;
     [HideInInspector] public Button btnGraduationRequirements;
     [HideInInspector] public Button btnNPCArchive;

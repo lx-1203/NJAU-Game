@@ -15,6 +15,7 @@ public class LocationSceneControllerEditor : Editor
         DrawDefaultInspector();
 
         EditorGUILayout.Space();
+        EditorGUILayout.HelpBox("预览地点由 previewLocation 决定。钟山台里的“地点可视化编辑”会自动切到对应地点；在 Scene 视图里可直接拖地面、边界、障碍盒，NPC 锚点则由 NPCManager 预览生成。", MessageType.None);
         EditorGUILayout.LabelField("Tools", EditorStyles.boldLabel);
 
         LocationSceneController controller = (LocationSceneController)target;
@@ -65,6 +66,7 @@ public class LocationSceneControllerEditor : Editor
         SerializedProperty previewLocationProperty = serializedObject.FindProperty("previewLocation");
         if (GUILayout.Button("Add Profile For Preview Location"))
         {
+            Undo.RecordObject(controller, "Add Location Profile");
             controller.AddProfile((LocationId)previewLocationProperty.enumValueIndex);
             controller.RebuildScene();
             EditorUtility.SetDirty(controller);
@@ -72,9 +74,17 @@ public class LocationSceneControllerEditor : Editor
 
         if (GUILayout.Button("Add Missing Location Profiles"))
         {
+            Undo.RecordObject(controller, "Add Missing Location Profiles");
             controller.AddMissingProfiles();
             controller.RebuildScene();
             EditorUtility.SetDirty(controller);
+        }
+
+        if (GUILayout.Button("Select Generated Preview Root"))
+        {
+            Transform previewRoot = controller.transform.Find("_GeneratedLocationScene");
+            Selection.activeObject = previewRoot != null ? previewRoot.gameObject : controller.gameObject;
+            SceneView.lastActiveSceneView?.FrameSelected();
         }
 
         serializedObject.ApplyModifiedProperties();
@@ -126,6 +136,7 @@ public class LocationSceneControllerEditor : Editor
 
     private void DrawBoundsHandles(SerializedProperty profileProperty)
     {
+        LocationSceneController controller = (LocationSceneController)target;
         SerializedProperty minXProperty = profileProperty.FindPropertyRelative("worldMinX");
         SerializedProperty maxXProperty = profileProperty.FindPropertyRelative("worldMaxX");
         SerializedProperty floorYProperty = profileProperty.FindPropertyRelative("floorY");
@@ -140,6 +151,7 @@ public class LocationSceneControllerEditor : Editor
         Vector3 newMinPosition = Handles.Slider(minHandlePosition, Vector3.right, HandleUtility.GetHandleSize(minHandlePosition) * 0.12f, Handles.CubeHandleCap, 0f);
         if (EditorGUI.EndChangeCheck())
         {
+            Undo.RecordObject(controller, "Adjust Location Min X");
             minXProperty.floatValue = Mathf.Min(newMinPosition.x, maxXProperty.floatValue - 0.1f);
         }
 
@@ -147,6 +159,7 @@ public class LocationSceneControllerEditor : Editor
         Vector3 newMaxPosition = Handles.Slider(maxHandlePosition, Vector3.right, HandleUtility.GetHandleSize(maxHandlePosition) * 0.12f, Handles.CubeHandleCap, 0f);
         if (EditorGUI.EndChangeCheck())
         {
+            Undo.RecordObject(controller, "Adjust Location Max X");
             maxXProperty.floatValue = Mathf.Max(newMaxPosition.x, minXProperty.floatValue + 0.1f);
         }
 
@@ -156,6 +169,7 @@ public class LocationSceneControllerEditor : Editor
 
     private void DrawFloorHandle(SerializedProperty profileProperty)
     {
+        LocationSceneController controller = (LocationSceneController)target;
         SerializedProperty minXProperty = profileProperty.FindPropertyRelative("worldMinX");
         SerializedProperty maxXProperty = profileProperty.FindPropertyRelative("worldMaxX");
         SerializedProperty floorYProperty = profileProperty.FindPropertyRelative("floorY");
@@ -168,6 +182,7 @@ public class LocationSceneControllerEditor : Editor
         Vector3 newFloorPosition = Handles.Slider(floorPosition, Vector3.up, HandleUtility.GetHandleSize(floorPosition) * 0.12f, Handles.SphereHandleCap, 0f);
         if (EditorGUI.EndChangeCheck())
         {
+            Undo.RecordObject(controller, "Adjust Floor Y");
             floorYProperty.floatValue = newFloorPosition.y;
         }
 
@@ -176,6 +191,7 @@ public class LocationSceneControllerEditor : Editor
 
     private void DrawSpawnHandle(SerializedProperty profileProperty)
     {
+        LocationSceneController controller = (LocationSceneController)target;
         SerializedProperty minXProperty = profileProperty.FindPropertyRelative("worldMinX");
         SerializedProperty maxXProperty = profileProperty.FindPropertyRelative("worldMaxX");
         SerializedProperty spawnYProperty = profileProperty.FindPropertyRelative("spawnY");
@@ -188,6 +204,7 @@ public class LocationSceneControllerEditor : Editor
         Vector3 newSpawnPosition = Handles.PositionHandle(spawnPosition, Quaternion.identity);
         if (EditorGUI.EndChangeCheck())
         {
+            Undo.RecordObject(controller, "Adjust Spawn Y");
             spawnYProperty.floatValue = newSpawnPosition.y;
         }
 
@@ -196,6 +213,7 @@ public class LocationSceneControllerEditor : Editor
 
     private void DrawGroundThicknessHandle(SerializedProperty profileProperty)
     {
+        LocationSceneController controller = (LocationSceneController)target;
         SerializedProperty minXProperty = profileProperty.FindPropertyRelative("worldMinX");
         SerializedProperty maxXProperty = profileProperty.FindPropertyRelative("worldMaxX");
         SerializedProperty floorYProperty = profileProperty.FindPropertyRelative("floorY");
@@ -209,6 +227,7 @@ public class LocationSceneControllerEditor : Editor
         Vector3 newBottomPosition = Handles.Slider(bottomHandlePosition, Vector3.up, HandleUtility.GetHandleSize(bottomHandlePosition) * 0.12f, Handles.SphereHandleCap, 0f);
         if (EditorGUI.EndChangeCheck())
         {
+            Undo.RecordObject(controller, "Adjust Ground Thickness");
             thicknessProperty.floatValue = Mathf.Max(0.05f, floorYProperty.floatValue - newBottomPosition.y);
         }
 
@@ -217,6 +236,7 @@ public class LocationSceneControllerEditor : Editor
 
     private void DrawObstacleHandles(SerializedProperty profileProperty)
     {
+        LocationSceneController controller = (LocationSceneController)target;
         SerializedProperty obstaclesProperty = profileProperty.FindPropertyRelative("obstacles");
         Handles.color = new Color(1f, 0.45f, 0.2f, 1f);
 
@@ -242,6 +262,7 @@ public class LocationSceneControllerEditor : Editor
                 obstacleHandle.DrawHandle();
                 if (EditorGUI.EndChangeCheck())
                 {
+                    Undo.RecordObject(controller, "Adjust Obstacle");
                     centerProperty.vector2Value = new Vector2(obstacleHandle.center.x, obstacleHandle.center.y);
                     sizeProperty.vector2Value = new Vector2(Mathf.Max(0.05f, obstacleHandle.size.x), Mathf.Max(0.05f, obstacleHandle.size.y));
                 }
@@ -294,6 +315,8 @@ public class LocationSceneControllerEditor : Editor
             handle.DrawHandle();
             if (EditorGUI.EndChangeCheck())
             {
+                LocationSceneController controller = (LocationSceneController)centerProperty.serializedObject.targetObject;
+                Undo.RecordObject(controller, $"Adjust {label}");
                 centerProperty.vector2Value = new Vector2(handle.center.x, handle.center.y);
                 sizeProperty.vector2Value = new Vector2(
                     Mathf.Max(0.05f, handle.size.x),

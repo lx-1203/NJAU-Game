@@ -9,6 +9,8 @@ namespace Zhongshan.CreatorToolkit.Dialogue
 {
     public class DialogueSaveHandler
     {
+        private const string NextPortName = "下一句";
+
         private DialogueGraphView graphView;
         private List<Edge> edges => graphView.edges.ToList();
         private List<DialogueGraphNode> nodes => graphView.nodes.ToList().Cast<DialogueGraphNode>().ToList();
@@ -51,7 +53,7 @@ namespace Zhongshan.CreatorToolkit.Dialogue
                 };
 
                 // 处理 Default Next 连接
-                var nextPort = graphNode.outputContainer.Query<Port>().Where(p => p.portName == "Next").First();
+                var nextPort = graphNode.outputContainer.Query<Port>().Where(p => p.portName == NextPortName).First();
                 var nextEdge = connectedEdges.FirstOrDefault(e => e.output == nextPort);
                 if (nextEdge != null)
                 {
@@ -63,7 +65,7 @@ namespace Zhongshan.CreatorToolkit.Dialogue
                 }
 
                 // 处理 Choices 连接
-                var choicePorts = graphNode.outputContainer.Query<Port>().Where(p => p.portName != "Next").ToList();
+                var choicePorts = graphNode.outputContainer.Query<Port>().Where(p => p.portName != NextPortName).ToList();
                 if (choicePorts.Count > 0)
                 {
                     var choicesList = new List<DialogueChoice>();
@@ -177,7 +179,7 @@ namespace Zhongshan.CreatorToolkit.Dialogue
                 // 连 Next
                 if (!string.IsNullOrEmpty(nodeData.next) && nodeDict.TryGetValue(nodeData.next, out var targetNextNode))
                 {
-                    var outputPort = graphNode.outputContainer.Query<Port>().Where(p => p.portName == "Next").First();
+                    var outputPort = graphNode.outputContainer.Query<Port>().Where(p => p.portName == NextPortName).First();
                     var inputPort = targetNextNode.inputContainer.Q<Port>();
                     LinkNodes(outputPort, inputPort);
                 }
@@ -185,7 +187,7 @@ namespace Zhongshan.CreatorToolkit.Dialogue
                 // 连 Choices
                 if (nodeData.choices != null)
                 {
-                    var choicePorts = graphNode.outputContainer.Query<Port>().Where(p => p.portName != "Next").ToList();
+                    var choicePorts = graphNode.outputContainer.Query<Port>().Where(p => p.portName != NextPortName).ToList();
                     for (int i = 0; i < nodeData.choices.Length && i < choicePorts.Count; i++)
                     {
                         var choice = nodeData.choices[i];

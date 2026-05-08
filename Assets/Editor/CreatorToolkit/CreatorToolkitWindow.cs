@@ -2,6 +2,7 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
 using System.Collections.Generic;
+using System.Linq;
 using Zhongshan.CreatorToolkit.Dialogue;
 using Zhongshan.CreatorToolkit.Event;
 using Zhongshan.CreatorToolkit.Mission;
@@ -13,6 +14,7 @@ namespace Zhongshan.CreatorToolkit
     {
         private VisualElement contentContainer;
         private DialogueGraphView graphView;
+        private Label dialogueListSummaryLabel;
 
         [MenuItem("钟山台/造物主 (Creator Toolkit)/剧情与事件编辑器", false, 0)]
         public static void OpenWindow()
@@ -96,10 +98,43 @@ namespace Zhongshan.CreatorToolkit
             }) { text = "+ 新建对话" };
             leftPanel.Add(newFileBtn);
 
+            dialogueListSummaryLabel = new Label();
+            dialogueListSummaryLabel.style.unityFontStyleAndWeight = FontStyle.Italic;
+            dialogueListSummaryLabel.style.marginBottom = 4;
+            leftPanel.Add(dialogueListSummaryLabel);
+
             var files = ToolkitDataManager.GetAllDialogueFiles();
-            var listView = new ListView(files, 25,
-                () => new Label(),
-                (e, i) => (e as Label).text = files[i]);
+            dialogueListSummaryLabel.text = $"当前共 {files.Count} 份对话文件（会递归扫描子目录）";
+
+            var listView = new ListView(files, 44,
+                () =>
+                {
+                    var item = new VisualElement();
+                    item.style.flexDirection = FlexDirection.Column;
+                    item.style.paddingLeft = 6;
+                    item.style.paddingRight = 6;
+                    item.style.paddingTop = 4;
+                    item.style.paddingBottom = 4;
+
+                    var nameLabel = new Label();
+                    nameLabel.name = "displayName";
+                    nameLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
+                    item.Add(nameLabel);
+
+                    var metaLabel = new Label();
+                    metaLabel.name = "metaInfo";
+                    metaLabel.style.fontSize = 11;
+                    metaLabel.style.color = new Color(0.7f, 0.7f, 0.7f);
+                    item.Add(metaLabel);
+                    return item;
+                },
+                (e, i) =>
+                {
+                    var info = files[i];
+                    e.Q<Label>("displayName").text = info.displayName;
+                    e.Q<Label>("metaInfo").text = $"{info.fileName}  |  {info.nodeCount} 个节点";
+                    e.tooltip = string.IsNullOrWhiteSpace(info.relativePath) ? info.fileName : info.relativePath;
+                });
 
             listView.style.flexGrow = 1;
             listView.selectionChanged += OnDialogueSelected;
@@ -125,8 +160,15 @@ namespace Zhongshan.CreatorToolkit
             {
                 if (listView.selectedItem != null)
                 {
-                    string fileName = listView.selectedItem.ToString();
-                    string dialogueId = fileName.Replace(".json", "");
+                    var selectedFile = listView.selectedItem as ToolkitDataManager.DialogueFileInfo;
+                    if (selectedFile == null)
+                    {
+                        EditorUtility.DisplayDialog("提示", "当前选中的对话文件数据无效。", "确定");
+                        return;
+                    }
+
+                    string fileName = selectedFile.fileName;
+                    string dialogueId = selectedFile.dialogueId;
                     var saveHandler = new DialogueSaveHandler(graphView);
                     saveHandler.SaveDialogue(fileName, dialogueId);
                 }
@@ -145,12 +187,11 @@ namespace Zhongshan.CreatorToolkit
         }
         private void OnDialogueSelected(IEnumerable<object> selection)
         {
-            var enumerator = selection.GetEnumerator();
-            if (enumerator.MoveNext())
+            ToolkitDataManager.DialogueFileInfo selectedFile = selection.OfType<ToolkitDataManager.DialogueFileInfo>().FirstOrDefault();
+            if (selectedFile != null)
             {
-                string fileName = enumerator.Current.ToString();
                 var saveHandler = new DialogueSaveHandler(graphView);
-                saveHandler.LoadDialogue(fileName);
+                saveHandler.LoadDialogue(selectedFile.fileName);
             }
         }
     }

@@ -11,7 +11,11 @@ using UnityEngine.UI;
 /// </summary>
 public class LoadingScreenManager : MonoBehaviour
 {
-    private const float PreActivationMaxProgress = 0.99f;
+    private const float SceneReadyGateProgress = 0.97f;
+    private const float PreActivationMaxProgress = 0.995f;
+    private const float SimulationStep = 1f / 60f;
+    private const float MaxFrameDelta = 1f / 15f;
+    private const int MaxSimulationStepsPerFrame = 4;
 
     [Header("UI References")]
     [Tooltip("Loading screen UI component.")]
@@ -27,12 +31,18 @@ public class LoadingScreenManager : MonoBehaviour
     [Header("Progress Timing")]
     [Tooltip("Loading screen stays visible for at least this duration, even when the target scene loads very quickly.")]
     public float minimumLoadingScreenDuration = 0.75f;
-    [Tooltip("How quickly the displayed progress catches up to the real loading progress.")]
-    public float progressSmoothTime = 0.18f;
+    [Tooltip("基础插值时间，数值越小越灵敏。实际显示会按前中后段与真实速率自适应调整。")]
+    public float progressSmoothTime = 0.16f;
+    [Tooltip("前段加载的平缓系数，值越大越柔和。")]
+    public float earlyPhaseSmoothMultiplier = 1.2f;
+    [Tooltip("中段加载的跟随系数，值越小越贴近真实速率波动。")]
+    public float midPhaseSmoothMultiplier = 0.78f;
+    [Tooltip("收尾阶段的缓冲系数，值越大越柔顺。")]
+    public float latePhaseSmoothMultiplier = 1.45f;
     [Tooltip("How long the final 95% -> 100% stretch should take once the target scene is ready.")]
-    public float finalProgressDuration = 0.2f;
+    public float finalProgressDuration = 0.28f;
     [Tooltip("Short pause after reaching 100% so the transition does not feel abrupt.")]
-    public float completionHoldDuration = 0.05f;
+    public float completionHoldDuration = 0.08f;
 
     [Header("Tip Rotation")]
     public float tipSwitchMinInterval = 3f;
@@ -46,14 +56,19 @@ public class LoadingScreenManager : MonoBehaviour
     private bool waitingForTargetSceneActivation;
     private string resolvedTargetSceneName;
     private float targetProgress;
+    private float rawProgress;
     private float currentDisplayProgress;
     private float displayProgressVelocity;
+    private float sourceProgressVelocity;
     private float loadingStartTime;
+    private float simulationAccumulator;
+    private bool hasExternalProgress;
 
     private void Awake()
     {
         UIFlowGuard.RestoreInteractiveState();
         UIFlowGuard.EnsureEventSystem();
+        LoadingProgressBridge.Reset();
 
         if (loadingScreenUI == null)
         {
@@ -93,6 +108,7 @@ public class LoadingScreenManager : MonoBehaviour
     private void OnDestroy()
     {
         SceneManager.sceneLoaded -= OnSceneLoaded;
+        LoadingProgressBridge.Reset();
     }
 
     private void Update()
@@ -102,19 +118,23 @@ public class LoadingScreenManager : MonoBehaviour
             return;
         }
 
-        currentDisplayProgress = Mathf.SmoothDamp(
-            currentDisplayProgress,
-            targetProgress,
-            ref displayProgressVelocity,
-            Mathf.Max(0.01f, progressSmoothTime),
-            Mathf.Infinity,
-            Time.unscaledDeltaTime);
+        float deltaTime = Mathf.Min(Time.unscaledDeltaTime, MaxFrameDelta);
+        simulationAccumulator += deltaTime;
 
-        if (targetProgress >= 0.999f && currentDisplayProgress >= 0.995f)
+        int simulatedSteps = 0;
+        while (simulationAccumulator >= SimulationStep && simulatedSteps < MaxSimulationStepsPerFrame)
         {
-            currentDisplayProgress = 1f;
-            displayProgressVelocity = 0f;
+            SimulateDisplayProgress(SimulationStep);
+            simulationAccumulator -= SimulationStep;
+            simulatedSteps++;
         }
+
+        if (simulatedSteps == 0)
+        {
+            SimulateDisplayProgress(Mathf.Max(0.0001f, deltaTime));
+        }
+
+        simulationAccumulator = Mathf.Min(simulationAccumulator, SimulationStep);
 
         loadingScreenUI.UpdateProgress(currentDisplayProgress);
     }
@@ -160,10 +180,14 @@ public class LoadingScreenManager : MonoBehaviour
         }
 
         isLoading = true;
+        hasExternalProgress = false;
         targetProgress = 0f;
+        rawProgress = 0f;
         currentDisplayProgress = 0f;
         displayProgressVelocity = 0f;
+        sourceProgressVelocity = 0f;
         loadingStartTime = Time.unscaledTime;
+        simulationAccumulator = 0f;
 
         if (loadingScreenUI != null)
         {
@@ -197,16 +221,16 @@ public class LoadingScreenManager : MonoBehaviour
 
         while (targetSceneLoadOperation.progress < 0.9f)
         {
-            float normalizedProgress = Mathf.Clamp01(targetSceneLoadOperation.progress / 0.9f);
-            targetProgress = Mathf.Lerp(0.08f, 0.92f, normalizedProgress);
+            targetProgress = GetCombinedProgressBeforeActivation();
             yield return null;
         }
 
-        targetProgress = 0.95f;
+        targetProgress = Mathf.Max(targetProgress, GetCombinedProgressBeforeActivation());
 
         float minimumVisibleUntil = loadingStartTime + Mathf.Max(0f, minimumLoadingScreenDuration);
-        while (Time.unscaledTime < minimumVisibleUntil || currentDisplayProgress < 0.92f)
+        while (Time.unscaledTime < minimumVisibleUntil || currentDisplayProgress < SceneReadyGateProgress - 0.02f)
         {
+            targetProgress = Mathf.Max(targetProgress, GetCombinedProgressBeforeActivation());
             yield return null;
         }
 
@@ -222,12 +246,13 @@ public class LoadingScreenManager : MonoBehaviour
         float elapsed = 0f;
 
         displayProgressVelocity = 0f;
+        sourceProgressVelocity = 0f;
 
         while (elapsed < duration)
         {
             elapsed += Time.unscaledDeltaTime;
             float t = Mathf.Clamp01(elapsed / duration);
-            float eased = 1f - Mathf.Pow(1f - t, 3f);
+            float eased = EaseOutCubic(t);
             targetProgress = Mathf.Lerp(startProgress, PreActivationMaxProgress, eased);
             yield return null;
         }
@@ -318,8 +343,10 @@ public class LoadingScreenManager : MonoBehaviour
     private IEnumerator CleanupAfterSceneActivation()
     {
         targetProgress = 1f;
+        rawProgress = 1f;
         currentDisplayProgress = 1f;
         displayProgressVelocity = 0f;
+        sourceProgressVelocity = 0f;
 
         if (loadingScreenUI != null)
         {
@@ -363,7 +390,7 @@ public class LoadingScreenManager : MonoBehaviour
         {
             float t = elapsed / Mathf.Max(0.0001f, fadeInDuration);
             rootGroup.alpha = t * t;
-            elapsed += Time.deltaTime;
+            elapsed += Time.unscaledDeltaTime;
             yield return null;
         }
 
@@ -387,7 +414,7 @@ public class LoadingScreenManager : MonoBehaviour
             float t = elapsed / Mathf.Max(0.0001f, fadeOutDuration);
             float easeT = 1f - (1f - t) * (1f - t);
             rootGroup.alpha = 1f - easeT;
-            elapsed += Time.deltaTime;
+            elapsed += Time.unscaledDeltaTime;
             yield return null;
         }
 
@@ -411,5 +438,121 @@ public class LoadingScreenManager : MonoBehaviour
                 loadingScreenUI.SwitchTip();
             }
         }
+    }
+
+    private void SimulateDisplayProgress(float deltaTime)
+    {
+        float nextRawProgress = Mathf.Max(rawProgress, targetProgress);
+        float rawVelocity = Mathf.Max(0f, nextRawProgress - rawProgress) / Mathf.Max(0.0001f, deltaTime);
+
+        rawProgress = nextRawProgress;
+        sourceProgressVelocity = Mathf.Lerp(sourceProgressVelocity, rawVelocity, 1f - Mathf.Exp(-deltaTime * 10f));
+
+        float lag = Mathf.Max(0f, rawProgress - currentDisplayProgress);
+        float adaptiveSmoothTime = EvaluateAdaptiveSmoothTime(rawProgress, lag, sourceProgressVelocity);
+        float adaptiveMaxSpeed = EvaluateAdaptiveMaxSpeed(lag, sourceProgressVelocity);
+
+        currentDisplayProgress = Mathf.SmoothDamp(
+            currentDisplayProgress,
+            rawProgress,
+            ref displayProgressVelocity,
+            adaptiveSmoothTime,
+            adaptiveMaxSpeed,
+            deltaTime);
+
+        if (rawProgress >= 0.999f && currentDisplayProgress >= 0.9975f)
+        {
+            currentDisplayProgress = 1f;
+            displayProgressVelocity = 0f;
+            return;
+        }
+
+        if (rawProgress >= PreActivationMaxProgress && currentDisplayProgress >= PreActivationMaxProgress - 0.001f)
+        {
+            currentDisplayProgress = PreActivationMaxProgress;
+            displayProgressVelocity = 0f;
+        }
+    }
+
+    private float EvaluateAdaptiveSmoothTime(float normalizedProgress, float lag, float progressVelocity)
+    {
+        float phaseMultiplier = normalizedProgress < 0.3f
+            ? earlyPhaseSmoothMultiplier
+            : normalizedProgress < 0.82f
+                ? midPhaseSmoothMultiplier
+                : latePhaseSmoothMultiplier;
+
+        float lagBoost = Mathf.Lerp(1f, 0.55f, Mathf.Clamp01(lag * 5.5f));
+        float velocityBoost = Mathf.Lerp(1f, 0.68f, Mathf.Clamp01(progressVelocity * 2.2f));
+        float smoothTime = progressSmoothTime * phaseMultiplier * lagBoost * velocityBoost;
+        return Mathf.Clamp(smoothTime, 0.035f, 0.42f);
+    }
+
+    private float EvaluateAdaptiveMaxSpeed(float lag, float progressVelocity)
+    {
+        float lagFactor = Mathf.Lerp(0.65f, 2.8f, Mathf.Clamp01(lag * 7f));
+        float velocityFactor = Mathf.Lerp(0.8f, 2.1f, Mathf.Clamp01(progressVelocity * 2.5f));
+        return Mathf.Max(0.5f, lagFactor * velocityFactor);
+    }
+
+    private float GetCombinedProgressBeforeActivation()
+    {
+        float sceneProgress = targetSceneLoadOperation != null
+            ? Mathf.Clamp01(targetSceneLoadOperation.progress / 0.9f) * SceneReadyGateProgress
+            : 0f;
+
+        float combinedProgress = sceneProgress;
+        if (LoadingProgressBridge.TryGetSnapshot(out LoadingProgressBridge.Snapshot externalProgress))
+        {
+            hasExternalProgress = externalProgress.isActive;
+            if (externalProgress.isActive)
+            {
+                float externalNormalized = Mathf.Clamp01(externalProgress.normalizedProgress);
+                combinedProgress = Mathf.Min(sceneProgress, externalNormalized * SceneReadyGateProgress);
+
+                string detailLabel = externalProgress.detailLabel;
+                if (string.IsNullOrEmpty(detailLabel) && externalProgress.totalBytes > 0L)
+                {
+                    detailLabel = $"已加载 {FormatBytes(externalProgress.loadedBytes)} / {FormatBytes(externalProgress.totalBytes)}";
+                }
+
+                if (!string.IsNullOrEmpty(externalProgress.statusLabel) || !string.IsNullOrEmpty(detailLabel))
+                {
+                    loadingScreenUI.SetStatusMessage(externalProgress.statusLabel, detailLabel);
+                }
+            }
+        }
+
+        if (hasExternalProgress)
+        {
+            combinedProgress = Mathf.Max(0f, combinedProgress);
+        }
+
+        return Mathf.Clamp(combinedProgress, 0f, SceneReadyGateProgress);
+    }
+
+    private static float EaseOutCubic(float t)
+    {
+        float inv = 1f - Mathf.Clamp01(t);
+        return 1f - inv * inv * inv;
+    }
+
+    private static string FormatBytes(long bytes)
+    {
+        if (bytes <= 0L)
+        {
+            return "0 B";
+        }
+
+        string[] units = { "B", "KB", "MB", "GB" };
+        double size = bytes;
+        int unitIndex = 0;
+        while (size >= 1024d && unitIndex < units.Length - 1)
+        {
+            size /= 1024d;
+            unitIndex++;
+        }
+
+        return $"{size:0.##} {units[unitIndex]}";
     }
 }

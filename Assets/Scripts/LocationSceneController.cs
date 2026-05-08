@@ -8,6 +8,8 @@ using UnityEditor;
 [ExecuteAlways]
 public class LocationSceneController : MonoBehaviour
 {
+    private static Sprite fallbackSolidSprite;
+
     [Serializable]
     public class ObstacleBox
     {
@@ -55,6 +57,7 @@ public class LocationSceneController : MonoBehaviour
 
     private const string GeneratedRootName = "_GeneratedLocationScene";
     private const string BackgroundObjectName = "Background";
+    private const string BackgroundLabelObjectName = "BackgroundLabel";
     private const string CollisionRootName = "Collisions";
     private const string GroundObjectName = "Ground";
     private const string LeftBoundaryName = "LeftBoundary";
@@ -127,7 +130,7 @@ public class LocationSceneController : MonoBehaviour
             return;
         }
 
-        profiles.Add(CreateDormitoryProfile());
+        AddMissingProfiles();
     }
 
     private void EnsureEditorNPCManager()
@@ -245,6 +248,11 @@ public class LocationSceneController : MonoBehaviour
 
         LocationSceneProfile profile = CreateProfileFromLocation(locationId);
         profiles.Add(profile);
+    }
+
+    public void EnsureProfile(LocationId locationId)
+    {
+        AddProfile(locationId);
     }
 
     public void AddMissingProfiles()
@@ -393,14 +401,52 @@ public class LocationSceneController : MonoBehaviour
 
         if (sprite == null)
         {
-            backgroundTransform.localScale = Vector3.one;
+            BuildFallbackBackground(backgroundTransform, spriteRenderer, profile);
             return;
         }
 
+        DestroyChildIfExists(backgroundTransform, BackgroundLabelObjectName);
+        spriteRenderer.color = Color.white;
+        spriteRenderer.drawMode = SpriteDrawMode.Simple;
+        spriteRenderer.size = Vector2.one;
         float targetWidth = Mathf.Max(1f, profile.worldMaxX - profile.worldMinX);
         float targetHeight = GetTargetHeight(profile);
         float scale = GetUniformScale(sprite, targetWidth, targetHeight);
         backgroundTransform.localScale = new Vector3(scale, scale, 1f);
+    }
+
+    private void BuildFallbackBackground(Transform backgroundTransform, SpriteRenderer spriteRenderer, LocationSceneProfile profile)
+    {
+        float targetWidth = Mathf.Max(1f, profile.worldMaxX - profile.worldMinX);
+        float targetHeight = Mathf.Max(6f, GetTargetHeight(profile));
+
+        spriteRenderer.sprite = GetFallbackSolidSprite();
+        spriteRenderer.color = GetFallbackBackgroundColor(profile.locationId);
+        spriteRenderer.drawMode = SpriteDrawMode.Simple;
+        spriteRenderer.size = Vector2.one;
+        backgroundTransform.localScale = new Vector3(targetWidth * 0.5f, targetHeight * 0.5f, 1f);
+
+        Transform labelTransform = GetOrCreateChild(backgroundTransform, BackgroundLabelObjectName);
+        labelTransform.localPosition = new Vector3(0f, targetHeight * 0.22f, -0.1f);
+
+        TextMesh textMesh = labelTransform.GetComponent<TextMesh>();
+        if (textMesh == null)
+        {
+            textMesh = labelTransform.gameObject.AddComponent<TextMesh>();
+        }
+
+        textMesh.text = $"{GetLocationDisplayName(profile.locationId)} 预览";
+        textMesh.anchor = TextAnchor.MiddleCenter;
+        textMesh.alignment = TextAlignment.Center;
+        textMesh.characterSize = 0.18f;
+        textMesh.fontSize = 48;
+        textMesh.color = new Color(1f, 1f, 1f, 0.88f);
+
+        MeshRenderer textRenderer = labelTransform.GetComponent<MeshRenderer>();
+        if (textRenderer != null)
+        {
+            textRenderer.sortingOrder = profile.sortingOrder + 1;
+        }
     }
 
     private void BuildCollisions(Transform root, LocationSceneProfile profile)
@@ -722,25 +768,134 @@ public class LocationSceneController : MonoBehaviour
             ? LocationManager.Instance.GetLocation(locationId)
             : null;
 
+        float minX = definition != null ? definition.worldMinX : -10f;
+        float maxX = definition != null ? definition.worldMaxX : 20f;
+        float spawnY = definition != null ? definition.worldSpawnY : -3.5f;
+        float floorY = spawnY - 1.5f;
+        float boundaryCenterY = floorY + 6f;
+
         return new LocationSceneProfile
         {
             locationId = locationId,
-            worldMinX = definition != null ? definition.worldMinX : -10f,
-            worldMaxX = definition != null ? definition.worldMaxX : 20f,
-            spawnY = definition != null ? definition.worldSpawnY : -3.5f,
-            floorY = definition != null ? definition.worldSpawnY - 1.5f : -5f,
+            backgroundResourcePath = GetDefaultBackgroundResourcePath(locationId),
+            backgroundCenterY = -2.5f,
+            backgroundZ = 0f,
+            verticalPadding = 1f,
+            fallbackHeight = GetDefaultFallbackHeight(locationId),
+            worldMinX = minX,
+            worldMaxX = maxX,
+            spawnY = spawnY,
+            floorY = floorY,
             groundThickness = 1f,
             sideBoundaryThickness = 0.6f,
             sideBoundaryHeight = 12f,
             leftBoundaryCenter = new Vector2(
-                (definition != null ? definition.worldMinX : -10f) - 0.3f,
-                (definition != null ? definition.worldSpawnY - 1.5f : -5f) + 6f),
+                minX - 0.3f,
+                boundaryCenterY),
             leftBoundarySize = new Vector2(0.6f, 12f),
             rightBoundaryCenter = new Vector2(
-                (definition != null ? definition.worldMaxX : 20f) + 0.3f,
-                (definition != null ? definition.worldSpawnY - 1.5f : -5f) + 6f),
+                maxX + 0.3f,
+                boundaryCenterY),
             rightBoundarySize = new Vector2(0.6f, 12f)
         };
+    }
+
+    private static string GetDefaultBackgroundResourcePath(LocationId locationId)
+    {
+        switch (locationId)
+        {
+            case LocationId.Dormitory:
+                return "Backgrounds/DormitoryTemporaryBackground";
+            case LocationId.TeachingBuilding:
+                return "LocationScenes/TeachingBuildings/TeachingBuilding";
+            case LocationId.Library:
+                return "LocationScenes/Librarys/Library";
+            case LocationId.Canteen:
+                return "LocationScenes/Canteens/Canteen";
+            case LocationId.Playground:
+                return "LocationScenes/Playgrounds/Playground";
+            case LocationId.Store:
+                return "LocationScenes/Stores/Store";
+            case LocationId.ExpressStation:
+                return "LocationScenes/ExpressStation/ExpressStation";
+            case LocationId.TakeoutStation:
+            default:
+                return string.Empty;
+        }
+    }
+
+    private static float GetDefaultFallbackHeight(LocationId locationId)
+    {
+        switch (locationId)
+        {
+            case LocationId.Playground:
+                return 10f;
+            case LocationId.ExpressStation:
+                return 9.5f;
+            default:
+                return 12f;
+        }
+    }
+
+    private static Color GetFallbackBackgroundColor(LocationId locationId)
+    {
+        switch (locationId)
+        {
+            case LocationId.Dormitory:
+                return new Color(0.30f, 0.36f, 0.50f, 0.95f);
+            case LocationId.TeachingBuilding:
+                return new Color(0.40f, 0.52f, 0.70f, 0.95f);
+            case LocationId.Library:
+                return new Color(0.34f, 0.44f, 0.56f, 0.95f);
+            case LocationId.Canteen:
+                return new Color(0.52f, 0.42f, 0.34f, 0.95f);
+            case LocationId.Playground:
+                return new Color(0.28f, 0.52f, 0.42f, 0.95f);
+            case LocationId.Store:
+                return new Color(0.50f, 0.44f, 0.34f, 0.95f);
+            case LocationId.ExpressStation:
+                return new Color(0.44f, 0.40f, 0.34f, 0.95f);
+            case LocationId.TakeoutStation:
+                return new Color(0.38f, 0.46f, 0.54f, 0.95f);
+            default:
+                return new Color(0.35f, 0.40f, 0.48f, 0.95f);
+        }
+    }
+
+    private static string GetLocationDisplayName(LocationId locationId)
+    {
+        switch (locationId)
+        {
+            case LocationId.Dormitory: return "宿舍";
+            case LocationId.TeachingBuilding: return "教学楼";
+            case LocationId.Library: return "图书馆";
+            case LocationId.Canteen: return "食堂";
+            case LocationId.Playground: return "操场";
+            case LocationId.Store: return "教超";
+            case LocationId.ExpressStation: return "快递站";
+            case LocationId.TakeoutStation: return "外卖站";
+            default: return locationId.ToString();
+        }
+    }
+
+    private static Sprite GetFallbackSolidSprite()
+    {
+        if (fallbackSolidSprite != null)
+        {
+            return fallbackSolidSprite;
+        }
+
+        Texture2D texture = new Texture2D(2, 2, TextureFormat.RGBA32, false)
+        {
+            hideFlags = HideFlags.HideAndDontSave
+        };
+        Color[] pixels = new Color[4] { Color.white, Color.white, Color.white, Color.white };
+        texture.SetPixels(pixels);
+        texture.Apply();
+
+        fallbackSolidSprite = Sprite.Create(texture, new Rect(0f, 0f, 2f, 2f), new Vector2(0.5f, 0.5f), 1f);
+        fallbackSolidSprite.name = "LocationSceneFallbackSprite";
+        return fallbackSolidSprite;
     }
 
     private void OnDrawGizmos()

@@ -316,8 +316,8 @@ public class PauseMenuUI : MonoBehaviour
         // 先自动存档
         if (SaveManager.Instance != null)
         {
-            SaveManager.Instance.AutoSave();
-            Debug.Log("[PauseMenu] 返回标题前自动存档");
+            SaveManager.Instance.AutoSaveImmediate("返回标题");
+            Debug.Log("[PauseMenu] 返回标题前执行即时自动存档");
         }
         else
         {
